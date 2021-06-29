@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___       ______       __                  #
-# (  ____ \(       )(  ___  )              /   )     / ___  \     /  \                 #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \    \/) )                #
-# | |      | || || || (___) |            / (_) (_       ___) /      | |                #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (       | |                #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \      | |                #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _  __) (_               #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \____/               #
+#  _______  _______  _______                ___       ______      _______              #
+# (  ____ \(       )(  ___  )              /   )     / ___  \    / ___   )             #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \   \/   )  |             #
+# | |      | || || || (___) |            / (_) (_       ___) /       /   )             #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (      _/   /              #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \    /   _/               #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ (   (__/\             #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_)\_______/             #
 #                                                                                      #
 ########################################################################################
 */
@@ -21,21 +21,21 @@
 //                                                                                    //
 ////////////////////////////////////////////////////////////////////////////////////////
 
-// In the Python version of this code, we take advantage of the fact that
+// In the Python GMA library version of this code, we take advantage of the fact that
 // we have a Tcl interpreter available in tkinter and use that to process
 // Tcl strings.
 //
 // In our case, we don't have a Tcl interpreter handy,  so we'll implement
-// a simple string scanner in Go which will convert these string represen-
-// tations to and from Go slices.
+// a simple string scanner in Go which will convert these string representations to and from Go slices.
 
+//
+// Convert between Tcl list strings and Go string slices.
 //
 // Some of the older elements of GMA (which used to be entirely written in
 // the Tcl language, after it was ported from the even older C++ code) use
 // Tcl  list  objects  as  their  data representation. Notably the biggest
 // example is the mapper(6) tool (which is still written in  Tcl  itself),
-// whose  map  file  format and TCP/IP communications protocl include mar‐
-// shalled data structures represented as Tcl lists.
+// whose  map  file  format and TCP/IP communications protocl include marshalled data structures represented as Tcl lists.
 //
 // While this is obviously convenient for Tcl programs in  that  they  can
 // take  such strings and natively use them as lists of values, it is also
@@ -73,7 +73,7 @@
 // Literal backslashes may be escaped with a backslash as well.
 //
 // While extra spaces are ignored when  parsing  lists  into  elements,  a
-// properly  formed  string representation of a list will have the miminum
+// properly  formed  string representation of a list will have the minimum
 // number of spaces and braces needed to describe the list structure.
 package tcllist
 
@@ -142,7 +142,7 @@ import (
 //
 //
 // The following code was written for GMA by Steven Willoughby, based on the
-// original C code distirbuted in the Tcl core source code files "tclUtil.c",
+// original C code distributed in the Tcl core source code files "tclUtil.c",
 // "tclParse.c", "tclUtf.c", as a direct port of that original code to Go.
 //
 const t_CONVERT_NONE = 0
@@ -372,6 +372,7 @@ func tcl_convert_element(src string, flags int) string {
 // triggered by a string whose length is too long to fit in an integer),
 // but there may be other error conditions added in the future, so check it
 // anyway).
+//
 // It returns the Tcl string and the error, if any.
 func ToTclString(listval []string) (string, error) {
 	var s strings.Builder
@@ -396,6 +397,7 @@ func ToTclString(listval []string) (string, error) {
 // ParseTclList takes a properly-formatted Tcl list string
 // and returns a slice of the list's elements as string values
 // as well as an error (if something went wrong).
+//
 // Note that this only parses a single nesting level of elements,
 // since with Tcl lists it is impossible to distintuish an element
 // which happens to contain spaces from a nested list of values. It
@@ -518,7 +520,7 @@ func ParseTclList(tcl_string string) ([]string, error) {
 // converted data slice.
 //
 // The types string controls this conversion. Each character indicates
-// the required type for that element in the input slice, as follows:
+// the required type for the corresponding element in the input slice, as follows:
 //    -  do not convert this element.
 //    s  copy the element as a string.
 //    b  copy the element as a []byte slice.
@@ -574,7 +576,7 @@ func ConvertTypes(list []string, types string) ([]interface{}, error) {
 	return converted, nil
 }
 
-// @[00]@| GMA 4.3.1
+// @[00]@| GMA 4.3.2
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.

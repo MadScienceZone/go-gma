@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___       ______       __                  #
-# (  ____ \(       )(  ___  )              /   )     / ___  \     /  \                 #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \    \/) )                #
-# | |      | || || || (___) |            / (_) (_       ___) /      | |                #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (       | |                #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \      | |                #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _  __) (_               #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \____/               #
+#  _______  _______  _______                ___       ______      _______              #
+# (  ____ \(       )(  ___  )              /   )     / ___  \    / ___   )             #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \   \/   )  |             #
+# | |      | || || || (___) |            / (_) (_       ___) /       /   )             #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (      _/   /              #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \    /   _/               #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ (   (__/\             #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_)\_______/             #
 #                                                                                      #
 ########################################################################################
 */
@@ -21,16 +21,23 @@
 // Calculates the challenge/response for a login attempt, and checks user input to
 // determine if it was a valid response to the challenge.
 //
-// The credential may be a shared player password for the game group, or one reserved
-// for the GM's access, or an individual user may have set a personal password to use
-// for their own sessions. By the time we get to this code, we have two passwords in
+// The map server uses a fairly simple authentication mechanism. THIS IS NOT necessarily
+// appropriate for other authentication needs. In this case, the usage model is simple
+// and the stakes are extremely low—the only thing being protected here is access to
+// the fantasy map used by a small group of friends. The intention is to block nuisance
+// connections, spam, and accidental connections by legitimate clients for a different game.
+//
+// In the simplest case, there is a single shared password all the players use and another
+// for the GM to use. If desired, the server may be configured to hold a separate password
+// for each individual player.
+//
+// By the time we get to this code, we have two passwords in
 // play: one that is either the shared password or (if one is set) the one for the
 // user attempting to log in, and the other is the GM's password set in the server
 // configuration. The response from the client is checked against both passwords
 // since using the GM password indicates GM regardless of login name (which may come
 // from the username on the client OS).
 //
-
 // The  challenge/response negotiation between the mapper server and
 // clients is implemented in this package.
 //
@@ -80,6 +87,49 @@
 // that value in the Secret member of Authenticator or may set it by calling
 //     a.SetSecret(personal_secret)
 // before calling the GenerateChallenge() method.
+//
+// AUTHENTICATION ALGORITHM
+//
+// Given:
+//   C:    the server's challenge as a byte slice
+//   h(x): the binary SHA-256 hash digest of byte slice x
+//   P:    the password needed to authenticate to the server
+//   x‖y:  means to concatenate x and y
+//
+// To calculate the response to the server's authentication challenge,
+// the client must do the following:
+//
+//   (1) Obtain i from the first 2 bytes of C as a big-endian uint16 value.
+//   (2) Calculate D=h(C‖P).
+//   (3) Repeat i times: D'=h(P‖D); let D=D'
+//
+// D is the response to send to the server for validation.
+//
+// PROTOCOL
+//
+// Although the `auth` package itself isn't involved in the client/server protocol
+// directly, the way it is used by the map server and its clients uses the following
+// protocol:
+//
+//  OK v challenge
+// The server's greeting to the client includes this line which gives the server's
+// protocol version (v) and a base-64 encoding of the binary challenge value (C in the
+// algorithm described above)
+//
+//  AUTH response [user client]
+// The client's response it sent with this line, where response is the base-64
+// encoded representation of the response to the challenge (D above), and the user and
+// client values are the desired user name and description of the client program.
+//
+//  DENIED message
+// Server response indicating that the authentication was unsuccessful.
+//
+//  GRANTED name
+// Server response indicating that the authentication was successful. The name value is
+// "GM" if the GM password was used, or the user name supplied by the user, which will be
+// the name they're known by inside the game map (usually a character name). If the user
+// did not supply a name and did not use the GM password, "anonymous" is returned.
+//
 package auth
 
 import (
@@ -209,7 +259,7 @@ func (a *Authenticator) CurrentChallenge() string {
 // vulnerable to MitM attacks if the communications path is not otherwise
 // protected, and long-term observation of authentication attempts may
 // provide sufficient insight to determine the secret component of the
-// exchange if the communcation channel is not otherwise encrypted.
+// exchange if the communication channel is not otherwise encrypted.
 //
 // I wouldn't normally say this, but in this very specific case, what we
 // are protecting is so very, very unimportant to anyone, and the result
@@ -261,7 +311,7 @@ func (a *Authenticator) AcceptChallenge(challenge string) (string, error) {
 }
 
 //
-// Given a base-64-endoded response string, verify that the value it encodes
+// Given a base-64-encoded response string, verify that the value it encodes
 // matches the expected response for the previously-generated challenge.
 //
 // If the response is not correct for the expected user's secret, we try
@@ -335,7 +385,7 @@ func NewClientAuthenticator(username string, secret []byte, client string) *Auth
 	return a
 }
 
-// @[00]@| GMA 4.3.1
+// @[00]@| GMA 4.3.2
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.

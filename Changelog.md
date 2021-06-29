@@ -1,10 +1,14 @@
 # Changelog
 ## Current Version Information
- * GMA Core API Library Version: 4.3.1		<!-- @@##@@ -->
+ * GMA Core API Library Version: 4.3.2		<!-- @@##@@ -->
  * Supported GMA Mapper Version: 3.40.9		<!-- @@##@@ -->
  * Supported GMA Mapper Protocol: 332		<!-- @@##@@ -->
  * Supported GMA Mapper File Format: 16		<!-- @@##@@ -->
- * Effective Date: 28-Jun-2021			<!-- @@##@@ -->
+ * Effective Date: 29-Jun-2021			<!-- @@##@@ -->
+
+## v4.3.2
+Cleaned up the module documentation. Un-exported some of the internals of the dice package
+that weren't supposed to have been exported.
 
 ## v4.3.1
 Initial move to its own repository. Implements the `auth`, `dice`, and `tcllist` packages.

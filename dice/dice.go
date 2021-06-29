@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___       ______       __                  #
-# (  ____ \(       )(  ___  )              /   )     / ___  \     /  \                 #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \    \/) )                #
-# | |      | || || || (___) |            / (_) (_       ___) /      | |                #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (       | |                #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \      | |                #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _  __) (_               #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \____/               #
+#  _______  _______  _______                ___       ______      _______              #
+# (  ____ \(       )(  ___  )              /   )     / ___  \    / ___   )             #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \   \/   )  |             #
+# | |      | || || || (___) |            / (_) (_       ___) /       /   )             #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (      _/   /              #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \    /   _/               #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ (   (__/\             #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_)\_______/             #
 #                                                                                      #
 ########################################################################################
 */
@@ -27,19 +27,24 @@
 // in fantasy role-playing games.
 //
 // The preferred usage model is to use the higher-level abstraction provided by
-// DieRoller, which rolls dice as described by strings, as so:
+// DieRoller, which rolls dice as described by strings. For example:
+//
+//    label, results, err := Roll("d20+16 | c")
+//    label, result, err := RollOnce("15d6 + 15 fire + 1 acid")
+//
+// If you need to keep the die roller itself around after the dice are rolled,
+// to query its status, or to produce a repeatable string of die rolls given
+// a custom seed or number generator, create a new DieRoller value and reuse
+// that as needed:
+//
 //    dr, err := NewDieRoller()
 //    label, results, err := dr.DoRoll("d20+16 | c")
 //    label, result, err := dr.DoRollOnce("15d6 + 15 fire + 1 acid")
 //
-// Or, if you don't need to create a DieRoller to reuse or query after the fact,
-// simply calling the functions
-//    label, results, err := Roll("d20+16 | c")
-//    label, result, err := RollOnce("15d6 + 15 fire + 1 acid")
-//
 // There is also a lower-level abstraction of dice available via the Dice
 // type, created by the New() function, if for some reason the DieRoller
 // interface won't provide what is needed.
+//
 package dice
 
 import (
@@ -56,11 +61,6 @@ import (
 
 //
 // Seed the random number generator with a very random seed.
-// TODO: For now, this is sufficient to support the die-rolling
-//       needs of the server. However, if we implement more of the
-//       core GMA to Go, this needs to change so that each Dice object
-//       can have its own random number generator which can be seeded
-//       independently.
 //
 func init() {
 	s, err := cryptorand.Int(cryptorand.Reader, big.NewInt(0xffffffff))
@@ -84,8 +84,9 @@ func init() {
 // a new Dice value, specify the number of dice and number of sides.
 //
 // This is a low-level representation of dice.
+//
 // See the DieRoller type for a higher-level abstraction which is the
-// recommended type to use for almost any caller.
+// recommended type to use instead of this one, for most purposes.
 type Dice struct {
 	// Constrained minimum and maximum values for the roll.
 	// Specify 0 if there should be no minimum and/or maximum.
@@ -94,7 +95,7 @@ type Dice struct {
 
 	// The individual components that make up the overall die-roll
 	// operation to be performed.
-	MultiDice []DieComponent
+	multiDice []dieComponent
 
 	// The result of the last roll of this die. LastValue has a value
 	// that can be used if Rolled is true.
@@ -102,7 +103,7 @@ type Dice struct {
 
 	_natural   int      // interim value while confirming critical rolls
 	_defthreat int      // default threat for confirming critical rolls
-	_onlydie   *DieSpec // for single-die rolls, this is the lone die
+	_onlydie   *dieSpec // for single-die rolls, this is the lone die
 
 	// Have we actually rolled the dice yet to get a result?
 	Rolled bool
@@ -341,7 +342,7 @@ type StructuredResult struct {
 }
 
 //
-// A DieComponent is something that can be assembled with other DieComponents
+// A dieComponent is something that can be assembled with other dieComponents
 // to form a full die-roll spec expression. Each has an operator and a value,
 // such that for any accumulated overall total value x, this component's
 // contribution to the overall total x' will be x' = x <operator> <value>.
@@ -351,46 +352,46 @@ type StructuredResult struct {
 //     constant (operator -, value 2)
 //     diespec (operator +, value 2d6)
 // then the evaluation of the overall die-roll spec ("1d20-2+2d6") is
-// performed by starting with the value 0, and then calling the ApplyOp
+// performed by starting with the value 0, and then calling the applyOp
 // method of each of the components in turn:
 //   (((0 + 1d20) - 2) + 2d6)
 //
-type DieComponent interface {
+type dieComponent interface {
 	// Applies the component's operator to the values x and y, returning the result.
-	ApplyOp(x, y int) (int, error)
+	applyOp(x, y int) (int, error)
 
 	// Apply the component's operator to the accumulated total x and its value.
-	Evaluate(x int) (int, error)
+	evaluate(x int) (int, error)
 
-	// Like Evaluate() but just assume the maximum possible value.
-	MaxValue(x int) (int, error)
+	// Like evaluate() but just assume the maximum possible value.
+	maxValue(x int) (int, error)
 
 	// Return the most recently calculated value.
-	LastValue() int
+	lastValue() int
 
 	// Describe the die-roll component as a string.
-	Description() string
+	description() string
 
 	// Describe the die-roll component as explicit elements.
-	StructuredDescribeRoll() []StructuredDescription
+	structuredDescribeRoll() []StructuredDescription
 
 	// Returns the natural roll value of the component. This must be a single
 	// die; otherwise -1 is returned. If the component isn't a die to be rolled,
 	// 0 is returned. The second return value is the number of sides on the die.
 	// Thus, a natural 3 on a d20 would be returned as (3, 20).
-	NaturalRoll() (int, int)
+	naturalRoll() (int, int)
 
 	// Return the operator for this component.
-	GetOperator() string
+	getOperator() string
 }
 
 //
-// DieConstant is a kind of DieComponent that provides a constant
+// dieConstant is a kind of dieComponent that provides a constant
 // value that is part of an expression.
 //
 // For example, if the die roll includes a +2 bonus due to intelligence,
-// this would be represented by the value DieConstant{"+", 3, "INT"}.
-type DieConstant struct {
+// this would be represented by the value dieConstant{"+", 3, "INT"}.
+type dieConstant struct {
 	// The operator with which this constant is integrated into the result.
 	Operator string
 
@@ -402,39 +403,39 @@ type DieConstant struct {
 }
 
 // Return the operator for the constant.
-func (d *DieConstant) GetOperator() string { return d.Operator }
+func (d *dieConstant) getOperator() string { return d.Operator }
 
 // Apply the operator to values x and y. Note that this satisfies the
-// DieComponent interface but ignores the constant value itself.
-func (d *DieConstant) ApplyOp(x, y int) (int, error) {
+// dieComponent interface but ignores the constant value itself.
+func (d *dieConstant) applyOp(x, y int) (int, error) {
 	return _apply_op(d.Operator, x, y)
 }
 
 // Apply the operator to the value x. For example, for the constant
-// i := DieConstant{"+", 3, "INT"}, i.Evaluate(10) would return
+// i := dieConstant{"+", 3, "INT"}, i.evaluate(10) would return
 // 13 (i.e., "10 + 3 INT").
-func (d *DieConstant) Evaluate(x int) (int, error) {
+func (d *dieConstant) evaluate(x int) (int, error) {
 	return _apply_op(d.Operator, x, d.Value)
 }
 
-// For DieConstant values, this is the same Evaluate(x),
+// For dieConstant values, this is the same evaluate(x),
 // since constants are... well... constant.
-func (d *DieConstant) MaxValue(x int) (int, error) {
+func (d *dieConstant) maxValue(x int) (int, error) {
 	return _apply_op(d.Operator, x, d.Value)
 }
 
-// For DieConstant values, this simply returns the constant value itself.
-func (d *DieConstant) LastValue() int {
+// For dieConstant values, this simply returns the constant value itself.
+func (d *dieConstant) lastValue() int {
 	return d.Value
 }
 
-// For DieConstant values, this always returns (0, 0).
-func (d *DieConstant) NaturalRoll() (int, int) {
+// For dieConstant values, this always returns (0, 0).
+func (d *dieConstant) naturalRoll() (int, int) {
 	return 0, 0
 }
 
 // Return a text description of this constant value.
-func (d *DieConstant) Description() string {
+func (d *dieConstant) description() string {
 	return d.Operator + strconv.Itoa(d.Value) + d.Label
 }
 
@@ -442,14 +443,14 @@ func (d *DieConstant) Description() string {
 // be "operator", "constant", and if the label for the constant is non-empty,
 // "label".
 //
-// For example, for c := DieConstant{"+", 3, "int"}, calling
+// For example, for c := dieConstant{"+", 3, "int"}, calling
 // c.StructuredDescribeRoll() returns the value
 //    []StructuredDescription{
 //        {"operator", "+"},
 //        {"constant", "3"},
 //        {"label", "int"}
 //    }
-func (d *DieConstant) StructuredDescribeRoll() []StructuredDescription {
+func (d *dieConstant) structuredDescribeRoll() []StructuredDescription {
 	var desc []StructuredDescription
 	if d.Operator != "" {
 		desc = append(desc, StructuredDescription{Type: "operator", Value: d.Operator})
@@ -481,10 +482,10 @@ func _apply_op(operator string, x, y int) (int, error) {
 }
 
 //
-// DieSpec is a part of a die-roll expression that specifies a single
+// dieSpec is a part of a die-roll expression that specifies a single
 // roll (NdS+B, etc) in a chain of other components.
 //
-type DieSpec struct {
+type dieSpec struct {
 	// The operator with which this component is integrated into the overall result.
 	// (Yes, these should be something more sophisticated than a string; this will
 	// quite probably change in the future).
@@ -527,12 +528,12 @@ type DieSpec struct {
 //
 // Get the operator for this component.
 //
-func (d *DieSpec) GetOperator() string { return d.Operator }
+func (d *dieSpec) getOperator() string { return d.Operator }
 
 //
 // Apply the component's operator to the given values.
 //
-func (d *DieSpec) ApplyOp(x, y int) (int, error) {
+func (d *dieSpec) applyOp(x, y int) (int, error) {
 	return _apply_op(d.Operator, x, y)
 }
 
@@ -541,7 +542,7 @@ func (d *DieSpec) ApplyOp(x, y int) (int, error) {
 // has already been rolled, return the natural value of that die
 // and the number of sides.
 //
-func (d *DieSpec) NaturalRoll() (int, int) {
+func (d *dieSpec) naturalRoll() (int, int) {
 	return d._natural, d.Sides
 }
 
@@ -589,10 +590,10 @@ func intToStrings(a []int) (as []string) {
 //
 // Apply the component to the value x, returning the result.
 // For example, if the component represents a d20 roll with
-// operator "+", then calling its Evaluate method with the value 10
+// operator "+", then calling its evaluate method with the value 10
 // will roll that d20, add its value to 10, and return the result.
 //
-func (d *DieSpec) Evaluate(x int) (int, error) {
+func (d *dieSpec) evaluate(x int) (int, error) {
 	d.History = nil
 	d.WasMaximized = false
 	for i := 0; i <= d.Rerolls; i++ {
@@ -646,11 +647,11 @@ func (d *DieSpec) Evaluate(x int) (int, error) {
 }
 
 //
-// Like Evaluate(x), but if the component involves
+// Like evaluate(x), but if the component involves
 // rolling dice, just assume they come up at their
 // maximum possible values rather than actually rolling.
 //
-func (d *DieSpec) MaxValue(x int) (int, error) {
+func (d *dieSpec) maxValue(x int) (int, error) {
 	d.WasMaximized = true
 	d.History = nil
 	this := []int{}
@@ -673,7 +674,7 @@ func (d *DieSpec) MaxValue(x int) (int, error) {
 // Return the last-generated value for this component
 // without (re-)rolling anything.
 //
-func (d *DieSpec) LastValue() int {
+func (d *dieSpec) lastValue() int {
 	return d.Value
 }
 
@@ -683,7 +684,7 @@ func (d *DieSpec) LastValue() int {
 //
 // The value will be prefixed by ">" if the first die is forced
 // to be maximum.
-func (d *DieSpec) Description() string {
+func (d *dieSpec) description() string {
 	desc := d.Operator
 	if d.InitialMax {
 		desc += ">"
@@ -712,7 +713,7 @@ func (d *DieSpec) Description() string {
 //
 // Returns true if the value rolled for this component was a 1.
 //
-func (d *DieSpec) IsMinRoll() bool {
+func (d *dieSpec) IsMinRoll() bool {
 	return d.Value == 1
 }
 
@@ -720,16 +721,16 @@ func (d *DieSpec) IsMinRoll() bool {
 // Returns true if the value rolled for this component is the same as
 // the number of sides on the die.
 //
-func (d *DieSpec) IsMaxRoll() bool {
+func (d *dieSpec) IsMaxRoll() bool {
 	return d.Value == d.Sides
 }
 
 //
-// Given a DieSpec value, the StructuredDescribeRoll() method
+// Given a dieSpec value, the StructuredDescribeRoll() method
 // returns a detailed description of that component of the roll,
 // as a number of StructuredDescription values.
 //
-func (d *DieSpec) StructuredDescribeRoll() []StructuredDescription {
+func (d *dieSpec) structuredDescribeRoll() []StructuredDescription {
 	var desc []StructuredDescription
 	var roll_type string
 	if d.WasMaximized {
@@ -787,6 +788,7 @@ func (d *DieSpec) StructuredDescribeRoll() []StructuredDescription {
 
 //
 // Constructor for a new set of dice.
+//
 // By default, this creates a d20 you can roll. For other kinds of die rolls,
 // pass the option(s) ByDescription(description), ByDieType(qty, sides, bonus),
 // WithDieBonus(n), WithDiv(n), WithFactor(n), WithGenerator(source), and/or
@@ -883,14 +885,14 @@ func New(options ...newDiceOption) (*Dice, error) {
 		//
 		// expr_parts is a list of alternating operators and values. We have an implied
 		// 0 in front if the list begins with an operator. We'll add that to the list
-		// now if necessary, then run through the list, building up a stack of DieComponents
+		// now if necessary, then run through the list, building up a stack of dieComponents
 		// to represent the expression we were given.
 		//
 		op := "nil"
 		if re_is_op.MatchString(expr_parts[0]) {
 			// We're starting with an operator. Push a 0 with no operator.
 			// then set up the operator to be applied to the next value.
-			d.MultiDice = append(d.MultiDice, &DieConstant{Value: 0})
+			d.multiDice = append(d.multiDice, &dieConstant{Value: 0})
 			op = expr_parts[0]
 			if len(expr_parts)%2 != 0 {
 				// we have a number of values after the split that suggests the expression
@@ -932,7 +934,7 @@ func New(options ...newDiceOption) (*Dice, error) {
 				//
 				x_values = re_constant.FindStringSubmatch(part)
 				if x_values != nil {
-					dc := new(DieConstant)
+					dc := new(dieConstant)
 					dc.Operator = op
 					dc.Value, err = strconv.Atoi(x_values[1])
 					if err != nil {
@@ -942,7 +944,7 @@ func New(options ...newDiceOption) (*Dice, error) {
 						dc.Label = x_values[2]
 					}
 
-					d.MultiDice = append(d.MultiDice, dc)
+					d.multiDice = append(d.multiDice, dc)
 					op = ""
 					continue
 				}
@@ -964,9 +966,9 @@ func New(options ...newDiceOption) (*Dice, error) {
 
 			//
 			// Ok, now let's digest the more complex die-roll spec pattern
-			// and constuct a DieSpec to describe it.
+			// and construct a dieSpec to describe it.
 			//
-			ds := &DieSpec{generator: d.generator}
+			ds := &dieSpec{generator: d.generator}
 			d._onlydie = ds
 			dice_count++
 			if x_values[1] != "" {
@@ -1016,7 +1018,7 @@ func New(options ...newDiceOption) (*Dice, error) {
 				ds.Label = x_values[7]
 			}
 			ds.Operator = op
-			d.MultiDice = append(d.MultiDice, ds)
+			d.multiDice = append(d.multiDice, ds)
 			op = ""
 		}
 		if dice_count != 1 {
@@ -1025,7 +1027,7 @@ func New(options ...newDiceOption) (*Dice, error) {
 	}
 
 	if opts.qty > 0 && opts.sides > 0 {
-		d.MultiDice = append(d.MultiDice, &DieSpec{
+		d.multiDice = append(d.multiDice, &dieSpec{
 			Numerator:   opts.qty,
 			Sides:       opts.sides,
 			DieBonus:    opts.diebonus,
@@ -1034,19 +1036,19 @@ func New(options ...newDiceOption) (*Dice, error) {
 		})
 	}
 	if opts.bonus < 0 {
-		d.MultiDice = append(d.MultiDice, &DieConstant{
+		d.multiDice = append(d.multiDice, &dieConstant{
 			Operator: "-",
 			Value:    -opts.bonus,
 		})
 	} else if opts.bonus > 0 {
-		d.MultiDice = append(d.MultiDice, &DieConstant{
+		d.multiDice = append(d.multiDice, &dieConstant{
 			Operator: "+",
 			Value:    opts.bonus,
 		})
 	}
 
 	if opts.factor != 0 {
-		d.MultiDice = append(d.MultiDice, &DieConstant{
+		d.multiDice = append(d.multiDice, &dieConstant{
 			Operator: "*",
 			Value:    opts.factor,
 		})
@@ -1080,8 +1082,8 @@ func (d *Dice) MaxRollToConfirm(bonus int) (int, error) {
 	d.Rolled = false
 	var err error
 
-	for _, die := range d.MultiDice {
-		roll_sum, err = die.MaxValue(roll_sum)
+	for _, die := range d.multiDice {
+		roll_sum, err = die.maxValue(roll_sum)
 		if err != nil {
 			return 0, err
 		}
@@ -1139,22 +1141,22 @@ func (d *Dice) RollToConfirm(confirm bool, threat int, bonus int) (int, error) {
 	d.Rolled = false
 	var err error
 
-	for _, die := range d.MultiDice {
-		roll_sum, err = die.Evaluate(roll_sum)
+	for _, die := range d.multiDice {
+		roll_sum, err = die.evaluate(roll_sum)
 		if err != nil {
 			return 0, err
 		}
 		// If we happen to be rolling for the first time, leave a
 		// note for the confirming roll as to the natural die value
 		// here.
-		// if NaturalRoll() returns -1, then this whole roll is disqualified
+		// if naturalRoll() returns -1, then this whole roll is disqualified
 		// from confirmation: thus d._natural will be -1 from then on to indicate
 		// that. Otherwise if we end up with multiple nonzero values, we are
 		// also disqualified due to multiple dice involved, also setting
 		// d._natural to -1.
 		// Otherwise d._natural will be 0 (no dice involved at all) or the
 		// single natural die roll we found.
-		the_natural, def_threat := die.NaturalRoll()
+		the_natural, def_threat := die.naturalRoll()
 		if the_natural != 0 {
 			if d._natural == 0 {
 				d._natural, d._defthreat = the_natural, def_threat
@@ -1181,8 +1183,8 @@ func (d *Dice) RollToConfirm(confirm bool, threat int, bonus int) (int, error) {
 // Produce a human-readable description of the die roll specification represented
 // by the Dice object
 func (d *Dice) Description() (desc string) {
-	for _, die := range d.MultiDice {
-		desc += die.Description()
+	for _, die := range d.multiDice {
+		desc += die.description()
 	}
 	if d.MinValue > 0 {
 		desc += fmt.Sprintf(" min %d", d.MinValue)
@@ -1231,8 +1233,8 @@ func (d *Dice) StructuredDescribeRoll(sfOpt, successMessage, failureMessage stri
 		StructuredDescription{Type: "result", Value: strconv.Itoa(d.LastValue)},
 		StructuredDescription{Type: "separator", Value: "="},
 	)
-	for _, die := range d.MultiDice {
-		desc = append(desc, die.StructuredDescribeRoll()...)
+	for _, die := range d.multiDice {
+		desc = append(desc, die.structuredDescribeRoll()...)
 	}
 	if rollBonus != 0 {
 		desc = append(desc, StructuredDescription{Type: "bonus", Value: fmt.Sprintf("%+d", rollBonus)})
@@ -2103,8 +2105,8 @@ func (d *DieRoller) isNatural(checkForMax bool) (result bool) {
 		return
 	}
 
-	for _, die := range d.d.MultiDice {
-		naturalRoll, sides := die.NaturalRoll()
+	for _, die := range d.d.multiDice {
+		naturalRoll, sides := die.naturalRoll()
 		if sides > 0 {
 			if result {
 				// too many dice!
@@ -2205,7 +2207,7 @@ func (sr StructuredDescriptionSet) Text() (string, error) {
 	return t.String(), nil
 }
 
-// @[00]@| GMA 4.3.1
+// @[00]@| GMA 4.3.2
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.

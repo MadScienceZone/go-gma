@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___       ______       __                  #
-# (  ____ \(       )(  ___  )              /   )     / ___  \     /  \                 #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \    \/) )                #
-# | |      | || || || (___) |            / (_) (_       ___) /      | |                #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (       | |                #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \      | |                #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _  __) (_               #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \____/               #
+#  _______  _______  _______                ___       ______      _______              #
+# (  ____ \(       )(  ___  )              /   )     / ___  \    / ___   )             #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \   \/   )  |             #
+# | |      | || || || (___) |            / (_) (_       ___) /       /   )             #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (      _/   /              #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \    /   _/               #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ (   (__/\             #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_)\_______/             #
 #                                                                                      #
 ########################################################################################
 */
@@ -189,10 +189,10 @@ func TestDiceHistories(t *testing.T) {
 
 	d.Roll()
 	s := 0
-	for i, die := range d.MultiDice {
-		s += die.LastValue()
-		if die.GetOperator() != "" && die.GetOperator() != "+" {
-			t.Fatalf("Die #%d operator is %s", i, die.GetOperator())
+	for i, die := range d.multiDice {
+		s += die.lastValue()
+		if die.getOperator() != "" && die.getOperator() != "+" {
+			t.Fatalf("Die #%d operator is %s", i, die.getOperator())
 		}
 	}
 	if s != d.LastValue {
@@ -1646,7 +1646,7 @@ func TestDiceStructured(t *testing.T) {
 	}
 }
 
-// @[00]@| GMA 4.3.1
+// @[00]@| GMA 4.3.2
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.

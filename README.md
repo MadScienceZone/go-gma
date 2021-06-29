@@ -22,12 +22,10 @@ map server) to Go for increased stability and performance, which we will
 release as open source ahead of the rest of GMA, since it's independent
 of the generalization issues that are gating the release of GMA.
 
-To support this, the `go-gma` repositoy holds parts of the core GMA API
+To support this, the `go-gma` repository holds parts of the core GMA API
 needed by the map server.
 
 ## Versioning
 We are keeping the version numbers for this project in sync with
 the main GMA project, so version _x_._y_._z_ of `go-gma` will always
-be compatible with version _x_._y_._z_ of `gma`. (GMA itself is currently
-an unreleased project. We plan to open source it eventually, but it's not yet
-ready for general use outside our local gaming group.)
+be compatible with version _x_._y_._z_ of `gma`.
