@@ -1,4 +1,4 @@
-module github.com/fizban-of-ragnarok/go-gma/dice
+module github.com/fizban-of-ragnarok/go-gma/dice/v4
 
 go 1.16
 
