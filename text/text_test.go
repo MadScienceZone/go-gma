@@ -250,66 +250,98 @@ And this is after the table.`, false, nil},
 		} else if test.out != v {
 			t.Errorf("Case %d: %v -> %v but expected %v", i, test.in, v, test.out)
 		}
+	}
+}
+
+func TestMarkupTextHTML(t *testing.T) {
+	type testcase struct {
+		in   string
+		out  string
+		err  bool
+		opts []renderOpts
+	}
+
+	for i, test := range []testcase{
+		{"foo", "<P>foo</P>", false, nil},
+		{"", "<P></P>", false, nil},
+		{"foo\nbar", "<P>foo bar</P>", false, nil},
+		{"foo\n\nbar", "<P>foo</P><P>bar</P>", false, nil},
+		{"\n\nfoo", "<P>foo</P>", false, nil},
+		{`foo\\bar`, "<P>foo<BR/>bar</P>", false, nil},
+		{"aa//bb//cc", "<P>aa<I>bb</I>cc</P>", false, nil},
+		{"aa**bb**cc", "<P>aa<B>bb</B>cc</P>", false, nil},
+		{"aa**bb", "<P>aa<B>bb</B></P>", false, nil},
+		{"a//b**c**d//e", "<P>a<I>b<B>c</B>d</I>e</P>", false, nil},
+		{"a //b **c //d **e", "<P>a <I>b <B>c </I>d </B>e</P>", false, nil},
+		{"a[[b]]d", "<P>a<A HREF=\"B\">b</A>d</P>", false, nil},
+		{"a[[b|c]]d", "<P>a<A HREF=\"B\">c</A>d</P>", false, nil},
+		{"a //it b\nc\\\\de//f", "<P>a <I>it b c<BR/>de</I>f</P>", false, nil},
+		{"a //it b\nc\n\nde//f", "<P>a <I>it b c</I></P><P>de<I>f</I></P>", false, nil},
+		{`This is a bullet list:
+*Item One
+*Item //Tw//o
+*Item Three
+ * this is not a\\bullet list
+*But this is
+**and a sub-list
+*** and sub-sub-list
+
+And this should start a new list:
+*Not that you can tell with bullets.
+`, "<P>This is a bullet list:<UL><LI>Item One<LI>Item <I>Tw</I>o<LI>Item Three * this is not a<BR/>bullet list<LI>But this is<UL><LI>and a sub-list<UL><LI>and sub-sub-list</UL></UL></UL></P><P>And this should start a new list:<UL><LI>Not that you can tell with bullets.</UL></P>", false, nil},
+		{`This is a bullet list:
+*Item One
+*Item //Tw//o
+*Item Three
+ * this is not a\\bullet list
+*But this is
+**and a sub-list
+*** and sub-sub-list
+**** four
+
+And this should start a new list:
+*Not that you can tell with bullets.
+`, "<P>This is a bullet list:<UL style='list-style-type:\"\\2022\";'><LI>Item One<LI>Item <I>Tw</I>o<LI>Item Three * this is not a<BR/>bullet list<LI>But this is<UL style='list-style-type:\"\\2023\";'><LI>and a sub-list<UL style='list-style-type:\"\\25E6\";'><LI>and sub-sub-list<UL style='list-style-type:\"\\2022\";'><LI>four</UL></UL></UL></UL></P><P>And this should start a new list:<UL style='list-style-type:\"\\2022\";'><LI>Not that you can tell with bullets.</UL></P>", false, []renderOpts{WithBullets('•', '‣', '◦')}},
+		{`This is a numbered list:
+#Item One
+#Item Two
+#Item Three
+ # this is not a\\bullet list
+#But this is
+##and a sub-list
+### and sub-sub-list
+
+And this should start a new list:
+#and this should be re-sequenced.
+`, "<P>This is a numbered list:<OL style=\"list-style-type: decimal;\"><LI>Item One<LI>Item Two<LI>Item Three # this is not a<BR/>bullet list<LI>But this is<OL style=\"list-style-type: lower-alpha;\"><LI>and a sub-list<OL style=\"list-style-type: lower-roman;\"><LI>and sub-sub-list</OL></OL></OL></P><P>And this should start a new list:<OL style=\"list-style-type: decimal;\"><LI>and this should be re-sequenced.</OL></P>", false, nil},
+		{`Table test:
+|=Column A|=Column B|
+|left     |    right|
+|  center |filled|
+|  aaa    |   bbb
+And this is after the table.`, "<P>Table test:<TABLE BORDER=1><TR><TH ALIGN=LEFT>Column A</TH><TH ALIGN=LEFT>Column B</TH></TR><TR><TD ALIGN=LEFT>left</TD><TD ALIGN=RIGHT>right</TD></TR><TR><TD ALIGN=CENTER>center</TD><TD ALIGN=LEFT>filled</TD></TR><TR><TD ALIGN=CENTER>aaa</TD><TD ALIGN=RIGHT>bbb</TD></TR></TABLE>And this is after the table.</P>", false, nil},
+		{`Table test:
+|=Column A|=Column B|=Column C|
+|left     |    right| some stuff |
+|  center |filled and extended to the other |-
+|  aaa and |-   |   bbb
+And this is after the table.`, "<P>Table test:<TABLE BORDER=1><TR><TH ALIGN=LEFT>Column A</TH><TH ALIGN=LEFT>Column B</TH><TH ALIGN=LEFT>Column C</TH></TR><TR><TD ALIGN=LEFT>left</TD><TD ALIGN=RIGHT>right</TD><TD ALIGN=CENTER>some stuff</TD></TR><TR><TD ALIGN=CENTER>center</TD><TD ALIGN=LEFT COLSPAN=2>filled and extended to the other</TD></TR><TR><TD ALIGN=CENTER COLSPAN=2>aaa and</TD><TD ALIGN=RIGHT>bbb</TD></TR></TABLE>And this is after the table.</P>", false, nil},
+	} {
+		test.opts = append(test.opts, AsHTML)
+		v, err := Render(test.in, test.opts...)
+		if err != nil && !test.err {
+			t.Errorf("Case %d: unexpected error: %v", i, err)
+		} else if err == nil && test.err {
+			t.Errorf("Case %d: error expected but not found", i)
+		} else if test.out != v {
+			t.Errorf("Case %d: %v -> %v but expected %v", i, test.in, v, test.out)
+		}
 		/*
 			            self.maxDiff= None
 			            self.assertMultiLineEqual(MarkupText(source).render(), expected)
 
 			    def test_html(self):
 			        for source, expected in (
-			            ('foo',        '<P>foo</P>'),
-			            ('',           '<P></P>'),
-			            ('foo\nbar',   '<P>foo bar</P>'),
-			            ('foo\n\nbar', '<P>foo</P><P>bar</P>'),
-			            ('\n\nfoo',    '<P>foo</P>'),
-			            (r'foo\\bar',  '<P>foo<BR/>bar</P>'),
-			            ('aa//bb//cc', '<P>aa<I>bb</I>cc</P>'),
-			            ('aa**bb**cc', '<P>aa<B>bb</B>cc</P>'),
-			            ('aa**bb',     '<P>aa<B>bb</B></P>'),
-			            ('a//b**c**d//e', '<P>a<I>b<B>c</B>d</I>e</P>'),
-			            ('a //b **c //d **e', '<P>a <I>b <B>c </I>d </B>e</P>'),
-			            ('a[[b]]d',    '<P>a<A HREF="B">b</A>d</P>'),
-			            ('a[[b|c]]d',  '<P>a<A HREF="B">c</A>d</P>'),
-			            ('a //it b\nc\\\\de//f', '<P>a <I>it b c<BR/>de</I>f</P>'),
-			            ('a //it b\nc\n\nde//f', '<P>a <I>it b c</I></P><P>de<I>f</I></P>'),
-			            ('''This is a bullet list:
-			*Item One
-			*Item //Tw//o
-			*Item Three
-			 * this is not a\\\\bullet list
-			*But this is
-			**and a sub-list
-			*** and sub-sub-list
-
-			And this should start a new list:
-			*Not that you can tell with bullets.
-			''', '''<P>This is a bullet list:<UL><LI>Item One<LI>Item <I>Tw</I>o<LI>Item Three * this is not a<BR/>bullet list<LI>But this is<UL><LI>and a sub-list<UL><LI>and sub-sub-list</UL></UL></UL></P><P>And this should start a new list:<UL><LI>Not that you can tell with bullets.</UL></P>'''),
-			            ('''This is a numbered list:
-			#Item One
-			#Item Two
-			#Item Three
-			 # this is not a\\\\bullet list
-			#But this is
-			##and a sub-list
-			### and sub-sub-list
-
-			And this should start a new list:
-			#and this should be re-sequenced.
-			''', '''<P>This is a numbered list:<OL><LI>Item One<LI>Item Two<LI>Item Three # this is not a<BR/>bullet list<LI>But this is<OL><LI>and a sub-list<OL><LI>and sub-sub-list</OL></OL></OL></P><P>And this should start a new list:<OL><LI>and this should be re-sequenced.</OL></P>'''),
-			            ('''Table test:
-			|=Column A|=Column B|
-			|left     |    right|
-			|  center |filled|
-			|  aaa    |   bbb
-			And this is after the table.''', '''<P>Table test:<TABLE BORDER=1><TR><TH ALIGN=LEFT>Column A</TH><TH ALIGN=LEFT>Column B</TH></TR><TR><TD ALIGN=LEFT>left</TD><TD ALIGN=RIGHT>right</TD></TR><TR><TD ALIGN=CENTER>center</TD><TD ALIGN=LEFT>filled</TD></TR><TR><TD ALIGN=CENTER>aaa</TD><TD ALIGN=RIGHT>bbb</TD></TR></TABLE>And this is after the table.</P>'''),
-			            ('''Table test:
-			|=Column A|=Column B|=Column C|
-			|left     |    right| some stuff |
-			|  center |filled and extended to the other |-
-			|  aaa and |-   |   bbb
-			And this is after the table.''', '''<P>Table test:<TABLE BORDER=1><TR><TH ALIGN=LEFT>Column A</TH><TH ALIGN=LEFT>Column B</TH><TH ALIGN=LEFT>Column C</TH></TR><TR><TD ALIGN=LEFT>left</TD><TD ALIGN=RIGHT>right</TD><TD ALIGN=CENTER>some stuff</TD></TR><TR><TD ALIGN=CENTER>center</TD><TD ALIGN=LEFT COLSPAN=2>filled and extended to the other</TD></TR><TR><TD ALIGN=CENTER COLSPAN=2>aaa and</TD><TD ALIGN=RIGHT>bbb</TD></TR></TABLE>And this is after the table.</P>'''),
-			        ):
-			            self.maxDiff = None
-			            self.assertMultiLineEqual(MarkupText(source).render(HTMLFormatter()), expected)
 
 			    # output is list of [pre, [str, ...], post] chunks
 

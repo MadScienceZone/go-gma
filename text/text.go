@@ -148,6 +148,11 @@ func AsPlainText(o *renderOptSet) {
 	o.formatter = &renderPlainTextFormatter{}
 }
 
+// Select HTML text output format
+func AsHTML(o *renderOptSet) {
+	o.formatter = &renderHTMLFormatter{}
+}
+
 //
 // Specify a custom set of bullet characters
 // to use for bulleted lists. The bullets passed
@@ -170,6 +175,7 @@ func WithBullets(bullets ...rune) renderOpts {
 // the marked up source text.
 //
 type renderingFormatter interface {
+	init()
 	newPar()
 	process(text string)
 	finalize() string
@@ -197,6 +203,8 @@ type renderPlainTextFormatter struct {
 	ital   bool
 	bold   bool
 }
+
+func (f *renderPlainTextFormatter) init() {}
 
 func (f *renderPlainTextFormatter) setItal(b bool) {
 	f.ital = b
@@ -228,6 +236,9 @@ func (f *renderPlainTextFormatter) newPar() {
 }
 
 func (f *renderPlainTextFormatter) bulletListItem(level int, bullet rune) {
+	if bullet == 0 {
+		bullet = '*'
+	}
 	fmt.Fprintf(&f.buf, "\n%*s%c  ", (level-1)*3, "", bullet)
 	f.indent = level
 }
@@ -328,6 +339,146 @@ func (f *renderPlainTextFormatter) table(t *textTable) {
 	f.buf.WriteString("+\n")
 }
 
+//
+//  _   _ _____ __  __ _
+// | | | |_   _|  \/  | |
+// | |_| | | | | |\/| | |
+// |  _  | | | | |  | | |___
+// |_| |_| |_| |_|  |_|_____|
+//
+// HTML output formatter
+//
+type renderHTMLFormatter struct {
+	buf       strings.Builder
+	indent    int
+	ital      bool
+	bold      bool
+	listStack []string
+}
+
+func (f *renderHTMLFormatter) init() {
+	f.buf.WriteString("<P>")
+	f.listStack = make([]string, 0, 4)
+}
+
+func (f *renderHTMLFormatter) cancelStyles() {
+	if f.ital {
+		f.setItal(false)
+	}
+	if f.bold {
+		f.setBold(false)
+	}
+}
+
+func (f *renderHTMLFormatter) setItal(b bool) {
+	if b {
+		f.buf.WriteString("<I>")
+	} else {
+		f.buf.WriteString("</I>")
+	}
+	f.ital = b
+}
+
+func (f *renderHTMLFormatter) setBold(b bool) {
+	if b {
+		f.buf.WriteString("<B>")
+	} else {
+		f.buf.WriteString("</B>")
+	}
+	f.bold = b
+}
+
+func (f *renderHTMLFormatter) process(text string) {
+	f.buf.WriteString(text)
+}
+
+func (f *renderHTMLFormatter) finalize() string {
+	f.endPar()
+	return f.buf.String()
+}
+
+func (f *renderHTMLFormatter) reference(desc, link string) {
+	fmt.Fprintf(&f.buf, "<A HREF=\"%s\">%s</A>", strings.ToUpper(link), desc)
+}
+
+func (f *renderHTMLFormatter) endPar() {
+	f.indent = 0
+	f.cancelStyles()
+	f.levelSet(0, "", "")
+	f.buf.WriteString("</P>")
+}
+
+func (f *renderHTMLFormatter) levelSet(level int, tag string, extra string) {
+	for level > len(f.listStack) {
+		if tag == "" {
+			tag = "UL"
+		}
+		if extra == "" {
+			fmt.Fprintf(&f.buf, "<%s>", tag)
+		} else {
+			fmt.Fprintf(&f.buf, "<%s %s>", tag, extra)
+		}
+		f.listStack = append(f.listStack, fmt.Sprintf("</%s>", tag))
+	}
+	for level < len(f.listStack) {
+		f.buf.WriteString(f.listStack[len(f.listStack)-1])
+		f.listStack = f.listStack[:len(f.listStack)-1]
+	}
+}
+
+func (f *renderHTMLFormatter) newLine() {
+	f.buf.WriteString("<BR/>")
+}
+
+func (f *renderHTMLFormatter) newPar() {
+	f.endPar()
+	f.buf.WriteString("<P>")
+}
+
+func (f *renderHTMLFormatter) bulletListItem(level int, bullet rune) {
+	if bullet == 0 {
+		f.levelSet(level, "UL", "")
+	} else {
+		f.levelSet(level, "UL", fmt.Sprintf("style='list-style-type:\"\\%X\";'", bullet))
+	}
+	f.buf.WriteString("<LI>")
+}
+
+func (f *renderHTMLFormatter) enumListItem(level, counter int) {
+	f.levelSet(level, "OL", fmt.Sprintf("style=\"list-style-type: %s;\"", enumType(level)))
+	f.buf.WriteString("<LI>")
+}
+
+func (f *renderHTMLFormatter) table(t *textTable) {
+	f.buf.WriteString("<TABLE BORDER=1>")
+	for _, row := range t.rows {
+		f.buf.WriteString("<TR>")
+		for _, col := range row {
+			if col != nil {
+				td := "TD"
+				al := "LEFT"
+				cs := ""
+				if col.header {
+					td = "TH"
+				}
+				if col.align == '^' {
+					al = "CENTER"
+				} else if col.align == '>' {
+					al = "RIGHT"
+				}
+				if col.span > 0 {
+					cs = fmt.Sprintf(" COLSPAN=%d", col.span+1)
+				}
+
+				fmt.Fprintf(&f.buf, "<%s ALIGN=%s%s>%s</%s>",
+					td, al, cs, col.text, td)
+			}
+		}
+		f.buf.WriteString("</TR>")
+	}
+	f.buf.WriteString("</TABLE>")
+}
+
 //  ___                   _     ____
 // |_ _|_ __  _ __  _   _| |_  |  _ \ __ _ _ __ ___  ___ _ __
 //  | || '_ \| '_ \| | | | __| | |_) / _` | '__/ __|/ _ \ '__|
@@ -423,9 +574,25 @@ func newTableCell(text string) *tableCell {
 }
 
 //
-// General-purpose function to generate enumerated list
-// numbering regardless of output format
+// General-purpose functions to generate enumerated list
+// numbering.
 //
+func enumType(level int) string {
+	switch (level - 1) % 5 {
+	case 0:
+		return "decimal"
+	case 1:
+		return "lower-alpha"
+	case 2:
+		return "lower-roman"
+	case 3:
+		return "upper-alpha"
+	case 4:
+		return "upper-roman"
+	}
+	return "decimal"
+}
+
 func enumVal(level, value int) string {
 	switch (level - 1) % 5 {
 	case 0:
@@ -468,6 +635,7 @@ func enumVal(level, value int) string {
 // include these which select the overall output format:
 //   AsPlainText  -- render a text-only version of the input
 //                   (this is the default)
+//   AsHTML       -- render an HTML version of the input
 //
 // and these options to control specific formatting in the selected
 // output format:
@@ -554,7 +722,7 @@ func enumVal(level, value int) string {
 func Render(text string, opts ...renderOpts) (string, error) {
 	ops := renderOptSet{
 		formatter: &renderPlainTextFormatter{},
-		bulletSet: []rune{'*'},
+		bulletSet: []rune{0},
 	}
 	for _, o := range opts {
 		o(&ops)
@@ -639,6 +807,7 @@ func Render(text string, opts ...renderOpts) (string, error) {
 	bold := false
 	firstPar := true
 	var currentTable *textTable
+	ops.formatter.init()
 
 	for _, par := range paragraphs {
 		firstLine := true
