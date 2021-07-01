@@ -39,8 +39,8 @@
 //
 // While this is obviously convenient for Tcl programs in  that  they  can
 // take  such strings and natively use them as lists of values, it is also
-// useful generally in that it is a simple string representation of a sim‐
-// ple  data  structure.  The  actual  definition of this string format is
+// useful generally in that it is a simple string representation of a simple
+// data  structure.  The  actual  definition of this string format is
 // included below.
 //
 // The tcllist Go package provides an easy interface to manipulate
@@ -52,8 +52,8 @@
 //
 // TCL LIST FORMAT
 //
-// In  a  nutshell,  a  Tcl  list (as a string representation) is a space-
-// delimited list of values. Any value which includes spaces  is  enclosed
+// In  a  nutshell,  a  Tcl  list (as a string representation) is a space-delimited
+// list of values. Any value which includes spaces  is  enclosed
 // in  curly braces.  An empty string (empty list) as an element in a list
 // is represented as “{}”.  (E.g., “1 {} 2” is a list of  three  elements,
 // the  middle of which is an empty string.) An entirely empty Tcl list is
@@ -66,8 +66,7 @@
 // or another in the code. Thus, the list
 // 	  “a b {this {is a} string}”
 // has three elements: “a”, “b”, and “this {is a} string”.   Otherwise,  a
-// lone brace that's part of a string value should be escaped with a back‐
-// slash:
+// lone brace that's part of a string value should be escaped with a backslash:
 // 	  “a b {this \{ too}”
 //
 // Literal backslashes may be escaped with a backslash as well.
@@ -399,7 +398,7 @@ func ToTclString(listval []string) (string, error) {
 // as well as an error (if something went wrong).
 //
 // Note that this only parses a single nesting level of elements,
-// since with Tcl lists it is impossible to distintuish an element
+// since with Tcl lists it is impossible to distinguish an element
 // which happens to contain spaces from a nested list of values. It
 // is simply up to the program to use the element as a string or as
 // a sublist, so in the latter case you'll need to call ParseTclList

@@ -61,7 +61,7 @@
 //     a := &Authenticator{Secret: my_secret_value}
 //
 // The client then obtains a challenge from the server in the form of a base-64-encoded
-// string, which is passes to the AcceptChallenge() method:
+// string, which is passed to the AcceptChallenge() method:
 //     response, err := a.AcceptChallenge(server_challenge_string)
 // This provides the response to send back to the server in order to log in.
 //
@@ -107,7 +107,7 @@
 //
 // PROTOCOL
 //
-// Although the `auth` package itself isn't involved in the client/server protocol
+// Although the auth package itself isn't involved in the client/server protocol
 // directly, the way it is used by the map server and its clients uses the following
 // protocol:
 //
@@ -117,7 +117,7 @@
 // algorithm described above)
 //
 //  AUTH response [user client]
-// The client's response it sent with this line, where response is the base-64
+// The client's response is sent with this line, where response is the base-64
 // encoded representation of the response to the challenge (D above), and the user and
 // client values are the desired user name and description of the client program.
 //
@@ -172,11 +172,18 @@ type Authenticator struct {
 }
 
 //
-// Change the secret (for when we know the username
-// they are logging in as and that user has their own
-// password). This disables GM logins. If the client's
-// response is correct, they will be authenticated as
-// a non-privileged user.
+// Change the non-GM secret and disable GM logins for this
+// authenticator.
+//
+// This is typically used on the server's side when it
+// determines that the user trying to authenticate has
+// their own password configured, so it calls SetSecret
+// with that personal password. Subsequent calls to
+// ValidateResponse will be based on this personal
+// password.
+//
+// GM logins are disabled since the GM already has their
+// own password, so this feature would not apply to them.
 //
 func (a *Authenticator) SetSecret(secret []byte) {
 	a.GmSecret = []byte{}
