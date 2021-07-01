@@ -120,29 +120,129 @@ func TestFromRoman(t *testing.T) {
 
 func TestMarkupTextNull(t *testing.T) {
 	type testcase struct {
-		in  string
-		out string
-		err bool
+		in   string
+		out  string
+		err  bool
+		opts []renderOpts
 	}
 
 	for i, test := range []testcase{
-		{"foo", "foo", false},
-		{"", "", false},
-		{"foo\nbar", "foo bar", false},
-		{"foo\n\nbar", "foo\n\nbar", false},
-		{"\n\nfoo", "foo", false},
-		{"foo\\\\bar", "foo\nbar", false},
-		{"aa//bb//cc", "aabbcc", false},
-		{"aa**bb**cc", "aabbcc", false},
-		{"aa**bb", "aabb", false},
-		{"a//b**c**d//e", "abcde", false},
-		{"a //b **c //d **e", "a b c d e", false},
-		{"a[[b]]d", "abd", false},
-		{"a[[b|c]]d", "acd", false},
-		{"a //it b\nc\\\\de//f", "a it b c\ndef", false},
-		{"a //it b\nc\n\nde//f", "a it b c\n\ndef", false},
+		{"foo", "foo", false, nil},
+		{"", "", false, nil},
+		{"foo\nbar", "foo bar", false, nil},
+		{"foo\n\nbar", "foo\n\nbar", false, nil},
+		{"\n\nfoo", "foo", false, nil},
+		{"foo\\\\bar", "foo\nbar", false, nil},
+		{"aa//bb//cc", "aabbcc", false, nil},
+		{"aa**bb**cc", "aabbcc", false, nil},
+		{"aa**bb", "aabb", false, nil},
+		{"a//b**c**d//e", "abcde", false, nil},
+		{"a //b **c //d **e", "a b c d e", false, nil},
+		{"a[[b]]d", "abd", false, nil},
+		{"a[[b|c]]d", "acd", false, nil},
+		{"a //it b\nc\\\\de//f", "a it b c\ndef", false, nil},
+		{"a //it b\nc\n\nde//f", "a it b c\n\ndef", false, nil},
+		{`This is a bullet list:
+*Item One
+*Item //Tw//o
+*Item Three
+  * this is not a\\bullet list
+*But this is
+**and a sub-list
+*** and sub-sub-list
+
+And this should start a new list:
+*Not that you can tell with bullets.
+`, `This is a bullet list:
+*  Item One
+*  Item Two
+*  Item Three * this is not a
+   bullet list
+*  But this is
+   *  and a sub-list
+      *  and sub-sub-list
+
+And this should start a new list:
+*  Not that you can tell with bullets.`, false, nil},
+		{`This is a bullet list:
+*Item One
+*Item //Tw//o
+*Item Three
+  * this is not a\\bullet list
+*But this is
+**and a sub-list
+*** and sub-sub-list
+****But this is
+*****and a sub-list
+
+And this should start a new list:
+*Not that you can tell with bullets.
+`, `This is a bullet list:
+•  Item One
+•  Item Two
+•  Item Three * this is not a
+   bullet list
+•  But this is
+   ‣  and a sub-list
+      ◦  and sub-sub-list
+         •  But this is
+            ‣  and a sub-list
+
+And this should start a new list:
+•  Not that you can tell with bullets.`, false, []renderOpts{WithBullets('•', '‣', '◦')}},
+		{`This is a numbered list:
+#Item One
+#Item Two
+#Item Three
+ # this is not a\\bullet list
+#But this is
+##and a sub-list
+### and sub-sub-list
+
+And this should start a new list:
+#and this should be re-sequenced.
+`, `This is a numbered list:
+1. Item One
+2. Item Two
+3. Item Three # this is not a
+   bullet list
+4. But this is
+   a. and a sub-list
+      i. and sub-sub-list
+
+And this should start a new list:
+1. and this should be re-sequenced.`, false, nil},
+		{`Table test:
+|=Column A|=Column B|
+|left     |    right|
+|  center |filled|
+|  aaa    |   bbb
+And this is after the table.`, `Table test:
++----------+----------+
+| COLUMN A | COLUMN B |
++----------+----------+
+| left     |    right |
+|  center  | filled   |
+|   aaa    |      bbb |
++----------+----------+
+And this is after the table.`, false, nil},
+		{`Table test:
+|=Column A|=Column B|=Column C|
+|left     |    right| some other |
+|  center |filled and more stuff too |-
+|  aaa and |-  |   bbb
+And this is after the table.`, `Table test:
++----------+------------+--------------+
+| COLUMN A |  COLUMN B  |   COLUMN C   |
++----------+------------+--------------+
+| left     |      right |  some other  |
+|  center  | filled and more stuff too |
+|        aaa and        |          bbb |
++----------+------------+--------------+
+And this is after the table.`, false, nil},
 	} {
-		v, err := Render(test.in, AsPlainText)
+		test.opts = append(test.opts, AsPlainText)
+		v, err := Render(test.in, test.opts...)
 		if err != nil && !test.err {
 			t.Errorf("Case %d: unexpected error: %v", i, err)
 		} else if err == nil && test.err {
@@ -151,79 +251,6 @@ func TestMarkupTextNull(t *testing.T) {
 			t.Errorf("Case %d: %v -> %v but expected %v", i, test.in, v, test.out)
 		}
 		/*
-			            {'''This is a bullet list:
-			*Item One
-			*Item //Tw//o
-			*Item Three
-			 * this is not a\\\\bullet list
-			*But this is
-			**and a sub-list
-			*** and sub-sub-list
-
-			And this should start a new list:
-			*Not that you can tell with bullets.
-			''', '''This is a bullet list:
-			*  Item One
-			*  Item Two
-			*  Item Three * this is not a
-			   bullet list
-			*  But this is
-			   *  and a sub-list
-			      *  and sub-sub-list
-
-			And this should start a new list:
-			*  Not that you can tell with bullets.'''),
-			            ('''This is a numbered list:
-			#Item One
-			#Item Two
-			#Item Three
-			 # this is not a\\\\bullet list
-			#But this is
-			##and a sub-list
-			### and sub-sub-list
-
-			And this should start a new list:
-			#and this should be re-sequenced.
-			''', '''This is a numbered list:
-			1. Item One
-			2. Item Two
-			3. Item Three # this is not a
-			   bullet list
-			4. But this is
-			   a. and a sub-list
-			      i. and sub-sub-list
-
-			And this should start a new list:
-			1. and this should be re-sequenced.'''),
-			            ('''Table test:
-			|=Column A|=Column B|
-			|left     |    right|
-			|  center |filled|
-			|  aaa    |   bbb
-			And this is after the table.''', '''Table test:
-			+----------+----------+
-			| COLUMN A | COLUMN B |
-			+----------+----------+
-			| left     |    right |
-			|  center  | filled   |
-			|   aaa    |      bbb |
-			+----------+----------+
-			And this is after the table.'''),
-			            ('''Table test:
-			|=Column A|=Column B|=Column C|
-			|left     |    right| some other |
-			|  center |filled and more stuff too |-
-			|  aaa and |-  |   bbb
-			And this is after the table.''', '''Table test:
-			+----------+------------+--------------+
-			| COLUMN A |  COLUMN B  |   COLUMN C   |
-			+----------+------------+--------------+
-			| left     |      right |  some other  |
-			|  center  | filled and more stuff too |
-			|        aaa and        |          bbb |
-			+----------+------------+--------------+
-			And this is after the table.'''),
-			        ):
 			            self.maxDiff= None
 			            self.assertMultiLineEqual(MarkupText(source).render(), expected)
 

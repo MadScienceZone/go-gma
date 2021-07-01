@@ -25,6 +25,27 @@ import (
 	"unicode"
 )
 
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func sum(ints ...int) int {
+	s := 0
+	for _, v := range ints {
+		s += v
+	}
+	return s
+}
+
+//  ____                               _   _                                _
+// |  _ \ ___  _ __ ___   __ _ _ __   | \ | |_   _ _ __ ___   ___ _ __ __ _| |___
+// | |_) / _ \| '_ ` _ \ / _` | '_ \  |  \| | | | | '_ ` _ \ / _ \ '__/ _` | / __|
+// |  _ < (_) | | | | | | (_| | | | | | |\  | |_| | | | | | |  __/ | | (_| | \__ \
+// |_| \_\___/|_| |_| |_|\__,_|_| |_| |_| \_|\__,_|_| |_| |_|\___|_|  \__,_|_|___/
+//
 type romanTableEntry struct {
 	i int
 	r string
@@ -103,25 +124,70 @@ func FromRoman(roman string) (int, error) {
 	return v, nil
 }
 
+//==================================================================
+//  _____ _______  _______   __  __    _    ____  _  ___   _ ____
+// |_   _| ____\ \/ /_   _| |  \/  |  / \  |  _ \| |/ / | | |  _ \
+//   | | |  _|  \  /  | |   | |\/| | / _ \ | |_) | ' /| | | | |_) |
+//   | | | |___ /  \  | |   | |  | |/ ___ \|  _ <| . \| |_| |  __/
+//   |_| |_____/_/\_\ |_|   |_|  |_/_/   \_\_| \_\_|\_\\___/|_|
+//
+
+//
+// Options to the Render() function are tracked in
+// this structure.
+//
 type renderOptSet struct {
 	formatter renderingFormatter
+	bulletSet []rune
 }
 
+type renderOpts func(*renderOptSet)
+
+// Select plain text output format
+func AsPlainText(o *renderOptSet) {
+	o.formatter = &renderPlainTextFormatter{}
+}
+
+//
+// Specify a custom set of bullet characters
+// to use for bulleted lists. The bullets passed
+// to this option are used in order, then the list
+// repeats over as necessary for additional levels.
+//
+// Example:
+//  formattedText, err := Render(srcText, AsPlainText, WithBullets('*', '-'))
+// This will alternate between '*' and '-' as bullets at each level.
+//
+func WithBullets(bullets ...rune) renderOpts {
+	return func(o *renderOptSet) {
+		o.bulletSet = bullets
+	}
+}
+
+//
+// Each output formatter must supply these methods
+// which the Render() function will invoke as it parses
+// the marked up source text.
+//
 type renderingFormatter interface {
-	//enum_val(level, value, style)
 	newPar()
 	process(text string)
 	finalize() string
-	//toggleItal()
 	setBold(on bool)
 	setItal(on bool)
 	newLine()
 	table(*textTable)
 	reference(displayName, linkName string)
-	bulletListItem(level int)
+	bulletListItem(level int, bullet rune)
 	enumListItem(level, counter int)
 }
 
+//
+//  ____  _       _     _____         _
+// |  _ \| | __ _(_)_ _|_   _|____  _| |_
+// | |_) | |/ _` | | '_ \| |/ _ \ \/ / __|
+// |  __/| | (_| | | | | | |  __/>  <| |_
+// |_|   |_|\__,_|_|_| |_|_|\___/_/\_\\__|
 //
 // Plain Text output formatter
 //
@@ -161,13 +227,13 @@ func (f *renderPlainTextFormatter) newPar() {
 	f.indent = 0
 }
 
-func (f *renderPlainTextFormatter) bulletListItem(level int) {
-	fmt.Fprintf(&f.buf, "\n%*s*  ", level-1, "")
+func (f *renderPlainTextFormatter) bulletListItem(level int, bullet rune) {
+	fmt.Fprintf(&f.buf, "\n%*s%c  ", (level-1)*3, "", bullet)
 	f.indent = level
 }
 
 func (f *renderPlainTextFormatter) enumListItem(level, counter int) {
-	fmt.Fprintf(&f.buf, "\n%*s%s. ", level-1, "", enumVal(level, counter))
+	fmt.Fprintf(&f.buf, "\n%*s%s. ", (level-1)*3, "", enumVal(level, counter))
 	f.indent = level
 }
 
@@ -262,21 +328,104 @@ func (f *renderPlainTextFormatter) table(t *textTable) {
 	f.buf.WriteString("+\n")
 }
 
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
+//  ___                   _     ____
+// |_ _|_ __  _ __  _   _| |_  |  _ \ __ _ _ __ ___  ___ _ __
+//  | || '_ \| '_ \| | | | __| | |_) / _` | '__/ __|/ _ \ '__|
+//  | || | | | |_) | |_| | |_  |  __/ (_| | |  \__ \  __/ |
+// |___|_| |_| .__/ \__,_|\__| |_|   \__,_|_|  |___/\___|_|
+//           |_|
+
+//
+// Incoming list items are marked with one of these, to be expanded
+// later by the output formatter.
+//
+type listItem struct {
+	bullet rune // '*' for bullet lists or '#' for enumerated
+	level  int  // nesting level
 }
 
-func sum(ints ...int) int {
-	s := 0
-	for _, v := range ints {
-		s += v
-	}
-	return s
+//
+// Representation of a table as a slice of rows, each of which
+// is a slice of tableCells.
+//
+type textTable struct {
+	rows [][]*tableCell
 }
 
+//
+// Add a new row to a textTable.
+// Handles spanned columns.
+//
+func (t *textTable) addRow(cols []string) error {
+	if t.rows == nil {
+		t.rows = make([][]*tableCell, 0, 32)
+	}
+	row := make([]*tableCell, 0, 8)
+	var lastUsed *tableCell = nil
+	for _, col := range cols {
+		if strings.HasPrefix(col, "-") {
+			if lastUsed == nil {
+				return fmt.Errorf("table cell cannot span into the first column")
+			}
+			lastUsed.span++
+			row = append(row, nil)
+		} else {
+			lastUsed = newTableCell(col)
+			row = append(row, lastUsed)
+		}
+	}
+	t.rows = append(t.rows, row)
+	return nil
+}
+
+//
+// Incoming table rows are represented in the input stream
+// with one of these, which notes that this should be a table
+// row and holds the markup text source from that line of input.
+//
+type tableRow struct {
+	src string
+}
+
+//
+// This represents a specific cell in a textTable.
+//
+type tableCell struct {
+	text   string // text that belongs in this cell
+	span   int    // number of columns to the right to take up
+	align  rune   // '<' (left), '^' (center), or '>' (right)
+	header bool   // true if this is a header cell
+}
+
+//
+// Create a new tableCell, figuring out alignment
+// from context (based on leading and/or trailing space)
+//
+// Also identifies cells which start with '=' as headers.
+//
+func newTableCell(text string) *tableCell {
+	c := &tableCell{
+		align: '<',
+	}
+	if text != "" && text[0] == '=' {
+		c.header = true
+		text = text[1:]
+	}
+	if text != "" && unicode.IsSpace(rune(text[0])) {
+		if unicode.IsSpace(rune(text[len(text)-1])) {
+			c.align = '^'
+		} else {
+			c.align = '>'
+		}
+	}
+	c.text = strings.TrimSpace(text)
+	return c
+}
+
+//
+// General-purpose function to generate enumerated list
+// numbering regardless of output format
+//
 func enumVal(level, value int) string {
 	switch (level - 1) % 5 {
 	case 0:
@@ -313,90 +462,106 @@ func enumVal(level, value int) string {
 	return "?"
 }
 
-type renderOpts func(*renderOptSet)
-
-func AsPlainText(o *renderOptSet) {
-	o.formatter = &renderPlainTextFormatter{}
-}
-
-type listItem struct {
-	bullet rune
-	level  int
-}
-
-type textTable struct {
-	rows [][]*tableCell
-}
-
-func (t *textTable) addRow(cols []string) error {
-	if t.rows == nil {
-		t.rows = make([][]*tableCell, 0, 32)
-	}
-	row := make([]*tableCell, 0, 8)
-	var lastUsed *tableCell = nil
-	for _, col := range cols {
-		if strings.HasSuffix(col, "-") {
-			if lastUsed == nil {
-				return fmt.Errorf("table cell cannot span into the first column")
-			}
-			lastUsed.span++
-			row = append(row, nil)
-		} else {
-			lastUsed = newTableCell(col)
-			row = append(row, lastUsed)
-		}
-	}
-	t.rows = append(t.rows, row)
-	return nil
-}
-
-type tableRow struct {
-	src string
-}
-
-type tableCell struct {
-	text   string
-	span   int
-	align  rune
-	header bool
-}
-
-func newTableCell(text string) *tableCell {
-	c := &tableCell{
-		align: '<',
-	}
-	if text != "" && text[0] == '=' {
-		c.header = true
-		text = text[1:]
-	}
-	if text != "" && unicode.IsSpace(rune(text[0])) {
-		if unicode.IsSpace(rune(text[len(text)-1])) {
-			c.align = '^'
-		} else {
-			c.align = '>'
-		}
-	}
-	c.text = strings.TrimSpace(text)
-	return c
-}
-
 //
 // Markup text rendering is done via the Render function.
 // The set of options which may follow the string to be formatted
-// include:
+// include these which select the overall output format:
 //   AsPlainText  -- render a text-only version of the input
 //                   (this is the default)
+//
+// and these options to control specific formatting in the selected
+// output format:
+//   WithBullets(...)  -- use a custom bullet sequence
+//
+// The markup syntax is simple. Lines are collected together into a single
+// logical line which is then wrapped as appropriate to the output format
+// (which may rely on whatever is printing the output to break lines as
+// it prefers).
+//
+// A blank line marks a paragraph break.
+//
+// \\ marks a line break.
+//
+// //text// sets "text" in Italics*†
+//
+// **text** sets "text" in boldface*†
+//
+// *blah... Starts bulleted list item‡
+//
+// **blah... Starts level-2 bulleted list item‡
+//
+// ***blah... Starts level-3 bulleted list item (and so forth)‡
+//
+// #blah... Starts enumerated list item‡
+//
+// ##blah... ...and so forth‡
+//
+// [[name]] Creates a hyperlink to "name" where this name itself adequately
+// identifies the linked-to element in GMA (e.g., the name of a spell).
+//
+// [[link|name]] Creates a hyperlink called "name" which links to GMA element "link".
+//
+// \. does nothing but serves to disambiguate things such as ** to begin
+// a section of bolded text from ** to begin a 2nd-level bulleted item
+// since the latter must be at the very start of the line.
+//
+// There is also a special page-break marker <<-->> which is not actually processed
+// by this package, but some output subsystems recognize it when they see it in the output
+// (e.g., PostScript formatted text blocks).
+//
+// Tables are specified by a set of lines beginning with a | character.‡
+// Each column in the table is separated from the others with | characters
+// as well. A | at the very end of the row is optional.
+//   |=Size Code|=Area|
+//   |  S  |  5|
+//   |  M  |  5|
+//   |  L  | 10|
+// This produces a table like
+//   +-----------+------+
+//   | SIZE CODE | AREA |
+//   +-----------+------+
+//   |     S     |    5 |
+//   |     M     |    5 |
+//   |     L     |   10 |
+//   +-----------+------+
+//
+// Table cells beginning with = are headers (usually placed in the first row)
+//
+// Cells are left- or right-justified if there is leading or trailing space between the |
+// separators for that cell, respectively. If there is space before and after the text,
+// it is centered. In the example above, the size codes will be centered in their column
+// and the area numbers are right-justified in theirs.
+//
+// Cells which begin with a hyphen (-) indicate that the cell to their left spans into them.
+// For example:
+//   |=Column A|=Column B|=Column C
+//   |stuff    |more stuff|and more
+//   |a really wide column|- |hello
+// produces:
+//   +----------+------------+----------+
+//   | COLUMN A |  COLUMN B  | COLUMN C |
+//   +----------+------------+----------+
+//   | stuff    | more stuff | and more |
+//   | a really wide column  | hello    |
+//   +----------+------------+----------+
+//
+// *May cross line boundaries but not paragraphs.
+//
+// †May nest as in //Italic **and** bold//.
+//
+// ‡Must appear at the very beginning of a line.
 //
 func Render(text string, opts ...renderOpts) (string, error) {
 	ops := renderOptSet{
 		formatter: &renderPlainTextFormatter{},
+		bulletSet: []rune{'*'},
 	}
 	for _, o := range opts {
 		o(&ops)
 	}
-	collapseSpaces := regexp.MustCompile("\\s{2,}")
-	newListBullet := regexp.MustCompile("^[*#]+")
-	formatReqs := regexp.MustCompile("//|\\*\\*|\\[\\[|\\]\\]|\\\\\\.")
+	collapseSpaces := regexp.MustCompile(`\s{2,}`)
+	newListBullet := regexp.MustCompile(`^[*#]+`)
+	formatReqs := regexp.MustCompile(`//|\*\*|\[\[|\]\]|\\\.`)
 
 	paragraphs := make([][][]interface{}, 0, 10)
 	thisParagraph := make([][]interface{}, 0, 10)
@@ -608,7 +773,8 @@ func Render(text string, opts ...renderOpts) (string, error) {
 						enumCounters[fragment.level-1]++
 						ops.formatter.enumListItem(fragment.level, enumCounters[fragment.level-1])
 					} else {
-						ops.formatter.bulletListItem(fragment.level)
+						ops.formatter.bulletListItem(fragment.level,
+							ops.bulletSet[(fragment.level-1)%len(ops.bulletSet)])
 					}
 
 				default:
