@@ -22,6 +22,14 @@ import (
 	"testing"
 )
 
+func min(a, b int) int {
+	if a > b {
+		return b
+	} else {
+		return a
+	}
+}
+
 func TestToRoman(t *testing.T) {
 	type testcase struct {
 		in  int
@@ -336,160 +344,158 @@ And this is after the table.`, "<P>Table test:<TABLE BORDER=1><TR><TH ALIGN=LEFT
 		} else if test.out != v {
 			t.Errorf("Case %d: %v -> %v but expected %v", i, test.in, v, test.out)
 		}
-		/*
-			            self.maxDiff= None
-			            self.assertMultiLineEqual(MarkupText(source).render(), expected)
+	}
+}
 
-			    def test_html(self):
-			        for source, expected in (
+func TestMarkupTextPostScript(t *testing.T) {
+	type testcase struct {
+		in   string
+		out  string
+		err  bool
+		opts []renderOpts
+	}
 
-			    # output is list of [pre, [str, ...], post] chunks
+	for i, test := range []testcase{
+		{"foo", " [  [ {} [ (foo) ] {PsFF_rm} ]  ] ", false, nil},
+		{"", " [  ] ", false, nil},
+		{"foo\nbar", " [  [ {} [ (foo )(bar) ] {PsFF_rm} ]  ] ", false, nil},
+		{"foo\n\nbar", " [  [ {PsFF_par} [ (foo) ] {PsFF_rm} ]  [ {} [ (bar) ] {} ]  ] ", false, nil},
+		{"\n\nfoo", " [  [ {} [ (foo) ] {PsFF_rm} ]  ] ", false, nil},
+		{`foo\\bar`, " [  [ {PsFF_nl} [ (foo) ] {PsFF_rm} ]  [ {} [ (bar) ] {} ]  ] ", false, nil},
+		{"aa//bb//cc", " [  [ {} [ (aa) ] {PsFF_rm} ]  [ {} [ (bb) ] {PsFF_it} ]  [ {} [ (cc) ] {PsFF_rm} ]  ] ", false, nil},
+		{"aa**bb", " [  [ {} [ (aa) ] {PsFF_rm} ]  [ {} [ (bb) ] {PsFF_bf} ]  ] ", false, nil},
+		{"a//b**c**d//e", " [  [ {} [ (a) ] {PsFF_rm} ]  [ {} [ (b) ] {PsFF_it} ]  [ {} [ (c) ] {PsFF_bi} ]  [ {} [ (d) ] {PsFF_it} ]  [ {} [ (e) ] {PsFF_rm} ]  ] ", false, nil},
+		{"a //b **c //d **e", " [  [ {} [ (a ) ] {PsFF_rm} ]  [ {} [ (b ) ] {PsFF_it} ]  [ {} [ (c ) ] {PsFF_bi} ]  [ {} [ (d ) ] {PsFF_bf} ]  [ {} [ (e) ] {PsFF_rm} ]  ] ", false, nil},
+		{"a[[b]]d", " [  [ {} [ (a) ] {PsFF_rm} ]  [ {} [ (b) ] {PsFF_it} ]  [ {} [ (d) ] {PsFF_rm} ]  ] ", false, nil},
+		{"a[[b|c]]d", " [  [ {} [ (a) ] {PsFF_rm} ]  [ {} [ (c) ] {PsFF_it} ]  [ {} [ (d) ] {PsFF_rm} ]  ] ", false, nil},
+		{`a //it b
+c\\de//f`, " [  [ {} [ (a ) ] {PsFF_rm} ]  [ {PsFF_nl} [ (it )(b )(c) ] {PsFF_it} ]  [ {} [ (de) ] {} ]  [ {} [ (f) ] {PsFF_rm} ]  ] ",
+			false, nil},
+		{`a //it b
+c
 
-			    # sb {PsFF_rm} !b !i
+de//f`, " [  [ {} [ (a ) ] {PsFF_rm} ]  [ {} [ (it )(b )(c) ] {PsFF_it} ]  [ {PsFF_par} [  ] {PsFF_rm} ]  [ {} [ (de) ] {} ]  [ {} [ (f) ] {PsFF_it} ]  ] ", false, nil},
+		{`This is a bullet list:
+*Item One
+*Item //Tw//o
+*Item Three
+ * this is not a\\bullet list
+*But this is
+**and a sub-list
+*** and sub-sub-list
 
-			    # pc add chk+sp,...chk from \s+ -> buf
-			    # ## [{n-1 PsFF_ind}, n., {n PsFF_ind}]
-			    # ** [{n-1 PsFF_ind}, ^., {n PsFF_ind}]
-			    # \n sb {PsFF_nl [0 PsFF_ind]}
-			    # pp sb {PsFF_nl PsFF_nl [0 PsFF_ind]}
-			    # ref==it
-			    # sb [fc, chk, {}/?]
-			    # fc {PsFF_bi/bf/it/rm}
-			    # tbl:
-			    # % Data Table: calculate column widths
-			    # /PsFF_Cw<n> 0 def
-			    # [(c0) (c1) ...] {
-			    #     stringwidth pop dup PsFF_Cw<n> gt {
-			    #         PsFF_Cw<n> exch def
-			    #     } {
-			    #         pop
-			    #     } ifelse
-			    # } forall
-			    # x cols
-			    # PsFF_nl
-			    # ???
-			    # x rows
+And this should start a new list:
+*Not that you can tell with bullets.
+`, " [  [ {PsFF_nl} [ (This )(is )(a )(bullet )(list:) ] {PsFF_rm} ] " +
+			" [ { 1 PsFF_ind } [ (\\267) ] { 0 PsFF_ind } ] " +
+			" [ {PsFF_nl} [ (Item )(One) ] {} ] " +
+			" [ { 1 PsFF_ind } [ (\\267) ] { 0 PsFF_ind } ] " +
+			" [ {} [ (Item ) ] {} ] " +
+			" [ {} [ (Tw) ] {PsFF_it} ] " +
+			" [ {PsFF_nl} [ (o) ] {PsFF_rm} ] " +
+			" [ { 1 PsFF_ind } [ (\\267) ] { 0 PsFF_ind } ] " +
+			" [ {PsFF_nl} [ (Item )(Three )(* )(this )(is )(not )(a) ] {} ] " +
+			" [ {PsFF_nl} [ (bullet )(list) ] {} ] " +
+			" [ { 1 PsFF_ind } [ (\\267) ] { 0 PsFF_ind } ] " +
+			" [ {PsFF_nl} [ (But )(this )(is) ] {} ] " +
+			" [ { 2 PsFF_ind } [ (\\267) ] { 1 PsFF_ind } ] " +
+			" [ {PsFF_nl} [ (and )(a )(sub\\255list) ] {} ] " +
+			" [ { 3 PsFF_ind } [ (\\267) ] { 2 PsFF_ind } ] " +
+			" [ {PsFF_par 0 PsFF_ind} [ (and )(sub\\255sub\\255list) ] {} ] " +
+			" [ {PsFF_nl} [ (And )(this )(should )(start )(a )(new )(list:) ] {} ] " +
+			" [ { 1 PsFF_ind } [ (\\267) ] { 0 PsFF_ind } ] " +
+			" [ {} [ (Not )(that )(you )(can )(tell )(with )(bullets.) ] {} ]  ] ", false, nil},
+		{`This is a numbered list:
+#Item One
+#Item //Tw//o
+#Item Three
+ # this is not a\\bullet list
+#But this is
+##and a sub-list
+### and sub-sub-list
 
-			    def test_ps(self):
-			        for source, expected in (
-			            ('foo',        [['{PsFF_rm}', ['foo'], '{}']]),
-			            ('',           []),
-			            ('foo\nbar',   [['{PsFF_rm}', ['foo ', 'bar'], '{}']],),
-			            ('foo\n\nbar', [['{PsFF_rm}', ['foo'], '{PsFF_par }'],
-			                            ['{}', ['bar'], '{}']]),
-			            ('\n\nfoo',    [['{PsFF_rm}', ['foo'], '{}']]),
-			            (r'foo\\bar',  [['{PsFF_rm}', ['foo'], '{PsFF_nl}'],
-			                            ['{}', ['bar'], '{}']]),
-			            ('aa//bb//cc', [['{PsFF_rm}', ['aa'], '{}'],
-			                            ['{PsFF_it}', ['bb'], '{}'],
-			                            ['{PsFF_rm}', ['cc'], '{}']]),
-			            ('aa**bb**cc', [['{PsFF_rm}', ['aa'], '{}'],
-			                            ['{PsFF_bf}', ['bb'], '{}'],
-			                            ['{PsFF_rm}', ['cc'], '{}']]),
-			            ('aa**bb',     [['{PsFF_rm}', ['aa'], '{}'],
-			                            ['{PsFF_bf}', ['bb'], '{}']]),
-			            ('a//b**c**d//e', [['{PsFF_rm}', ['a'], '{}'],
-			                               ['{PsFF_it}', ['b'], '{}'],
-			                               ['{PsFF_bi}', ['c'], '{}'],
-			                               ['{PsFF_it}', ['d'], '{}'],
-			                               ['{PsFF_rm}', ['e'], '{}']]),
-			            ('a //b **c //d **e', [['{PsFF_rm}', ['a '], '{}'],
-			                                   ['{PsFF_it}', ['b '], '{}'],
-			                                   ['{PsFF_bi}', ['c '], '{}'],
-			                                   ['{PsFF_bf}', ['d '], '{}'],
-			                                   ['{PsFF_rm}', ['e'], '{}']]),
-			            ('a[[b]]d',    [['{PsFF_rm}', ['a'], '{}'],
-			                            ['{PsFF_it}', ['b'], '{}'],
-			                            ['{PsFF_rm}', ['d'], '{}']]),
-			            ('a[[b|c]]d',  [['{PsFF_rm}', ['a'], '{}'],
-			                            ['{PsFF_it}', ['c'], '{}'],
-			                            ['{PsFF_rm}', ['d'], '{}']]),
-			            ('a //it b\nc\\\\de//f', [['{PsFF_rm}', ['a '], '{}'],
-			                                      ['{PsFF_it}', ['it ', 'b ', 'c'], '{PsFF_nl}'],
-			                                      ['{}', ['de'], '{}'],
-			                                      ['{PsFF_rm}', ['f'], '{}']]),
-			            ('a //it b\nc\n\nde//f', [['{PsFF_rm}', ['a '], '{}'],
-			                                      ['{PsFF_it}', ['it ', 'b ', 'c'], '{}'],
-			                                      ['{PsFF_rm}', [], '{PsFF_par }'],
-			                                      ['{}', ['de'], '{}'],
-			                                      ['{PsFF_it}', ['f'], '{}']]),
-			            ('''This is a bullet list:
-			*Item One
-			*Item //Tw//o
-			*Item Three
-			 * this is not a\\\\bullet list
-			*But this is
-			**and a sub-list
-			*** and sub-sub-list
+And this should start a new list:
+#and this should be re-sequenced.
+`, " [  [ {PsFF_nl} [ (This )(is )(a )(numbered )(list:) ] {PsFF_rm} ] " +
+			" [ { 1 PsFF_ind } [ (1.) ] { 0 PsFF_ind } ] " +
+			" [ {PsFF_nl} [ (Item )(One) ] {} ] " +
+			" [ { 1 PsFF_ind } [ (2.) ] { 0 PsFF_ind } ] " +
+			" [ {} [ (Item ) ] {} ] " +
+			" [ {} [ (Tw) ] {PsFF_it} ] " +
+			" [ {PsFF_nl} [ (o) ] {PsFF_rm} ] " +
+			" [ { 1 PsFF_ind } [ (3.) ] { 0 PsFF_ind } ] " +
+			" [ {PsFF_nl} [ (Item )(Three )(# )(this )(is )(not )(a) ] {} ] " +
+			" [ {PsFF_nl} [ (bullet )(list) ] {} ] " +
+			" [ { 1 PsFF_ind } [ (4.) ] { 0 PsFF_ind } ] " +
+			" [ {PsFF_nl} [ (But )(this )(is) ] {} ] " +
+			" [ { 2 PsFF_ind } [ (a.) ] { 1 PsFF_ind } ] " +
+			" [ {PsFF_nl} [ (and )(a )(sub\\255list) ] {} ] " +
+			" [ { 3 PsFF_ind } [ (i.) ] { 2 PsFF_ind } ] " +
+			" [ {PsFF_par 0 PsFF_ind} [ (and )(sub\\255sub\\255list) ] {} ] " +
+			" [ {PsFF_nl} [ (And )(this )(should )(start )(a )(new )(list:) ] {} ] " +
+			" [ { 1 PsFF_ind } [ (1.) ] { 0 PsFF_ind } ] " +
+			" [ {} [ (and )(this )(should )(be )(re\\255sequenced.) ] {} ]  ] ", false, nil},
+		{`Table test:
+|=Column A|=Column B|
+|left     |    right|
+|  center |filled|
+|  aaa    |   bbb
+And this is after the table.`, ` [  [ {PsFF_nl} [ (Table )(test:) ] {PsFF_rm} ] ` +
+			` [ {PsFF_rm
+%
+% Data Table: calculate column widths
+%
+/PsFF_Cw0 0 def
+[(Column A) (left) (center) (aaa) ] {
+	stringwidth pop dup PsFF_Cw0 gt {
+		/PsFF_Cw0 exch def
+	} {
+		pop
+	} ifelse
+} forall
+/PsFF_Cw1 0 def
+[(Column B) (right) (filled) (bbb) ] {
+	stringwidth pop dup PsFF_Cw1 gt {
+		/PsFF_Cw1 exch def
+	} {
+		pop
+	} ifelse
+} forall
+    (Column A) PsFF_Cw0 PsFF_thL
+    (Column B) PsFF_Cw1 PsFF_thL
+PsFF_nl
+    (left) PsFF_Cw0 PsFF_tdL
+    (right) PsFF_Cw1 PsFF_tdR
+PsFF_nl
+    (center) PsFF_Cw0 PsFF_tdC
+    (filled) PsFF_Cw1 PsFF_tdL
+PsFF_nl
+    (aaa) PsFF_Cw0 PsFF_tdC
+    (bbb) PsFF_Cw1 PsFF_tdR
+PsFF_nl
+} [  ] {} ] ` +
+			` [ {} [ (And )(this )(is )(after )(the )(table.) ] {} ]  ] `, false, nil},
+	} {
+		test.opts = append(test.opts, AsPostScript)
+		v, err := Render(test.in, test.opts...)
+		if err != nil && !test.err {
+			t.Errorf("Case %d: unexpected error: %v", i, err)
+		} else if err == nil && test.err {
+			t.Errorf("Case %d: error expected but not found", i)
+		} else if test.out != v {
+			t.Errorf("Case %d: %v -> %v but expected %v", i, test.in, v, test.out)
+			rActual := []rune(v)
+			rExpected := []rune(test.out)
+			for i := 0; i < len(rActual) && i < len(rExpected); i++ {
+				l := min(len(rActual), i+10)
+				e := min(len(rExpected), i+10)
 
-			And this should start a new list:
-			*Not that you can tell with bullets.
-			''', [['{PsFF_rm}', ['This ','is ','a ','bullet ','list:'], '{PsFF_nl}'],
-			      ['{ 0 PsFF_ind }', ['^.'], '{ 1 PsFF_ind }'],
-			      ['{}', ['Item ','One'], '{PsFF_nl}'],
-			      ['{ 0 PsFF_ind }', ['^.'], '{ 1 PsFF_ind }'],
-			      ['{}', ['Item '], '{}'],
-			      ['{PsFF_it}', ['Tw'], '{}'],
-			      ['{PsFF_rm}', ['o'], '{PsFF_nl}'],
-			      ['{ 0 PsFF_ind }', ['^.'], '{ 1 PsFF_ind }'],
-			      ['{}', ['Item ','Three ','* ','this ','is ','not ','a'], '{PsFF_nl}'],
-			      ['{}', ['bullet ','list'], '{PsFF_nl}'],
-			      ['{ 0 PsFF_ind }', ['^.'], '{ 1 PsFF_ind }'],
-			      ['{}', ['But ','this ','is'], '{PsFF_nl}'],
-			      ['{ 1 PsFF_ind }', ['^.'], '{ 2 PsFF_ind }'],
-			      ['{}', ['and ','a ','sub-list'], '{PsFF_nl}'],
-			      ['{ 2 PsFF_ind }', ['^.'], '{ 3 PsFF_ind }'],
-			      ['{}', ['and ','sub-sub-list'], '{PsFF_par  0 PsFF_ind}'],
-			      ['{}', ['And ','this ','should ','start ','a ','new ','list:'], '{PsFF_nl}'],
-			      ['{ 0 PsFF_ind }', ['^.'], '{ 1 PsFF_ind }'],
-			      ['{}', ['Not ','that ','you ','can ','tell ','with ','bullets.'], '{}']]),
-			            ('''This is a numbered list:
-			#Item One
-			#Item Two
-			#Item Three
-			 # this is not a\\\\bullet list
-			#But this is
-			##and a sub-list
-			### and sub-sub-list
-
-			And this should start a new list:
-			#and this should be re-sequenced.
-			''', [['{PsFF_rm}', ['This ','is ','a ','numbered ','list:'], '{PsFF_nl}'],
-			      ['{ 0 PsFF_ind }', ['1.'], '{ 1 PsFF_ind }'],
-			      ['{}', ['Item ','One'], '{PsFF_nl}'],
-			      ['{ 0 PsFF_ind }', ['2.'], '{ 1 PsFF_ind }'],
-			      ['{}', ['Item ','Two'], '{PsFF_nl}'],
-			      ['{ 0 PsFF_ind }', ['3.'], '{ 1 PsFF_ind }'],
-			      ['{}', ['Item ','Three ','# ','this ','is ','not ','a'], '{PsFF_nl}'],
-			      ['{}', ['bullet ','list'], '{PsFF_nl}'],
-			      ['{ 0 PsFF_ind }', ['4.'], '{ 1 PsFF_ind }'],
-			      ['{}', ['But ','this ','is'], '{PsFF_nl}'],
-			      ['{ 1 PsFF_ind }', ['a.'], '{ 2 PsFF_ind }'],
-			      ['{}', ['and ','a ','sub-list'], '{PsFF_nl}'],
-			      ['{ 2 PsFF_ind }', ['i.'], '{ 3 PsFF_ind }'],
-			      ['{}', ['and ','sub-sub-list'], '{PsFF_par  0 PsFF_ind}'],
-			      ['{}', ['And ','this ','should ','start ','a ','new ','list:'], '{PsFF_nl}'],
-			      ['{ 0 PsFF_ind }', ['1.'], '{ 1 PsFF_ind }'],
-			      ['{}', ['and ','this ','should ','be ','re-sequenced.'], '{}']]),
-			            ('''Table test:
-			|=Column A|=Column B|
-			|left     |    right|
-			|  center |filled|
-			|  aaa    |   bbb
-			And this is after the table.''', [
-			    ['{PsFF_rm}', ['Table ', 'test:'], '{PsFF_nl}'],
-			    ['{}', [], '{PsFF_rm\n%\n% Data Table: calculate column widths\n%\n/PsFF_Cw0 0 def\n[(Column A) (left) (center) (aaa)] {\n    stringwidth pop dup PsFF_Cw0 gt {\n        /PsFF_Cw0 exch def\n    } {\n        pop\n    } ifelse\n} forall\n\n/PsFF_Cw1 0 def\n[(Column B) (right) (filled) (bbb)] {\n    stringwidth pop dup PsFF_Cw1 gt {\n        /PsFF_Cw1 exch def\n    } {\n        pop\n    } ifelse\n} forall\n    (Column A) PsFF_Cw0 PsFF_thL\n    (Column B) PsFF_Cw1 PsFF_thL\nPsFF_nl\n    (left) PsFF_Cw0 PsFF_tdL\n    (right) PsFF_Cw1 PsFF_tdR\nPsFF_nl\n    (center) PsFF_Cw0 PsFF_tdC\n    (filled) PsFF_Cw1 PsFF_tdL\nPsFF_nl\n    (aaa) PsFF_Cw0 PsFF_tdC\n    (bbb) PsFF_Cw1 PsFF_tdR\nPsFF_nl\n}'],
-			    ['{}', ['And ', 'this ', 'is ', 'after ', 'the ', 'table.'], '{}']
-			    ]),
-			        ):
-			            #print "Trying", source
-			            #print "Rendered", MarkupText(source).render(PsFormFormatter())
-
-			            self.assertListEqual(MarkupText(source).render(PsFormFormatter()), expected,
-			                msg="markup {0} -> {1}, expected {2}".format(
-			                    source, MarkupText(source).render(PsFormFormatter()), expected))
-		*/
-
+				if rActual[i] != rExpected[i] {
+					t.Errorf("  at position %d/%d (actual \"%s\" vs. expected \"%s\")", i, len(v), string(rActual[i:l]), string(rExpected[i:e]))
+					break
+				}
+			}
+		}
 	}
 }
 

@@ -139,6 +139,7 @@ func FromRoman(roman string) (int, error) {
 type renderOptSet struct {
 	formatter renderingFormatter
 	bulletSet []rune
+	compact   bool
 }
 
 type renderOpts func(*renderOptSet)
@@ -151,6 +152,11 @@ func AsPlainText(o *renderOptSet) {
 // Select HTML text output format
 func AsHTML(o *renderOptSet) {
 	o.formatter = &renderHTMLFormatter{}
+}
+
+// Select PostScript text output format
+func AsPostScript(o *renderOptSet) {
+	o.formatter = &renderPostScriptFormatter{}
 }
 
 //
@@ -170,12 +176,23 @@ func WithBullets(bullets ...rune) renderOpts {
 }
 
 //
+// For PostScript output, use a more compact rendering of text
+// blocks in order to conserve paper real estate.
+//
+// Example:
+//  ps, err := Render(srcText, AsPostScript, WithCompactText)
+//
+func WithCompactText(o *renderOptSet) {
+	o.compact = true
+}
+
+//
 // Each output formatter must supply these methods
 // which the Render() function will invoke as it parses
 // the marked up source text.
 //
 type renderingFormatter interface {
-	init()
+	init(renderOptSet)
 	newPar()
 	process(text string)
 	finalize() string
@@ -204,7 +221,7 @@ type renderPlainTextFormatter struct {
 	bold   bool
 }
 
-func (f *renderPlainTextFormatter) init() {}
+func (f *renderPlainTextFormatter) init(o renderOptSet) {}
 
 func (f *renderPlainTextFormatter) setItal(b bool) {
 	f.ital = b
@@ -356,7 +373,7 @@ type renderHTMLFormatter struct {
 	listStack []string
 }
 
-func (f *renderHTMLFormatter) init() {
+func (f *renderHTMLFormatter) init(o renderOptSet) {
 	f.buf.WriteString("<P>")
 	f.listStack = make([]string, 0, 4)
 }
@@ -479,6 +496,379 @@ func (f *renderHTMLFormatter) table(t *textTable) {
 	f.buf.WriteString("</TABLE>")
 }
 
+//
+//  ____           _   ____            _       _
+// |  _ \ ___  ___| |_/ ___|  ___ _ __(_)_ __ | |_
+// | |_) / _ \/ __| __\___ \ / __| '__| | '_ \| __|
+// |  __/ (_) \__ \ |_ ___) | (__| |  | | |_) | |_
+// |_|   \___/|___/\__|____/ \___|_|  |_| .__/ \__|
+//                                      |_|
+//
+// PostScript output formatter
+//
+type renderPostScriptFormatter struct {
+	buf         strings.Builder
+	indent      int
+	chunks      []psChunk
+	curChunk    []string
+	lastSetFont string
+	compact     bool
+	ital        bool
+	bold        bool
+	needOutdent bool
+}
+
+type psChunk struct {
+	pre      string
+	contents []string
+	post     string
+}
+
+func (f *renderPostScriptFormatter) init(o renderOptSet) {
+	f.compact = o.compact
+}
+
+func psSimpleEscape(s string) string {
+	return strings.ReplaceAll(
+		strings.ReplaceAll(
+			strings.ReplaceAll(s, "\\", `\\`),
+			"(", `\(`),
+		")", `\)`)
+}
+
+func (f *renderPostScriptFormatter) fontChange() string {
+	newFont := "rm"
+	if f.bold && f.ital {
+		newFont = "bi"
+	} else if f.bold {
+		newFont = "bf"
+	} else if f.ital {
+		newFont = "it"
+	}
+
+	if newFont != f.lastSetFont {
+		f.lastSetFont = newFont
+		return fmt.Sprintf("{PsFF_%s}", newFont)
+	}
+	return "{}"
+}
+
+func (f *renderPostScriptFormatter) setItal(b bool) {
+	f.sendBuffer("{}")
+	f.ital = b
+}
+
+func (f *renderPostScriptFormatter) setBold(b bool) {
+	f.sendBuffer("{}")
+	f.bold = b
+}
+
+func (f *renderPostScriptFormatter) process(text string) {
+	sp := regexp.MustCompile(`^(\S*\s+)(.*)$`)
+	for sp.MatchString(text) {
+		pieces := sp.FindStringSubmatch(text)
+		f.curChunk = append(f.curChunk, pieces[1])
+		text = pieces[2]
+	}
+	if text != "" {
+		f.curChunk = append(f.curChunk, text)
+	}
+}
+
+//
+// Convert a string value to a properly-formatted PostScript string,
+// and substitute special character codes with PostScript equivalents.
+//
+func psStr(s string) string {
+	type specialChar struct {
+		pattern *regexp.Regexp
+		ps      string
+	}
+
+	for _, sc := range []specialChar{
+		{regexp.MustCompile(`[()\\]`), `\$0`},
+		{regexp.MustCompile(`\+/-`), `\261`},
+		{regexp.MustCompile(`-(\d)`), `\055$1`},
+		{regexp.MustCompile(`---`), `\055\055`},
+		{regexp.MustCompile(`--`), `\055`},
+		{regexp.MustCompile(`(\d)x`), `$1\327`},
+		{regexp.MustCompile(`x(\d)`), `\327$1`},
+		{regexp.MustCompile(`\[x\]`), `\327`},
+		{regexp.MustCompile(`\[S\]`), `\247`},
+		{regexp.MustCompile(`-`), `\255`},
+		{regexp.MustCompile(`\[1\]`), `\271`},
+		{regexp.MustCompile(`\[2\]`), `\262`},
+		{regexp.MustCompile(`\[3\]`), `\263`},
+		{regexp.MustCompile(`\b1/2\b`), `\275`},
+		{regexp.MustCompile(`\b1/4\b`), `\274`},
+		{regexp.MustCompile(`\b3/4\b`), `\276`},
+		{regexp.MustCompile(`_1/2\b`), `\275`},
+		{regexp.MustCompile(`_1/4\b`), `\274`},
+		{regexp.MustCompile(`_3/4\b`), `\276`},
+		{regexp.MustCompile(`\^o`), `\260`},
+		{regexp.MustCompile(`\[c\]`), `\251`},
+		{regexp.MustCompile(`\[R\]`), `\256`},
+		{regexp.MustCompile(`AE`), `\306`},
+		{regexp.MustCompile(`ae`), `\346`},
+		{regexp.MustCompile(`\[<<\]`), `\253`},
+		{regexp.MustCompile(`\[>>\]`), `\273`},
+		{regexp.MustCompile(`\^\.`), `\267`},
+		{regexp.MustCompile(`\[/\]`), `\367`},
+	} {
+		s = sc.pattern.ReplaceAllString(s, sc.ps)
+	}
+	return s
+}
+
+func (f *renderPostScriptFormatter) finalize() string {
+	f.sendBuffer("{}")
+	f.setBold(false)
+	f.setItal(false)
+
+	f.buf.WriteString(" [ ")
+	for _, chunk := range f.chunks {
+		f.buf.WriteString(" [ ")
+		f.buf.WriteString(chunk.post)
+		f.buf.WriteString(" [ ")
+		for _, s := range chunk.contents {
+			f.buf.WriteString("(")
+			f.buf.WriteString(psStr(s))
+			f.buf.WriteString(")")
+		}
+		f.buf.WriteString(" ] ")
+		f.buf.WriteString(chunk.pre)
+		f.buf.WriteString(" ] ")
+	}
+	f.buf.WriteString(" ] ")
+	f.chunks = nil
+	return f.buf.String()
+}
+
+func (f *renderPostScriptFormatter) reference(desc, link string) {
+	f.toggleItal()
+	f.process(desc)
+	f.toggleItal()
+}
+
+func (f *renderPostScriptFormatter) newLine() {
+	if f.compact {
+		f.process(" ")
+	} else {
+		f.sendBuffer("{PsFF_nl}")
+	}
+}
+
+func (f *renderPostScriptFormatter) newPar() {
+	if f.compact {
+		f.process(" ")
+	} else {
+		if f.needOutdent {
+			f.sendBuffer("{PsFF_par 0 PsFF_ind}")
+			f.needOutdent = false
+		} else {
+			f.sendBuffer("{PsFF_par}")
+		}
+	}
+}
+
+func (f *renderPostScriptFormatter) bulletListItem(level int, bullet rune) {
+	var psb string
+
+	if bullet == 0 {
+		bullet = '*'
+		psb = "^."
+	} else {
+		psb = string(bullet)
+	}
+
+	if f.compact {
+		f.process(fmt.Sprintf(" (%c) ", bullet))
+	} else {
+		f.newLine()
+		f.chunks = append(f.chunks, psChunk{
+			pre:      fmt.Sprintf("{ %d PsFF_ind }", level-1),
+			contents: []string{psb},
+			post:     fmt.Sprintf("{ %d PsFF_ind }", level),
+		})
+		f.needOutdent = true
+	}
+}
+
+func (f *renderPostScriptFormatter) sendBuffer(end string) {
+	if f.curChunk != nil || end != "{}" {
+		f.chunks = append(f.chunks, psChunk{
+			pre:      f.fontChange(),
+			contents: f.curChunk,
+			post:     end,
+		})
+		f.curChunk = nil
+	}
+}
+
+func (f *renderPostScriptFormatter) toggleItal() {
+	f.setItal(!f.ital)
+}
+
+func (f *renderPostScriptFormatter) enumListItem(level, counter int) {
+	if f.compact {
+		f.process(fmt.Sprintf(" (%s) ", enumVal(level, counter)))
+	} else {
+		f.newLine()
+		f.chunks = append(f.chunks, psChunk{
+			pre:      fmt.Sprintf("{ %d PsFF_ind }", level-1),
+			contents: []string{fmt.Sprintf("%s.", enumVal(level, counter))},
+			post:     fmt.Sprintf("{ %d PsFF_ind }", level),
+		})
+		f.needOutdent = true
+	}
+}
+
+//
+//  For PostScript tables, we handle this by
+//  emitting a routine up front which estimates
+//  the horizontal space required by each column.
+//  this way we let the device, which knows its
+//  output parameters and font metrics, so all
+//  the math the other formatter classes do here
+//  will instead by shipped over to the output
+//  device and written in PostScript.
+//
+//  This defines variables called /PsFF_Cw<n>
+//  which hold the size in points for column <n>
+//  of the table (0-origin).
+//
+//  The code for this is essentially:
+//  [ <col <n> row 0> <col <n> row 1> ... ] {
+//    stringwidth pop dup PsFF_Cw<n> gt {
+//      /PsFF_Cw<n> exch def
+//    } { pop } ifelse
+//  } forall
+//
+//  As the table cells are typeset, they are put
+//  into boxes of width PsFF_Cw<n> using the normal
+//  boxed text support we use elsewhere, via the
+//  PsFF_tXX procedures.
+//
+//  For spanned columns, we will skip over the
+//  spans when doing the initial calculations,
+//  and then emit code for each span which adjusts
+//  the column widths:
+//
+//  % span columns 1-3
+//  <text> stringwidth pop PsFF_Cw1 PsFF_Cw2 add
+//  PsFF_Cw3 add 2 PsFF_TcolSpn mul add gt {
+//    /PsFF_Cw1 PsFF_Cw1 <x> add def
+//    /PsFF_Cw2 PsFF_Cw2 <x> add def
+//    /PsFF_Cw3 PsFF_Cw3 <x> add def
+//  } if
+//
+//  (note that PsFF_TcolSpn is a constant equal
+//  to the amount of space added in a table between
+//  columns--this needs to be added back into the
+//  size of spanned columns)
+//
+func (f *renderPostScriptFormatter) table(t *textTable) {
+	// Emit routine to calculate column widths, then emit
+	// code to render the table
+	if f.compact {
+		f.process(" [table] ")
+		return
+	}
+
+	f.sendBuffer("{PsFF_nl}")
+	f.bold = false
+	f.ital = false
+	var ps strings.Builder
+	ps.WriteString(`{PsFF_rm
+%
+% Data Table: calculate column widths
+%
+`)
+	for c := 0; c < t.numCols(); c++ {
+		fmt.Fprintf(&ps, "/PsFF_Cw%d 0 def\n[", c)
+		for _, row := range t.rows {
+			if row[c] != nil && row[c].span == 0 {
+				fmt.Fprintf(&ps, "(%s) ", psSimpleEscape(row[c].text))
+			}
+		}
+		fmt.Fprintf(&ps, `] {
+	stringwidth pop dup PsFF_Cw%d gt {
+		/PsFF_Cw%d exch def
+	} {
+		pop
+	} ifelse
+} forall
+`, c, c)
+	}
+	//
+	// Now adjust column widths for the spans
+	//
+	for r, row := range t.rows {
+		for i, col := range row {
+			if col != nil && col.span > 0 {
+				fmt.Fprintf(&ps, "\n%% span row %d, columns %d-%d:\n/PsFF__t__have PsFF_TcolSpn %d mul", r, i, i+col.span, col.span)
+				for j := i; j <= i+col.span; j++ {
+					fmt.Fprintf(&ps, " PsFF_Cw%d add", j)
+				}
+				fmt.Fprintf(&ps, " def\n/PsFF__t__need (%s) stringwidth pop def",
+					psSimpleEscape(col.text))
+				fmt.Fprintf(&ps, `
+PsFF__t__need PsFF__t__have gt {
+   /PsFF__t__add PsFF__t__need PsFF__t__have sub def
+   /PsFF__t__each PsFF__t__add %d 1 add idiv def
+`, col.span)
+				for n := i; n <= i+col.span; n++ {
+					fmt.Fprintf(&ps, "   /PsFF_Cw%d PsFF_Cw%d PsFF__t__each add def\n", n, n)
+					ps.WriteString("   /PsFF__t__add PsFF__t__add PsFF__t__each sub def\n")
+				}
+				fmt.Fprintf(&ps, `   PsFF__t__add 0 gt {
+      /PsFF_Cw%d PsFF_Cw%d PsFF__t__add add def
+   } if
+} if
+`, i, i)
+			}
+		}
+	}
+	//
+	// now typeset the table itself.
+	//
+	for _, row := range t.rows {
+		for c, col := range row {
+			if col != nil {
+				fmt.Fprintf(&ps, "    (%s) PsFF_Cw%d ", psSimpleEscape(col.text), c)
+				for span := c + 1; span <= c+col.span; span++ {
+					fmt.Fprintf(&ps, "PsFF_Cw%d add ", span)
+				}
+				if col.span > 0 {
+					fmt.Fprintf(&ps, "PsFF_TcolSpn %d mul add ", col.span)
+				}
+				var style, align rune
+				if col.header {
+					style = 'h'
+				} else {
+					style = 'd'
+				}
+
+				switch col.align {
+				case '<':
+					align = 'L'
+				case '^':
+					align = 'C'
+				case '>':
+					align = 'R'
+				default:
+					align = 'L'
+				}
+
+				fmt.Fprintf(&ps, "PsFF_t%c%c\n", style, align)
+			}
+		}
+		ps.WriteString("PsFF_nl\n")
+	}
+	ps.WriteString("}")
+	f.sendBuffer(ps.String())
+}
+
 //  ___                   _     ____
 // |_ _|_ __  _ __  _   _| |_  |  _ \ __ _ _ __ ___  ___ _ __
 //  | || '_ \| '_ \| | | | __| | |_) / _` | '__/ __|/ _ \ '__|
@@ -501,6 +891,17 @@ type listItem struct {
 //
 type textTable struct {
 	rows [][]*tableCell
+}
+
+//
+// Count number of columns
+//
+func (t *textTable) numCols() int {
+	nc := 0
+	for _, r := range t.rows {
+		nc = max(nc, len(r))
+	}
+	return nc
 }
 
 //
@@ -562,8 +963,9 @@ func newTableCell(text string) *tableCell {
 		c.header = true
 		text = text[1:]
 	}
-	if text != "" && unicode.IsSpace(rune(text[0])) {
-		if unicode.IsSpace(rune(text[len(text)-1])) {
+	rt := []rune(text)
+	if text != "" && unicode.IsSpace(rt[0]) {
+		if unicode.IsSpace(rt[len(rt)-1]) {
 			c.align = '^'
 		} else {
 			c.align = '>'
@@ -636,10 +1038,18 @@ func enumVal(level, value int) string {
 //   AsPlainText  -- render a text-only version of the input
 //                   (this is the default)
 //   AsHTML       -- render an HTML version of the input
+//   AsPostScript -- render a PostScript version of the input
+//                   (requires the GMA PostScript preamble and
+//                   other supporting code; this merely produces
+//                   the formatted text block to the PostScript
+//                   data being produced by the application)
 //
 // and these options to control specific formatting in the selected
 // output format:
 //   WithBullets(...)  -- use a custom bullet sequence
+//   WithCompactText   -- squish verbose text blocks down a bit*
+//
+//  *(PostScript format only)
 //
 // The markup syntax is simple. Lines are collected together into a single
 // logical line which is then wrapped as appropriate to the output format
@@ -712,6 +1122,8 @@ func enumVal(level, value int) string {
 //   | stuff    | more stuff | and more |
 //   | a really wide column  | hello    |
 //   +----------+------------+----------+
+//
+// Notes:
 //
 // *May cross line boundaries but not paragraphs.
 //
@@ -807,7 +1219,7 @@ func Render(text string, opts ...renderOpts) (string, error) {
 	bold := false
 	firstPar := true
 	var currentTable *textTable
-	ops.formatter.init()
+	ops.formatter.init(ops)
 
 	for _, par := range paragraphs {
 		firstLine := true
