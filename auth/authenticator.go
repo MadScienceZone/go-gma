@@ -21,72 +21,79 @@
 // Calculates the challenge/response for a login attempt, and checks user input to
 // determine if it was a valid response to the challenge.
 //
-// The map server uses a fairly simple authentication mechanism. THIS IS NOT necessarily
-// appropriate for other authentication needs. In this case, the usage model is simple
-// and the stakes are extremely low—the only thing being protected here is access to
-// the fantasy map used by a small group of friends. The intention is to block nuisance
-// connections, spam, and accidental connections by legitimate clients for a different game.
+// BACKGROUND AND SECURITY NOTES
 //
-// In the simplest case, there is a single shared password all the players use and another
-// for the GM to use. If desired, the server may be configured to hold a separate password
-// for each individual player.
+// This authentication system is designed for validating connections between clients
+// and servers in our game system and nothing else. This is an extremely casual, low-risk
+// situation where the main intent is to deflect nuisance connections. It would not be
+// suitable for use in most other situations where there is more sensitive information
+// to be protected.
 //
-// By the time we get to this code, we have two passwords in
-// play: one that is either the shared password or (if one is set) the one for the
-// user attempting to log in, and the other is the GM's password set in the server
-// configuration. The response from the client is checked against both passwords
-// since using the GM password indicates GM regardless of login name (which may come
-// from the username on the client OS).
+// In this case, there are two passwords configured into the system. One is shared
+// among all players, and is configured into their clients so they may automatically
+// connect to the server when playing the game. The other is for the GM's use, and
+// serves only to identify his or her clients to the system as being GM clients for
+// the purposes of routing GM-only information to them.
 //
-// The  challenge/response negotiation between the mapper server and
-// clients is implemented in this package.
+// If desired, individual passwords may be given to some users which they can use
+// to authenticate in order to avoid confusion between players in the game.
+//
+// While this scheme protects passwords from observation and replay in transit (but not
+// man-in-the-middle or other more sophisticated attacks unless further protections are
+// placed on the connection itself), the passwords themselves are handled on both client
+// and server in plaintext form.
 //
 // CLIENT-SIDE OPERATION
 //
-// A client wishing to authenticate
-// should create an Authenticator as
-//    a := NewClientAuthenticator(my_user_name, my_secret_value, my_program_name)
-// where my_secret_value is the shared secret (password) used by all clients to
-// authenticate to the server, or the personal password assigned to the user with the
-// name given by my_user_name, if one exists; my_program_name is a string describing what
+// A client wishing to authenticate should create an Authenticator as
+//    a := NewClientAuthenticator(myUserName, mySecretValue, myProgramName)
+// where mySecretValue is the password they are using to authenticate (which will be
+// the shared secret (password) used by all clients to
+// authenticate to the server, the GM's password, or the personal password assigned to the user with the
+// name given by myUserName, if one exists); myProgramName is a string describing what
 // sort of client this is.
 //
-// If my_user_name is empty, an attempt will be made to determine the local user name
+// The value in myUserName is arbitrary. If the password is the shared player password,
+// then myUserName is taken as the name this player wants to be known by in the game system,
+// and may be anything except "GM". If the password is the GM password, then "GM" will be
+// used for the username regardless of the value passed as myUserName. If the user has a
+// personal password defined for them on the server, then myUserName must match the name
+// on file (since that's how the server will know which personal password to check).
+//
+// If myUserName is empty, an attempt will be made to determine the local user name
 // of the process, or will be "anonymous" if that cannot be accomplished. If the
 // program name is empty, "unnamed" will be used.
 //
-// These values are used to provide needed context for the user's session with the
-// server, but just for the functioning of the methods documented here, the minimal
-// client Authenticator necessary is simply
-//     a := &Authenticator{Secret: my_secret_value}
-//
 // The client then obtains a challenge from the server in the form of a base-64-encoded
 // string, which is passed to the AcceptChallenge() method:
-//     response, err := a.AcceptChallenge(server_challenge_string)
+//     response, err := a.AcceptChallenge(serverChallengeString)
 // This provides the response to send back to the server in order to log in.
 //
 // SERVER-SIDE OPERATION
 //
 // A server which accepts a client connection should create an Authenticator
 // for each such client which will track that session's authentication state.
-//     a := &Authenticator{Secret: common_password, GmSecret: gm_password}
-// where common_password is the password used by all clients to authenticate, and
-// gm_password is the one used by privileged clients.
+//     a := &Authenticator{Secret: commonPassword, GmSecret: gmPassword}
+// where commonPassword is the password used by all clients to authenticate, and
+// gmPassword is the one used by privileged clients.
 //
 // The server then generates a unique challenge for this client's session by
 // calling
 //     challenge, err := a.GenerateChallenge()
 //
 // The generated challenge string is sent to the client, which will reply with
-// a response string. The server validates the authenticity of the response
-// by calling
-//     ok, err := a.ValidateResponse(client_response)
-// which will return true if the response is correct for that challenge.
+// a response string.
 //
-// If the server has a personal password on file for a given user, it can place
-// that value in the Secret member of Authenticator or may set it by calling
-//     a.SetSecret(personal_secret)
-// before calling the GenerateChallenge() method.
+// If the server knows it needs to validate against a specific non-GM user's
+// personal password, the server needs to update the Authenticator with that
+// password by calling
+//     a.SetSecret(personalSecret)
+// before validating the client's response.
+//
+// The server validates the authenticity of the response
+// by calling
+//     ok, err := a.ValidateResponse(clientResponse)
+// which will return true if the response is correct for that challenge.
 //
 // AUTHENTICATION ALGORITHM
 //
@@ -111,21 +118,21 @@
 // directly, the way it is used by the map server and its clients uses the following
 // protocol:
 //
-//  OK v challenge
+//  (server->client) "OK <v> <challenge>"
 // The server's greeting to the client includes this line which gives the server's
-// protocol version (v) and a base-64 encoding of the binary challenge value (C in the
+// protocol version (<v>) and a base-64 encoding of the binary challenge value (C in the
 // algorithm described above)
 //
-//  AUTH response [user client]
-// The client's response is sent with this line, where response is the base-64
-// encoded representation of the response to the challenge (D above), and the user and
-// client values are the desired user name and description of the client program.
+//  (server<-client) "AUTH <response> [<user> <client>]"
+// The client's response is sent with this line, where <response> is the base-64
+// encoded representation of the response to the challenge (D above), and the optional <user> and
+// <client> values are the desired user name and description of the client program.
 //
-//  DENIED message
+//  (server->client) "DENIED [<message>]"
 // Server response indicating that the authentication was unsuccessful.
 //
-//  GRANTED name
-// Server response indicating that the authentication was successful. The name value is
+//  (server->client) "GRANTED <user>"
+// Server response indicating that the authentication was successful. The <user> value is
 // "GM" if the GM password was used, or the user name supplied by the user, which will be
 // the name they're known by inside the game map (usually a character name). If the user
 // did not supply a name and did not use the GM password, "anonymous" is returned.
@@ -172,8 +179,8 @@ type Authenticator struct {
 }
 
 //
-// Change the non-GM secret and disable GM logins for this
-// authenticator.
+// SetSecret changes the non-GM secret and disables GM logins for this
+// authenticator. (SERVER)
 //
 // This is typically used on the server's side when it
 // determines that the user trying to authenticate has
@@ -207,9 +214,19 @@ func bytesEqual(a, b []byte) bool {
 }
 
 //
-// Generate an authentication challenge for this session.
+// GenerateChallenge creates an authentication challenge for this session.
+// (SERVER)
+//
 // This is a 256-bit random nonce which is remembered for
 // subsequent operations on this Authenticator instance.
+// It does not depend on the password(s).
+//
+// Since the first two bytes of this challenge value specify the number
+// of rounds to apply the hashing function on the client, the 16-bit
+// number they represent is constrained to the range [64, 4095] to
+// avoid too few rounds or so many rounds that a client may be unnecessarily
+// burdened. (The latter is an actual runtime performance issue for one of
+// our clients which is implemented as a Tcl script.)
 //
 // The challenge is returned as a base-64-encoded string.
 //
@@ -233,7 +250,10 @@ func (a *Authenticator) GenerateChallenge() (string, error) {
 }
 
 //
-// Return the last-generated challenge created by GenerateChallenge().
+// CurrentChallenge
+// returns the last-generated challenge created by GenerateChallenge().
+// (SERVER)
+//
 // This is returned as a base-64-encoded string suitable for transmitting
 // directly to a client.
 //
@@ -300,8 +320,10 @@ func (a *Authenticator) calcResponse(secret []byte) ([]byte, error) {
 	return d, nil
 }
 
-// Accept a server's challenge, store it internally, and generate an appropriate
-// response to it.
+//
+// AcceptChallenge takes a server's challenge, stores it internally, and generates an appropriate
+// response to it, which is returned as a base-64 encoded string. (CLIENT)
+//
 func (a *Authenticator) AcceptChallenge(challenge string) (string, error) {
 	c, err := base64.StdEncoding.DecodeString(challenge)
 	if err != nil {
@@ -318,12 +340,16 @@ func (a *Authenticator) AcceptChallenge(challenge string) (string, error) {
 }
 
 //
-// Given a base-64-encoded response string, verify that the value it encodes
+// ValidateResponse takes
+// a base-64-encoded response string and verifies that the value it encodes
 // matches the expected response for the previously-generated challenge.
+// (SERVER)
 //
 // If the response is not correct for the expected user's secret, we try
 // again against the GM's secret to see if the user is logging in as the GM
 // role. If so, the GmMode member of the Authenticator is set to true.
+//
+// Returns true if the authentication was successful.
 //
 func (a *Authenticator) ValidateResponse(response string) (bool, error) {
 	a.GmMode = false
@@ -355,8 +381,10 @@ func (a *Authenticator) ValidateResponse(response string) (bool, error) {
 }
 
 //
-// Reset an Authenticator instance back to its pre-challenge state
+// Reset returns an Authenticator instance back to its pre-challenge state
 // so that it may be used again for another authentication attempt.
+// (CLIENT/SERVER)
+//
 // Existing secrets and user names are preserved.
 //
 func (a *Authenticator) Reset() {
@@ -365,8 +393,10 @@ func (a *Authenticator) Reset() {
 }
 
 //
-// Generate a new client-side Authenticator for a user with the given username, secret,
-// and string description of the client program. If the username string is empty, an
+// NewClientAuthenticator creates and returns a pointer to a new Authenticator
+// instance, prepared for use by a typical client. (CLIENT)
+//
+// If the username string is empty, an
 // attempt will be made to determine the local username on the system, or the string
 // "anonymous" will be used. If the client string is empty, "unnamed" will be used.
 //

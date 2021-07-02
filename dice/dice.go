@@ -132,7 +132,7 @@ type diceOptions struct {
 type newDiceOption func(*diceOptions) error
 
 //
-// ByDescription(desc) sets up a Dice value based on the
+// ByDescription sets up a Dice value based on the
 // text description given. This is the preferred way to make
 // a low-level Dice value, since it is a flexible human-readable
 // specification which likely came from the user anyway.
@@ -152,18 +152,18 @@ type newDiceOption func(*diceOptions) error
 // and “÷” (U+00F7) in place of “//”.
 //
 // Each die‐roll expression has the general form
-//   [>] [n[/div]] d sides [best|worst of r] [label]
+//   [>] [<n>[/<div>]] d <sides> [best|worst of <r>] [<label>]
 //
-// This calls for n dice with the given number of sides (which  may  be  a
+// This calls for <n> dice with the given number of <sides> (which  may  be  a
 // number  or the character “%” which means percentile dice or d100).  The
-// optional div part of the expression allows a fractional number of dice:
+// optional <div> part of the expression allows a fractional number of dice:
 // the  expression  “1/2d20” rolls half of a d20 (in other words, it rolls
 // 1d20 and divides the result by 2, truncating the result).  The optional qualifier
-// “best of r” will cause the dice to be rolled r times, keeping the
+// “best of <r>” will cause the dice to be rolled <r> times, keeping the
 // best result. (You may also use the word worst in place of best to  take
 // the lowest of the rolls.)
 //
-// Arbitrary  text  (label) may appear at the end of the expression. It is
+// Arbitrary  text  (<label>) may appear at the end of the expression. It is
 // simply reported back in the result as a label to  describe  that  value
 // (e.g.   “1d10  + 1d6 fire + 2d6 sneak”.)  If the expression begins with
 // the character “>”, then the first die in the set is maximized:  in  the
@@ -172,10 +172,10 @@ type newDiceOption func(*diceOptions) error
 //
 // The entire die roll expression may be followed by one or  both  of  the
 // following  global  modifiers,  separated  from  the expression and each
-// other by vertical bars (“|”): “min a” or “max b”.
+// other by vertical bars (“|”): “min <a>” or “max <b>”.
 //
-// These force the final result to be no smaller than a and/or  no  larger
-// than b, where a and b are integer values. For example:
+// These force the final result to be no smaller than <a> and/or  no  larger
+// than <b>, where <a> and <b> are integer values. For example:
 //    2d6 + 1d4 | min 6
 // which  rolls 2d6 and 1d4 to get a random value between 3 and 16, but if
 // the result is less than 6, it will return 6 anyway.
@@ -192,7 +192,7 @@ func ByDescription(desc string) newDiceOption {
 }
 
 //
-// ByDieType(qty, sides, bonus) sets the Dice up by
+// ByDieType sets the Dice up by
 // discrete values which determine the number of dice to roll,
 // how many sides they each have, and a bonus to add to their
 // sum.
@@ -210,7 +210,7 @@ func ByDieType(qty, sides, bonus int) newDiceOption {
 }
 
 //
-// WithDieBonus(n) adds a per-die bonus of n which will be
+// WithDieBonus adds a per-die bonus of n which will be
 // added to every single die rolled.
 //
 func WithDieBonus(n int) newDiceOption {
@@ -221,9 +221,10 @@ func WithDieBonus(n int) newDiceOption {
 }
 
 //
-// WithDiv(n) causes the total die-roll to be divided by n
+// WithDiv causes the total die-roll to be divided by n
 // (as an integer division, truncated toward zero).
-// Deprecated in favor of using WithDescription("... // n")
+//
+// DEPRECATED in favor of using WithDescription("... // n")
 // or WithDescription("... ÷ n")
 //
 func WithDiv(n int) newDiceOption {
@@ -234,8 +235,10 @@ func WithDiv(n int) newDiceOption {
 }
 
 //
-// WithFactor(n) causes the total die-roll to be multiplied by
-// n. Deprecated in favor of using WithDescription("... * n")
+// WithFactor causes the total die-roll to be multiplied by
+// n.
+//
+// DEPRECATED in favor of using WithDescription("... * n")
 // or WithDescription("... × n")
 //
 func WithFactor(n int) newDiceOption {
@@ -246,7 +249,7 @@ func WithFactor(n int) newDiceOption {
 }
 
 //
-// WithSeed(s) sets up the Dice value to use a random
+// WithSeed sets up the Dice value to use a random
 // number generator with the given seed value.
 // (Per rand, this generator will not be safe for concurrent
 // use by multiple goroutines.)
@@ -259,7 +262,7 @@ func WithSeed(s int64) newDiceOption {
 }
 
 //
-// WithGenerator(s) sets up the Dice value to use a random
+// WithGenerator sets up the Dice value to use a random
 // number generator created by the caller and passed in to this
 // option.  The generator must be of type rand.Source.
 //
@@ -333,6 +336,7 @@ type StructuredDescriptionSet []StructuredDescription
 //       {Type: "min",       Value: "5"},
 //    }
 //  }}
+//
 type StructuredResult struct {
 	// Total final result of the expression.
 	Result int
@@ -713,7 +717,7 @@ func (d *dieSpec) description() string {
 //
 // Returns true if the value rolled for this component was a 1.
 //
-func (d *dieSpec) IsMinRoll() bool {
+func (d *dieSpec) isMinRoll() bool {
 	return d.Value == 1
 }
 
@@ -721,7 +725,7 @@ func (d *dieSpec) IsMinRoll() bool {
 // Returns true if the value rolled for this component is the same as
 // the number of sides on the die.
 //
-func (d *dieSpec) IsMaxRoll() bool {
+func (d *dieSpec) isMaxRoll() bool {
 	return d.Value == d.Sides
 }
 
@@ -787,7 +791,8 @@ func (d *dieSpec) structuredDescribeRoll() []StructuredDescription {
 }
 
 //
-// Constructor for a new set of dice.
+// New creates a new set of dice (using the low-level representation Dice type;
+// for a more user-friendly interface use NewDieRoller instead).
 //
 // By default, this creates a d20 you can roll. For other kinds of die rolls,
 // pass the option(s) ByDescription(description), ByDieType(qty, sides, bonus),
@@ -1057,7 +1062,7 @@ func New(options ...newDiceOption) (*Dice, error) {
 	return d, nil
 }
 
-// Roll the dice which this Dice instance represents. The result is
+// Roll rolls the dice which this Dice instance represents. The result is
 // returned as an integer value.  Each time  this  is  called,  the
 // dice are rerolled to get a new result.  The Dice value’s internal
 // state reflects the last call to this method.
@@ -1066,7 +1071,8 @@ func (d *Dice) Roll() (int, error) {
 }
 
 //
-// Instead of rolling the dice, just assume they all came up at their maximum
+// MaxRoll is an alternative to Roll() where
+// instead of rolling the dice, it just assumes they all came up at their maximum
 // possible values. This does NOT set up for subsequent critical rolls.
 //
 func (d *Dice) MaxRoll() (int, error) {
@@ -1074,7 +1080,8 @@ func (d *Dice) MaxRoll() (int, error) {
 }
 
 //
-// Like MaxRoll(), but to confirm critical rolls.
+// MaxRollToConfirm is the analog to RollToConfirm but just assumes all
+// dice come up with their maximum values rather than rolling anything.
 //
 func (d *Dice) MaxRollToConfirm(bonus int) (int, error) {
 	roll_sum := 0
@@ -1102,6 +1109,22 @@ func (d *Dice) MaxRollToConfirm(bonus int) (int, error) {
 }
 
 //
+// RollToConfirm rolls the dice specified in the Dice value, with support
+// for making critical confirmation rolls.
+//
+// If confirm is true, we're rolling to confirm a critical threat.
+// In this case, the previous-rolled value is checked against the
+// provided threat value. If that previous roll is less than the threat
+// value, nothing further is done, and 0 is returned.
+//
+// If the previous roll was >= threat, then we make another roll, adding
+// the provided bonus modifier to that roll. This roll's total is returned,
+// and becomes the new most-recent roll for this Dice value.
+//
+// If threat is less than or equal to zero, the default threat of a natural
+// maximum roll (e.g., 20 on a d20, or 10 on a d10) is used.
+//
+// Calling d.RollToConfirm(false, 0, 0) is equivalent to calling d.Roll().
 // Confirm a critical roll by rolling again against the normal to-hit target.
 //
 func (d *Dice) RollToConfirm(confirm bool, threat int, bonus int) (int, error) {
@@ -1178,10 +1201,9 @@ func (d *Dice) RollToConfirm(confirm bool, threat int, bonus int) (int, error) {
 	return roll_sum, nil
 }
 
-// Description()
-
-// Produce a human-readable description of the die roll specification represented
-// by the Dice object
+// Description
+// produces a human-readable description of the die roll specification represented
+// by the Dice object.
 func (d *Dice) Description() (desc string) {
 	for _, die := range d.multiDice {
 		desc += die.description()
@@ -1196,21 +1218,22 @@ func (d *Dice) Description() (desc string) {
 }
 
 //
-// StructuredDescribeRoll()
-
-// Produce a detailed structured description of the result of rolling
-// the dice, in a way that a caller can format as they see fit.
+// StructuredDescribeRoll
+// produces a detailed structured description of the result of rolling
+// the Dice, in a way that a caller can format as they see fit.
 //
 // If sfOpt is a non-empty string, then successMessage will be presented
 // in the result list if the die-roll indicates a known-successful roll,
 // or failureMessage will be used if the die-roll indicates a known-failure value.
+//
+// If rollBonus is nonzero, a {"bonus", "±n"} result value will appear in the
+// structured description.
+//
+// Bug note:
 // (Why is sfOpt a string instead of a boolean? No good reason, it was just an
 // uncorrected artifact of the older implementation where sfOpt was empty or the
 // "|SF ..." option string while successMessage and failureMessages are values
 // parsed out of that string. Really, sfOpt should be a bool value.)
-//
-// If rollBonus is nonzero, a {"bonus", "±n"} result value will appear in the
-// structured description.
 //
 func (d *Dice) StructuredDescribeRoll(sfOpt, successMessage, failureMessage string, rollBonus int) ([]StructuredDescription, error) {
 	var desc []StructuredDescription
@@ -1222,9 +1245,9 @@ func (d *Dice) StructuredDescribeRoll(sfOpt, successMessage, failureMessage stri
 		if d._onlydie == nil || d._onlydie.Numerator != 1 {
 			return nil, fmt.Errorf("You can't indicate auto-success/fail (|sf option) because it involves multiple dice.")
 		}
-		if d._onlydie.IsMinRoll() {
+		if d._onlydie.isMinRoll() {
 			desc = append(desc, StructuredDescription{Type: "fail", Value: failureMessage})
-		} else if d._onlydie.IsMaxRoll() {
+		} else if d._onlydie.isMaxRoll() {
 			desc = append(desc, StructuredDescription{Type: "success", Value: successMessage})
 		}
 	}
@@ -1320,10 +1343,14 @@ type DieRoller struct {
 }
 
 //
-// Usage of the high-level (recommended) access to the die-rolling package
-// starts here. Call NewDieRoller() to get a new DieRoller value, which can
+// NewDieRoller creates a new DieRoller value, which provides the recommended
+// higher-level interface for rolling dice. This value can
 // then be used for as many die rolls as needed by calling its DoRoll()
-// method.
+// or DoRollOnce() methods.
+//
+// You may pass zero or more option specifiers to this function as already
+// described for the New() constructor, although the only ones which apply
+// here are WithSeed(s) and WithGenerator(s).
 //
 // Initially it is set up to roll a single d20, but this can be changed with
 // each DoRoll() call.
@@ -1597,8 +1624,8 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 }
 
 //
-// Roll dice as described by the specification string. If this string is empty,
-// re-roll the previously-used specification. Initially, "1d20" is assumed.
+// DoRoll rolls dice as described by the specification string. If this string is empty,
+// it re-rolls the previously-used specification. Initially, "1d20" is assumed.
 //
 // Returns the user-specified die-roll label (if any), the result of the roll,
 // and an error if one occurred.
@@ -1614,55 +1641,57 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 // characters are to be taken literally.
 //
 // The <title> (which, if given, is separated from the rest of the spec with an
-// equals sign (“=”) is optional and will be included as a comment in the result
+// equals sign (“=”)) is optional and will be included as a comment in the result
 // list to indicate what the purpose of the die roll was for.
 //
 // <expression> can be anything that can be given as the description string
-// to the NewDice() constructor (q.v.). At the end of the spec string there
+// to the New() constructor (q.v.). At the end of the spec string there
 // may be zero or more options, each beginning with a vertical bar (“|”).
 //
 // These options may be any of the following:
 //
-// | min <n>
-//    The result will be at least <n>.
+//   | min <n>
+// The result will be at least <n>.
 //
-// | max <n>
-//    The result will be no more than <n>.
+//   | max <n>
+// The result will be no more than <n>.
 //
-// | c[<t>[±<b>]]
-//    This indicates that the roll may need a critical
-//    confirmation roll to follow it. This will appear
-//    as an additional result in the list of results returned
-//    from the DoRoll() method.  If the <t> parameter is given,
-//    a natural roll equal to or greater than <t> is assumed to
-//    be a critical threat. If a plus or minus sign followed by
-//    a number <b> is appended to the option, then this value is
-//    added to the confirmation die roll as a confirmation bonus.
+//   | c[<t>[±<b>]]
+// This indicates that the roll may need a critical
+// confirmation roll to follow it. This will appear
+// as an additional result in the list of results returned
+// from the DoRoll() and DoRollOnce() methods.  If the <t> parameter is given,
+// a natural roll equal to or greater than <t> is assumed to
+// be a critical threat. If a plus or minus sign followed by
+// a number <b> is appended to the option, then this value is
+// added to the confirmation die roll as a confirmation bonus.
+// (The notation "±" here means either a "-" or "+" may appear at that
+// position in the string.)
 //
-// | dc <n>
-//    This is a roll against a known difficulty class <n>. If the
-//    result is at least <n>, the roll is "successful".
+//   | dc <n>
+// This is a roll against a known difficulty class <n>. If the
+// result is at least <n>, the roll is "successful".
 //
-// | sf [<success>[/<fail>]]
-//    Auto-success/fail: the roll, which must involve only a single
-//    die, will be considered successful if it's a natural maximum
-//    value (e.g., 20 on a d20 before modifiers are applied), or
-//    a failure if a natural 1 was rolled. Optionally, messages
-//    to report to the user to indicate what success and failure mean
-//    may be specified. Suitable defaults will be used or derived if
-//    one or both of those strings is not given.
+//   | sf [<success>[/<fail>]]
+// Auto-success/fail: the roll, which must involve only a single
+// die, will be considered successful if it's a natural maximum
+// value (e.g., 20 on a d20 before modifiers are applied), or
+// a failure if a natural 1 was rolled. Optionally, messages
+// to report to the user to indicate what success and failure mean
+// may be specified. Suitable defaults will be used or derived if
+// one or both of those strings is not given.
 //
-// | until <n>
-//    Continue making die rolls, adding their results to the returned output,
-//    until a result of at least <n> is obtained.
+//   | until <n>
+// Continue making die rolls, adding their results to the returned output,
+// until a result of at least <n> is obtained.
 //
-// | repeat <n>
-//    Make <n> die rolls, reporting their results.
+//   | repeat <n>
+// Make <n> die rolls, reporting their results.
 //
-// | maximized
-//    Assume all dice roll at their maximum possible values. For example,
-//    the spec "3d6 | maximized" will always return the result 18, as if
-//    all three dice rolled sixes.
+//   | maximized
+// Assume all dice roll at their maximum possible values. For example,
+// the spec "3d6 | maximized" will always return the result 18, as if
+// all three dice rolled sixes.
 //
 // To prevent getting caught in an infinite loop, a maximum of  100  rolls
 // will be made regardless of repeat and until options.
@@ -1671,7 +1700,7 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 // curly braces as “{<a>/<b>/<c>/...}”.  This will repeat the overall die roll
 // expression once for each of the values <a>, <b>, <c>, etc., substituting each
 // in turn for the braced list. If multiple specifiers appear, they’ll all
-// repeat so you get the cartesian product of all the sets of values. This
+// repeat so you get the Cartesian product of all the sets of values. This
 // allows, for example, multiple attack rolls in a single click. For example,
 // “Attack=d20+{17/12/7}”  would  roll  three  attack rolls: d20+17,
 // d20+12, and d20+7.
@@ -1691,26 +1720,35 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 // options  may  be  used. Permutations (“{...}”) are also disallowed with
 // percentile rolls.
 //
-// This method returns a tuple of values (title, resultSet, error)  representing
+// This method returns values title, resultSet, and error representing
 // the  results  of rolling the dice.  The title is the title specified in
-// the dice string, or an empty striung if one was not given.
+// the dice string, or an empty string if one was not given.
 // The  resultSet is a slice of StructuredResult structures, one for each
 // roll of the dice that was performed.
 //
 // Example die-roll specifications:
-//   "d20"           Roll 1d20.
-//   "3d6"           Roll 3d6 (3 six-sided dice, adding their values).
-//   "15d6+15"       Roll 15d6, add 15 to their sum.
-//   "1d10+5*10"     Roll 1d10, add 5, then multiply the result by 10.
-//   "1/2 d6"        Roll 1d6, divide result by 2 (truncating toward zero).
-//   "2d10+3d6+12"   Roll 2d10, 3d6, add their results and add 12 to the sum.
-//   "d20+15|c"      Roll d20+15, automatically rolling to confirm on a natural 20.
-//   "d20+15|c19+2"  Roll d20+15, rolling to confirm on natural 19 or 20 with +2 bonus.
-//   "d%"            Roll percentile dice, giving result 1-100.
-//   "40%"           Roll percentile dice, giving result 1 with 40% probability.
-//   "d20+12|max20"  Roll d20+12 but any result > 20 is capped at 20.
-//   "d20 best of 2" Roll d20 twice, discarding the worse result.
-//   "d20+4|dc 10"   Roll d20+4, signalling success if the result is 10 or greater.
+//   "d20"             Roll 1d20.
+//   "3d6"             Roll 3d6 (3 six-sided dice, adding their values).
+//   "15d6+15"         Roll 15d6, add 15 to their sum.
+//   "1d10+5*10"       Roll 1d10, add 5, then multiply the result by 10.
+//   "1/2 d6"          Roll 1d6, divide result by 2 (truncating toward zero).
+//   "2d10+3d6+12"     Roll 2d10, 3d6, add their results and add 12 to the sum.
+//   "d20+15|c"        Roll d20+15, automatically rolling to confirm on a natural 20.
+//   "d20+15|c19+2"    Roll d20+15, rolling to confirm on natural 19 or 20 with +2 bonus.
+//   "d%"              Roll percentile dice, giving result 1-100.
+//   "40%"             Roll percentile dice, giving result 1 with 40% probability.
+//   "d20+12|max20"    Roll d20+12 but any result > 20 is capped at 20.
+//   "d20 best of 2"   Roll d20 twice, discarding the worse result.
+//   "d20+4|dc 10"     Roll d20+4, signalling success if the result is 10 or greater.
+//   "3d6 fire+1d4 acid+2 bonus"
+//                     Roll 3d6+1d4+2. In the structured results, it will show the values
+//                     rolled for the 3d6 fire, 1d4 acid, and 2 bonus individually.
+//   "40% hit"         Reports success ("hit") with a 40% probability; otherwise reports
+//                     failure ("miss").
+//   "13% red/blue"    Reports success ("red") with a 13% probability; otherwise reports
+//                     failure ("blue").
+//   "2d10+3|until 19" Repeatedly rolls 2d10+3, adding each result to the set of die rolls
+//                     returned, until a roll totals at least 19.
 //
 func (d *DieRoller) DoRoll(spec string) (string, []StructuredResult, error) {
 	var err error
@@ -2025,9 +2063,13 @@ func (d *DieRoller) rollDice(repeat_iter, repeat_count int) (int, []StructuredRe
 	return result, results, nil
 }
 
-// Convenience function that simply takes a die-roll expression and returns the
-// results of this one-off roll, without requiring the caller to perform all the
-// steps of creating the reusable DieRoller value and then using it.
+// Roll rolls the dice specified by the specification string, without
+// requiring a separate step to create a DieRoller first.
+//
+// Calling Roll(spec) is equivalent to the sequence
+//  dr = NewDieRoller()
+//  dr.DoRoll(spec)
+//
 func Roll(spec string) (string, []StructuredResult, error) {
 	d, err := NewDieRoller()
 	if err != nil {
@@ -2036,10 +2078,10 @@ func Roll(spec string) (string, []StructuredResult, error) {
 	return d.DoRoll(spec)
 }
 
-// Just like Roll() but adds the constraint that there may only be one result
+// RollOnce is just like Roll() but adds the constraint that there may only be one result
 // returned (no confirmation rolls, no repeated rolls, etc., although multiple
-// dice or "best of N" kinds of things are allowed). It is an error if the
-// die roll spec results in multiple results.
+// dice such as "3d6+4d10" or "best of N" kinds of things are allowed). It is an error if the
+// die roll spec generates multiple results.
 //
 // The return value differs from Roll() in that only a single StructuredResult
 // is returned rather than a slice of them.
@@ -2055,13 +2097,10 @@ func RollOnce(spec string) (string, StructuredResult, error) {
 	return l, r[0], nil
 }
 
-// Just like DoRoll() but adds the constraint that there may only be one result
-// returned (no confirmation rolls, no repeated rolls, etc., although multiple
-// dice or "best of N" kinds of things are allowed). It is an error if the
-// die roll spec results in multiple results.
 //
-// The return value differs from Roll() in that only a single StructuredResult
-// is returned rather than a slice of them.
+// DoRollOnce is just like the DoRoll() method but adds the constraint that there may only be one result
+// returned, in the same way the RollOnce() function differs from the Roll() function.
+//
 func (d *DieRoller) DoRollOnce(spec string) (string, StructuredResult, error) {
 	l, r, err := d.DoRoll(spec)
 	if err != nil {
@@ -2075,8 +2114,8 @@ func (d *DieRoller) DoRollOnce(spec string) (string, StructuredResult, error) {
 }
 
 //
-// If the DieRoller has been rolled already, and contains but a single die
-// in its specification, this method will return true if that die was rolled
+// IsNaturalMax returns true if the DieRoller has been rolled already, and contains but a single die
+// in its specification, and that die was rolled
 // to the maximum possible value (i.e., a 20 on a d20).
 //
 // It returns false if that was not true, even if that was for reasons that it
@@ -2088,8 +2127,8 @@ func (d *DieRoller) IsNaturalMax() (result bool) {
 }
 
 //
-// If the DieRoller has been rolled already, and contains but a single die
-// in its specification, this method will return true if that die was rolled
+// IsNatural1 returns true if the DieRoller has been rolled already, and contains but a single die
+// in its specification, and that die was rolled
 // as a natural 1.
 //
 // It returns false if that was not true, even if that was for reasons that it
@@ -2125,7 +2164,10 @@ func (d *DieRoller) isNatural(checkForMax bool) (result bool) {
 	return
 }
 
-// Simple text formatter for a StructuredDescription slice.
+// Text produces a simple plain-text rendering of the information
+// in a StructuredDescription slice. This is useful for showing
+// the full details of a die roll to a human, or a log file, etc.,
+// if fancier formatting isn't needed.
 func (sr StructuredDescriptionSet) Text() (string, error) {
 	var t strings.Builder
 	var i int

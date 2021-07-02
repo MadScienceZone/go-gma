@@ -70,7 +70,7 @@ func romanTable() []romanTableEntry {
 }
 
 //
-// Converts an integer value to a Roman numeral string.
+// ToRoman converts an integer value to a Roman numeral string.
 // This will return "0" for a zero value.
 //
 func ToRoman(i int) (string, error) {
@@ -95,7 +95,7 @@ func ToRoman(i int) (string, error) {
 }
 
 //
-// Converts a Roman numeral string to integer.
+// FromRoman converts a Roman numeral string to integer.
 // Accepts "0" as a zero value.
 //
 func FromRoman(roman string) (int, error) {
@@ -144,23 +144,27 @@ type renderOptSet struct {
 
 type renderOpts func(*renderOptSet)
 
-// Select plain text output format
+// AsPlainText may be added as an option to the Render() function
+// to select plain text output format.
 func AsPlainText(o *renderOptSet) {
 	o.formatter = &renderPlainTextFormatter{}
 }
 
-// Select HTML text output format
+// AsHTML may be added as an option to the Render() function
+// to select HTML output format.
 func AsHTML(o *renderOptSet) {
 	o.formatter = &renderHTMLFormatter{}
 }
 
-// Select PostScript text output format
+// AsPostScript may be added as an option to the Render() function
+// to select PostScript output format.
 func AsPostScript(o *renderOptSet) {
 	o.formatter = &renderPostScriptFormatter{}
 }
 
 //
-// Specify a custom set of bullet characters
+// WithBullets may be added as an option to the Render() function to
+// specify a custom set of bullet characters
 // to use for bulleted lists. The bullets passed
 // to this option are used in order, then the list
 // repeats over as necessary for additional levels.
@@ -169,6 +173,10 @@ func AsPostScript(o *renderOptSet) {
 //  formattedText, err := Render(srcText, AsPlainText, WithBullets('*', '-'))
 // This will alternate between '*' and '-' as bullets at each level.
 //
+// While the default bullet(s) are chosen appropriately for each output format,
+// no other processing is made to the runes passed here; they are used as-is
+// in each case. This may change.
+//
 func WithBullets(bullets ...rune) renderOpts {
 	return func(o *renderOptSet) {
 		o.bulletSet = bullets
@@ -176,8 +184,11 @@ func WithBullets(bullets ...rune) renderOpts {
 }
 
 //
-// For PostScript output, use a more compact rendering of text
+// WithCompactText may be added as an option to the Render() function to
+// specify that a more compact rendering of text
 // blocks in order to conserve paper real estate.
+//
+// Currently only supported for PostScript output.
 //
 // Example:
 //  ps, err := Render(srcText, AsPostScript, WithCompactText)
@@ -1032,7 +1043,10 @@ func enumVal(level, value int) string {
 }
 
 //
-// Markup text rendering is done via the Render function.
+// Render converts its input text (in our simple markup notation described
+// below) to an output format as specified by the option(s) passed after
+// the input text in the parameter list.
+//
 // The set of options which may follow the string to be formatted
 // include these which select the overall output format:
 //   AsPlainText  -- render a text-only version of the input
@@ -1080,7 +1094,7 @@ func enumVal(level, value int) string {
 // [[link|name]] Creates a hyperlink called "name" which links to GMA element "link".
 //
 // \. does nothing but serves to disambiguate things such as ** to begin
-// a section of bolded text from ** to begin a 2nd-level bulleted item
+// a section of boldface text from ** to begin a 2nd-level bulleted item
 // since the latter must be at the very start of the line.
 //
 // There is also a special page-break marker <<-->> which is not actually processed

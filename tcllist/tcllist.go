@@ -35,7 +35,7 @@
 // the Tcl language, after it was ported from the even older C++ code) use
 // Tcl  list  objects  as  their  data representation. Notably the biggest
 // example is the mapper(6) tool (which is still written in  Tcl  itself),
-// whose  map  file  format and TCP/IP communications protocl include marshalled data structures represented as Tcl lists.
+// whose  map  file  format and TCP/IP communications protocol include marshalled data structures represented as Tcl lists.
 //
 // While this is obviously convenient for Tcl programs in  that  they  can
 // take  such strings and natively use them as lists of values, it is also
@@ -510,11 +510,17 @@ func ParseTclList(tcl_string string) ([]string, error) {
 }
 
 //
-// Since the elements in a TclList may represent integers or floats,
-// but are just strings of characters in the TclList, we can't automatically
-// assume they should be actual numeric values. If it is known that they
+// ConvertTypes converts some or all of the elements in a string slice
+// such as that returned by ParseTclList() to a new slice of values
+// which have been converted to other data types as specified by the
+// caller.
+//
+// Since the string representation of a TclList is type-agnostic,
+// we can't automatically
+// assume its elements should be specific types such as numeric values.
+// If it is known that they
 // should be, this function will run through the elements of the slice
-// (such as one returned from ParseTclList()), converting its elements
+// converting its elements
 // to either int or float types wherever possible, returning the
 // converted data slice.
 //
@@ -525,10 +531,11 @@ func ParseTclList(tcl_string string) ([]string, error) {
 //    b  copy the element as a []byte slice.
 //    r  copy the element as a []rune slice.
 //    f  convert the element to a float value.
-//    i  invert the element to an int value.
+//    i  convert the element to an int value.
 //    *  stop processing here, ignoring any remaining slice elements.
 // If the value cannot be converted as requested, an error is returned.
-// This allows a simple way to validate the incoming types for all values in
+//
+// This provides a simple way to validate the types for all values in
 // the slice at once, so you can directly access the slice elements as the
 // intended types without individually type-testing each one.
 //

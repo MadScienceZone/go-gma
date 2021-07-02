@@ -37,7 +37,8 @@ func splitToInts(s string) ([]int, error) {
 }
 
 //
-// Compare version strings a and b. These strings must consist of
+// VersionCompare
+// compared version strings a and b. These strings must consist of
 // integers separated with dots, such as "2" or "3.1".
 // Any number of version levels are allowed, although generally
 // only 2 or 3 are of practical use.
@@ -156,7 +157,8 @@ func Hexdump(data []byte, opts ...hdoption) string {
 }
 
 //
-// Hexdump option: change starting address
+// WithStartingAddress may be added as an option to the Hexdump() function
+// to change the starting address of the data being shown.
 //
 // Example:
 //  data := []byte("\x00\x81\x02\x03Hello, World™<>ABCDEFG")
@@ -172,7 +174,8 @@ func WithStartingAddress(a int) hdoption {
 }
 
 //
-// Hexdump option: change output width in bytes
+// WithWidth may be added as an option to the Hexdump() function
+// to change the output width in bytes.
 //
 // The behavior is undefined if the width is not a multiple
 // of the word size.
@@ -193,7 +196,8 @@ func WithWidth(w int) hdoption {
 }
 
 //
-// Hexdump option: change output word size in bytes
+// WithWordSize may be added as an option to the Hexdump() function
+// to change the output word size in bytes.
 //
 // Example:
 //  data := []byte("\x00\x81\x02\x03Hello, World™<>ABCDEFG")
@@ -209,7 +213,8 @@ func WithWordSize(w int) hdoption {
 }
 
 //
-// Hexdump option: suppress text column
+// WithoutText may be added as an option to the Hexdump() function
+// to suppress the text column from the generated display.
 //
 // Example:
 //  data := []byte("\x00\x81\x02\x03Hello, World™<>ABCDEFG")
