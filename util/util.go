@@ -38,7 +38,7 @@ func splitToInts(s string) ([]int, error) {
 
 //
 // VersionCompare
-// compared version strings a and b. These strings must consist of
+// compares version strings a and b. These strings must consist of
 // integers separated with dots, such as "2" or "3.1".
 // Any number of version levels are allowed, although generally
 // only 2 or 3 are of practical use.
@@ -165,7 +165,7 @@ func Hexdump(data []byte, opts ...hdoption) string {
 //  Hexdump(data, WithStartingAddress(0x4444))
 // will return the string
 //  00004444:  00 81 02 03 48 65 6C 6C 6F 2C 20 57 6F 72 6C 64  |....Hello, World|
-//  00004450:  E2 84 A2 3C 3E 41 42 43 44 45 46 47              |...<>ABCDEFG    |
+//  00004454:  E2 84 A2 3C 3E 41 42 43 44 45 46 47              |...<>ABCDEFG    |
 //
 func WithStartingAddress(a int) hdoption {
 	return func(o *hdopt) {
@@ -185,9 +185,9 @@ func WithStartingAddress(a int) hdoption {
 //  Hexdump(data, WithWidth(8), WithStartingAddress(0x4444))
 // will return the string
 //  00004444:  00 81 02 03 48 65 6C 6C  |....Hell|
-//  0000444B:  6F 2C 20 57 6F 72 6C 64  |o, World|
-//  00004453:  E2 84 A2 3C 3E 41 42 43  |...<>ABC|
-//  0000445B:  44 45 46 47              |DEFG    |
+//  0000444C:  6F 2C 20 57 6F 72 6C 64  |o, World|
+//  00004454:  E2 84 A2 3C 3E 41 42 43  |...<>ABC|
+//  0000445C:  44 45 46 47              |DEFG    |
 //
 func WithWidth(w int) hdoption {
 	return func(o *hdopt) {

@@ -135,7 +135,8 @@ type newDiceOption func(*diceOptions) error
 // ByDescription sets up a Dice value based on the
 // text description given. This is the preferred way to make
 // a low-level Dice value, since it is a flexible human-readable
-// specification which likely came from the user anyway.
+// specification which likely came from the user anyway. (Although
+// using DieRoller instead of Dice is even better.)
 //
 // This text description may contain any number of nonnegative integer values
 // and/or die‐roll expressions separated by the basic math operators “+”,  “−”,
@@ -1117,7 +1118,7 @@ func (d *Dice) MaxRollToConfirm(bonus int) (int, error) {
 // provided threat value. If that previous roll is less than the threat
 // value, nothing further is done, and 0 is returned.
 //
-// If the previous roll was >= threat, then we make another roll, adding
+// If the previous roll was ≥ threat, then we make another roll, adding
 // the provided bonus modifier to that roll. This roll's total is returned,
 // and becomes the new most-recent roll for this Dice value.
 //
@@ -1322,7 +1323,7 @@ type DieRoller struct {
 	// Values to be substituted into the Template
 	Permutations [][]interface{}
 
-	// If PctChance >= 0 then our target to be "successful" is a score
+	// If PctChance ≥ 0 then our target to be "successful" is a score
 	// or at least PctChance on a percentile die roll. In that case
 	// we can also set a label in PctLabel for that roll.
 	PctChance int
