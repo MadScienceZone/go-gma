@@ -262,6 +262,11 @@ func TestTclList_ConvertTypes(t *testing.T) {
 		t.Fatalf("Error converting ssff*: expected [4] to be nil")
 	}
 
+	b, err = ConvertTypes([]string{"foo", "bar"}, "ss*")
+	if err != nil {
+		t.Fatalf("Error when trailing * in conversion set: %v", err)
+	}
+
 	b, err = ConvertTypes(src, "ssifs")
 	if err != nil {
 		t.Fatalf("Error converting ssifs: %v", err)

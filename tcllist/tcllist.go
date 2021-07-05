@@ -532,6 +532,8 @@ func ParseTclList(tcl_string string) ([]string, error) {
 //    r  copy the element as a []rune slice.
 //    f  convert the element to a float value.
 //    i  convert the element to an int value.
+//    I  as i, but an empty string is equivalent to 0.
+//    ?  copy the element as a bool value.
 //    *  stop processing here, ignoring any remaining slice elements.
 // If the value cannot be converted as requested, an error is returned.
 //
@@ -547,6 +549,9 @@ func ConvertTypes(list []string, types string) ([]interface{}, error) {
 	converted := make([]interface{}, len(list))
 	var err error
 
+	if len(types) > len(list) && types[len(list)] != '*' {
+		return nil, fmt.Errorf("too many data elements (%d) for expected values", len(list))
+	}
 	for i, s := range list {
 		if len(types) <= i {
 			return nil, fmt.Errorf("Not enough type specifiers for %d-element slice", len(list))
@@ -558,6 +563,8 @@ func ConvertTypes(list []string, types string) ([]interface{}, error) {
 			converted[i] = s
 		case 'b':
 			converted[i] = []byte(s)
+		case '?':
+			converted[i], err = strconv.ParseBool(s)
 		case 'r':
 			converted[i] = []rune(s)
 		case 'f':
@@ -565,6 +572,12 @@ func ConvertTypes(list []string, types string) ([]interface{}, error) {
 			if err != nil {
 				return nil, err
 			}
+		case 'I':
+			if strings.TrimSpace(s) == "" {
+				converted[i] = 0
+				continue
+			}
+			fallthrough
 		case 'i':
 			converted[i], err = strconv.Atoi(s)
 			if err != nil {
@@ -576,10 +589,18 @@ func ConvertTypes(list []string, types string) ([]interface{}, error) {
 			return nil, fmt.Errorf("Invalid type specifier '%v'", types[i])
 		}
 	}
-	if len(types) != len(list) {
-		return nil, fmt.Errorf("More data elements than type specifiers")
-	}
 	return converted, nil
+}
+
+// Parse is a convenience function which combines the operation of the
+// ParseTclList and ConvertTypes functions in a single step.
+func Parse(tclString, types string) ([]interface{}, error) {
+	f, err := ParseTclList(tclString)
+	if err != nil {
+		return nil, err
+	}
+
+	return ConvertTypes(f, types)
 }
 
 // @[00]@| GMA 4.3.3
