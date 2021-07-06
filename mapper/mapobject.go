@@ -830,6 +830,14 @@ func objTextFont(objDef map[string][]string, i int, fldName string, required boo
 	if err != nil {
 		return TextFont{}, err
 	}
+	// oddly this is stored with an extra level of list-wrapping
+	if len(f) != 1 {
+		return TextFont{}, fmt.Errorf("attribute %s has invalid font format [%s]", fldName, val[i])
+	}
+	f, err = tcllist.ParseTclList(f[0])
+	if err != nil {
+		return TextFont{}, err
+	}
 
 	var ff []interface{}
 	switch len(f) {
