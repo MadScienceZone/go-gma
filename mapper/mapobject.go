@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/fizban-of-ragnarok/go-gma/v4/tcllist"
 )
@@ -49,6 +50,7 @@ type PolymorphSizes struct {
 
 type MapObject interface {
 	ObjID() string
+	SaveData([]string, string, string) ([]string, error)
 }
 
 type BaseMapObject struct {
@@ -59,6 +61,13 @@ type Coordinates struct {
 	// The (x,y) coordinates for the reference point of this element on the map.
 	// These are in standard map pixel units (50 pixels = 5 feet).
 	X, Y float64
+}
+
+func (c Coordinates) SaveData(data []string, prefix, id string) ([]string, error) {
+	return saveValues(data, prefix, id, []saveAttributes{
+		{"X", "f", true, c.X},
+		{"Y", "f", true, c.Y},
+	})
 }
 
 type MapElement struct {
@@ -699,6 +708,7 @@ func objMapElement(objId string, objDef map[string][]string) (MapElement, error)
 	e.Points, err = objCoordinateList(objDef, 0, "POINTS", false, err)
 	e.Fill, err = objString(objDef, 0, "FILL", false, err)
 	e.Dash, err = objEnum(objDef, 0, "DASH", false, enumChoices{
+		"":    DashSolid,
 		"-":   DashLong,
 		",":   DashMedium,
 		".":   DashShort,
@@ -963,78 +973,377 @@ func saveEnum(choice byte, choices enumChoices) (string, error) {
 			return k, nil
 		}
 	}
-	return "", fmt.Errorf("value %v not in list of valid enum choices", choice)
+	return "", fmt.Errorf("value %v not in list of valid enum choices %v", choice, choices)
 }
 
-func SaveObjects(objects []MapObject, images map[string]ImageDefinition, files []FileDefinition) ([]string, error) {
-	data := make([]string, 0, 32)
-	for _, o := range objects {
-		switch obj := o.(type) {
-		case ArcElement:
-		case CircleElement:
-		case LineElement:
-		case MonsterToken:
-		case PlayerToken:
-			ss, err := tcllist.ToTclString(obj.SkinSize)
-			if err != nil {
-				return nil, err
-			}
-			sl, err := tcllist.ToTclString(obj.StatusList)
-			if err != nil {
-				return nil, err
-			}
-			ae, err := saveCreatureAoE(obj.AoE)
-			if err != nil {
-				return nil, err
-			}
-			mm, err := saveEnum(obj.MoveMode, enumChoices{
-				"land":   MoveModeLand,
-				"burrow": MoveModeBurrow,
-				"climb":  MoveModeClimb,
-				"fly":    MoveModeFly,
-				"swim":   MoveModeSwim,
-			})
-			if err != nil {
-				return nil, err
-			}
-			he, err := saveHealth(obj.Health)
-			if err != nil {
-				return nil, err
-			}
-			data, err = saveValues(data, "P", o.ObjID(), []saveAttributes{
-				{"TYPE", "s", true, "player"},
-				{"NAME", "s", true, obj.Name},
-				{"GX", "f", true, obj.Gx},
-				{"GY", "f", true, obj.Gy},
-				{"SKIN", "i", true, obj.Skin},
-				{"SKINSIZE", "s", false, ss},
-				{"ELEV", "i", true, obj.Elev},
-				{"COLOR", "s", true, obj.Color},
-				{"NOTE", "s", false, obj.Note},
-				{"SIZE", "s", true, obj.Size},
-				{"STATUSLIST", "s", false, sl},
-				{"AOE", "s", false, ae},
-				{"AREA", "s", true, obj.Area},
-				{"MOVEMODE", "s", false, mm},
-				{"REACH", "b", true, obj.Reach},
-				{"KILLED", "b", true, obj.Killed},
-				{"DIM", "b", true, obj.Dim},
-				{"HEALTH", "s", false, he},
-			})
-			if err != nil {
-				return nil, err
-			}
+type saveObjOpts struct {
+	Comment        string
+	Date           time.Time
+	SuppressHeader bool
+}
 
-		case PolygonElement:
-		case RectangleElement:
-		case SpellAreaOfEffectElement:
-		case TextElement:
-		case TileElement:
-		default:
-			return nil, fmt.Errorf("unexpected map object type for %s", o.ObjID())
+type saveOption func(*saveObjOpts)
+
+func WithoutHeader(o *saveObjOpts) {
+	o.SuppressHeader = true
+}
+
+func WithDate(d time.Time) saveOption {
+	return func(o *saveObjOpts) {
+		o.Date = d
+	}
+}
+func WithComment(c string) saveOption {
+	return func(o *saveObjOpts) {
+		o.Comment = c
+	}
+}
+
+func SaveObjects(objects []MapObject, images map[string]ImageDefinition, files []FileDefinition, options ...saveOption) ([]string, error) {
+	var err error
+	opts := saveObjOpts{}
+	data := make([]string, 0, 32)
+
+	for _, o := range options {
+		o(&opts)
+	}
+
+	if !opts.SuppressHeader {
+		if opts.Date.IsZero() {
+			opts.Date = time.Now()
+		}
+
+		fileDate, err := tcllist.ToTclString([]string{
+			strconv.FormatInt(opts.Date.Unix(), 10),
+			opts.Date.Format(time.UnixDate),
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		commentHdr, err := tcllist.ToTclString([]string{
+			opts.Comment,
+			fileDate,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		header, err := tcllist.ToTclString([]string{
+			fmt.Sprintf("__MAPPER__:%d", GMAMapperFileFormat),
+			commentHdr,
+		})
+		if err != nil {
+			return nil, err
+		}
+		data = append(data, header)
+	}
+
+	for _, o := range objects {
+		data, err = o.SaveData(data, "", o.ObjID())
+		if err != nil {
+			return nil, fmt.Errorf("could not save object %s: %v", o.ObjID(), err)
 		}
 	}
+
 	return data, nil
+}
+
+func (o BaseMapObject) SaveData(data []string, prefix, id string) ([]string, error) {
+	return data, nil
+}
+
+func (o MapElement) SaveData(data []string, prefix, id string) ([]string, error) {
+	var err error
+	if data, err = o.BaseMapObject.SaveData(data, prefix, id); err != nil {
+		return nil, err
+	}
+	if data, err = o.Coordinates.SaveData(data, prefix, id); err != nil {
+		return nil, err
+	}
+
+	var coords string
+	if len(o.Points) > 0 {
+		cl := make([]string, 0, len(o.Points))
+		for _, c := range o.Points {
+			cl = append(cl, fmt.Sprintf("%g", c.X))
+			cl = append(cl, fmt.Sprintf("%g", c.Y))
+		}
+		if coords, err = tcllist.ToTclString(cl); err != nil {
+			return nil, err
+		}
+	}
+
+	da, err := saveEnum(o.Dash, enumChoices{
+		"":    DashSolid,
+		"-":   DashLong,
+		",":   DashMedium,
+		".":   DashShort,
+		"-.":  DashLongShort,
+		"-..": DashLong2Short,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return saveValues(data, prefix, id, []saveAttributes{
+		{"Z", "i", true, o.Z},
+		{"POINTS", "s", true, coords},
+		{"LOCKED", "b", false, o.Locked},
+		{"FILL", "s", true, o.Fill},
+		{"LINE", "s", false, o.Line},
+		{"WIDTH", "i", false, o.Width},
+		{"LAYER", "s", true, o.Layer},
+		{"HIDDEN", "b", false, o.Hidden},
+		{"LEVEL", "i", false, o.Level},
+		{"GROUP", "s", false, o.Group},
+		{"DASH", "s", false, da},
+	})
+}
+
+func (o MonsterToken) SaveData(data []string, prefix, id string) ([]string, error) {
+	return o.CreatureToken.SaveData(data, "M", id)
+}
+
+func (o PlayerToken) SaveData(data []string, prefix, id string) ([]string, error) {
+	return o.CreatureToken.SaveData(data, "P", id)
+}
+
+func (o CreatureToken) SaveData(data []string, prefix, id string) ([]string, error) {
+	var err error
+	if data, err = o.BaseMapObject.SaveData(data, prefix, id); err != nil {
+		return nil, err
+	}
+
+	ss, err := tcllist.ToTclString(o.SkinSize)
+	if err != nil {
+		return nil, err
+	}
+	sl, err := tcllist.ToTclString(o.StatusList)
+	if err != nil {
+		return nil, err
+	}
+	ae, err := saveCreatureAoE(o.AoE)
+	if err != nil {
+		return nil, err
+	}
+	mm, err := saveEnum(o.MoveMode, enumChoices{
+		"land":   MoveModeLand,
+		"burrow": MoveModeBurrow,
+		"climb":  MoveModeClimb,
+		"fly":    MoveModeFly,
+		"swim":   MoveModeSwim,
+	})
+	if err != nil {
+		return nil, err
+	}
+	he, err := saveHealth(o.Health)
+	if err != nil {
+		return nil, err
+	}
+
+	var myType string
+	if prefix == "P" {
+		myType = "player"
+	} else {
+		myType = "monster"
+	}
+
+	return saveValues(data, prefix, id, []saveAttributes{
+		{"TYPE", "s", true, myType},
+		{"NAME", "s", true, o.Name},
+		{"GX", "f", true, o.Gx},
+		{"GY", "f", true, o.Gy},
+		{"SKIN", "i", true, o.Skin},
+		{"SKINSIZE", "s", false, ss},
+		{"ELEV", "i", true, o.Elev},
+		{"COLOR", "s", true, o.Color},
+		{"NOTE", "s", false, o.Note},
+		{"SIZE", "s", true, o.Size},
+		{"STATUSLIST", "s", false, sl},
+		{"AOE", "s", false, ae},
+		{"AREA", "s", true, o.Area},
+		{"MOVEMODE", "s", false, mm},
+		{"REACH", "b", false, o.Reach},
+		{"KILLED", "b", true, o.Killed},
+		{"DIM", "b", true, o.Dim},
+		{"HEALTH", "s", false, he},
+	})
+}
+
+func (o ArcElement) SaveData(data []string, prefix, id string) ([]string, error) {
+	data, err := o.MapElement.SaveData(data, prefix, id)
+	if err != nil {
+		return nil, err
+	}
+
+	am, err := saveEnum(o.Arcmode, enumChoices{
+		"pieslice": ArcModePieSlice,
+		"arc":      ArcModeArc,
+		"chord":    ArcModeChord,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return saveValues(data, prefix, id, []saveAttributes{
+		{"TYPE", "s", true, "arc"},
+		{"ARCMODE", "s", true, am},
+		{"START", "f", true, o.Start},
+		{"EXTENT", "f", true, o.Extent},
+	})
+}
+
+func (o LineElement) SaveData(data []string, prefix, id string) ([]string, error) {
+	data, err := o.MapElement.SaveData(data, prefix, id)
+	if err != nil {
+		return nil, err
+	}
+
+	am, err := saveEnum(o.Arrow, enumChoices{
+		"none":  ArrowNone,
+		"first": ArrowFirst,
+		"last":  ArrowLast,
+		"both":  ArrowBoth,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return saveValues(data, prefix, id, []saveAttributes{
+		{"TYPE", "s", true, "line"},
+		{"ARROW", "s", false, am},
+	})
+}
+
+func (o PolygonElement) SaveData(data []string, prefix, id string) ([]string, error) {
+	data, err := o.MapElement.SaveData(data, prefix, id)
+	if err != nil {
+		return nil, err
+	}
+
+	jm, err := saveEnum(o.Join, enumChoices{
+		"bevel": JoinBevel,
+		"miter": JoinMiter,
+		"round": JoinRound,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return saveValues(data, prefix, id, []saveAttributes{
+		{"TYPE", "s", true, "poly"},
+		{"JOIN", "s", true, jm},
+		{"SPLINE", "f", true, o.Spline},
+	})
+}
+
+func (o SpellAreaOfEffectElement) SaveData(data []string, prefix, id string) ([]string, error) {
+	data, err := o.MapElement.SaveData(data, prefix, id)
+	if err != nil {
+		return nil, err
+	}
+
+	ae, err := saveEnum(o.AoEShape, enumChoices{
+		"cone":   AoEShapeCone,
+		"radius": AoEShapeRadius,
+		"ray":    AoEShapeRay,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return saveValues(data, prefix, id, []saveAttributes{
+		{"TYPE", "s", true, "aoe"},
+		{"AOESHAPE", "s", true, ae},
+	})
+}
+
+func (o TextElement) SaveData(data []string, prefix, id string) ([]string, error) {
+	data, err := o.MapElement.SaveData(data, prefix, id)
+	if err != nil {
+		return nil, err
+	}
+
+	a, err := saveEnum(o.Anchor, enumChoices{
+		"center": AnchorCenter,
+		"n":      AnchorNorth,
+		"s":      AnchorSouth,
+		"e":      AnchorEast,
+		"w":      AnchorWest,
+		"ne":     AnchorNE,
+		"se":     AnchorSE,
+		"nw":     AnchorNW,
+		"sw":     AnchorSW,
+	})
+	if err != nil {
+		return nil, err
+	}
+	fw, err := saveEnum(o.Font.Weight, enumChoices{
+		"bold":   FontWeightBold,
+		"normal": FontWeightNormal,
+	})
+	if err != nil {
+		return nil, err
+	}
+	fs, err := saveEnum(o.Font.Slant, enumChoices{
+		"italic": FontSlantItalic,
+		"roman":  FontSlantRoman,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	f1, err := tcllist.ToTclString([]string{
+		o.Font.Family,
+		fmt.Sprintf("%g", o.Font.Size),
+		fw, fs})
+	if err != nil {
+		return nil, err
+	}
+	f2, err := tcllist.ToTclString([]string{f1})
+	if err != nil {
+		return nil, err
+	}
+
+	return saveValues(data, prefix, id, []saveAttributes{
+		{"TYPE", "s", true, "text"},
+		{"TEXT", "s", true, o.Text},
+		{"FONT", "s", true, f2},
+		{"ANCHOR", "s", true, a},
+	})
+}
+
+func (o TileElement) SaveData(data []string, prefix, id string) ([]string, error) {
+	data, err := o.MapElement.SaveData(data, prefix, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return saveValues(data, prefix, id, []saveAttributes{
+		{"TYPE", "s", true, "tile"},
+		{"IMAGE", "s", true, o.Image},
+	})
+}
+
+func (o RectangleElement) SaveData(data []string, prefix, id string) ([]string, error) {
+	data, err := o.MapElement.SaveData(data, prefix, id)
+	if err != nil {
+		return nil, err
+	}
+	return saveValues(data, prefix, id, []saveAttributes{
+		{"TYPE", "s", true, "rect"},
+	})
+}
+
+func (o CircleElement) SaveData(data []string, prefix, id string) ([]string, error) {
+	data, err := o.MapElement.SaveData(data, prefix, id)
+	if err != nil {
+		return nil, err
+	}
+	return saveValues(data, prefix, id, []saveAttributes{
+		{"TYPE", "s", true, "circ"},
+	})
 }
 
 func saveValues(previous []string, prefix, objID string, attrs []saveAttributes) ([]string, error) {
@@ -1047,7 +1356,11 @@ func saveValues(previous []string, prefix, objID string, attrs []saveAttributes)
 		var s string
 		switch attr.Type {
 		case "b":
-			s = saveBool(attr.Value.(bool))
+			if !attr.Value.(bool) && !attr.Required {
+				s = ""
+			} else {
+				s = saveBool(attr.Value.(bool))
+			}
 		case "f":
 			s = fmt.Sprintf("%g", attr.Value.(float64))
 		case "i":
