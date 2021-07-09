@@ -1001,6 +1001,12 @@ func (o TileElement) SaveData(data []string, prefix, id string) ([]string, error
 // A CreatureToken is a MapObject (but not a MapElement) which displays a movable
 // token indicating the size and location of a creature in the game.
 //
+const (
+	CreatureTypeUnknown = iota
+	CreatureTypeMonster
+	CreatureTypePlayer
+)
+
 type CreatureToken struct {
 	BaseMapObject
 
@@ -1086,6 +1092,9 @@ type CreatureToken struct {
 	// In combat, if this is true, the token is "dimmed" to indicate
 	// that it is not their turn to act.
 	Dim bool
+
+	// The creature type.
+	CreatureType byte
 }
 
 //
@@ -1093,7 +1102,9 @@ type CreatureToken struct {
 //
 func newCreature(objId string, objDef map[string][]string) (CreatureToken, error) {
 	var err error
-	c := CreatureToken{}
+	c := CreatureToken{
+		CreatureType: CreatureTypeUnknown,
+	}
 	c.ID = objId
 	c.Name, err = objString(objDef, 0, "NAME", true, err)
 	c.Gx, err = objFloat(objDef, 0, "GX", true, err)
@@ -1342,10 +1353,13 @@ func (o CreatureToken) SaveData(data []string, prefix, id string) ([]string, err
 	}
 
 	var myType string
-	if prefix == "P" {
+	switch o.CreatureType {
+	case CreatureTypePlayer:
 		myType = "player"
-	} else {
+	case CreatureTypeMonster:
 		myType = "monster"
+	default:
+		return nil, fmt.Errorf("CreatureToken has unknown type")
 	}
 
 	return saveValues(data, prefix, id, []saveAttributes{
@@ -1390,6 +1404,7 @@ type PlayerToken struct {
 //
 func newPlayer(objId string, objDef map[string][]string) (PlayerToken, error) {
 	c, err := newCreature(objId, objDef)
+	c.CreatureType = CreatureTypePlayer
 	return PlayerToken{
 		CreatureToken: c,
 	}, err
@@ -1425,6 +1440,7 @@ type MonsterToken struct {
 //
 func newMonster(objId string, objDef map[string][]string) (MonsterToken, error) {
 	c, err := newCreature(objId, objDef)
+	c.CreatureType = CreatureTypeMonster
 	return MonsterToken{
 		CreatureToken: c,
 	}, err

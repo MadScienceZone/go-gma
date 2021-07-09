@@ -118,6 +118,7 @@ func TestObjLoadOnePlayer(t *testing.T) {
 	iEq(p.Health.MaxHP, 28, "MaxHP", t)
 	if !reflect.DeepEqual(objs[0].(PlayerToken), PlayerToken{
 		CreatureToken: CreatureToken{
+			CreatureType: CreatureTypePlayer,
 			BaseMapObject: BaseMapObject{
 				ID: "PC73",
 			},
@@ -466,6 +467,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				bEq(obj.Reach, false, "Reach", t)
 				bEq(obj.Killed, true, "Killed", t)
 				bEq(obj.Dim, true, "Dim", t)
+				BEq(obj.CreatureType, CreatureTypeMonster, "CreatureType", t)
 			case "39a1afc1b1aa4cac87eee32be93ebe9a":
 				sEq(obj.ID, "39a1afc1b1aa4cac87eee32be93ebe9a", "ID", t)
 				iEq(obj.Health.MaxHP, 45, "MaxHP", t)
@@ -494,6 +496,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				bEq(obj.Reach, true, "Reach", t)
 				bEq(obj.Killed, false, "Killed", t)
 				bEq(obj.Dim, true, "Dim", t)
+				BEq(obj.CreatureType, CreatureTypeMonster, "CreatureType", t)
 			default:
 				t.Errorf("Found unexpected monster token %s", obj.ObjID())
 			}
@@ -527,6 +530,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				bEq(obj.Reach, false, "Reach", t)
 				bEq(obj.Killed, false, "Killed", t)
 				bEq(obj.Dim, true, "Dim", t)
+				BEq(obj.CreatureType, CreatureTypePlayer, "CreatureType", t)
 			case "976e7148ae86409f99fdebf83f3f0904":
 				sEq(obj.ID, "976e7148ae86409f99fdebf83f3f0904", "ID", t)
 				if obj.Health != nil {
@@ -549,6 +553,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				bEq(obj.Reach, false, "Reach", t)
 				bEq(obj.Killed, false, "Killed", t)
 				bEq(obj.Dim, false, "Dim", t)
+				BEq(obj.CreatureType, CreatureTypePlayer, "CreatureType", t)
 			default:
 				t.Errorf("Found unexpected player token %s", obj.ObjID())
 			}
