@@ -1,10 +1,10 @@
 # Changelog
 ## Current Version Information
- * GMA Core API Library Version: 4.3.3		<!-- @@##@@ -->
+ * GMA Core API Library Version: 4.3.4		<!-- @@##@@ -->
  * Supported GMA Mapper Version: 3.40.9		<!-- @@##@@ -->
  * Supported GMA Mapper Protocol: 332		<!-- @@##@@ -->
  * Supported GMA Mapper File Format: 16		<!-- @@##@@ -->
- * Effective Date: 02-Jul-2021			<!-- @@##@@ -->
+ * Effective Date: 11-Jul-2021			<!-- @@##@@ -->
 
 ## v4.3.3
 Added text processing and utility functions.
