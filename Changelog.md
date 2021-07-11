@@ -6,6 +6,9 @@
  * Supported GMA Mapper File Format: 16		<!-- @@##@@ -->
  * Effective Date: 11-Jul-2021			<!-- @@##@@ -->
 
+## v4.3.4
+Correction to how auth objects manage byte slices. 
+
 ## v4.3.3
 Added text processing and utility functions.
 
