@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___       ______      ______               #
-# (  ____ \(       )(  ___  )              /   )     / ___  \    / ___  \              #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \   \/   \  \             #
-# | |      | || || || (___) |            / (_) (_       ___) /      ___) /             #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (      (___ (              #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \         ) \             #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ /\___/  /             #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_)\______/              #
+#  _______  _______  _______                ___       ______         ___               #
+# (  ____ \(       )(  ___  )              /   )     / ___  \       /   )              #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \     / /) |              #
+# | |      | || || || (___) |            / (_) (_       ___) /    / (_) (_             #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (    (____   _)            #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \        ) (              #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _      | |              #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_)     (_)              #
 #                                                                                      #
 ########################################################################################
 */
@@ -30,6 +30,9 @@
 //
 // Client interface for the mapper service.
 //
+// THIS PACKAGE IS STILL A WORK IN PROGRESS and has not been
+// completely tested yet.
+//
 // This package handles the details of communicating with the
 // GMA mapper service communication channel used to keep the mapper
 // clients in sync with each other and with the other GMA tools.
@@ -51,6 +54,8 @@ package mapper
 import (
 	"bufio"
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"log"
@@ -71,7 +76,7 @@ import (
 //
 const (
 	GMAMapperProtocol              = 332     // @@##@@ auto-configured
-	GMAVersionNumber               = "4.3.3" // @@##@@ auto-configured
+	GMAVersionNumber               = "4.3.4" // @@##@@ auto-configured
 	MINIMUM_SUPPORTED_MAP_PROTOCOL = 332
 	MAXIMUM_SUPPORTED_MAP_PROTOCOL = 332
 )
@@ -562,6 +567,13 @@ func (c Connection) AddObjAttributes(objID, attrName string, values []string) er
 	return c.send("OA+", objID, attrName, vlist)
 }
 
+//     _       _  _           _ __     ___
+//    / \   __| |(_)_   _ ___| |\ \   / (_) _____      __
+//   / _ \ / _` || | | | / __| __\ \ / /| |/ _ \ \ /\ / /
+//  / ___ \ (_| || | |_| \__ \ |_ \ V / | |  __/\ V  V /
+// /_/   \_\__,_|/ |\__,_|___/\__| \_/  |_|\___| \_/\_/
+//             |__/
+
 //
 // AdjustView message: Change your displayed map view to the given
 // fractions of the full canvas size.
@@ -570,6 +582,17 @@ type AdjustViewMessagePayload struct {
 	BaseMessagePayload
 	XView, YView float64
 }
+
+func (c Connection) AdjustView(xview, yview float64) error {
+	return c.send("AV", fmt.Sprintf("%g", xview), fmt.Sprintf("%g", yview))
+}
+
+//   ____           _          _____ _ _
+//  / ___|__ _  ___| |__   ___|  ___(_) | ___
+// | |   / _` |/ __| '_ \ / _ \ |_  | | |/ _ \
+// | |__| (_| | (__| | | |  __/  _| | | |  __/
+//  \____\__,_|\___|_| |_|\___|_|   |_|_|\___|
+//
 
 //
 // CacheFile message: The client should take note of the given file
@@ -580,6 +603,17 @@ type CacheFileMessagePayload struct {
 	BaseMessagePayload
 	FileDefinition
 }
+
+func (c Connection) CacheFile(serverID string) error {
+	return c.send("M?", serverID)
+}
+
+//   ____ _           _   __  __
+//  / ___| |__   __ _| |_|  \/  | ___  ___ ___  __ _  __ _  ___
+// | |   | '_ \ / _` | __| |\/| |/ _ \/ __/ __|/ _` |/ _` |/ _ \
+// | |___| | | | (_| | |_| |  | |  __/\__ \__ \ (_| | (_| |  __/
+//  \____|_| |_|\__,_|\__|_|  |_|\___||___/___/\__,_|\__, |\___|
+//                                                   |___/
 
 //
 // Fields common to chat messages and die-roll results.
@@ -611,6 +645,41 @@ type ChatMessageMessagePayload struct {
 	Text string
 }
 
+const (
+	ToGMOnly = "%" // ChatMessage recipient is GM only
+	ToAll    = "*" // ChatMessage recipients are all users
+)
+
+//
+// ChatMessage sends a message on the chat channel to other
+// users. The to paramter is a slice of user names of the people
+// who should receive this message. Any of them may also be the
+// special values
+//    ToGMOnly  -- ignore any other names on the list. Send only to GM.
+//    ToAll     -- send to all users.
+//
+func (c Connection) ChatMessage(to []string, message string) error {
+	recipients, err := tcllist.ToTclString(to)
+	if err != nil {
+		return err
+	}
+	return c.send("TO", "", recipients, message)
+}
+
+//
+// ChatMessageToAll is equivalent to ChatMessage addressed to all users.
+//
+func (c Connection) ChatMessageToAll(message string) error {
+	return c.send("TO", "", ToAll, message)
+}
+
+//
+// ChatMessageToGM is equivalent to ChatMessage addressed only to the GM.
+//
+func (c Connection) ChatMessageToGM(message string) error {
+	return c.send("TO", "", ToGMOnly, message)
+}
+
 //   ____ _
 //  / ___| | ___  __ _ _ __
 // | |   | |/ _ \/ _` | '__|
@@ -639,9 +708,16 @@ func (c Connection) Clear(objID string) error {
 	return c.send("CLR", objID)
 }
 
+//   ____ _                  ____ _           _
+//  / ___| | ___  __ _ _ __ / ___| |__   __ _| |_
+// | |   | |/ _ \/ _` | '__| |   | '_ \ / _` | __|
+// | |___| |  __/ (_| | |  | |___| | | | (_| | |_
+//  \____|_|\___|\__,_|_|   \____|_| |_|\__,_|\__|
+//
+
 //
 // ClearChat message: clear the client's chat history
-// XXX is this just a notice of the action?
+//
 type ClearChatMessagePayload struct {
 	BaseMessagePayload
 
@@ -660,6 +736,15 @@ type ClearChatMessagePayload struct {
 	MessageID int
 }
 
+/* clients can't send these (for now) */
+
+//   ____ _                 _____
+//  / ___| | ___  __ _ _ __|  ___| __ ___  _ __ ___
+// | |   | |/ _ \/ _` | '__| |_ | '__/ _ \| '_ ` _ \
+// | |___| |  __/ (_| | |  |  _|| | | (_) | | | | | |
+//  \____|_|\___|\__,_|_|  |_|  |_|  \___/|_| |_| |_|
+//
+
 //
 // ClearFrom message: remove all elements in the map file
 // referenced.
@@ -669,6 +754,17 @@ type ClearFromMessagePayload struct {
 	FileDefinition
 }
 
+func (c Connection) ClearFrom(serverID string) error {
+	return c.send("CLR@", serverID)
+}
+
+//   ____                _           _   __  __           _
+//  / ___|___  _ __ ___ | |__   __ _| |_|  \/  | ___   __| | ___
+// | |   / _ \| '_ ` _ \| '_ \ / _` | __| |\/| |/ _ \ / _` |/ _ \
+// | |__| (_) | | | | | | |_) | (_| | |_| |  | | (_) | (_| |  __/
+//  \____\___/|_| |_| |_|_.__/ \__,_|\__|_|  |_|\___/ \__,_|\___|
+//
+
 //
 // CombatMode message: indicate if combat mode should be in effect.
 //
@@ -676,6 +772,21 @@ type CombatModeMessagePayload struct {
 	BaseMessagePayload
 	Enabled bool
 }
+
+func (c Connection) CombatMode(enabled bool) error {
+	if enabled {
+		c.send("CO", "1")
+	} else {
+		c.send("CO", "0")
+	}
+}
+
+//   ____                                     _
+//  / ___|___  _ __ ___  _ __ ___   ___ _ __ | |_
+// | |   / _ \| '_ ` _ \| '_ ` _ \ / _ \ '_ \| __|
+// | |__| (_) | | | | | | | | | | |  __/ | | | |_
+//  \____\___/|_| |_| |_|_| |_| |_|\___|_| |_|\__|
+//
 
 //
 // Comment message: a server comment to the client. The client is
@@ -686,16 +797,18 @@ type CommentMessagePayload struct {
 	Text string
 }
 
+/* Clients don't send these */
+
+//  _____ _ _ _            ____  _          ____                     _
+// |  ___(_) | |_ ___ _ __|  _ \(_) ___ ___|  _ \ _ __ ___  ___  ___| |_ ___
+// | |_  | | | __/ _ \ '__| | | | |/ __/ _ \ |_) | '__/ _ \/ __|/ _ \ __/ __|
+// |  _| | | | ||  __/ |  | |_| | | (_|  __/  __/| | |  __/\__ \  __/ |_\__ \
+// |_|   |_|_|\__\___|_|  |____/|_|\___\___|_|   |_|  \___||___/\___|\__|___/
 //
-// FilterDicePresets message: remove die-roll presets whose names
-// match a regular expression.
-//
-/*
-type FilterDicePresetsMessagePayload struct {
-	BaseMessagePayload
-	NamePattern string
+
+func (c Connection) FilterDicePresets(re string) error {
+	return c.send("DD/", re)
 }
-*/
 
 //
 // LoadFrom message: load elements from the given file.
@@ -713,6 +826,13 @@ type LoadFromMessagePayload struct {
 	Merge bool
 }
 
+//  _                    _  ___  _     _           _
+// | |    ___   __ _  __| |/ _ \| |__ (_) ___  ___| |_
+// | |   / _ \ / _` |/ _` | | | | '_ \| |/ _ \/ __| __|
+// | |__| (_) | (_| | (_| | |_| | |_) | |  __/ (__| |_
+// |_____\___/ \__,_|\__,_|\___/|_.__// |\___|\___|\__|
+//                                  |__/
+
 //
 // LoadObject message: load an object from the server.
 //
@@ -721,15 +841,61 @@ type LoadObjectMessagePayload struct {
 	MapObject
 }
 
+func streamChecksum(data [][]string) string {
+	cks := sha256.New()
+	for _, item := range data {
+		for i, field := range item {
+			if i > 0 {
+				cks.Write([]byte{' '})
+			}
+			cks.Write([]byte(field))
+		}
+	}
+	return base64.StdEncoding.EncodeToString(cks.Sum(nil))
+}
+
+func (c Connection) LoadObject(me MapElement) error {
+	data := me.ToStrings()
+	if err != nil {
+		return err
+	}
+
+	if err := c.send("LS"); err != nil {
+		return err
+	}
+	for _, a := range data {
+		if err := c.send("LS:", a...); err != nil {
+			c.send("LS.", "0")
+			return err
+		}
+	}
+	c.send("LS.", fmt.Sprintf("%d", len(data)), streamChecksum(data))
+	return nil
+}
+
+//  __  __
+// |  \/  | __ _ _ __ ___ ___
+// | |\/| |/ _` | '__/ __/ _ \
+// | |  | | (_| | | | (_| (_) |
+// |_|  |_|\__,_|_|  \___\___/
+//
+
 //
 // Marco message: the server is asking if we are still
 // alive and responding. Reply by sending a Polo message.
 //
-// TODO: default handler for Marco should auto-send Polo.
-//
 type MarcoMessagePayload struct {
 	BaseMessagePayload
 }
+
+/* clients don't send these */
+
+//  __  __            _
+// |  \/  | __ _ _ __| | __
+// | |\/| |/ _` | '__| |/ /
+// | |  | | (_| | |  |   <
+// |_|  |_|\__,_|_|  |_|\_\
+//
 
 //
 // Mark message: visually mark the given map coordinates.
@@ -738,6 +904,17 @@ type MarkMessagePayload struct {
 	BaseMessagePayload
 	Coordinates
 }
+
+func (c Connection) Mark(x, y float64) error {
+	return c.send("MARK", fmt.Sprintf("%g", x), fmt.Sprintf("%g", y))
+}
+
+//  ____  _                ____
+// |  _ \| | __ _  ___ ___/ ___|  ___  _ __ ___   ___  ___  _ __   ___
+// | |_) | |/ _` |/ __/ _ \___ \ / _ \| '_ ` _ \ / _ \/ _ \| '_ \ / _ \
+// |  __/| | (_| | (_|  __/___) | (_) | | | | | |  __/ (_) | | | |  __/
+// |_|   |_|\__,_|\___\___|____/ \___/|_| |_| |_|\___|\___/|_| |_|\___|
+//
 
 //
 // PlaceSomeone message: introduce a new creature token,
@@ -753,6 +930,44 @@ type PlaceSomeoneMessagePayload struct {
 	CreatureToken
 }
 
+func PlaceSomeone(someone CreatureToken) error {
+	switch p := someone.(type) {
+	case PlayerToken:
+		gx := fmt.Sprintf("%g", p.Gx)
+		gy := fmt.Sprintf("%g", p.Gy)
+		re := "0"
+		if p.Reach {
+			r = "1"
+		}
+		if err := c.send("PS", p.ObjID(), p.Color, p.Name, p.Area, p.Size, "player", gx, gy, re); err != nil {
+			return err
+		}
+
+	case MonsterToken:
+		gx := fmt.Sprintf("%g", p.Gx)
+		gy := fmt.Sprintf("%g", p.Gy)
+		re := "0"
+		if p.Reach {
+			r = "1"
+		}
+		if err := c.send("PS", p.ObjID(), p.Color, p.Name, p.Area, p.Size, "monster", gx, gy, re); err != nil {
+			return err
+		}
+
+	default:
+		return fmt.Errorf("PlaceSomeone: argument not a PlayerToken or MonsterToken")
+	}
+
+	return nil
+}
+
+//   ___                        ___
+//  / _ \ _   _  ___ _ __ _   _|_ _|_ __ ___   __ _  __ _  ___
+// | | | | | | |/ _ \ '__| | | || || '_ ` _ \ / _` |/ _` |/ _ \
+// | |_| | |_| |  __/ |  | |_| || || | | | | | (_| | (_| |  __/
+//  \__\_\\__,_|\___|_|   \__, |___|_| |_| |_|\__,_|\__, |\___|
+//                        |___/                     |___/
+
 //
 // QueryImage message: a peer wants to know where to find a given
 // image and the server didn't know either. If you know the definition
@@ -761,6 +976,10 @@ type PlaceSomeoneMessagePayload struct {
 type QueryImageMessagePayload struct {
 	BaseMessagePayload
 	ImageDefinition
+}
+
+func (c Connection) QueryImage(idef ImageDefinition) error {
+	return c.send("AI?", idef.Name, fmt.Sprintf("%g", idef.Zoom))
 }
 
 //  ____                                ___  _     _    _   _   _        _ _           _
@@ -1254,55 +1473,55 @@ func (c *Connection) login(done chan error) {
 // ->UpdateProgress       // END <id>
 // ->AddCharacter         AC <name> <id> <color> <area> <size>
 // <-(Subscribe)          ACCEPT <msglist>
-// <>AddImage             AI <name> <size>
-//                        AI: <data>			(repeated)
-//                        AI. <#lines> <sha256>
+//X<>AddImage             AI <name> <size>
+//X                       AI: <data>			(repeated)
+//X                       AI. <#lines> <sha256>
 //                        AI@ <name> <size> <serverid>
 // <>QueryImage           AI? <name> <size>
-// <-(login)              AUTH <response> [<user>|GM <client>]
+//.<-(login)              AUTH <response> [<user>|GM <client>]
 // <>AdjustView           AV <xview> <yview>
-// ?>ClearChat            CC *|<user> [""|<newmax>|-<#recents> [<messageID>]]
-// <>Clear                CLR <objid>|*|E*|M*|P*|[<imagename>=]<name>
+// ->ClearChat            CC *|<user> [""|<newmax>|-<#recents> [<messageID>]]
 // <>ClearFrom            CLR@ <serverid>
 // <>CombatMode           CO 0|1
-// ->UpdateClock          CS <abs> <rel>
-// <-RollDice             D {<recipient>|@|*|% ...} <spec>
-// <-DefineDicePresets    DD {{<name> <description> <spec>} ...}     (replace)
-// <-DefineDicePresets    DD+ {{<name> <description> <spec>} ...}    (append)
-// <-FilterDicePresets    DD/ <regex>
-// ->UpdateDicePresets    DD=
-//                        DD: <i> <name> <description> <spec>      (repeated)
-//                        DD. <#lines> <sha256>
-// ->(login)              DENIED [<message>]
-// <-QueryDicePresets     DR
-// ->UpdateStatusMarker   DSM <condition> <shape> <color>
-// ->(login)              GRANTED <name>|GM
-// ->UpdateTurn           I {<r> <c> <s> <m> <h>} <id>|""|*Monsters*|/<regex>
-// ->UpdateInitiative     IL {{<name> <hold> <ready> <hp> <flat> <slot#>} ...}
-// <>LoadFrom             L {<path> ...}              (clear map before each)
-//                        M {<path> ...}              (merge to map)
-//                        M@ <serverid>               (merge to map)
+//.->UpdateClock          CS <abs> <rel>
+//.<-RollDice             D {<recipient>|@|*|% ...} <spec>
+//.<-DefineDicePresets    DD {{<name> <description> <spec>} ...}     (replace)
+//.<-DefineDicePresets    DD+ {{<name> <description> <spec>} ...}    (append)
+//.<-FilterDicePresets    DD/ <regex>
+//.->UpdateDicePresets    DD=
+//.                       DD: <i> <name> <description> <spec>      (repeated)
+//.                       DD. <#lines> <sha256>
+//.->(login)              DENIED [<message>]
+//.<-QueryDicePresets     DR
+//.->UpdateStatusMarker   DSM <condition> <shape> <color>
+//.->(login)              GRANTED <name>|GM
+//.->UpdateTurn           I {<r> <c> <s> <m> <h>} <id>|""|*Monsters*|/<regex>
+//.->UpdateInitiative     IL {{<name> <hold> <ready> <hp> <flat> <slot#>} ...}
+//.<>LoadFrom             L {<path> ...}              (clear map before each)
+//.                       M {<path> ...}              (merge to map)
+//.                       M@ <serverid>               (merge to map)
 // <>LoadObject           LS
 //                        LS: <data>                  (repeated)
 //                        LS. <#lines> <sha256>
-// ->CacheFile            M? <serverid>
-// ->Marco                MARCO
+//                        LS. 0                       (NEW: cancel LS)
+// <>CacheFile            M? <serverid>
+//.->Marco                MARCO
 // <>Mark                 MARK <x> <y>
-// <-WriteOnly            NO
-// <>UpdateObjAttributes  OA <objid> {<key> <value ...}
+//.<-WriteOnly            NO
+//.<>UpdateObjAttributes  OA <objid> {<key> <value ...}
 // <>AddObjAttributes     OA+ <objid> <key> {<value> ...}
-// <>RemoveObjAttributes  OA- <objid> <key> {<value> ...}
-// ->(login)              OK <version> [<challenge>]
-// ->                     PRIV <message>
-// <-Polo                 POLO
+//.<>RemoveObjAttributes  OA- <objid> <key> {<value> ...}
+//.->(login)              OK <version> [<challenge>]
+//.->                     PRIV <message>
+//.<-Polo                 POLO
 // <>PlaceSomeone         PS <id> <color> <name> <area> <size> player|monster <gx> <gy> <reach>
-// ->RollResult           ROLL <from> {<recipient> ...} <title> <result> {{<type> <value>} ...} <messageid>
-// <-Sync                 SYNC
-// <-SyncChat             SYNC CHAT [-<#recent>|<since>]
-// ->Toolbar              TB 0|1
+//.->RollResult           ROLL <from> {<recipient> ...} <title> <result> {{<type> <value>} ...} <messageid>
+//.<-Sync                 SYNC
+//.<-SyncChat             SYNC CHAT [-<#recent>|<since>]
+//.->Toolbar              TB 0|1
 // <>ChatMessage          TO <from> {<recipient>|@|*|% ...} <message> [<messageid>]
-// <-QueryPeers           /CONN
-// ->UpdatePeerList       CONN
+//.<-QueryPeers           /CONN
+//.->UpdatePeerList       CONN
 //                        CONN: <i> you|peer <addr> <user> <client> <auth> <primary> <writeonly> <lastseen>
 //                        CONN. <#lines> <sha256>
 
@@ -1942,7 +2161,7 @@ ately.
 
 */
 
-// @[00]@| GMA 4.3.3
+// @[00]@| GMA 4.3.4
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.
