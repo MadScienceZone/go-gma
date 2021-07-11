@@ -535,6 +535,13 @@ func (c Connection) AddImage(idef ImageDefinition) error {
 	return c.send("AI@", idef.Name, fmt.Sprintf("%g", idef.Zoom), idef.File)
 }
 
+//     _       _     _  ___  _     _    _   _   _        _ _           _
+//    / \   __| | __| |/ _ \| |__ (_)  / \ | |_| |_ _ __(_) |__  _   _| |_ ___  ___
+//   / _ \ / _` |/ _` | | | | '_ \| | / _ \| __| __| '__| | '_ \| | | | __/ _ \/ __|
+//  / ___ \ (_| | (_| | |_| | |_) | |/ ___ \ |_| |_| |  | | |_) | |_| | ||  __/\__ \
+// /_/   \_\__,_|\__,_|\___/|_.__// /_/   \_\__|\__|_|  |_|_.__/ \__,_|\__\___||___/
+//                              |__/
+
 //
 // AddObjAttributes message: Adjust the multi-value attribute
 // of the object with the given ID by adding the new values
@@ -545,6 +552,14 @@ type AddObjAttributesMessagePayload struct {
 	ObjID    string
 	AttrName string
 	Values   []string
+}
+
+func (c Connection) AddObjAttributes(objID, attrName string, values []string) error {
+	vlist, err := tcllist.ToTclString(values)
+	if err != nil {
+		return err
+	}
+	return c.send("OA+", objID, attrName, vlist)
 }
 
 //
@@ -748,6 +763,13 @@ type QueryImageMessagePayload struct {
 	ImageDefinition
 }
 
+//  ____                                ___  _     _    _   _   _        _ _           _
+// |  _ \ ___ _ __ ___   _____   _____ / _ \| |__ (_)  / \ | |_| |_ _ __(_) |__  _   _| |_ ___  ___
+// | |_) / _ \ '_ ` _ \ / _ \ \ / / _ \ | | | '_ \| | / _ \| __| __| '__| | '_ \| | | | __/ _ \/ __|
+// |  _ <  __/ | | | | | (_) \ V /  __/ |_| | |_) | |/ ___ \ |_| |_| |  | | |_) | |_| | ||  __/\__ \
+// |_| \_\___|_| |_| |_|\___/ \_/ \___|\___/|_.__// /_/   \_\__|\__|_|  |_|_.__/ \__,_|\__\___||___/
+//                                              |__/
+
 //
 // RemoveObjAttributes message: Adjust the multi-value attribute
 // of the object with the given ID by removing the new values
@@ -758,6 +780,14 @@ type RemoveObjAttributesMessagePayload struct {
 	ObjID    string
 	AttrName string
 	Values   []string
+}
+
+func (c Connection) RemoveObjAttributes(objID, attrName string, values []string) error {
+	vlist, err := tcllist.ToTclString(values)
+	if err != nil {
+		return err
+	}
+	return c.send("OA-", objID, attrName, vlist)
 }
 
 //
@@ -1404,6 +1434,61 @@ func (c *Connection) listen(done chan error) {
 						BaseMessagePayload: payload,
 						Text:               strings.Join(f[1:], " "),
 					}
+				}
+			}
+
+		case "OA+":
+			//   ___   _    _
+			//  / _ \ /_\ _| |_
+			// | (_) / _ \_   _|
+			//  \___/_/ \_\|_|
+			//
+			// OA+ <objid> <key> {<value> ...}
+			if len(f) != 4 {
+				c.reportError(fmt.Errorf("Invalid AddObjAttributes message: parameter list length %d", len(f)))
+				break
+			}
+			vlist, err := tcllist.ParseTclList(f[3])
+			if err != nil {
+				c.reportError(fmt.Errorf("Invalid AddObjAttributes message: %v", err))
+				break
+			}
+			payload.messageType = AddObjAttributes
+			ch, ok := c.Subscriptions[AddObjAttributes]
+			if ok {
+				ch <- AddObjAttributesMessagePayload{
+					BaseMessagePayload: payload,
+					ObjID:              f[1],
+					AttrName:           f[2],
+					Values:             vlist,
+				}
+			}
+
+		case "OA-":
+			//   ___     _
+			//  / _ \   / \
+			// | | | | / _ \  _____
+			// | |_| |/ ___ \|_____|
+			//  \___//_/   \_\
+			//
+			// OA- <objid> <key> {<value> ...}
+			if len(f) != 4 {
+				c.reportError(fmt.Errorf("Invalid RemoveObjAttributes message: parameter list length %d", len(f)))
+				break
+			}
+			vlist, err := tcllist.ParseTclList(f[3])
+			if err != nil {
+				c.reportError(fmt.Errorf("Invalid RemoveAddObjAttributes message: %v", err))
+				break
+			}
+			payload.messageType = RemoveAddObjAttributes
+			ch, ok := c.Subscriptions[RemoveAddObjAttributes]
+			if ok {
+				ch <- RemoveAddObjAttributesMessagePayload{
+					BaseMessagePayload: payload,
+					ObjID:              f[1],
+					AttrName:           f[2],
+					Values:             vlist,
 				}
 			}
 
