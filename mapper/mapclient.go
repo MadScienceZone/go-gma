@@ -51,6 +51,7 @@ package mapper
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -85,6 +86,12 @@ func init() {
 	}
 }
 
+// This is the error returned when the server requires authentication but we didn't provide any.
+var AuthenticationRequired = errors.New("authenticator required for connection")
+
+// This is the error returned when our authentication was rejected by the server.
+var AuthenticationFailed = errors.New("access denied to server")
+
 //
 // A connection to the server is described by the Connection
 // type.
@@ -103,11 +110,7 @@ type Connection struct {
 	Authenticator *auth.Authenticator
 
 	// Server message subscriptions currently in effect.
-	Subscriptions map[ServerMessage]chan<- MessagePayload
-
-	// If true, we will always try to reconnect to the server if we
-	// lose our connection.
-	StayConnected bool
+	Subscriptions map[ServerMessage]chan MessagePayload
 
 	// If nonzero, we will re-try a failing connection this many
 	// times before giving up on the server. Otherwise we will keep
@@ -141,20 +144,46 @@ type Connection struct {
 	// as passed to a channel subscribed to UpdateProgress.
 	Gauges map[string]*UpdateProgressMessagePayload
 
-	// Private fields
+	// The last error encountered while communicating with the server.
+	LastError error
+
 	server   net.Conn
 	reader   *bufio.Scanner
 	writer   *bufio.Writer
 	sendChan chan string
 	sendBuf  []string
+	signedOn bool
+
+	// If true, we will always try to reconnect to the server if we
+	// lose our connection.
+	StayConnected bool
 }
 
+//
+// IsReady returns true if the connection to the server
+// has completed and authentication was successful, so
+// the connection is ready for interactive use.
+//
+func (c *Connection) IsReady() bool {
+	return c.reader != nil && c.writer != nil && c.signedOn
+}
+
+//
+// A CharacterDefinition describes a PC known as a regular player of the
+// game system.
+//
 type CharacterDefinition struct {
-	Name  string
+	// Character name as appears on the map.
+	Name string
+
+	// ObjID to use for the character rather than generating one.
 	ObjID string
+
+	// Color to use to draw the threat zone around the character.
 	Color string
-	Area  string
-	Size  string
+
+	// Size codes of the threat area and creature token size.
+	Area, Size string
 }
 
 //
@@ -186,7 +215,7 @@ func WithContext(ctx context.Context) connectionOption {
 // by adding a server message subscription to the connection just as if
 // the Subscribe() method had been called on the connection value.
 //
-func WithSubscription(ch chan<- MessagePayload, messages ...ServerMessage) connectionOption {
+func WithSubscription(ch chan MessagePayload, messages ...ServerMessage) connectionOption {
 	return func(c *Connection) error {
 		return c.Subscribe(ch, messages...)
 	}
@@ -286,7 +315,7 @@ func NewConnection(endpoint string, opts ...connectionOption) (Connection, error
 	newCon := Connection{
 		Context:       context.Background(),
 		Endpoint:      endpoint,
-		Subscriptions: make(map[ServerMessage]chan<- MessagePayload),
+		Subscriptions: make(map[ServerMessage]chan MessagePayload),
 		Characters:    make(map[string]CharacterDefinition),
 		Conditions:    make(map[string]StatusMarkerDefinition),
 		Retries:       1,
@@ -306,8 +335,8 @@ func NewConnection(endpoint string, opts ...connectionOption) (Connection, error
 
 func (c *Connection) Close() {
 	c.server.Close()
-	c.reader = nil
-	c.writer = nil
+	//	c.reader = nil
+	//	c.writer = nil
 	// TODO
 }
 
@@ -354,7 +383,7 @@ func (c *Connection) Close() {
 //   service, err := NewConnection(endpoint)
 //   err = service.Subscribe(cm, ChatMessage)
 //
-func (conn *Connection) Subscribe(ch chan<- MessagePayload, messages ...ServerMessage) error {
+func (conn *Connection) Subscribe(ch chan MessagePayload, messages ...ServerMessage) error {
 	for _, m := range messages {
 		if m >= maximumServerMessage {
 			return fmt.Errorf("server message ID %v not defined (illegal Subscribe call)", m)
@@ -460,6 +489,7 @@ type UnknownMessagePayload struct {
 //  / ___ \ (_| | (_| | |___| | | | (_| | | | (_| | (__| ||  __/ |
 // /_/   \_\__,_|\__,_|\____|_| |_|\__,_|_|  \__,_|\___|\__\___|_|
 //
+
 //
 // AddCharacter message: add a PC to the party
 //
@@ -477,6 +507,7 @@ type AddCharacterMessagePayload struct {
 //  / ___ \ (_| | (_| || || | | | | | (_| | (_| |  __/
 // /_/   \_\__,_|\__,_|___|_| |_| |_|\__,_|\__, |\___|
 //                                         |___/
+
 //
 // AddImage message: the client should locally note the definition
 // of an image for later reference.
@@ -565,17 +596,32 @@ type ChatMessageMessagePayload struct {
 	Text string
 }
 
+//   ____ _
+//  / ___| | ___  __ _ _ __
+// | |   | |/ _ \/ _` | '__|
+// | |___| |  __/ (_| | |
+//  \____|_|\___|\__,_|_|
+//
+
 //
 // Clear message: The client should remove the given object from
 // its map. This ID may also be one of the following:
-//   *   Remove all objects
-//   E*  Remove all map elements
-//   M*  Remove all monster tokens
-//   P*  Remove all player tokens
+//   *                    Remove all objects
+//   E*                   Remove all map elements
+//   M*                   Remove all monster tokens
+//   P*                   Remove all player tokens
+//   [<imagename>=]<name> Remove token with given <name>
 //
 type ClearMessagePayload struct {
 	BaseMessagePayload
 	ObjID string
+}
+
+//
+// Tell the server and peers about an image they can use.
+//
+func (c Connection) Clear(objID string) error {
+	return c.send("CLR", objID)
 }
 
 //
@@ -901,11 +947,15 @@ type UpdateTurnMessagePayload struct {
 func (c *Connection) Dial() {
 	var err error
 
+	c.signedOn = false
 	for {
 		err = c.tryConnect()
 		if err == nil {
-			err = c.interact()
-			// XXX err
+			c.signedOn = true
+			if err = c.interact(); err != nil {
+				c.Logger.Printf("mapper: INTERACT FAILURE: %v", err)
+			}
+			c.signedOn = false
 		}
 
 		if c.Context.Err() != nil || !c.StayConnected {
@@ -938,6 +988,7 @@ func (c *Connection) tryConnect() error {
 	}
 	if err != nil {
 		c.Logger.Printf("mapper: No more attempts allowed; giving up!")
+		c.LastError = err
 		return err
 	}
 
@@ -955,6 +1006,7 @@ syncloop:
 			if err != nil {
 				c.Logger.Printf("mapper: login process failed: %v", err)
 				c.Close()
+				c.LastError = err
 				return err
 			}
 			break syncloop
@@ -966,7 +1018,6 @@ syncloop:
 		}
 	}
 
-	c.Logger.Printf("mapper: login process finished")
 	return nil
 }
 
@@ -1025,7 +1076,7 @@ func (c *Connection) login(done chan error) {
 				// authentication)
 				if c.Authenticator == nil {
 					c.Logger.Printf("mapper: Server requires authentication but no authenticator was provided for the client.")
-					done <- fmt.Errorf("authenticator required for connection")
+					done <- AuthenticationRequired
 					return
 				}
 				c.Logger.Printf("mapper: authenticating to server")
@@ -1036,7 +1087,7 @@ func (c *Connection) login(done chan error) {
 					done <- err
 					return
 				}
-				c.send("AUTH", response, c.Authenticator.Username, c.Authenticator.Client)
+				c.rawSend("AUTH", response, c.Authenticator.Username, c.Authenticator.Client)
 				c.Logger.Printf("mapper: authentication sent. Awaiting validation.")
 				authPending = true
 			} else {
@@ -1096,7 +1147,7 @@ func (c *Connection) login(done chan error) {
 					} else if d < 0 {
 						c.Logger.Printf("mapper: **NOTE** An update for the GMA Core API is available. You are using %s, but your server is advertising version %s.", GMAVersionNumber, advertisedVersion)
 					}
-					c.Logger.Printf("mapper: sync %02d: Notedc Core API version %s", recCount, advertisedVersion)
+					c.Logger.Printf("mapper: sync %02d: Noted Core API version %s", recCount, advertisedVersion)
 				} else if len(f) >= 4 && f[2] == "UPDATE" && f[3] == "//" {
 					c.Logger.Printf("mapper: sync %02d: Noted other client version", recCount)
 				} else {
@@ -1136,7 +1187,7 @@ func (c *Connection) login(done chan error) {
 			} else {
 				c.Logger.Printf("mapper: access denied by server")
 			}
-			done <- fmt.Errorf("server access denied")
+			done <- AuthenticationFailed
 			return
 
 		case "GRANTED":
@@ -1356,6 +1407,25 @@ func (c *Connection) listen(done chan error) {
 				}
 			}
 
+		case "CLR":
+			//   ___ _    ___
+			//  / __| |  | _ \
+			// | (__| |__|   /
+			//  \___|____|_|_\
+			//
+			if len(f) != 2 {
+				c.reportError(fmt.Errorf("Invalid Clear message: parameter list length %d", len(f)))
+			} else {
+				payload.messageType = Clear
+				ch, ok := c.Subscriptions[Clear]
+				if ok {
+					ch <- ClearMessagePayload{
+						BaseMessagePayload: payload,
+						ObjID:              f[1],
+					}
+				}
+			}
+
 		case "MARCO":
 			//  __  __   _   ___  ___ ___
 			// |  \/  | /_\ | _ \/ __/ _ \
@@ -1401,6 +1471,7 @@ func (c *Connection) listen(done chan error) {
 // report any sort of error to the client
 //
 func (c *Connection) reportError(e error) {
+	c.LastError = e
 	ch, ok := c.Subscriptions[ERROR]
 	if ok {
 		ch <- ErrorMessagePayload{
@@ -1432,8 +1503,10 @@ func (c *Connection) interact() error {
 		//
 		select {
 		case <-c.Context.Done():
+			c.Logger.Printf("interact: context done, stopping")
 			return nil
 		case err := <-listenerDone:
+			c.Logger.Printf("interact: listener done (%v), stopping", err)
 			return err
 		case packet := <-c.sendChan:
 			c.sendBuf = append(c.sendBuf, packet)
@@ -1447,6 +1520,7 @@ func (c *Connection) interact() error {
 				return fmt.Errorf("only wrote %d of %d bytes: %v", written, len(c.sendBuf[0]), err)
 			}
 			if err := c.writer.Flush(); err != nil {
+				c.Logger.Printf("interact: unable to flush: %v", err)
 				return err
 			}
 			c.sendBuf = c.sendBuf[1:]
@@ -1464,6 +1538,22 @@ func (c Connection) send(fields ...string) error {
 	case c.sendChan <- packet:
 	default:
 		return fmt.Errorf("unable to send to server (Dial() not running?)")
+	}
+	return nil
+}
+
+func (c Connection) rawSend(fields ...string) error {
+	packet, err := tcllist.ToTclString(fields)
+	if err != nil {
+		return err
+	}
+	packet += "\n"
+	if written, err := c.writer.WriteString(packet); err != nil {
+		return fmt.Errorf("only wrote %d of %d bytes: %v", written, len(packet), err)
+	}
+	if err := c.writer.Flush(); err != nil {
+		c.Logger.Printf("rawSend: unable to flush: %v", err)
+		return err
 	}
 	return nil
 }
