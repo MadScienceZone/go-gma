@@ -329,7 +329,11 @@ func (a *Authenticator) AcceptChallenge(challenge string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("Bad challenge string: %v.", err)
 	}
-	copy(a.Challenge, c)
+
+	if len(c) < 2 {
+		return "", fmt.Errorf("Challenge value is too short")
+	}
+	a.Challenge = c
 
 	response, err := a.calcResponse(a.Secret)
 	if err != nil {
@@ -405,6 +409,7 @@ func NewClientAuthenticator(username string, secret []byte, client string) *Auth
 		Username: username,
 		Client:   client,
 	}
+	a.Secret = make([]byte, len(secret))
 	copy(a.Secret, secret)
 
 	if a.Client == "" {
