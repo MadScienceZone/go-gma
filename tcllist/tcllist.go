@@ -78,6 +78,7 @@ package tcllist
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 )
@@ -601,6 +602,82 @@ func Parse(tclString, types string) ([]interface{}, error) {
 	}
 
 	return ConvertTypes(f, types)
+}
+
+//
+// ToDeepTclString takes a number of arbitrarily-typed values and returns
+// a Tcl string which represents them as elements of a list.
+// Supports values of type
+// bool,
+// float64,
+// int,
+// int16,
+// int32,
+// int64,
+// string,
+// uint,
+// uint16,
+// uint32,
+// uint64,
+// and slices of any combination of the above.
+//
+func ToDeepTclString(values ...interface{}) (string, error) {
+	var list []string
+
+	for _, value := range values {
+		switch v := value.(type) {
+		case bool:
+			if v {
+				list = append(list, "1")
+			} else {
+				list = append(list, "0")
+			}
+		case string:
+			list = append(list, v)
+		case float64:
+			list = append(list, fmt.Sprintf("%g", v))
+		case int:
+			list = append(list, fmt.Sprintf("%d", v))
+		case int16:
+			list = append(list, fmt.Sprintf("%d", v))
+		case int32:
+			list = append(list, fmt.Sprintf("%d", v))
+		case int64:
+			list = append(list, fmt.Sprintf("%d", v))
+		case uint:
+			list = append(list, fmt.Sprintf("%d", v))
+		case uint16:
+			list = append(list, fmt.Sprintf("%d", v))
+		case uint32:
+			list = append(list, fmt.Sprintf("%d", v))
+		case uint64:
+			list = append(list, fmt.Sprintf("%d", v))
+
+		case []string:
+			sublist, err := ToTclString(v)
+			if err != nil {
+				return "", nil
+			}
+			list = append(list, sublist)
+
+		default:
+			vof := reflect.ValueOf(value)
+			if vof.Kind() == reflect.Slice {
+				subslice := make([]interface{}, vof.Len())
+				for i := 0; i < vof.Len(); i++ {
+					subslice[i] = vof.Index(i).Interface()
+				}
+				sublist, err := ToDeepTclString(subslice...)
+				if err != nil {
+					return "", nil
+				}
+				list = append(list, sublist)
+			} else {
+				return "", fmt.Errorf("ToDeepTclString: unsupported value type \"%T\"", value)
+			}
+		}
+	}
+	return ToTclString(list)
 }
 
 // @[00]@| GMA 4.3.4

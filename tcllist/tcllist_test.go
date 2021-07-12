@@ -294,6 +294,16 @@ func TestTclList_ConvertTypes(t *testing.T) {
 
 }
 
+func TestTclList_Deep(t *testing.T) {
+	s, err := ToDeepTclString("hello", "world", 123, 45.67, []interface{}{"a", "", "b", []string{"xyz", "333"}, 1, true}, false)
+
+	if err != nil {
+		t.Errorf("%v", err)
+	} else if s != "hello world 123 45.67 {a {} b {xyz 333} 1 1} 0" {
+		t.Errorf("deep string error, returned \"%v\"", s)
+	}
+}
+
 // @[00]@| GMA 4.3.4
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
