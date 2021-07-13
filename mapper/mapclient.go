@@ -12,21 +12,6 @@
 ########################################################################################
 */
 
-// NewConnection(endpoint string, ...connOptions)
-// .WithContext(ctx)
-// .WithSubscription(c, event...)
-// .WithAuthenticator(a)
-//
-// conn.Subscribe(c chan<-interface{}, event ...ServerMessage)
-//   Receive server message on channel c when any of the named messages
-//   arrive here. You may call this multiple times to add more events
-//   to a channel.
-//
-// conn.Dial()
-// conn.<message>(args...)
-// conn.Context		(context object -- will use a default if one isn't given)
-//
-
 //
 // Client interface for the mapper service.
 //
@@ -58,6 +43,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"hash"
 	"log"
 	"net"
 	"strconv"
@@ -533,11 +519,33 @@ type AddImageMessagePayload struct {
 //
 // Tell the server and peers about an image they can use.
 //
-func (c Connection) AddImage(idef ImageDefinition) error {
+func (c *Connection) AddImage(idef ImageDefinition) error {
 	if idef.IsLocalFile {
-		return fmt.Errorf("Sending non-local files is not supported by this version.")
+		return fmt.Errorf("sending local files is not supported. Upload image to server first")
 	}
-	return c.send("AI@", idef.Name, fmt.Sprintf("%g", idef.Zoom), idef.File)
+	return c.send("AI@", idef.Name, idef.Zoom, idef.File)
+}
+
+func (c *Connection) AddImageData(idef ImageDefinition, data []byte) error {
+	var dataBlocks []string
+	encoded := base64.StdEncoding.EncodeToString(data)
+	for len(encoded) > 100 {
+		dataBlocks = append(dataBlocks, encoded[0:100])
+		encoded = encoded[100:]
+	}
+	dataBlocks = append(dataBlocks, encoded)
+
+	if err := c.send("AI", idef.Name, idef.Zoom); err != nil {
+		_ = c.send("AI.", 0) // best effort but doesn't matter if this actually goes through
+		return err
+	}
+	for _, dataBlock := range dataBlocks {
+		if err := c.send("AI:", dataBlock); err != nil {
+			_ = c.send("AI.", 0)
+			return err
+		}
+	}
+	return c.send("AI.", len(dataBlocks), streamChecksumStrings(dataBlocks))
 }
 
 //     _       _     _  ___  _     _    _   _   _        _ _           _
@@ -559,12 +567,8 @@ type AddObjAttributesMessagePayload struct {
 	Values   []string
 }
 
-func (c Connection) AddObjAttributes(objID, attrName string, values []string) error {
-	vlist, err := tcllist.ToTclString(values)
-	if err != nil {
-		return err
-	}
-	return c.send("OA+", objID, attrName, vlist)
+func (c *Connection) AddObjAttributes(objID, attrName string, values []string) error {
+	return c.send("OA+", objID, attrName, values)
 }
 
 //     _       _  _           _ __     ___
@@ -583,8 +587,8 @@ type AdjustViewMessagePayload struct {
 	XView, YView float64
 }
 
-func (c Connection) AdjustView(xview, yview float64) error {
-	return c.send("AV", fmt.Sprintf("%g", xview), fmt.Sprintf("%g", yview))
+func (c *Connection) AdjustView(xview, yview float64) error {
+	return c.send("AV", xview, yview)
 }
 
 //   ____           _          _____ _ _
@@ -604,7 +608,7 @@ type CacheFileMessagePayload struct {
 	FileDefinition
 }
 
-func (c Connection) CacheFile(serverID string) error {
+func (c *Connection) CacheFile(serverID string) error {
 	return c.send("M?", serverID)
 }
 
@@ -658,25 +662,21 @@ const (
 //    ToGMOnly  -- ignore any other names on the list. Send only to GM.
 //    ToAll     -- send to all users.
 //
-func (c Connection) ChatMessage(to []string, message string) error {
-	recipients, err := tcllist.ToTclString(to)
-	if err != nil {
-		return err
-	}
-	return c.send("TO", "", recipients, message)
+func (c *Connection) ChatMessage(to []string, message string) error {
+	return c.send("TO", "", to, message)
 }
 
 //
 // ChatMessageToAll is equivalent to ChatMessage addressed to all users.
 //
-func (c Connection) ChatMessageToAll(message string) error {
+func (c *Connection) ChatMessageToAll(message string) error {
 	return c.send("TO", "", ToAll, message)
 }
 
 //
 // ChatMessageToGM is equivalent to ChatMessage addressed only to the GM.
 //
-func (c Connection) ChatMessageToGM(message string) error {
+func (c *Connection) ChatMessageToGM(message string) error {
 	return c.send("TO", "", ToGMOnly, message)
 }
 
@@ -704,7 +704,7 @@ type ClearMessagePayload struct {
 //
 // Tell the server and peers about an image they can use.
 //
-func (c Connection) Clear(objID string) error {
+func (c *Connection) Clear(objID string) error {
 	return c.send("CLR", objID)
 }
 
@@ -754,7 +754,7 @@ type ClearFromMessagePayload struct {
 	FileDefinition
 }
 
-func (c Connection) ClearFrom(serverID string) error {
+func (c *Connection) ClearFrom(serverID string) error {
 	return c.send("CLR@", serverID)
 }
 
@@ -773,12 +773,8 @@ type CombatModeMessagePayload struct {
 	Enabled bool
 }
 
-func (c Connection) CombatMode(enabled bool) error {
-	if enabled {
-		c.send("CO", "1")
-	} else {
-		c.send("CO", "0")
-	}
+func (c *Connection) CombatMode(enabled bool) error {
+	return c.send("CO", enabled)
 }
 
 //   ____                                     _
@@ -806,9 +802,16 @@ type CommentMessagePayload struct {
 // |_|   |_|_|\__\___|_|  |____/|_|\___\___|_|   |_|  \___||___/\___|\__|___/
 //
 
-func (c Connection) FilterDicePresets(re string) error {
+func (c *Connection) FilterDicePresets(re string) error {
 	return c.send("DD/", re)
 }
+
+//  _                    _ _____
+// | |    ___   __ _  __| |  ___| __ ___  _ __ ___
+// | |   / _ \ / _` |/ _` | |_ | '__/ _ \| '_ ` _ \
+// | |__| (_) | (_| | (_| |  _|| | | (_) | | | | | |
+// |_____\___/ \__,_|\__,_|_|  |_|  \___/|_| |_| |_|
+//
 
 //
 // LoadFrom message: load elements from the given file.
@@ -842,19 +845,44 @@ type LoadObjectMessagePayload struct {
 }
 
 func streamChecksum(data [][]string) string {
-	cks := sha256.New()
+	cks := startStreamChecksum()
 	for _, item := range data {
-		for i, field := range item {
-			if i > 0 {
-				cks.Write([]byte{' '})
-			}
-			cks.Write([]byte(field))
-		}
+		addStreamChecksumFields(cks, item)
 	}
-	return base64.StdEncoding.EncodeToString(cks.Sum(nil))
+	return finalizeStreamChecksum()
 }
 
-func (c Connection) LoadObject(me MapElement) error {
+func streamChecksumStrings(data []string) string {
+	cks := startStreamChecksum()
+	for _, item := range data {
+		addStreamChecksumString(cks, item)
+	}
+	return finalizeStreamChecksum()
+}
+
+func startStreamChecksum() hash.Hash {
+	return sha256.New()
+}
+
+func addStreamChecksumString(ck *hash.Hash, data string) {
+	ck.Write([]byte(data))
+}
+
+func addStreamChecksumFields(ck *hash.Hash, data []string) {
+	for i, field := range data {
+		if i > 0 {
+			ck.Write([]byte{' '})
+		}
+		ck.Write([]byte(field))
+	}
+}
+
+func finalizeStreamChecksum(ck *hash.Hash) string {
+	return base64.StdEncoding.EncodeToString(ck.Sum(nil))
+}
+
+/* XXX
+func (c *Connection) LoadObject(me MapElement) error {
 	data := me.ToStrings()
 	if err != nil {
 		return err
@@ -872,6 +900,7 @@ func (c Connection) LoadObject(me MapElement) error {
 	c.send("LS.", fmt.Sprintf("%d", len(data)), streamChecksum(data))
 	return nil
 }
+*/
 
 //  __  __
 // |  \/  | __ _ _ __ ___ ___
@@ -905,8 +934,8 @@ type MarkMessagePayload struct {
 	Coordinates
 }
 
-func (c Connection) Mark(x, y float64) error {
-	return c.send("MARK", fmt.Sprintf("%g", x), fmt.Sprintf("%g", y))
+func (c *Connection) Mark(x, y float64) error {
+	return c.send("MARK", x, y)
 }
 
 //  ____  _                ____
@@ -930,35 +959,17 @@ type PlaceSomeoneMessagePayload struct {
 	CreatureToken
 }
 
-func PlaceSomeone(someone CreatureToken) error {
-	switch p := someone.(type) {
-	case PlayerToken:
-		gx := fmt.Sprintf("%g", p.Gx)
-		gy := fmt.Sprintf("%g", p.Gy)
-		re := "0"
-		if p.Reach {
-			r = "1"
-		}
-		if err := c.send("PS", p.ObjID(), p.Color, p.Name, p.Area, p.Size, "player", gx, gy, re); err != nil {
-			return err
-		}
-
-	case MonsterToken:
-		gx := fmt.Sprintf("%g", p.Gx)
-		gy := fmt.Sprintf("%g", p.Gy)
-		re := "0"
-		if p.Reach {
-			r = "1"
-		}
-		if err := c.send("PS", p.ObjID(), p.Color, p.Name, p.Area, p.Size, "monster", gx, gy, re); err != nil {
-			return err
-		}
-
-	default:
-		return fmt.Errorf("PlaceSomeone: argument not a PlayerToken or MonsterToken")
+func (c *Connection) PlaceSomeone(someone interface{}) error {
+	if player, ok := someone.(PlayerToken); ok {
+		return c.send("PS", player.ObjID(), player.Color, player.Name,
+			player.Area, player.Size, "player", player.Gx, player.Gy, player.Reach)
 	}
 
-	return nil
+	if monster, ok := someone.(MonsterToken); ok {
+		return c.send("PS", monster.ObjID(), monster.Color, monster.Name,
+			monster.Area, monster.Size, "monster", monster.Gx, monster.Gy, monster.Reach)
+	}
+	return fmt.Errorf("PlaceSomeone: argument not a PlayerToken or MonsterToken")
 }
 
 //   ___                        ___
@@ -978,8 +989,8 @@ type QueryImageMessagePayload struct {
 	ImageDefinition
 }
 
-func (c Connection) QueryImage(idef ImageDefinition) error {
-	return c.send("AI?", idef.Name, fmt.Sprintf("%g", idef.Zoom))
+func (c *Connection) QueryImage(idef ImageDefinition) error {
+	return c.send("AI?", idef.Name, idef.Zoom)
 }
 
 //  ____                                ___  _     _    _   _   _        _ _           _
@@ -1001,12 +1012,33 @@ type RemoveObjAttributesMessagePayload struct {
 	Values   []string
 }
 
-func (c Connection) RemoveObjAttributes(objID, attrName string, values []string) error {
-	vlist, err := tcllist.ToTclString(values)
-	if err != nil {
-		return err
-	}
-	return c.send("OA-", objID, attrName, vlist)
+func (c *Connection) RemoveObjAttributes(objID, attrName string, values []string) error {
+	return c.send("OA-", objID, attrName, values)
+}
+
+//  ____       _ _ ____  _
+// |  _ \ ___ | | |  _ \(_) ___ ___
+// | |_) / _ \| | | | | | |/ __/ _ \
+// |  _ < (_) | | | |_| | | (_|  __/
+// |_| \_\___/|_|_|____/|_|\___\___|
+//
+
+func (c *Connection) RollDice(to []string, rollspec string) error {
+	return c.send("D", to, rollspec)
+}
+
+//
+// RollDiceToAll is equivalent to RollDice addressed to all users.
+//
+func (c *Connection) RollDiceToAll(message string) error {
+	return c.send("D", ToAll, message)
+}
+
+//
+// RollDiceToGM is equivalent to RollDice addressed only to the GM.
+//
+func (c *Connection) RollDiceToGM(message string) error {
+	return c.send("D", ToGMOnly, message)
 }
 
 //
@@ -1025,6 +1057,44 @@ type RollResultMessagePayload struct {
 
 	// Was this die-roll sent for the GM to see only?
 	BlindToGM bool
+}
+
+//  ____  _          ____                     _
+// |  _ \(_) ___ ___|  _ \ _ __ ___  ___  ___| |_ ___
+// | | | | |/ __/ _ \ |_) | '__/ _ \/ __|/ _ \ __/ __|
+// | |_| | | (_|  __/  __/| | |  __/\__ \  __/ |_\__ \
+// |____/|_|\___\___|_|   |_|  \___||___/\___|\__|___/
+//
+
+type DicePreset struct {
+	// The name of the preset
+	Name string
+
+	// Description of the preset
+	Description string
+
+	// The die-roll specification string
+	RollSpec string
+}
+
+func (c *Connection) DefineDicePresets(presets []DicePreset) error {
+	var plist [][]string
+	for _, p := range presets {
+		plist = append(plist, []string{p.Name, p.Description, p.RollSpec})
+	}
+	return c.send("DD", plist)
+}
+
+func (c *Connection) AddDicePresets(presets []DicePreset) error {
+	var plist [][]string
+	for _, p := range presets {
+		plist = append(plist, []string{p.Name, p.Description, p.RollSpec})
+	}
+	return c.send("DD+", plist)
+}
+
+func (c *Connection) QueryDicePresets() error {
+	return c.send("DR")
 }
 
 //
@@ -1171,6 +1241,41 @@ type UpdateTurnMessagePayload struct {
 	// Count is the initiative slot within the round.
 	Hours, Minutes, Seconds, Rounds, Count int
 }
+
+//
+// Concurrency and general flow of operation for Dial():
+// Dial() itself will block until the session with the server is completed.
+// Thus, a client program will probably run it in a goroutine, using
+// a channel subscribed to ERROR to receive any errors encountered by it
+// (otherwise the errors are at least logged).
+//
+// The Dial() call does have some concurrent operations of its own, though,
+// to facilitate bidirectional communication with the service without
+// stopping the client application or tripping over its own feet.
+//
+// Dial
+// ^ tryConnect
+// |   establish socket to server
+// |   launch login----------------------------------->login (l<-, s<-, <-s)
+// |                                                     receive preamble
+// |                                                     negotiate auth
+// |   wait for login or cancel (<-l)<--------------------------+
+// |     if cancel, close socket to terminate login
+// |   abandon if login failed
+// | interact (close on exit) (<-m)
+// |   launch listen---------------------------------->listen (l<-)
+// |   buffer messages from m channel (from app)         read from server (<-s)
+// |   send buffered messages (s<-)                      dispatch to chans (*<-)
+// |   if cancel, close socket to stop listen            may send too (m<-)
+// |   if listen done, stop (<-l)<-------------------------------+
+// |   our deferred close upon exit will stop listen
+// +-repeat if staying connected
+//
+// Elsewhere in the client app:
+//   send message (m<-)
+//   receive subscribed server messages (<-*)
+//   call cancel to terminate Dial/login/listen
+//
 
 //
 // Dial connects to the server, negotiates the initial sign-on sequence
@@ -1450,6 +1555,9 @@ func (c *Connection) login(done chan error) {
 			}
 			authPending = false
 
+		case "//", "CONN", "CONN:", "CONN.":
+			// Ignore
+
 		default:
 			c.Logger.Printf("mapper: unexpected server message %v while waiting for authentication to complete", f)
 		}
@@ -1473,16 +1581,17 @@ func (c *Connection) login(done chan error) {
 // ->UpdateProgress       // END <id>
 // ->AddCharacter         AC <name> <id> <color> <area> <size>
 // <-(Subscribe)          ACCEPT <msglist>
-//X<>AddImage             AI <name> <size>
-//X                       AI: <data>			(repeated)
-//X                       AI. <#lines> <sha256>
+// <>AddImage             AI <name> <size>
+//                        AI: <data>			(repeated)
+//                        AI. <#lines> <sha256>
 //                        AI@ <name> <size> <serverid>
 // <>QueryImage           AI? <name> <size>
-//.<-(login)              AUTH <response> [<user>|GM <client>]
+// <-(login)              AUTH <response> [<user>|GM <client>]
 // <>AdjustView           AV <xview> <yview>
-// ->ClearChat            CC *|<user> [""|<newmax>|-<#recents> [<messageID>]]
-// <>ClearFrom            CLR@ <serverid>
-// <>CombatMode           CO 0|1
+// <>Clear                CLR *|E*|M*|P*|[<imagename>=]<name>|<objID>
+//.->ClearChat            CC *|<user> [""|<newmax>|-<#recents> [<messageID>]]
+//.<>ClearFrom            CLR@ <serverid>
+//.<>CombatMode           CO 0|1
 //.->UpdateClock          CS <abs> <rel>
 //.<-RollDice             D {<recipient>|@|*|% ...} <spec>
 //.<-DefineDicePresets    DD {{<name> <description> <spec>} ...}     (replace)
@@ -1500,17 +1609,17 @@ func (c *Connection) login(done chan error) {
 //.<>LoadFrom             L {<path> ...}              (clear map before each)
 //.                       M {<path> ...}              (merge to map)
 //.                       M@ <serverid>               (merge to map)
-// <>LoadObject           LS
-//                        LS: <data>                  (repeated)
-//                        LS. <#lines> <sha256>
-//                        LS. 0                       (NEW: cancel LS)
-// <>CacheFile            M? <serverid>
-//.->Marco                MARCO
-// <>Mark                 MARK <x> <y>
+//.<>LoadObject           LS
+//.                       LS: <data>                  (repeated)
+//.                       LS. <#lines> <sha256>
+//.                       LS. 0                       (NEW: cancel LS)
+//.<>CacheFile            M? <serverid>
+// ->Marco                MARCO
+//.<>Mark                 MARK <x> <y>
 //.<-WriteOnly            NO
 //.<>UpdateObjAttributes  OA <objid> {<key> <value ...}
 // <>AddObjAttributes     OA+ <objid> <key> {<value> ...}
-//.<>RemoveObjAttributes  OA- <objid> <key> {<value> ...}
+// <>RemoveObjAttributes  OA- <objid> <key> {<value> ...}
 //.->(login)              OK <version> [<challenge>]
 //.->                     PRIV <message>
 //.<-Polo                 POLO
@@ -1533,6 +1642,9 @@ func (c *Connection) listen(done chan error) {
 		close(done)
 		c.Logger.Printf("mapper: stopped listening to server")
 	}()
+
+	var imageDataBuffer [][]string
+	var imageDataDef ImageDefinition
 
 	strike := 0
 	c.Logger.Printf("mapper: listening for server messages to dispatch...")
@@ -1656,6 +1768,172 @@ func (c *Connection) listen(done chan error) {
 				}
 			}
 
+		case "AI":
+			//    _   ___
+			//   /_\ |_ _|
+			//  / _ \ | |
+			// /_/ \_\___|
+			//
+			// AI <name> <size>
+			// AI: <data>
+			// AI. <#lines> <sha256>
+			//
+			ch, ok := c.Subscriptions[AddImage]
+			if ok {
+				if imageDataBuffer != nil {
+					c.reportError(fmt.Errorf("AI encountered before previous one ended"))
+				}
+				fv, err := tcllist.ConvertTypes(f, "ssf")
+				if err {
+					c.reportError(fmt.Errorf("cannot parse AI message from server: %v", err))
+					break
+				}
+				imageDataBuffer = nil
+				imageDataDef.Name = fv[1].(string)
+				imageDataDef.Zoom = fv[2].(float64)
+				if imageDataDef.Zoom == 0 || imageDataDef.Name == "" {
+					c.reportError(fmt.Errorf("cannot parse AI message from server: data out of range"))
+					break
+				}
+			}
+
+		case "AI:":
+			ch, ok := c.Subscriptions[AddImage]
+			if ok {
+				if imageDataDef.Zoom == 0 {
+					c.reportError(fmt.Errorf("AI: message received before AI"))
+					break
+				}
+				if len(f) != 2 {
+					c.reportError(fmt.Errorf("AI: message field count wrong (%d)", len(f)))
+					break
+				}
+				imageDataBuffer = append(imageDataBuffer, f[1])
+			}
+
+		case "AI.":
+			ch, ok := c.Subscriptions[AddImage]
+			if ok {
+				fv, err := tcllist.ConvertTypes(f, "si*")
+				if err {
+					c.reportError(fmt.Errorf("cannot parse AI. message from server: %v", err))
+					break
+				}
+				if imageDataDef.Zoom == 0 {
+					c.reportError(fmt.Errorf("AI. message received before AI"))
+					break
+				}
+				if fv[1].(int) == 0 {
+					c.Logger.Printf("mapper: image transfer cancelled by server")
+				} else {
+					if len(imageDataBuffer) != fv[1].(int) {
+						c.reportError(fmt.Errorf("Image data received %d records; expected %d", len(imageDataBuffer), fv[1].(int)))
+					} else {
+						chk := streamChecksumStrings(imageDataBuffer)
+						if len(f) > 2 && chk != f[2] {
+							c.reportError(fmt.Errorf("Image data checksum mismatch"))
+						} else {
+							if len(f) < 3 {
+								c.Logger.Printf("Image data transferred from server without checksum")
+							}
+							data, err := base64.StdEncoding.DecodeString(strings.Join(imageDataBuffer, ""))
+							if err != nil {
+								c.reportError(fmt.Errorf("Image data could not be decoded: %v", err))
+							} else {
+								payload.messageType = AddImage
+								ch <- AddImageMessagePayload{
+									BaseMessagePayload: payload,
+									ImageDefinition: ImageDefinition{
+										Zoom:        imageDataDef.Zoom,
+										Name:        imageDataDef.Name,
+										IsLocalFile: false,
+									},
+									ImageData: data,
+								}
+							}
+						}
+					}
+				}
+				imageDataBuffer = nil
+				imageDataDef = ImageDefinition{}
+			}
+
+		case "AI@":
+			//    _   ___  ____
+			//   /_\ |_ _|/ __ \
+			//  / _ \ | |/ / _` |
+			// /_/ \_\___\ \__,_|
+			//            \____/
+			//
+			// AI@ <name> <size> <serverID>
+			//
+			ch, ok := c.Subscriptions[AddImage]
+			if ok {
+				fv, err := tcllist.ConvertTypes(f, "ssfs")
+				if err != nil {
+					c.reportError(fmt.Errorf("Invalid AddImage (AI@) message: %v", err))
+					break
+				}
+				payload.messageType = AddImage
+				ch <- AddImageMessagePayload{
+					BaseMessagePayload: payload,
+					ImageDefinition: ImageDefinition{
+						Zoom:        fv[2].(float64),
+						Name:        fv[1].(string),
+						File:        fv[3].(string),
+						IsLocalFile: false,
+					},
+				}
+			}
+
+		case "AI?":
+			//    _   ___ ___
+			//   /_\ |_ _|__ \
+			//  / _ \ | |  /_/
+			// /_/ \_\___|(_)
+			//
+			// AI? <name> <size>
+			//
+			ch, ok := c.Subscriptions[QueryImage]
+			if ok {
+				fv, err := tcllist.ConvertTypes(f, "ssf")
+				if err != nil {
+					c.reportError(fmt.Errorf("Invalid QueryImage message: %v", err))
+					break
+				}
+				payload.messageType = QueryImage
+				ch <- QueryImageMessagePayload{
+					BaseMessagePayload: payload,
+					ImageDefinition: ImageDefinition{
+						Zoom: fv[2].(float64),
+						Name: fv[1].(string),
+					},
+				}
+			}
+
+		case "AV":
+			//    ___   __
+			//   /_\ \ / /
+			//  / _ \ V /
+			// /_/ \_\_/
+			//
+			// AV <x> <y>
+			//
+			ch, ok := c.Subscriptions[AdjustView]
+			if ok {
+				fv, err := tcllist.ConvertTypes(f, "sff")
+				if err != nil {
+					c.reportError(fmt.Errorf("Invalid AdjustView message: %v", err))
+					break
+				}
+				payload.messageType = AdjustView
+				ch <- AdjustViewMessagePayload{
+					BaseMessagePayload: payload,
+					XView:              fv[1].(float64),
+					YView:              fv[2].(float64),
+				}
+			}
+
 		case "OA+":
 			//   ___   _    _
 			//  / _ \ /_\ _| |_
@@ -1663,18 +1941,18 @@ func (c *Connection) listen(done chan error) {
 			//  \___/_/ \_\|_|
 			//
 			// OA+ <objid> <key> {<value> ...}
-			if len(f) != 4 {
-				c.reportError(fmt.Errorf("Invalid AddObjAttributes message: parameter list length %d", len(f)))
-				break
-			}
-			vlist, err := tcllist.ParseTclList(f[3])
-			if err != nil {
-				c.reportError(fmt.Errorf("Invalid AddObjAttributes message: %v", err))
-				break
-			}
-			payload.messageType = AddObjAttributes
 			ch, ok := c.Subscriptions[AddObjAttributes]
 			if ok {
+				if len(f) != 4 {
+					c.reportError(fmt.Errorf("Invalid AddObjAttributes message: parameter list length %d", len(f)))
+					break
+				}
+				vlist, err := tcllist.ParseTclList(f[3])
+				if err != nil {
+					c.reportError(fmt.Errorf("Invalid AddObjAttributes message: %v", err))
+					break
+				}
+				payload.messageType = AddObjAttributes
 				ch <- AddObjAttributesMessagePayload{
 					BaseMessagePayload: payload,
 					ObjID:              f[1],
@@ -1691,19 +1969,19 @@ func (c *Connection) listen(done chan error) {
 			//  \___//_/   \_\
 			//
 			// OA- <objid> <key> {<value> ...}
-			if len(f) != 4 {
-				c.reportError(fmt.Errorf("Invalid RemoveObjAttributes message: parameter list length %d", len(f)))
-				break
-			}
-			vlist, err := tcllist.ParseTclList(f[3])
-			if err != nil {
-				c.reportError(fmt.Errorf("Invalid RemoveAddObjAttributes message: %v", err))
-				break
-			}
-			payload.messageType = RemoveAddObjAttributes
-			ch, ok := c.Subscriptions[RemoveAddObjAttributes]
+			ch, ok := c.Subscriptions[RemoveObjAttributes]
 			if ok {
-				ch <- RemoveAddObjAttributesMessagePayload{
+				if len(f) != 4 {
+					c.reportError(fmt.Errorf("Invalid RemoveObjAttributes message: parameter list length %d", len(f)))
+					break
+				}
+				vlist, err := tcllist.ParseTclList(f[3])
+				if err != nil {
+					c.reportError(fmt.Errorf("Invalid RemoveObjAttributes message: %v", err))
+					break
+				}
+				payload.messageType = RemoveObjAttributes
+				ch <- RemoveObjAttributesMessagePayload{
 					BaseMessagePayload: payload,
 					ObjID:              f[1],
 					AttrName:           f[2],
@@ -1717,12 +1995,14 @@ func (c *Connection) listen(done chan error) {
 			// | (__| |__|   /
 			//  \___|____|_|_\
 			//
-			if len(f) != 2 {
-				c.reportError(fmt.Errorf("Invalid Clear message: parameter list length %d", len(f)))
-			} else {
-				payload.messageType = Clear
-				ch, ok := c.Subscriptions[Clear]
-				if ok {
+			// CLR *|E*|M*|P*|[<image>=]<name>|<id>
+			//
+			ch, ok := c.Subscriptions[Clear]
+			if ok {
+				if len(f) != 2 {
+					c.reportError(fmt.Errorf("Invalid Clear message: parameter list length %d", len(f)))
+				} else {
+					payload.messageType = Clear
 					ch <- ClearMessagePayload{
 						BaseMessagePayload: payload,
 						ObjID:              f[1],
@@ -1736,9 +2016,9 @@ func (c *Connection) listen(done chan error) {
 			// | |\/| |/ _ \|   / (_| (_) |
 			// |_|  |_/_/ \_\_|_\\___\___/
 			//
-			payload.messageType = Marco
 			ch, ok := c.Subscriptions[Marco]
 			if ok {
+				payload.messageType = Marco
 				ch <- MarcoMessagePayload{
 					BaseMessagePayload: payload,
 				}
@@ -1754,9 +2034,9 @@ func (c *Connection) listen(done chan error) {
 			// | |_| | .` | ' <| .` | (_) \ \/\/ /| .` |
 			//  \___/|_|\_|_|\_\_|\_|\___/ \_/\_/ |_|\_|
 			//
-			payload.messageType = UNKNOWN
 			ch, ok := c.Subscriptions[UNKNOWN]
 			if ok {
+				payload.messageType = UNKNOWN
 				ch <- UnknownMessagePayload{
 					BaseMessagePayload: payload,
 				}
@@ -1832,10 +2112,13 @@ func (c *Connection) interact() error {
 	}
 }
 
-func (c Connection) send(fields ...string) error {
-	packet, err := tcllist.ToTclString(fields)
+func (c *Connection) send(fields ...interface{}) error {
+	packet, err := tcllist.ToDeepTclString(fields)
 	if err != nil {
 		return err
+	}
+	if strings.ContainsAny(packet, "\n\r") {
+		return fmt.Errorf("sent data may not contain a newline")
 	}
 	packet += "\n"
 	select {
@@ -1846,7 +2129,7 @@ func (c Connection) send(fields ...string) error {
 	return nil
 }
 
-func (c Connection) rawSend(fields ...string) error {
+func (c *Connection) rawSend(fields ...string) error {
 	packet, err := tcllist.ToTclString(fields)
 	if err != nil {
 		return err
@@ -1926,240 +2209,6 @@ func (c *Connection) filterSubscriptions() error {
 	c.send("ACCEPT", sl)
 	return nil
 }
-
-/*
-//
-// Send the provided fields to the server
-//
-func (c *Client) send(f ...string) error {
-	cmd, err := tcllist.ToTclString(f)
-	if err != nil {
-		c.Logger.Printf("mapclient: error preparing data to send: %v", err)
-		return err
-	}
-	if _, err := c.writer.WriteString(cmd + "\n"); err != nil {
-		c.Logger.Printf("mapclient: error sending data \"%s\" to server: %v", cmd, err)
-		return err
-	}
-	if err := c.writer.Flush(); err != nil {
-		c.Logger.Printf("mapclient: error flushing data to server: %v", err)
-		return err
-	}
-	return nil
-}
-
-func (c *Client) Close() error {
-	if err := c.connection.Close(); err != nil {
-		c.Logger.Printf("mapclient: Error closing connection to server: %v", err)
-		return err
-	}
-	c.connection = nil
-	return nil
-}
-
-type Logger interface {
-	Printf(string, ...interface{})
-}
-
-type dialOptionSet struct {
-	sleepFunction   func(time.Duration)
-	timeout         time.Duration
-	authenticator   *auth.Authenticator
-	initialCommands []string
-	retries         int
-	debugProtocol   bool
-	logger          *Logger
-}
-
-type dialOption func(*dialOptionSet)
-
-func WithAuthenticator(a *auth.Authenticator) dialOption {
-	return func(o *dialOptionSet) {
-		o.authenticator = a
-	}
-}
-
-func WithInitialCommands(cmds []string) dialOption {
-	return func(o *dialOptionSet) {
-		o.initialCommands = make([]string, len(cmds))
-		for i, c := range cmds {
-			o.initialCommands[i] = c
-		}
-	}
-}
-
-func WithLogger(l *Logger) dialOption {
-	return func(o *dialOptionSet) {
-		o.logger = l
-	}
-}
-
-func WithTimeout(n time.Duration) dialOption {
-	return func(o *dialOptionSet) {
-		o.timeout = n
-	}
-}
-
-func WithRetries(n int) dialOption {
-	return func(o *dialOptionSet) {
-		o.retries = n
-	}
-}
-
-func WithSleepFunction(f func(time.Duration)) dialOption {
-	return func(o *dialOptionSet) {
-		o.sleepFunction = f
-	}
-}
-
-func DebugProtocol(o *dialOptionSet) {
-	o.debugProtocol = true
-}
-*/
-
-/*
-       When  instantiated, a SocketInterface object s establishes a connection
-       to the specified host, logs in, and then becomes the point  of  contact
-       to interact with the mapper service. The constructor and methods avail‐
-       able are described below.
-              s=SocketInterface(maphost, authenticator=None, initial_com‐
-              mands=None, retries=1, diag_callback=None, sleep_callback=None,
-              protocol_debug=None, subscribe_to=None, pass_callback=None,
-              use_tk=False)
-
-       Establishes a connection to the service at maphost (which is a tuple of
-       (hostname_or_IP, port)).  If the connection fails, it  will  try  again
-       until the number of retries specified has been exhausted. It will sleep
-       for 1 second between attempts. Once the  connection  is  made,  if  the
-       server  requires  authentication  and an authenticator object is given,
-       that object will be used to negotiate authentication with  the  server.
-       This  should  be  an instance of an Mapper.Authentication.Authenticator
-       object.  If the password stored in authenticator is a  single  question
-       mark  (“?”), then the user is prompted for their actual password, which
-       is then inserted into the authenticator object before  using  it.   The
-       server’s initial set of configuration data and/or commands are received
-       and stored in the new SocketInterface object as appropriate.
-
-       If initial_commands is provided, they are sent to  the  server  immedi‐
-ately.
-
-       If diag_callback is given, then all diagnostic messages will be sent to
-       that function as the  sole  parameter.  Otherwise,  in  some  cases  an
-       attempt  will  be  made to alert the user using a Tk dialog box, but if
-       that fails (such as, the application does not have a Tk interface  run‐
-       ning),  it  will fall back to printing diagnostic messages to the stan‐
-       dard output.
-
-       If sleep_callback is given, then any delays needed by the  object  will
-       be performed by calling the provided function with two parameters: num‐
-       ber of seconds to delay,  and  a  callable  function  which  should  be
-       invoked when that delay has expired. Otherwise, sleep() will be called.
-
-       If subscribe_to is specified, its value will  be  passed  to  the  sub‐
-       scribe()  method  to  limit the set of messages the server will send to
-       this client.
-
-       If debugging a client, you can pass an open  file‐like  object  to  the
-       protocol_debug  parameter.  Extra debugging information will be written
-       to that file.
-
-       If pass_callback is given, then any time the socket interface needs  to
-       prompt  the  user for a password, it will invoke the function passed as
-       the value to this parameter, with two arguments: a title and a  prompt.
-       The value returned by this callback function should be the user’s pass‐
-       word. If this is not given, at attempt will be made  to  prompt  for  a
-       password  using  a Tk dialog box, and if that is unsuccessful, the user
-       will be prompted to type it on the standard input.
-
-
-       If use_tk has a true value, the Tk features will be  attempted;  other‐
-       wise they never will.
-
-       The following attributes are available after the object is constructed:
-
-       s.protocol    The protocol version number used by the server.
-
-       s.characters  A dictionary mapping  character  names  to  corresponding
-                     MapCharacter  objects  describing  the  main  party (what
-                     would be on the quick placement list of the Mapper tool’s
-                     pop‐up context menu).
-
-       s.conditions  A  dictionary mapping the name of a condition to a corre‐
-                     sponding MapCondition object describing how a  particular
-                     condition is to be drawn on a map display.
-
-       s.subscribed_messages
-                     The  set  of all server messages this client is currently
-                     subscribed to receive.
-
-       s.preamble    The initial greeting sent by the server.
-
-   High‐Level Interface
-       Once a SocketInterface object s is constructed, it should be logged  in
-       to  a  server  and  ready  to exchange commands with it.  The following
-       methods expose the API to the caller to interact with the map service:
-
-       s.protocol_debug(handle=None)
-              You can call this to turn on or off debugging  on  the  fly.  It
-              performs  just  as the protocol_debug parameter to the construc‐
-              tor.
-
-       s.dispatch(handler, verbose=False, timeout=0)
-              This method is analogous to the lower‐level  read_poll()  method
-              (and  the  verbose  and  timeout  parameters are handled identi‐
-              cally), but rather than simply returning the data  sent  by  the
-              server as a string, it interprets the data according to the map‐
-              per protocol and invokes the  corresponding  handler  method  in
-              your handler object.
-
-              To  make  one of these, create your own handler subclass derived
-              from MapperProtocolHandler.  The base  class  is  full  of  stub
-              methods  which  ignore the incoming server messages. In your own
-              class, simply override all of the ones you care  to  receive  in
-              your client.
-
-              There  will  be  a method corresponding to each of the following
-              methods used to send data to the server, with identical  calling
-              semantics.   Thus,  for example, given that you can call s.tool‐
-              bar(flag) to order peers to turn on or off  their  toolbars,  if
-              you  receive  the toolbar command from the server, dispatch will
-              invoke the method handler.toolbar(flag) for your handler  object
-              to respond in whatever way you wish.
-
-              In  addition to the protocol methods, two additional methods are
-              defined:
-
-              handler.unknown(command, args)
-                     The server sent a command that we  don’t  recognize.  The
-                     command  (as  a  string)  and its arguments (as a list of
-                     strings) are passed as parameters. The  default  behavior
-                     is to ignore this event.
-
-              handler.error(description, data)
-                     An  error was encountered as described in the description
-                     parameter while trying to  process  the  incoming  server
-                     data.  The raw data string as received is passed as data.
-                     The default behavior is to ignore these errors.
-
-       s.add_image(name, size, data=None, server_id=None)
-              Define a graphic image for use by the mapper clients.  The  name
-              is  what  the  clients  will use to refer to the image and these
-              names must be globally unique (more precisely,  the  combination
-              of name and size must be unique). In theory, this will replace a
-              previous image definition with the  same  name  but  there’s  no
-              guarantee  any  client will do so if it already had the previous
-              one cached. This does not permanently store  the  image  server‐
-              side.  It  only sends the data to clients listening at the time,
-              or who later sync the data from the  server  (since  the  server
-              will  keep  the  image definition in its state memory until that
-              state is cleared).
-
-              The size is a floating‐point value that gives the  magnification
-              (zoom  level)  that this data defines for the image called name.
-              The mapper currently supports values of 0.25, 0.5, 1.0, 2.0, and
-              4.0  but  may  support others in the future. The data is a bytes
-
-*/
 
 // @[00]@| GMA 4.3.4
 // @[01]@|
