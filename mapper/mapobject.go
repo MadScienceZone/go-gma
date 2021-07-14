@@ -52,6 +52,26 @@ func init() {
 	}
 }
 
+func StdAttrTypes() map[string]string {
+	return map[string]string{
+		"TYPE":  "string",
+		"X":     "float64",
+		"Y":     "float64",
+		"Z":     "int",
+		"LEVEL": "int",
+
+		"POINTS": []Coordinates,
+		"LINE": "string",
+		"FILL": "string",
+		"WIDTH": "int",
+		"LAYER": "string",
+		"GROUP": "string",
+		"DASH": "byte",	// enum
+		"HIDDEN": "bool",
+		"LOCKED": "bool",
+	}
+}
+
 //________________________________________________________________________________
 //  __  __              ___  _     _           _
 // |  \/  | __ _ _ __  / _ \| |__ (_) ___  ___| |_

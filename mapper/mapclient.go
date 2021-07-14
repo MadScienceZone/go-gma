@@ -635,6 +635,9 @@ type ChatCommon struct {
 
 	// True if this is a global message (sent to all users).
 	ToAll bool
+
+	// True if this message was sent only to the GM.
+	ToGM bool
 }
 
 //
@@ -736,7 +739,16 @@ type ClearChatMessagePayload struct {
 	MessageID int
 }
 
-/* clients can't send these (for now) */
+func (c *Connection) ClearChat(target int, silently bool) error {
+	by := ""
+	if silently {
+		by = "*"
+	} else if c.Authenticator != nil {
+		by = c.Authenticator.Username
+	}
+
+	return c.send("CC", by, target)
+}
 
 //   ____ _                 _____
 //  / ___| | ___  __ _ _ __|  ___| __ ___  _ __ ___
@@ -775,6 +787,14 @@ type CombatModeMessagePayload struct {
 
 func (c *Connection) CombatMode(enabled bool) error {
 	return c.send("CO", enabled)
+}
+
+//
+// Toolbar message: indicate if the client's toolbar should be displayed.
+//
+type ToolbarMessagePayload struct {
+	BaseMessagePayload
+	Enabled bool
 }
 
 //   ____                                     _
@@ -1054,9 +1074,6 @@ type RollResultMessagePayload struct {
 
 	// The die roll result and details behind where it came from.
 	Result dice.StructuredResult
-
-	// Was this die-roll sent for the GM to see only?
-	BlindToGM bool
 }
 
 //  ____  _          ____                     _
@@ -1158,6 +1175,12 @@ type UpdateObjAttributesMessagePayload struct {
 	NewAttrs map[string]interface{}
 }
 
+/*
+coordinate string<->struct conversion with mapobj
+
+func (c *Connection) UpdateObjAttributes(objID string, attrs map[string]interface{}) error {
+*/
+
 //
 // UpdatePeerList message: notifies the client that the list of
 // other connected peers has changed.
@@ -1170,11 +1193,20 @@ type Peer struct {
 	Addr            string
 	User            string
 	Client          string
-	LastPolo        int
+	LastPolo        float64
 	IsAuthenticated bool
 	IsMe            bool
 	IsMain          bool
 	IsWriteOnly     bool
+}
+
+//
+// QueryPeers asks the server to send an UpdatePeerList
+// message with the current set of peers who are connected
+// to the server.
+//
+func (c *Connection) QueryPeers() error {
+	c.send("/CONN")
 }
 
 //
@@ -1235,11 +1267,43 @@ type UpdateTurnMessagePayload struct {
 	// The ObjID of the creature whose turn it is. This may also be one of:
 	//   *Monsters*   All monsters are up now.
 	//   (empty)      It is no one's turn now.
+	//   /regex       All creatures whose names match regex
 	ActorID string
 
 	// The time lapsed so far since the start of combat.
 	// Count is the initiative slot within the round.
 	Hours, Minutes, Seconds, Rounds, Count int
+}
+
+//
+// WriteOnly informs the server that from this point forward,
+// we will not be interested in receiving any messages. We will
+// only be sending.
+//
+// Regardless of sending this, clients should still read any
+// data that is sent anyway. The Dial() method does in fact do this
+// in case a misbehaving server doesn't fully respect the WriteOnly
+// request.
+//
+func (c *Connection) WriteOnly() error {
+	return c.send("NO")
+}
+
+//
+// Sync requests that the server send the entire game state
+// to it.
+//
+func (c *Connection) Sync() error {
+	return c.send("SYNC")
+}
+
+//
+// SyncChat requests that the server (re-)send past messages
+// greater than the target message ID (target≥0) or the most
+// recent |target| messages (target<0).
+//
+func (c *Connection) SyncChat(target int) error {
+	return c.send("SYNC", "CHAT", target)
 }
 
 //
@@ -1471,16 +1535,8 @@ func (c *Connection) login(done chan error) {
 				c.Logger.Printf("mapper: sync %02d: Added %s", recCount, f[1])
 
 			case "DSM": // DSM name shape color
-				_, err := tcllist.ConvertTypes(f, "ssss")
-				if err != nil {
-					c.Logger.Printf("mapper: INVALID server DSM data: %v: %v", f, err)
-					continue
-				}
-				// add to status list
-				c.Conditions[f[1]] = StatusMarkerDefinition{
-					Condition: f[1],
-					Shape:     f[2],
-					Color:     f[3],
+				if err := c.receiveDSM(f); err != nil {
+					c.Logger.Printf("mapper: error in DSM data: %v", err)
 				}
 				c.Logger.Printf("mapper: sync %02d: Added condition %s", recCount, f[1])
 
@@ -1570,6 +1626,20 @@ func (c *Connection) login(done chan error) {
 	c.filterSubscriptions()
 }
 
+func (c *Connection) receiveDSM(f []string) error {
+	_, err := tcllist.ConvertTypes(f, "ssss")
+	if err != nil {
+		return fmt.Errorf("%v: %v", f, err)
+	}
+	// add to status list
+	c.Conditions[f[1]] = StatusMarkerDefinition{
+		Condition: f[1],
+		Shape:     f[2],
+		Color:     f[3],
+	}
+	return nil
+}
+
 //
 // The official protocol spec is the mapper(6) manpage. This is a summary only.
 //
@@ -1589,23 +1659,23 @@ func (c *Connection) login(done chan error) {
 // <-(login)              AUTH <response> [<user>|GM <client>]
 // <>AdjustView           AV <xview> <yview>
 // <>Clear                CLR *|E*|M*|P*|[<imagename>=]<name>|<objID>
-//.->ClearChat            CC *|<user> [""|<newmax>|-<#recents> [<messageID>]]
-//.<>ClearFrom            CLR@ <serverid>
-//.<>CombatMode           CO 0|1
-//.->UpdateClock          CS <abs> <rel>
-//.<-RollDice             D {<recipient>|@|*|% ...} <spec>
-//.<-DefineDicePresets    DD {{<name> <description> <spec>} ...}     (replace)
-//.<-DefineDicePresets    DD+ {{<name> <description> <spec>} ...}    (append)
-//.<-FilterDicePresets    DD/ <regex>
-//.->UpdateDicePresets    DD=
-//.                       DD: <i> <name> <description> <spec>      (repeated)
-//.                       DD. <#lines> <sha256>
-//.->(login)              DENIED [<message>]
-//.<-QueryDicePresets     DR
-//.->UpdateStatusMarker   DSM <condition> <shape> <color>
-//.->(login)              GRANTED <name>|GM
-//.->UpdateTurn           I {<r> <c> <s> <m> <h>} <id>|""|*Monsters*|/<regex>
-//.->UpdateInitiative     IL {{<name> <hold> <ready> <hp> <flat> <slot#>} ...}
+// <>ClearChat            CC *|<user> [""|<newmax>|-<#recents> [<messageID>]]
+// <>ClearFrom            CLR@ <serverid>
+// <>CombatMode           CO 0|1
+// ->UpdateClock          CS <abs> <rel>
+// <-RollDice             D {<recipient>|@|*|% ...} <spec>
+// <-DefineDicePresets    DD {{<name> <description> <spec>} ...}     (replace)
+// <-DefineDicePresets    DD+ {{<name> <description> <spec>} ...}    (append)
+// <-FilterDicePresets    DD/ <regex>
+// ->UpdateDicePresets    DD=
+//                        DD: <i> <name> <description> <spec>      (repeated)
+//                        DD. <#lines> <sha256>
+// ->(login)              DENIED [<message>]
+// <-QueryDicePresets     DR
+// ->UpdateStatusMarker   DSM <condition> <shape> <color>
+// ->(login)              GRANTED <name>|GM
+// ->UpdateTurn           I {<r> <c> <s> <m> <h>} <id>|""|*Monsters*|/<regex>
+// ->UpdateInitiative     IL {{<name> <hold> <ready> <hp> <flat> <slot#>} ...}
 //.<>LoadFrom             L {<path> ...}              (clear map before each)
 //.                       M {<path> ...}              (merge to map)
 //.                       M@ <serverid>               (merge to map)
@@ -1615,24 +1685,43 @@ func (c *Connection) login(done chan error) {
 //.                       LS. 0                       (NEW: cancel LS)
 //.<>CacheFile            M? <serverid>
 // ->Marco                MARCO
-//.<>Mark                 MARK <x> <y>
-//.<-WriteOnly            NO
+// <>Mark                 MARK <x> <y>
+// <-WriteOnly            NO
 //.<>UpdateObjAttributes  OA <objid> {<key> <value ...}
 // <>AddObjAttributes     OA+ <objid> <key> {<value> ...}
 // <>RemoveObjAttributes  OA- <objid> <key> {<value> ...}
-//.->(login)              OK <version> [<challenge>]
-//.->                     PRIV <message>
-//.<-Polo                 POLO
+// ->(login)              OK <version> [<challenge>]
+// ->                     PRIV <message>
+// <-Polo                 POLO
 // <>PlaceSomeone         PS <id> <color> <name> <area> <size> player|monster <gx> <gy> <reach>
-//.->RollResult           ROLL <from> {<recipient> ...} <title> <result> {{<type> <value>} ...} <messageid>
-//.<-Sync                 SYNC
-//.<-SyncChat             SYNC CHAT [-<#recent>|<since>]
-//.->Toolbar              TB 0|1
+// ->RollResult           ROLL <from> {<recipient> ...} <title> <result> {{<type> <value>} ...} <messageid>
+// <-Sync                 SYNC
+// <-SyncChat             SYNC CHAT [-<#recent>|<since>]
+// ->Toolbar              TB 0|1
 // <>ChatMessage          TO <from> {<recipient>|@|*|% ...} <message> [<messageid>]
-//.<-QueryPeers           /CONN
-//.->UpdatePeerList       CONN
+// <-QueryPeers           /CONN
+// ->UpdatePeerList       CONN
 //                        CONN: <i> you|peer <addr> <user> <client> <auth> <primary> <writeonly> <lastseen>
 //                        CONN. <#lines> <sha256>
+
+func (c *Connection) finishStream(f string, started bool, dataLen int, checksum string) (bool, error) {
+	fv, err := tcllist.ConvertTypes(f, "si*")
+	if err {
+		return false, fmt.Errorf("cannot parse stream-end message %q: %v", f, err)
+	}
+	if !started {
+		return false, fmt.Errorf("stream-end encountered before stream-begin: %q", f)
+	}
+	if fv[1].(int) == 0 {
+		return false, nil
+	}
+	if len(f) > 2 && checksum != f[2] {
+		return false, fmt.Errorf("stream data transfer checksum error")
+	}
+	if dataLen != fv[1].(int) {
+		return false, fmt.Errorf("stream transfer had %d elements but expected %d", dataLen, fv[1].(int))
+	}
+}
 
 //
 // listen for, and dispatch, incoming server messages
@@ -1643,8 +1732,12 @@ func (c *Connection) listen(done chan error) {
 		c.Logger.Printf("mapper: stopped listening to server")
 	}()
 
-	var imageDataBuffer [][]string
-	var imageDataDef ImageDefinition
+	var (
+		imageDataBuffer []string
+		imageDataDef    ImageDefinition
+		presetBuffer    [][]string
+		peerBuffer      [][]string
+	)
 
 	strike := 0
 	c.Logger.Printf("mapper: listening for server messages to dispatch...")
@@ -1671,6 +1764,7 @@ func (c *Connection) listen(done chan error) {
 			rawMessage: f,
 		}
 
+	payloadSelection:
 		switch f[0] {
 		case "//":
 			//    ____   ___ ___  __  __ __  __ ___ _  _ _____ ___
@@ -1768,6 +1862,7 @@ func (c *Connection) listen(done chan error) {
 				}
 			}
 
+		case "AC":
 		case "AI":
 			//    _   ___
 			//   /_\ |_ _|
@@ -1814,43 +1909,25 @@ func (c *Connection) listen(done chan error) {
 		case "AI.":
 			ch, ok := c.Subscriptions[AddImage]
 			if ok {
-				fv, err := tcllist.ConvertTypes(f, "si*")
-				if err {
-					c.reportError(fmt.Errorf("cannot parse AI. message from server: %v", err))
-					break
+				imgOk, err := finishStream(f, imageDataDef.Zoom != 0, len(imageDataBuffer),
+					streamChecksumStrings(imageDataBuffer))
+				if err != nil {
+					c.reportError(fmt.Errorf("bad AddImage transfer: %v", err))
 				}
-				if imageDataDef.Zoom == 0 {
-					c.reportError(fmt.Errorf("AI. message received before AI"))
-					break
-				}
-				if fv[1].(int) == 0 {
-					c.Logger.Printf("mapper: image transfer cancelled by server")
-				} else {
-					if len(imageDataBuffer) != fv[1].(int) {
-						c.reportError(fmt.Errorf("Image data received %d records; expected %d", len(imageDataBuffer), fv[1].(int)))
+				if imgOk {
+					data, err := base64.StdEncoding.DecodeString(strings.Join(imageDataBuffer, ""))
+					if err != nil {
+						c.reportError(fmt.Errorf("Image data could not be decoded: %v", err))
 					} else {
-						chk := streamChecksumStrings(imageDataBuffer)
-						if len(f) > 2 && chk != f[2] {
-							c.reportError(fmt.Errorf("Image data checksum mismatch"))
-						} else {
-							if len(f) < 3 {
-								c.Logger.Printf("Image data transferred from server without checksum")
-							}
-							data, err := base64.StdEncoding.DecodeString(strings.Join(imageDataBuffer, ""))
-							if err != nil {
-								c.reportError(fmt.Errorf("Image data could not be decoded: %v", err))
-							} else {
-								payload.messageType = AddImage
-								ch <- AddImageMessagePayload{
-									BaseMessagePayload: payload,
-									ImageDefinition: ImageDefinition{
-										Zoom:        imageDataDef.Zoom,
-										Name:        imageDataDef.Name,
-										IsLocalFile: false,
-									},
-									ImageData: data,
-								}
-							}
+						payload.messageType = AddImage
+						ch <- AddImageMessagePayload{
+							BaseMessagePayload: payload,
+							ImageDefinition: ImageDefinition{
+								Zoom:        imageDataDef.Zoom,
+								Name:        imageDataDef.Name,
+								IsLocalFile: false,
+							},
+							ImageData: data,
 						}
 					}
 				}
@@ -1934,6 +2011,439 @@ func (c *Connection) listen(done chan error) {
 				}
 			}
 
+		case "CLR":
+			//   ___ _    ___
+			//  / __| |  | _ \
+			// | (__| |__|   /
+			//  \___|____|_|_\
+			//
+			// CLR *|E*|M*|P*|[<image>=]<name>|<id>
+			//
+			ch, ok := c.Subscriptions[Clear]
+			if ok {
+				if len(f) != 2 {
+					c.reportError(fmt.Errorf("Invalid Clear message: parameter list length %d", len(f)))
+				} else {
+					payload.messageType = Clear
+					ch <- ClearMessagePayload{
+						BaseMessagePayload: payload,
+						ObjID:              f[1],
+					}
+				}
+			}
+
+		case "CC":
+			//   ___ ___
+			//  / __/ __|
+			// | (_| (__
+			//  \___\___|
+			//
+			// CC *|<user> ""|<newmax>|-<#recents> <messageID>
+			//
+			ch, ok := c.Subscriptions[ClearChat]
+			if ok {
+				fv, err := tcllist.ConvertTypes(f, "ssIi")
+				if err != nil {
+					c.reportError(fmt.Errorf("Invalid ClearChat message: %v", err))
+				} else {
+					payload.messageType = ClearChat
+					by := fv[1].(sring)
+					silent := false
+					if by == "*" {
+						by = ""
+						silent = true
+					}
+					ch <- ClearChatMessagePayload{
+						BaseMessagePayload: payload,
+						RequestedBy:        by,
+						DoSilently:         silent,
+						Target:             fv[2].(int),
+						MessageID:          fv[3].(int),
+					}
+				}
+			}
+
+		case "CLR@":
+			//   ___ _    ___  ____
+			//  / __| |  | _ \/ __ \
+			// | (__| |__|   / / _` |
+			//  \___|____|_|_\ \__,_|
+			//                \____/
+			// CLR@ <id>
+			//
+			ch, ok := c.Subscriptions[ClearFrom]
+			if ok {
+				fv, err := tcllist.ConvertTypes(f, "ss")
+				if err != nil {
+					c.reportError(fmt.Errorf("Invalid ClearFrom message: %v", err))
+				} else {
+					payload.messageType = ClearFrom
+					ch <- ClearFromMessagePayload{
+						BaseMessagePayload: payload,
+						FileDefinition: FileDefinition{
+							File:        fv[1].(string),
+							IsLocalFile: false,
+						},
+					}
+				}
+			}
+
+		case "CO":
+			//   ___ ___
+			//  / __/ _ \
+			// | (_| (_) |
+			//  \___\___/
+			//
+			// CO 0|1
+			//
+			ch, ok := c.Subscriptions[CombatMode]
+			if ok {
+				fv, err := tcllist.ConvertTypes(f, "s?")
+				if err != nil {
+					c.reportError(fmt.Errorf("Invalid CombatMode message: %v", err))
+				} else {
+					payload.messageType = CombatMode
+					ch <- CombatModeMessagePayload{
+						BaseMessagePayload: payload,
+						Enabled:            fv[1].(bool),
+					}
+				}
+			}
+
+		case "CONN":
+			//   ___ ___  _  _ _  _
+			//  / __/ _ \| \| | \| |
+			// | (_| (_) | .` | .` |
+			//  \___\___/|_|\_|_|\_|
+			//
+			// CONN
+			// CONN: <i> you|peer <addr> <user> <client> <auth> <primary> <writeonly> <lastseen>
+			// CONN. <#peers> <sha256>
+			//
+			ch, ok := c.Subscriptions[UpdatePeerList]
+			if ok {
+				if peerBuffer != nil {
+					c.reportError(fmt.Errorf("CONN encountered before previous one ended"))
+				}
+				presetBuffer = nil
+			}
+
+		case "CONN:":
+			ch, ok := c.Subscriptions[UpdatePeerList]
+			if ok {
+				if len(f) != 10 {
+					c.reportError(fmt.Errorf("CONN: message field count wrong (%d)", len(f)))
+					break
+				}
+				thisSet = make([]string, 10)
+				copy(thisSet, f)
+				peerBuffer = append(peerBuffer, thisSet)
+			}
+
+		case "CONN.":
+			ch, ok := c.Subscriptions[UpdatePeerList]
+			if ok {
+				ccOk, err := c.finishStream(f, true, len(peerBuffer), streamChecksum(peerBuffer))
+				if err != nil {
+					c.reportError(fmt.Errorf("bad peer list transfer: %v", err))
+				}
+				if ccOk {
+					plist := make([]Peer, 0, len(peerBuffer))
+					for i, preset := range presetBuffer {
+						pv, err := tcllist.ConvertTypes(preset, "sissss???f")
+						if err != nil {
+							c.reportError(fmt.Errorf("bad peer list transfer: %v", err))
+							ccOk = false
+							break
+						}
+						if i != pv[1].(int) {
+							c.reportError(fmt.Errorf("peer list transfer sequence error %d!=%d: %v", i, pv[1].(int), err))
+							ccOk = false
+							break
+						}
+						plist = append(plist, Peer{
+							Addr:            pv[3].(string),
+							User:            pv[4].(string),
+							Client:          pv[5].(string),
+							LastPolo:        pv[9].(float64),
+							IsAuthenticated: pv[6].(bool),
+							IsMe:            pv[2].(string) == "you",
+							IsMain:          pv[7].(bool),
+							IsWriteOnly:     pv[8].(bool),
+						})
+					}
+				}
+				if ccOk {
+					payload.messageType = UpdatePeerList
+					ch <- UpdatePeerListMessagePayload{
+						BaseMessagePayload: payload,
+						PeerList:           plist,
+					}
+				}
+				peerBuffer = nil
+			}
+
+		case "CS":
+			//   ___ ___
+			//  / __/ __|
+			// | (__\__ \
+			//  \___|___/
+			//
+			// CS <abs> <rel>
+			//
+			ch, ok := c.Subscriptions[UpdateClock]
+			if ok {
+				fv, err := tcllist.ConvertTypes(f, "sff")
+				if err != nil {
+					c.reportError(fmt.Errorf("Invalid UpdateClock message: %v", err))
+				} else {
+					payload.messageType = UpdateClock
+					ch <- UpdateClockMessagePayload{
+						BaseMessagePayload: payload,
+						Absolute:           fv[1].(float64),
+						Relative:           fv[2].(float64),
+					}
+				}
+			}
+
+		case "DD=":
+			//  ___  ___
+			// |   \|   \
+			// | |) | |) |
+			// |___/|___/
+			//
+			// DD=
+			// DD: <i> <name> <desc> <spec>
+			// DD. <#defs> <sha256>
+			//
+			ch, ok := c.Subscriptions[UpdateDicePresets]
+			if ok {
+				if presetBuffer != nil {
+					c.reportError(fmt.Errorf("DD encountered before previous one ended"))
+				}
+				presetBuffer = nil
+			}
+
+		case "DD:":
+			ch, ok := c.Subscriptions[UpdateDicePresets]
+			if ok {
+				if len(f) != 5 {
+					c.reportError(fmt.Errorf("DD: message field count wrong (%d)", len(f)))
+					break
+				}
+				thisSet = make([]string, 5)
+				copy(thisSet, f)
+				presetBuffer = append(presetBuffer, thisSet)
+			}
+
+		case "DD.":
+			ch, ok := c.Subscriptions[UpdateDicePresets]
+			if ok {
+				ddOk, err := c.finishStream(f, true, len(presetBuffer), streamChecksum(presetBuffer))
+				if err != nil {
+					c.reportError(fmt.Errorf("bad preset transfer: %v", err))
+				}
+				if ddOk {
+					plist := make([]DieRollPreset, 0, len(presetBuffer))
+					for i, preset := range presetBuffer {
+						pv, err := tcllist.ConvertTypes(preset, "sisss")
+						if err != nil {
+							c.reportError(fmt.Errorf("bad preset transfer: %v", err))
+							ddOk = false
+							break
+						}
+						if i != pv[1].(int) {
+							c.reportError(fmt.Errorf("preset transfer sequence error %d!=%d: %v", i, pv[1].(int), err))
+							ddOk = false
+							break
+						}
+						plist = append(plist, DieRollPreset{
+							Name:        pv[2],
+							Description: pv[3],
+							DieRollSpec: pv[4],
+						})
+					}
+				}
+				if ddOk {
+					payload.messageType = UpdateDicePresets
+					ch <- UpdateDicePresetsMessagePayload{
+						BaseMessagePayload: payload,
+						Presets:            plist,
+					}
+				}
+				presetBuffer = nil
+			}
+
+		case "DENIED":
+			//  ___  ___ _  _ ___ ___ ___
+			// |   \| __| \| |_ _| __|   \
+			// | |) | _|| .` || || _|| |) |
+			// |___/|___|_|\_|___|___|___/
+			//
+			if len(f) > 1 {
+				c.reportError(fmt.Errorf("server denied access: %s", f[1]))
+			} else {
+				c.reportError(fmt.Errorf("server denied access: %s"))
+			}
+
+		case "DSM":
+			//  ___  ___ __  __
+			// |   \/ __|  \/  |
+			// | |) \__ \ |\/| |
+			// |___/|___/_|  |_|
+			//
+			// DSM <cond> <shape> <color>
+			//
+			if err := c.receiveDSM(f); err != nil {
+				c.reportError(fmt.Errorf("error in UpdateStatusMarker: %v", err))
+				break
+			}
+			ch, ok := c.Subscriptions[UpdateStatusMarker]
+			if ok {
+				if len(f) != 4 {
+					// This should have been caught by receiveDSM.
+					c.reportError(fmt.Errorf("error in UpdateStatusMarker: field count %d", len(f)))
+					break
+				}
+				payload.messageType = UpdateStatusMarker
+				ch <- UpdateStatusMarkerMessagePayload{
+					BaseMessagePayload: payload,
+					StatusMarkerDefinition: StatusMarkerDefinition{
+						Condition: f[1],
+						Shape:     f[2],
+						Color:     f[3],
+					},
+				}
+			}
+
+		case "I":
+			//  ___
+			// |_ _|
+			//  | |
+			// |___|
+			//
+			// I {<r> <c> <s> <m> <h>} <id>|""|*Monsters*|/<regex>
+			//
+			ch, ok := c.Subscriptions[UpdateTurn]
+			if ok {
+				fv, err := tcllist.ConvertTypes(f, "sss")
+				if err != nil {
+					c.reportError(fmt.Errorf("invalid UpdateTurn message: %v", err))
+					break
+				}
+				breakdown, err := tcllist.Parse(fv[1].(string), "iiiii")
+				if err != nil {
+					c.reportError(fmt.Errorf("invalid UpdateTurn time structure: %v", err))
+					break
+				}
+
+				payload.messageType = UpdateTurn
+				ch <- UpdateTurnMessagePayload{
+					BaseMessagePayload: payload,
+					ActorID:            fv[2].(string),
+					Hours:              breakdown[4].(int),
+					Minutes:            breakdown[3].(int),
+					Seconds:            breakdown[2].(int),
+					Rounds:             breakdown[0].(int),
+					Count:              breakdown[1].(int),
+				}
+			}
+
+		case "IL":
+			//  ___ _
+			// |_ _| |
+			//  | || |__
+			// |___|____|
+			//
+			// IL {{<name> <hold?> <ready?> <hp> <flat?> <slot#>} ...}
+			//
+
+			ch, ok := c.Subscriptions[UpdateInitiative]
+			if ok {
+				if len(f) != 2 {
+					c.reportError(fmt.Errorf("invalid UpdateInitiative message: field count %d", len(f)))
+					break
+				}
+				entries, err := tcllist.ParseTclList(f[1])
+				if err != nil {
+					c.reportError(fmt.Errorf("invalid UpdateInitiative structure: %v", err))
+					break
+				}
+
+				var ilist []InitiativeSlot
+				for i, entry := range entries {
+					fv, err := tcllist.Parse(entry, "s??i?i")
+					if err != nil {
+						c.reportError(fmt.Errorf("invalid UpdateInitiative slot #%d: %v", i, err))
+						break
+					}
+					ilist = append(ilist, InitiativeSlot{
+						Name:             fv[0].(string),
+						IsHolding:        fv[1].(bool),
+						HasReadiedAction: fv[2].(bool),
+						CurrentHP:        fv[3].(int),
+						IsFlatFooted:     fv[4].(bool),
+						Slot:             fv[5].(int),
+					})
+				}
+
+				payload.messageType = UpdateInitiative
+				ch <- UpdateInitiativeMessagePayload{
+					BaseMessagePayload: payload,
+					InitiativeList:     ilist,
+				}
+			}
+
+		case "L":
+		case "LS":
+		case "LS:":
+		case "LS.":
+		case "M":
+		case "M@":
+		case "M?":
+		case "MARCO":
+			//  __  __   _   ___  ___ ___
+			// |  \/  | /_\ | _ \/ __/ _ \
+			// | |\/| |/ _ \|   / (_| (_) |
+			// |_|  |_/_/ \_\_|_\\___\___/
+			//
+			ch, ok := c.Subscriptions[Marco]
+			if ok {
+				payload.messageType = Marco
+				ch <- MarcoMessagePayload{
+					BaseMessagePayload: payload,
+				}
+			} else {
+				// if the user isn't catching these, we'll respond
+				// back to the server ourselves
+				c.send("POLO")
+			}
+
+		case "MARK":
+			//  __  __   _   ___ _  __
+			// |  \/  | /_\ | _ \ |/ /
+			// | |\/| |/ _ \|   / ' <
+			// |_|  |_/_/ \_\_|_\_|\_\
+			//
+			// MARK <x> <y>
+			//
+			ch, ok := c.Subscriptions[Mark]
+			if ok {
+				fv, err := tcllist.ConvertTypes(f, "sff")
+				if err != nil {
+					c.reportError(fmt.Errorf("Invalid Mark message: %v", err))
+				} else {
+					payload.messageType = Mark
+					ch <- MarkMessagePayload{
+						BaseMessagePayload: payload,
+						Coordinates: Coordinates{
+							X: fv[1].(float64),
+							Y: fv[2].(float64),
+						},
+					}
+				}
+			}
+
 		case "OA+":
 			//   ___   _    _
 			//  / _ \ /_\ _| |_
@@ -1989,43 +2499,203 @@ func (c *Connection) listen(done chan error) {
 				}
 			}
 
-		case "CLR":
-			//   ___ _    ___
-			//  / __| |  | _ \
-			// | (__| |__|   /
-			//  \___|____|_|_\
+		case "PRIV":
+			//  ___ ___ _____   __
+			// | _ \ _ \_ _\ \ / /
+			// |  _/   /| | \ V /
+			// |_| |_|_\___| \_/
 			//
-			// CLR *|E*|M*|P*|[<image>=]<name>|<id>
+			if len(f) > 1 {
+				c.reportError(fmt.Errorf("privileged server operation denied: %s", f[1]))
+			} else {
+				c.reportError(fmt.Errorf("privileged server operation denied"))
+			}
+
+		case "PS":
+			//  ___  ___
+			// | _ \/ __|
+			// |  _/\__ \
+			// |_|  |___/
 			//
-			ch, ok := c.Subscriptions[Clear]
+			// PS <id> <color> <name> <area> <size> player|monster <gx> <gy> <reach?>
+			//
+			ch, ok := c.Subscriptions[PlaceSomeone]
 			if ok {
-				if len(f) != 2 {
-					c.reportError(fmt.Errorf("Invalid Clear message: parameter list length %d", len(f)))
+				fv, err := tcllist.ConvertTypes(f, "sssssssff?")
+				if err != nil {
+					c.reportError(fmt.Errorf("Invalid PlaceSomeone message: %v", err))
+					break
+				}
+
+				ct := CreatureTypeUnknown
+				switch fv[6].(string) {
+				case "player":
+					ct = CreatureTypePlayer
+				case "monster":
+					ct = CreatureTypeMonster
+				default:
+					c.reportError(fmt.Errorf("Invalid creature type %s", fv[6].(string)))
+					break payloadSelection
+				}
+
+				payload.messageType = PlaceSomeone
+				ch <- PlaceSomeoneMessagePayload{
+					BaseMessagePayload: payload,
+					CreatureToken: CreatureToken{
+						BaseMapObject: BaseMapObject{
+							ID: fv[1].(string),
+						},
+						Color:        fv[2].(string),
+						Name:         fv[3].(string),
+						Area:         fv[4].(string),
+						Size:         fv[5].(string),
+						CreatureType: ct,
+						Gx:           fv[7].(float64),
+						Gy:           fv[8].(float64),
+						Reach:        fv[9].(bool),
+					},
+				}
+			}
+
+		case "ROLL":
+			//  ___  ___  _    _
+			// | _ \/ _ \| |  | |
+			// |   / (_) | |__| |__
+			// |_|_\\___/|____|____|
+			//
+			// ROLL <from> {<recipient> ...} <title> <result> {{<type> <value>} ...} <messageID>
+			//
+			ch, ok := c.Subscriptions[RollResult]
+			if ok {
+				fv, err := tcllist.ConvertTypes(f, "ssssisi")
+				if err != nil {
+					c.reportError(fmt.Errorf("Invalid RollResult message: %v", err))
+					break
+				}
+
+				var recipients []string
+				var toGM bool
+				var toAll bool
+				var dlist []StructuredDescription
+
+				recips, err := tcllist.ParseTclList(fv[2].(string))
+				if err != nil {
+					c.reportError(fmt.Errorf("Invalid RollResult recipient list: %v", err))
+					break
+				}
+				for _, recipient := range recips {
+					switch recipient {
+					case ToGMOnly:
+						toGM = true
+					case ToAll:
+						toAll = true
+					}
+					recipients = append(recipients, recipient)
+				}
+				details, err := tcllist.ParseTclList(fv[5].(string))
+				if err != nil {
+					c.reportError(fmt.Errorf("Invalid RollResult detail list: %v", err))
+					break
+				}
+				for i, det := range details {
+					ds, err := tcllist.ParseTclList(det)
+					if err != nil || len(ds) != 2 {
+						c.reportError(fmt.Errorf("Invalid RollResult detail element #%d \"%s\"", i, det))
+						break payloadSelection
+					}
+
+					dlist = append(dlist, StructuredDescription{
+						Type:  ds[0],
+						Value: ds[1],
+					})
+				}
+
+				payload.messageType = RollResult
+				ch <- RollResultMessagePayload{
+					BaseMessagePayload: payload,
+					ChatCommon: ChatCommon{
+						Sender:     fv[1].(string),
+						Recipients: recipients,
+						MessageID:  fv[6].(int),
+						ToAll:      toAll,
+						ToGM:       toGM,
+					},
+					Title: fv[3].(string),
+					Result: dice.StructuredResult{
+						Result:  fv[4].(int),
+						Details: dlist,
+					},
+				}
+			}
+
+		case "TB":
+			//  _____ ___
+			// |_   _| _ )
+			//   | | | _ \
+			//   |_| |___/
+			//
+			// TB 0|1
+			ch, ok := c.Subscriptions[Toolbar]
+			if ok {
+				fv, err := tcllist.ConvertTypes(f, "s?")
+				if err != nil {
+					c.reportError(fmt.Errorf("Invalid Toolbar message: %v", err))
 				} else {
-					payload.messageType = Clear
-					ch <- ClearMessagePayload{
+					payload.messageType = Toolbar
+					ch <- ToolbarMessagePayload{
 						BaseMessagePayload: payload,
-						ObjID:              f[1],
+						Enabled:            fv[1].(bool),
 					}
 				}
 			}
 
-		case "MARCO":
-			//  __  __   _   ___  ___ ___
-			// |  \/  | /_\ | _ \/ __/ _ \
-			// | |\/| |/ _ \|   / (_| (_) |
-			// |_|  |_/_/ \_\_|_\\___\___/
+		case "TO":
+			//  _____ ___
+			// |_   _/ _ \
+			//   | || (_) |
+			//   |_| \___/
 			//
-			ch, ok := c.Subscriptions[Marco]
+			// TO <from> {<recipient> ...} <message> <messageID>
+			//
+			ch, ok := c.Subscriptions[ChatMessage]
 			if ok {
-				payload.messageType = Marco
-				ch <- MarcoMessagePayload{
-					BaseMessagePayload: payload,
+				fv, err := tcllist.ConvertTypes(f, "ssssi")
+				if err != nil {
+					c.reportError(fmt.Errorf("Invalid ChatMessage message: %v", err))
+					break
 				}
-			} else {
-				// if the user isn't catching these, we'll respond
-				// back to the server ourselves
-				c.send("POLO")
+
+				var recipients []string
+				var toGM bool
+				var toAll bool
+
+				recips, err := tcllist.ParseTclList(fv[2].(string))
+				if err != nil {
+					c.reportError(fmt.Errorf("Invalid ChatMessage recipient list: %v", err))
+					break
+				}
+				for _, recipient := range recips {
+					switch recipient {
+					case ToGMOnly:
+						toGM = true
+					case ToAll:
+						toAll = true
+					}
+					recipients = append(recipients, recipient)
+				}
+
+				payload.messageType = ChatMessage
+				ch <- ChatMessageMessagePayload{
+					BaseMessagePayload: payload,
+					ChatCommon: ChatCommon{
+						Sender:     fv[1].(string),
+						Recipients: recipients,
+						MessageID:  fv[4].(int),
+						ToAll:      toAll,
+						ToGM:       toGM,
+					},
+					Text: fv[3].(string),
+				}
 			}
 
 		default:
