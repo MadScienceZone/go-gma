@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___       ______         ___               #
-# (  ____ \(       )(  ___  )              /   )     / ___  \       /   )              #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \     / /) |              #
-# | |      | || || || (___) |            / (_) (_       ___) /    / (_) (_             #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (    (____   _)            #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \        ) (              #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _      | |              #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_)     (_)              #
+#  _______  _______  _______                ___       ______      _______              #
+# (  ____ \(       )(  ___  )              /   )     / ___  \    (  ____ \             #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \   | (    \/             #
+# | |      | || || || (___) |            / (_) (_       ___) /   | (____               #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (    (_____ \              #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \         ) )             #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ /\____) )             #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_)\______/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -70,8 +70,8 @@ import (
 // and protocol versions supported by this code.
 //
 const (
-	GMAMapperProtocol              = 332     // @@##@@ auto-configured
-	GMAVersionNumber               = "4.3.4" // @@##@@ auto-configured
+	GMAMapperProtocol=332     // @@##@@ auto-configured
+	GMAVersionNumber="4.3.5" // @@##@@ auto-configured
 	MINIMUM_SUPPORTED_MAP_PROTOCOL = 332
 	MAXIMUM_SUPPORTED_MAP_PROTOCOL = 332
 )
@@ -3697,7 +3697,7 @@ func (c *Connection) unfilterSubscriptions() error {
 	return c.send("ACCEPT", "*")
 }
 
-// @[00]@| GMA 4.3.4
+// @[00]@| GMA 4.3.5
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.
