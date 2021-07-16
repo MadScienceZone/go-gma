@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___       ______      _______              #
-# (  ____ \(       )(  ___  )              /   )     / ___  \    (  ____ \             #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \   | (    \/             #
+#  _______  _______  _______                ___       ______       ______              #
+# (  ____ \(       )(  ___  )              /   )     / ___  \     / ____ \             #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \   ( (    \/             #
 # | |      | || || || (___) |            / (_) (_       ___) /   | (____               #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (    (_____ \              #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \         ) )             #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ /\____) )             #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_)\______/              #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (    |  ___ \              #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \   | (   ) )             #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ ( (___) )             #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \_____/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -183,6 +183,8 @@ func TestObjLoadSmallMap(t *testing.T) {
 		"Y:0006bc4a7063427b8fb1f8990a24b980 7350.0",
 		"IMAGE:0006bc4a7063427b8fb1f8990a24b980 parquet22",
 		"TYPE:0006bc4a7063427b8fb1f8990a24b980 tile",
+		"BBHEIGHT:0006bc4a7063427b8fb1f8990a24b980 57",
+		"BBWIDTH:0006bc4a7063427b8fb1f8990a24b980 100.5",
 		"LAYER:0006bc4a7063427b8fb1f8990a24b980 walls",
 		"POINTS:0006bc4a7063427b8fb1f8990a24b980 {}",
 		"FILL:0268e7eeb78e41ff82fddc4f5f0e2c1d #7e7f12",
@@ -579,6 +581,8 @@ func TestObjLoadSmallMap(t *testing.T) {
 				sEq(obj.Group, "", "tile Group", t)
 				// TileElement
 				sEq(obj.Image, "parquet22", "tile Image", t)
+				fEq(obj.BBHeight, 57.0, "tile height", t)
+				fEq(obj.BBWidth, 100.5, "tile width", t)
 			default:
 				t.Errorf("Found unexpected tile %s", obj.ObjID())
 			}
@@ -1102,6 +1106,8 @@ func TestObjLoadSmallMap(t *testing.T) {
 		"ARROW:2a1751827a954d8fad688da8e431502a first",
 		"ARROW:38f633da2d6749467f5406f187b8cc3f none",
 		"ARROW:61dc2ff4efe54be7a18791b338c29c5c first",
+		"BBHEIGHT:0006bc4a7063427b8fb1f8990a24b980 57",
+		"BBWIDTH:0006bc4a7063427b8fb1f8990a24b980 100.5",
 		"DASH:2a1751827a954d8fad688da8e431502a -",
 		"DASH:61dc2ff4efe54be7a18791b338c29c5c -",
 		"EXTENT:13a2dd4a64a94e178509744e1a0a4481 225",
@@ -1354,7 +1360,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 		"Z:afd136735d7e400082f331485e73f7a1 99999999",
 		"Z:bf29dfa85cc54498bb33a2d7523d9edc 4",
 		"Z:e68d5354f175401582866a75d806d8d7 99999999",
-		"__MAPPER__:16 {{just testing} {1625549559 {Mon Jul  5 22:32:39 PDT 2021}}}",
+		"__MAPPER__:17 {{just testing} {1625549559 {Mon Jul  5 22:32:39 PDT 2021}}}",
 	}
 	if len(expectedData) != len(saveData) {
 		t.Errorf("save data has %d lines, expected %d", len(saveData), len(expectedData))
@@ -1428,7 +1434,7 @@ func CEq(a, b []Coordinates, msg string, t *testing.T) {
 	}
 }
 
-// @[00]@| GMA 4.3.5
+// @[00]@| GMA 4.3.6
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.

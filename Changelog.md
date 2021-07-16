@@ -1,10 +1,25 @@
 # Changelog
 ## Current Version Information
- * GMA Core API Library Version: 4.3.5		<!-- @@##@@ -->
+ * GMA Core API Library Version: 4.3.6		<!-- @@##@@ -->
  * Supported GMA Mapper Version: 3.40.9		<!-- @@##@@ -->
  * Supported GMA Mapper Protocol: 332		<!-- @@##@@ -->
- * Supported GMA Mapper File Format: 16		<!-- @@##@@ -->
+ * Supported GMA Mapper File Format: 17		<!-- @@##@@ -->
  * Effective Date: 16-Jul-2021			<!-- @@##@@ -->
+
+## v4.3.6-alpha
+Updates map file support to version 17.
+
+## v4.3.5-alpha
+Adds mapper package with code to represent map objects and load/save them
+from a disk file or over the client/server protocol. Also adds code for clients
+to connect to a running server, with functions to send individual messages to
+the server and a mechanism for the client to be notified via subscribed channels
+when incoming server messages arrive.
+
+Adds `ToDeepTclString()` to the tcllist package which converts an arbitrary
+slice of values (including nested sub-lists) into a Tcl string in one step.
+Otherwise one would need to convert non-string types to strings and then
+call `ToTclString()` (repeatedly, in the case of sub-lists).
 
 ## v4.3.4
 Correction to how auth objects manage byte slices. 

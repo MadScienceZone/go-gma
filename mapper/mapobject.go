@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___       ______      _______              #
-# (  ____ \(       )(  ___  )              /   )     / ___  \    (  ____ \             #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \   | (    \/             #
+#  _______  _______  _______                ___       ______       ______              #
+# (  ____ \(       )(  ___  )              /   )     / ___  \     / ____ \             #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \   ( (    \/             #
 # | |      | || || || (___) |            / (_) (_       ___) /   | (____               #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (    (_____ \              #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \         ) )             #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ /\____) )             #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_)\______/              #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (    |  ___ \              #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \   | (   ) )             #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ ( (___) )             #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \_____/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -39,7 +39,7 @@ import (
 // The GMA File Format version number current as of this build.
 // This is the format which will be used for saving map data.
 //
-const GMAMapperFileFormat = 16 // @@##@@ auto-configured
+const GMAMapperFileFormat = 17 // @@##@@ auto-configured
 //
 // This package can understand file formats starting with MINIMUM_SUPPORTED_MAP_FILE_FORMAT.
 //
@@ -48,7 +48,7 @@ const MINIMUM_SUPPORTED_MAP_FILE_FORMAT = 14
 //
 // This package can understand file formats up to MAXIMUM_SUPPORTED_MAP_FILE_FORMAT.
 //
-const MAXIMUM_SUPPORTED_MAP_FILE_FORMAT = 16
+const MAXIMUM_SUPPORTED_MAP_FILE_FORMAT = 17
 
 func init() {
 	if MINIMUM_SUPPORTED_MAP_FILE_FORMAT > GMAMapperFileFormat || MAXIMUM_SUPPORTED_MAP_FILE_FORMAT < GMAMapperFileFormat {
@@ -272,7 +272,7 @@ func attributeType(attrName string) (string, bool) {
 		return "*CreatureHealth", true
 	case "SKINSIZE", "STATUSLIST":
 		return "[]string", true
-	case "EXTENT", "GX", "GY", "START", "X", "Y":
+	case "BBHEIGHT", "BBWIDTH", "EXTENT", "GX", "GY", "START", "X", "Y":
 		return "float64", true
 	case "DIM", "HIDDEN", "KILLED", "LOCKED", "REACH":
 		return "bool", true
@@ -1114,6 +1114,13 @@ type TileElement struct {
 
 	// Image name as known to the mapper system.
 	Image string
+
+	// Bounding box in pixels for the image tile.
+	// If for some reason the tile can't be found, clients
+	// can use the bounding box to indicate where the tile should be.
+	// If the bounding box is not known, these values may both
+	// be zero.
+	BBHeight, BBWidth float64
 }
 
 //
@@ -1125,6 +1132,8 @@ func objTileElement(objId string, objDef map[string][]string) (TileElement, erro
 		MapElement: me,
 	}
 	tile.Image, err = objString(objDef, 0, "IMAGE", true, err)
+	tile.BBHeight, err = objFloat(objDef, 0, "BBHEIGHT", false, err)
+	tile.BBWidth, err = objFloat(objDef, 0, "BBWIDTH", false, err)
 	return tile, err
 }
 
@@ -1144,6 +1153,8 @@ func (o TileElement) SaveData(data []string, prefix, id string) ([]string, error
 	return saveValues(data, prefix, id, []saveAttributes{
 		{"TYPE", "s", true, "tile"},
 		{"IMAGE", "s", true, o.Image},
+		{"BBHEIGHT", "f", true, o.BBHeight},
+		{"BBWIDTH", "f", true, o.BBWidth},
 	})
 }
 
@@ -2252,7 +2263,7 @@ func saveValues(previous []string, prefix, objID string, attrs []saveAttributes)
 	return previous, nil
 }
 
-// @[00]@| GMA 4.3.5
+// @[00]@| GMA 4.3.6
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.

@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___       ______      _______              #
-# (  ____ \(       )(  ___  )              /   )     / ___  \    (  ____ \             #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \   | (    \/             #
+#  _______  _______  _______                ___       ______       ______              #
+# (  ____ \(       )(  ___  )              /   )     / ___  \     / ____ \             #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \   ( (    \/             #
 # | |      | || || || (___) |            / (_) (_       ___) /   | (____               #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (    (_____ \              #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \         ) )             #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ /\____) )             #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_)\______/              #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (    |  ___ \              #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \   | (   ) )             #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ ( (___) )             #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \_____/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -71,7 +71,7 @@ import (
 //
 const (
 	GMAMapperProtocol=332     // @@##@@ auto-configured
-	GMAVersionNumber="4.3.5" // @@##@@ auto-configured
+	GMAVersionNumber="4.3.6" // @@##@@ auto-configured
 	MINIMUM_SUPPORTED_MAP_PROTOCOL = 332
 	MAXIMUM_SUPPORTED_MAP_PROTOCOL = 332
 )
@@ -407,7 +407,7 @@ func (c *Connection) Close() {
 // when they arrive.
 //
 // If multiple messages are specified, they are all directed to send their payloads
-// to the channel, which may used the MessageType() method to differentiate what
+// to the channel, which may use the MessageType() method to differentiate what
 // kind of payload was sent.
 //
 // This method may be called multiple times for the same channel, in which case
@@ -441,7 +441,7 @@ func (c *Connection) Close() {
 // received by the client until subscribed to again.
 //
 // Example: (error checking not shown for the sake of brevity)
-//   cm := make(chan<-MessagePayload, 1)
+//   cm := make(chan MessagePayload, 1)
 //   service, err := NewConnection(endpoint)
 //   err = service.Subscribe(cm, ChatMessage)
 //
@@ -1689,7 +1689,7 @@ func (c *Connection) Dial() {
 	for {
 		err = c.tryConnect()
 		if err == nil {
-			c.signedOn = true
+			// interact will set c.signedOn = true when ready
 			if err = c.interact(); err != nil {
 				c.Logger.Printf("mapper: INTERACT FAILURE: %v", err)
 			}
@@ -3074,15 +3074,6 @@ func (c *Connection) listen(done chan error) {
 			//
 			// OA <id> {<key> <value> ...}
 			//
-			// XXX: Caveat: There is an ambiguous case for the SIZE
-			// attribute. Since we don't know the type of object these
-			// attributes are going into, we will take the most common
-			// case and assume SIZE will be a creature attribute and return
-			// it as a string value.
-			// The only other object which uses SIZE is a tile object, and
-			// I propose changing the attribute name for tiles to something
-			// distinct.
-			//
 			ch, ok := c.Subscriptions[UpdateObjAttributes]
 			if ok {
 				if len(f) != 3 {
@@ -3526,12 +3517,17 @@ func (c *Connection) reportError(e error) {
 // then close our connection to it
 //
 func (c *Connection) interact() error {
-	defer c.Close()
+	defer func() {
+		c.signedOn = false
+		c.Close()
+	}()
+
 	c.debug(2, "interact() started")
 	defer c.debug(2, "interact() ended")
 
 	listenerDone := make(chan error, 1)
 	go c.listen(listenerDone)
+	c.signedOn = true
 
 	for {
 		//
@@ -3630,6 +3626,10 @@ func (c *Connection) rawSend(fields ...string) error {
 // messages the client wants to see.
 //
 func (c *Connection) filterSubscriptions() error {
+	if !c.IsReady() {
+		return nil
+	}
+
 	subList := []string{"AC", "DSM", "MARCO"} // these are unconditional
 	for msg, _ := range c.Subscriptions {
 		switch msg {
@@ -3697,7 +3697,7 @@ func (c *Connection) unfilterSubscriptions() error {
 	return c.send("ACCEPT", "*")
 }
 
-// @[00]@| GMA 4.3.5
+// @[00]@| GMA 4.3.6
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.
