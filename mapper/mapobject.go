@@ -13,6 +13,14 @@
 */
 
 //
+// EXPERIMENTAL CODE
+//
+// THIS PACKAGE IS STILL A WORK IN PROGRESS and has not been
+// completely tested yet. Although GMA generally is a stable
+// product, this module of it is new, and is not.
+//
+
+//
 // MapObject describes the elements that may appear on the map.
 //
 
@@ -52,24 +60,230 @@ func init() {
 	}
 }
 
-func StdAttrTypes() map[string]string {
-	return map[string]string{
-		"TYPE":  "string",
-		"X":     "float64",
-		"Y":     "float64",
-		"Z":     "int",
-		"LEVEL": "int",
+//  ___ _  _ _   _ __  __ ___
+// | __| \| | | | |  \/  / __|
+// | _|| .` | |_| | |\/| \__ \
+// |___|_|\_|\___/|_|  |_|___/
+//
+// The following definitions provide a mapping between the
+// text expression of the enum values as used in our save
+// file format and online protocol messages, and the internal
+// numeric codes used here.
+//
 
-		"POINTS": []Coordinates,
-		"LINE": "string",
-		"FILL": "string",
-		"WIDTH": "int",
-		"LAYER": "string",
-		"GROUP": "string",
-		"DASH": "byte",	// enum
-		"HIDDEN": "bool",
-		"LOCKED": "bool",
+//
+// These are the allowed values for the Dash attribute of a MapElement.
+//
+const (
+	DashSolid = iota
+	DashLong
+	DashMedium
+	DashShort
+	DashLongShort
+	DashLong2Short
+)
+
+var enumDashes = enumChoices{
+	"":    DashSolid,
+	"-":   DashLong,
+	",":   DashMedium,
+	".":   DashShort,
+	"-.":  DashLongShort,
+	"-..": DashLong2Short,
+}
+
+//
+// These are the allowed values for the ArcMode attribute of an ArcElement.
+//
+const (
+	ArcModePieSlice = iota
+	ArcModeArc
+	ArcModeChord
+)
+
+var enumArcs = enumChoices{
+	"pieslice": ArcModePieSlice,
+	"arc":      ArcModeArc,
+	"chord":    ArcModeChord,
+}
+
+//
+// Valid values for a line's Arrow attribute.
+//
+const (
+	ArrowNone = iota
+	ArrowFirst
+	ArrowLast
+	ArrowBoth
+)
+
+var enumArrows = enumChoices{
+	"none":  ArrowNone,
+	"first": ArrowFirst,
+	"last":  ArrowLast,
+	"both":  ArrowBoth,
+}
+
+//
+// These are the allowed values for the Join attribute of a PolygonElement.
+//
+const (
+	JoinBevel = iota
+	JoinMiter
+	JoinRound
+)
+
+var enumJoins = enumChoices{
+	"bevel": JoinBevel,
+	"miter": JoinMiter,
+	"round": JoinRound,
+}
+
+//
+// These are the valid values for the AoEShape attribute.
+//
+const (
+	AoEShapeCone = iota
+	AoEShapeRadius
+	AoEShapeRay
+)
+
+var enumAoeShapes = enumChoices{
+	"cone":   AoEShapeCone,
+	"radius": AoEShapeRadius,
+	"ray":    AoEShapeRay,
+}
+
+//
+// The valid font weights.
+//
+const (
+	FontWeightNormal = iota
+	FontWeightBold
+)
+
+var enumFontWeights = enumChoices{
+	"normal": FontWeightNormal,
+	"bold":   FontWeightBold,
+}
+
+//
+// The valid font slants.
+//
+const (
+	FontSlantRoman = iota
+	FontSlantItalic
+)
+
+var enumFontSlants = enumChoices{
+	"roman":  FontSlantRoman,
+	"italic": FontSlantItalic,
+}
+
+//
+// The valid values for the Anchor attribute of a TextElement.
+//
+const (
+	AnchorCenter = iota
+	AnchorNorth
+	AnchorSouth
+	AnchorEast
+	AnchorWest
+	AnchorNE
+	AnchorNW
+	AnchorSW
+	AnchorSE
+)
+
+var enumAnchors = enumChoices{
+	"center": AnchorCenter,
+	"n":      AnchorNorth,
+	"s":      AnchorSouth,
+	"e":      AnchorEast,
+	"w":      AnchorWest,
+	"ne":     AnchorNE,
+	"se":     AnchorSE,
+	"nw":     AnchorNW,
+	"sw":     AnchorSW,
+}
+
+//
+// The valid values for a creature's MoveMode attribute.
+//
+const (
+	MoveModeLand = iota
+	MoveModeBurrow
+	MoveModeClimb
+	MoveModeFly
+	MoveModeSwim
+)
+
+var enumMoveModes = enumChoices{
+	"fly":    MoveModeFly,
+	"climb":  MoveModeClimb,
+	"swim":   MoveModeSwim,
+	"burrow": MoveModeBurrow,
+	"land":   MoveModeLand,
+}
+
+//
+// This returns the underlying Go data type
+// for attribute values as a string. If the boolean
+// is false, then we don't know what the attribute is
+// (so will treat it as a string)
+//
+
+func enumToByte(attrName, value string) (evalue byte, ok bool) {
+	switch attrName {
+	case "AOESHAPE":
+		evalue, ok = enumAoeShapes[value]
+	case "ANCHOR":
+		evalue, ok = enumAnchors[value]
+	case "ARCMODE":
+		evalue, ok = enumArcs[value]
+	case "ARROW":
+		evalue, ok = enumArrows[value]
+	case "DASH":
+		evalue, ok = enumDashes[value]
+	case "MOVEMODE":
+		evalue, ok = enumMoveModes[value]
+	case "JOIN":
+		evalue, ok = enumJoins[value]
+	default:
+		evalue, ok = 0, false
 	}
+	return
+}
+
+//
+// This returns a string describing the expected data type
+// of a MapObject's attribute.
+//
+
+func attributeType(attrName string) (string, bool) {
+	switch attrName {
+	case "AOE":
+		return "*RadiusAoE", true
+	case "AOESHAPE", "ANCHOR", "ARCMODE", "ARROW", "DASH", "MOVEMODE", "JOIN":
+		return "enum", true
+	case "POINTS":
+		return "[]Coordinates", true
+	case "HEALTH":
+		return "*CreatureHealth", true
+	case "SKINSIZE", "STATUSLIST":
+		return "[]string", true
+	case "EXTENT", "GX", "GY", "START", "X", "Y":
+		return "float64", true
+	case "DIM", "HIDDEN", "KILLED", "LOCKED", "REACH":
+		return "bool", true
+	case "ELEV", "LEVEL", "SKIN", "SPLINE", "WIDTH", "Z":
+		return "int", true
+	case "AREA", "COLOR", "FILL", "GROUP", "IMAGE", "LAYER", "LINE", "NAME", "NOTE", "SIZE", "TEXT", "TYPE":
+		return "string", true
+	case "FONT":
+		return "TextFont", true
+	}
+	return "string", false
 }
 
 //________________________________________________________________________________
@@ -91,24 +305,122 @@ type MapObject interface {
 }
 
 //
+// In the following sections, each MapObject type is described,
+// including the type declaration, and the standard methods
+//   obj<T>(objID, objDef) (<T>, error)
+//      -- create a new <T> value with the given ID, based on data parsed
+//         from an input source in objDef, which is a map of attribute name
+//         to a slice of strings broken out into fields.
+//
+//   <T>.SaveData(data, prefix, id) ([]string, error)
+//      -- generate the save file data for this object. These are appended
+//         as individual strings (one per line) to the end of the strings
+//         in data. The new combined string slice is returned.
+//
+
+//
+// A coordinate pair to locate something on the map.
+// Coordinates are in standard map pixel units (10 pixels = 1 inch).
+//
+type Coordinates struct {
+	X, Y float64
+}
+
+//
+// SaveData converts a Coordinate pair to a text representation
+// in the map file format (suitable for sending to clients or saving to a disk
+// file).
+//
+// This works just as described for BaseMapElement.SaveData(), but simply
+// saves the X and Y fields for the element's reference point.
+//
+func (c Coordinates) SaveData(data []string, prefix, id string) ([]string, error) {
+	return saveValues(data, prefix, id, []saveAttributes{
+		{"X", "f", true, c.X},
+		{"Y", "f", true, c.Y},
+	})
+}
+
+// Coordinates
+//  SaveData
+//
+// MapObject
+//  BaseMapObject
+//   MapElement
+//     objMapElement
+//     SaveData
+//    ArcElement
+//      objArcElement
+//      SaveData
+//    CircleElement
+//      objCircleElement
+//      SaveData
+//    LineElement
+//      objLineElement
+//      SaveData
+//    PolygonElement
+//      objPolygonElement
+//      SaveData
+//    RectangleElement
+//      objRectangleElement
+//      SaveData
+//    SpellAreaOfEffect
+//      objSpellAreaOfEffect
+//      SaveData
+//    (TextFont)
+//      objTextFont
+//    TextElement
+//      objTextElement
+//      SaveData
+//    TileElement
+//      objTileElement
+//      SaveData
+//   CreatureToken
+//     objCreature
+//     SaveData
+//    PlayerToken
+//      objPlayer
+//      SaveData
+//    MonsterToken
+//      objMonster
+//      SaveData
+//    (CreatureHealth)
+//      objHealth
+//      newHealth
+//      saveHealth
+//    (RadiusAoE)
+//      objAoEShape
+//      saveCreatureAoE
+// ImageDefinition
+// FileDefinition
+//
+
+//
 // All MapObjects have these attributes in common, so will import
 // BaseMapObject into their definitions by composition.
 //
 type BaseMapObject struct {
-	// Unique (to this map) object identifier. May be any string
+	// Unique object identifier. May be any string
 	// consisting of upper- or lower-case letters, digits, '_', and "#"
 	// characters.
+	//
+	// By convention, we create these from a UUID expressed in
+	// hex without punctuation. Local conventions may also be
+	// used, such as PC character tokens using ID strings such as
+	// "PC1", "PC2", etc.
 	ID string
 }
 
 //
-// SaveData converts a BaseMapObject to a text representation of that object
+// SaveData converts a MapObject to a text representation of that object
 // in the map file format (suitable for sending to clients or saving to a disk
-// file).
+// file). Each type must have one of these methods to satisfy the MapObject
+// interface.
 //
-// The data for this object occupies one or more lines of data which are appended
+// In the save file format (and client/server protocol) the data for this
+// object occupies one or more lines of data. These lines are appended
 // as a list of strings (one per line) to the input strings in the data parameter.
-// The new list of strings (input + this object's) is returned.
+// The new list of strings (input data + this object's) is returned.
 //
 // If prefix is non-empty, it is prepended to each line as the first field of the
 // lines saved for this object. This is specified in the file format for certain
@@ -122,6 +434,8 @@ func (o BaseMapObject) SaveData(data []string, prefix, id string) ([]string, err
 
 //
 // ObjID returns the unique ID of a MapObject.
+// Each type must have one of these methods to satisfy the MapObject
+// interface.
 //
 func (o BaseMapObject) ObjID() string {
 	return o.ID
@@ -207,14 +521,7 @@ func objMapElement(objId string, objDef map[string][]string) (MapElement, error)
 	e.Group, err = objString(objDef, 0, "GROUP", false, err)
 	e.Points, err = objCoordinateList(objDef, 0, "POINTS", false, err)
 	e.Fill, err = objString(objDef, 0, "FILL", false, err)
-	e.Dash, err = objEnum(objDef, 0, "DASH", false, enumChoices{
-		"":    DashSolid,
-		"-":   DashLong,
-		",":   DashMedium,
-		".":   DashShort,
-		"-.":  DashLongShort,
-		"-..": DashLong2Short,
-	}, err)
+	e.Dash, err = objEnum(objDef, 0, "DASH", false, enumDashes, err)
 	e.Line, err = objString(objDef, 0, "LINE", false, err)
 	e.Width, err = objInt(objDef, 0, "WIDTH", false, err)
 	e.Layer, err = objString(objDef, 0, "LAYER", false, err)
@@ -222,41 +529,6 @@ func objMapElement(objId string, objDef map[string][]string) (MapElement, error)
 	e.Locked, err = objBool(objDef, 0, "LOCKED", false, err)
 
 	return e, err
-}
-
-//
-// These are the allowed values for the Dash attribute of a MapElement.
-//
-const (
-	DashSolid = iota
-	DashLong
-	DashMedium
-	DashShort
-	DashLongShort
-	DashLong2Short
-)
-
-//
-// A coordinate pair to locate something on the map.
-// Coordinates are in standard map pixel units (10 pixels = 1 inch).
-//
-type Coordinates struct {
-	X, Y float64
-}
-
-//
-// SaveData converts a Coordinate pair to a text representation
-// in the map file format (suitable for sending to clients or saving to a disk
-// file).
-//
-// This works just as described for BaseMapElement.SaveData(), but simply
-// saves the X and Y fields for the element's reference point.
-//
-func (c Coordinates) SaveData(data []string, prefix, id string) ([]string, error) {
-	return saveValues(data, prefix, id, []saveAttributes{
-		{"X", "f", true, c.X},
-		{"Y", "f", true, c.Y},
-	})
 }
 
 //
@@ -287,14 +559,7 @@ func (o MapElement) SaveData(data []string, prefix, id string) ([]string, error)
 		}
 	}
 
-	da, err := saveEnum(o.Dash, enumChoices{
-		"":    DashSolid,
-		"-":   DashLong,
-		",":   DashMedium,
-		".":   DashShort,
-		"-.":  DashLongShort,
-		"-..": DashLong2Short,
-	})
+	da, err := saveEnum(o.Dash, enumDashes)
 	if err != nil {
 		return nil, err
 	}
@@ -344,18 +609,14 @@ type ArcElement struct {
 }
 
 //
-// newArcElement creates a new instance from the fields in objDef.
+// objArcElement creates a new instance from the fields in objDef.
 //
-func newArcElement(objId string, objDef map[string][]string) (ArcElement, error) {
+func objArcElement(objId string, objDef map[string][]string) (ArcElement, error) {
 	me, err := objMapElement(objId, objDef)
 	arc := ArcElement{
 		MapElement: me,
 	}
-	arc.ArcMode, err = objEnum(objDef, 0, "ARCMODE", true, enumChoices{
-		"pieslice": ArcModePieSlice,
-		"arc":      ArcModeArc,
-		"chord":    ArcModeChord,
-	}, err)
+	arc.ArcMode, err = objEnum(objDef, 0, "ARCMODE", true, enumArcs, err)
 	arc.Start, err = objFloat(objDef, 0, "START", true, err)
 	arc.Extent, err = objFloat(objDef, 0, "EXTENT", true, err)
 	return arc, err
@@ -374,11 +635,7 @@ func (o ArcElement) SaveData(data []string, prefix, id string) ([]string, error)
 		return nil, err
 	}
 
-	am, err := saveEnum(o.ArcMode, enumChoices{
-		"pieslice": ArcModePieSlice,
-		"arc":      ArcModeArc,
-		"chord":    ArcModeChord,
-	})
+	am, err := saveEnum(o.ArcMode, enumArcs)
 	if err != nil {
 		return nil, err
 	}
@@ -390,15 +647,6 @@ func (o ArcElement) SaveData(data []string, prefix, id string) ([]string, error)
 		{"EXTENT", "f", true, o.Extent},
 	})
 }
-
-//
-// These are the allowed values for the ArcMode attribute of an ArcElement.
-//
-const (
-	ArcModePieSlice = iota
-	ArcModeArc
-	ArcModeChord
-)
 
 //________________________________________________________________________________
 //   ____ _          _      _____ _                           _
@@ -418,9 +666,9 @@ type CircleElement struct {
 }
 
 //
-// newCircleElement creates a new instance from the fields in objDef.
+// objCircleElement creates a new instance from the fields in objDef.
 //
-func newCircleElement(objId string, objDef map[string][]string) (CircleElement, error) {
+func objCircleElement(objId string, objDef map[string][]string) (CircleElement, error) {
 	me, err := objMapElement(objId, objDef)
 	return CircleElement{
 		MapElement: me,
@@ -473,19 +721,14 @@ type LineElement struct {
 }
 
 //
-// newLineElement creates a new instance from the fields in objDef.
+// objLineElement creates a new instance from the fields in objDef.
 //
-func newLineElement(objId string, objDef map[string][]string) (LineElement, error) {
+func objLineElement(objId string, objDef map[string][]string) (LineElement, error) {
 	me, err := objMapElement(objId, objDef)
 	line := LineElement{
 		MapElement: me,
 	}
-	line.Arrow, err = objEnum(objDef, 0, "ARROW", false, enumChoices{
-		"none":  ArrowNone,
-		"first": ArrowFirst,
-		"last":  ArrowLast,
-		"both":  ArrowBoth,
-	}, err)
+	line.Arrow, err = objEnum(objDef, 0, "ARROW", false, enumArrows, err)
 	return line, err
 }
 
@@ -502,12 +745,7 @@ func (o LineElement) SaveData(data []string, prefix, id string) ([]string, error
 		return nil, err
 	}
 
-	am, err := saveEnum(o.Arrow, enumChoices{
-		"none":  ArrowNone,
-		"first": ArrowFirst,
-		"last":  ArrowLast,
-		"both":  ArrowBoth,
-	})
+	am, err := saveEnum(o.Arrow, enumArrows)
 	if err != nil {
 		return nil, err
 	}
@@ -517,14 +755,6 @@ func (o LineElement) SaveData(data []string, prefix, id string) ([]string, error
 		{"ARROW", "s", false, am},
 	})
 }
-
-// Valid values for a line's Arrow attribute.
-const (
-	ArrowNone = iota
-	ArrowFirst
-	ArrowLast
-	ArrowBoth
-)
 
 //________________________________________________________________________________
 //  ____       _                         _____ _                           _
@@ -551,18 +781,14 @@ type PolygonElement struct {
 }
 
 //
-// newPolygonElement creates a new instance from the fields in objDef.
+// objPolygonElement creates a new instance from the fields in objDef.
 //
-func newPolygonElement(objId string, objDef map[string][]string) (PolygonElement, error) {
+func objPolygonElement(objId string, objDef map[string][]string) (PolygonElement, error) {
 	me, err := objMapElement(objId, objDef)
 	poly := PolygonElement{
 		MapElement: me,
 	}
-	poly.Join, err = objEnum(objDef, 0, "JOIN", false, enumChoices{
-		"bevel": JoinBevel,
-		"miter": JoinMiter,
-		"round": JoinRound,
-	}, err)
+	poly.Join, err = objEnum(objDef, 0, "JOIN", false, enumJoins, err)
 	poly.Spline, err = objFloat(objDef, 0, "SPLINE", false, err)
 	return poly, err
 }
@@ -580,11 +806,7 @@ func (o PolygonElement) SaveData(data []string, prefix, id string) ([]string, er
 		return nil, err
 	}
 
-	jm, err := saveEnum(o.Join, enumChoices{
-		"bevel": JoinBevel,
-		"miter": JoinMiter,
-		"round": JoinRound,
-	})
+	jm, err := saveEnum(o.Join, enumJoins)
 	if err != nil {
 		return nil, err
 	}
@@ -595,13 +817,6 @@ func (o PolygonElement) SaveData(data []string, prefix, id string) ([]string, er
 		{"SPLINE", "f", true, o.Spline},
 	})
 }
-
-// These are the allowed values for the Join attribute of a PolygonElement.
-const (
-	JoinBevel = iota
-	JoinMiter
-	JoinRound
-)
 
 //________________________________________________________________________________
 //  ____           _                    _
@@ -626,9 +841,9 @@ type RectangleElement struct {
 }
 
 //
-// newRectangleElement creates a new instance from the fields in objDef.
+// objRectangleElement creates a new instance from the fields in objDef.
 //
-func newRectangleElement(objId string, objDef map[string][]string) (RectangleElement, error) {
+func objRectangleElement(objId string, objDef map[string][]string) (RectangleElement, error) {
 	me, err := objMapElement(objId, objDef)
 	return RectangleElement{
 		MapElement: me,
@@ -683,18 +898,14 @@ type SpellAreaOfEffectElement struct {
 }
 
 //
-// newSpellAreaOfEffectElement creates a new instance from the fields in objDef.
+// objSpellAreaOfEffectElement creates a new instance from the fields in objDef.
 //
-func newSpellAreaOfEffectElement(objId string, objDef map[string][]string) (SpellAreaOfEffectElement, error) {
+func objSpellAreaOfEffectElement(objId string, objDef map[string][]string) (SpellAreaOfEffectElement, error) {
 	me, err := objMapElement(objId, objDef)
 	sa := SpellAreaOfEffectElement{
 		MapElement: me,
 	}
-	sa.AoEShape, err = objEnum(objDef, 0, "AOESHAPE", true, enumChoices{
-		"cone":   AoEShapeCone,
-		"radius": AoEShapeRadius,
-		"ray":    AoEShapeRay,
-	}, err)
+	sa.AoEShape, err = objEnum(objDef, 0, "AOESHAPE", true, enumAoeShapes, err)
 	return sa, err
 }
 
@@ -711,11 +922,7 @@ func (o SpellAreaOfEffectElement) SaveData(data []string, prefix, id string) ([]
 		return nil, err
 	}
 
-	ae, err := saveEnum(o.AoEShape, enumChoices{
-		"cone":   AoEShapeCone,
-		"radius": AoEShapeRadius,
-		"ray":    AoEShapeRay,
-	})
+	ae, err := saveEnum(o.AoEShape, enumAoeShapes)
 	if err != nil {
 		return nil, err
 	}
@@ -725,15 +932,6 @@ func (o SpellAreaOfEffectElement) SaveData(data []string, prefix, id string) ([]
 		{"AOESHAPE", "s", true, ae},
 	})
 }
-
-//
-// These are the valid values for the AoEShape attribute.
-//
-const (
-	AoEShapeCone = iota
-	AoEShapeRadius
-	AoEShapeRay
-)
 
 //________________________________________________________________________________
 //  _____         _   _____ _                           _
@@ -827,14 +1025,8 @@ func objTextFont(objDef map[string][]string, i int, fldName string, required boo
 		return TextFont{}, err
 	}
 
-	w, err := strEnum(ff[2].(string), true, enumChoices{
-		"normal": FontWeightNormal,
-		"bold":   FontWeightBold,
-	}, err)
-	s, err := strEnum(ff[3].(string), true, enumChoices{
-		"roman":  FontSlantRoman,
-		"italic": FontSlantItalic,
-	}, err)
+	w, err := strEnum(ff[2].(string), true, enumFontWeights, err)
+	s, err := strEnum(ff[3].(string), true, enumFontSlants, err)
 
 	return TextFont{
 		Family: ff[0].(string),
@@ -844,23 +1036,10 @@ func objTextFont(objDef map[string][]string, i int, fldName string, required boo
 	}, err
 }
 
-// The valid values for the Anchor attribute of a TextElement.
-const (
-	AnchorCenter = iota
-	AnchorNorth
-	AnchorSouth
-	AnchorEast
-	AnchorWest
-	AnchorNE
-	AnchorNW
-	AnchorSW
-	AnchorSE
-)
-
 //
-// newTextElement creates a new instance from the fields in objDef.
+// objTextElement creates a new instance from the fields in objDef.
 //
-func newTextElement(objId string, objDef map[string][]string) (TextElement, error) {
+func objTextElement(objId string, objDef map[string][]string) (TextElement, error) {
 	me, err := objMapElement(objId, objDef)
 	text := TextElement{
 		MapElement: me,
@@ -868,17 +1047,7 @@ func newTextElement(objId string, objDef map[string][]string) (TextElement, erro
 
 	text.Text, err = objString(objDef, 0, "TEXT", true, err)
 	text.Font, err = objTextFont(objDef, 0, "FONT", true, err)
-	text.Anchor, err = objEnum(objDef, 0, "ANCHOR", false, enumChoices{
-		"center": AnchorCenter,
-		"n":      AnchorNorth,
-		"s":      AnchorSouth,
-		"e":      AnchorEast,
-		"w":      AnchorWest,
-		"ne":     AnchorNE,
-		"se":     AnchorSE,
-		"nw":     AnchorNW,
-		"sw":     AnchorSW,
-	}, err)
+	text.Anchor, err = objEnum(objDef, 0, "ANCHOR", false, enumAnchors, err)
 	return text, err
 }
 
@@ -895,31 +1064,15 @@ func (o TextElement) SaveData(data []string, prefix, id string) ([]string, error
 		return nil, err
 	}
 
-	a, err := saveEnum(o.Anchor, enumChoices{
-		"center": AnchorCenter,
-		"n":      AnchorNorth,
-		"s":      AnchorSouth,
-		"e":      AnchorEast,
-		"w":      AnchorWest,
-		"ne":     AnchorNE,
-		"se":     AnchorSE,
-		"nw":     AnchorNW,
-		"sw":     AnchorSW,
-	})
+	a, err := saveEnum(o.Anchor, enumAnchors)
 	if err != nil {
 		return nil, err
 	}
-	fw, err := saveEnum(o.Font.Weight, enumChoices{
-		"bold":   FontWeightBold,
-		"normal": FontWeightNormal,
-	})
+	fw, err := saveEnum(o.Font.Weight, enumFontWeights)
 	if err != nil {
 		return nil, err
 	}
-	fs, err := saveEnum(o.Font.Slant, enumChoices{
-		"italic": FontSlantItalic,
-		"roman":  FontSlantRoman,
-	})
+	fs, err := saveEnum(o.Font.Slant, enumFontSlants)
 	if err != nil {
 		return nil, err
 	}
@@ -944,22 +1097,6 @@ func (o TextElement) SaveData(data []string, prefix, id string) ([]string, error
 	})
 }
 
-//
-// The valid font weights.
-//
-const (
-	FontWeightNormal = iota
-	FontWeightBold
-)
-
-//
-// The valid font slants.
-//
-const (
-	FontSlantRoman = iota
-	FontSlantItalic
-)
-
 //________________________________________________________________________________
 //  _____ _ _      _____ _                           _
 // |_   _(_) | ___| ____| | ___ _ __ ___   ___ _ __ | |_
@@ -980,9 +1117,9 @@ type TileElement struct {
 }
 
 //
-// newTileElement creates a new instance from the fields in objDef.
+// objTileElement creates a new instance from the fields in objDef.
 //
-func newTileElement(objId string, objDef map[string][]string) (TileElement, error) {
+func objTileElement(objId string, objDef map[string][]string) (TileElement, error) {
 	me, err := objMapElement(objId, objDef)
 	tile := TileElement{
 		MapElement: me,
@@ -1118,9 +1255,9 @@ type CreatureToken struct {
 }
 
 //
-// newCreature creates a new CreatureToken instance from the fields in objDef.
+// objCreature creates a new CreatureToken instance from the fields in objDef.
 //
-func newCreature(objId string, objDef map[string][]string) (CreatureToken, error) {
+func objCreature(objId string, objDef map[string][]string) (CreatureToken, error) {
 	var err error
 	c := CreatureToken{
 		CreatureType: CreatureTypeUnknown,
@@ -1129,22 +1266,16 @@ func newCreature(objId string, objDef map[string][]string) (CreatureToken, error
 	c.Name, err = objString(objDef, 0, "NAME", true, err)
 	c.Gx, err = objFloat(objDef, 0, "GX", true, err)
 	c.Gy, err = objFloat(objDef, 0, "GY", true, err)
-	c.Health, err = newHealth(objDef, err)
+	c.Health, err = objHealth(objDef, err)
 	c.Elev, err = objInt(objDef, 0, "ELEV", false, err)
-	c.MoveMode, err = objEnum(objDef, 0, "MOVEMODE", false, enumChoices{
-		"fly":    MoveModeFly,
-		"climb":  MoveModeClimb,
-		"swim":   MoveModeSwim,
-		"burrow": MoveModeBurrow,
-		"land":   MoveModeLand,
-	}, err)
+	c.MoveMode, err = objEnum(objDef, 0, "MOVEMODE", false, enumMoveModes, err)
 	c.Color, err = objString(objDef, 0, "COLOR", false, err)
 	c.Note, err = objString(objDef, 0, "NOTE", false, err)
 	c.Skin, err = objInt(objDef, 0, "SKIN", false, err)
 	c.SkinSize, err = objStrings(objDef, 0, "SKINSIZE", false, err)
 	c.Size, err = objString(objDef, 0, "SIZE", true, err)
 	c.StatusList, err = objStrings(objDef, 0, "STATUSLIST", false, err)
-	c.AoE, err = newAoEShape(objDef, err)
+	c.AoE, err = objAoEShape(objDef, err)
 	c.Area, err = objString(objDef, 0, "AREA", true, err)
 	c.Reach, err = objBool(objDef, 0, "REACH", false, err)
 	c.Killed, err = objBool(objDef, 0, "KILLED", false, err)
@@ -1152,15 +1283,6 @@ func newCreature(objId string, objDef map[string][]string) (CreatureToken, error
 
 	return c, err
 }
-
-// The valid values for a creature's MoveMode attribute.
-const (
-	MoveModeLand = iota
-	MoveModeBurrow
-	MoveModeClimb
-	MoveModeFly
-	MoveModeSwim
-)
 
 //
 // A CreatureHealth struct describes the current health statistics of a creature if we are
@@ -1198,7 +1320,7 @@ type CreatureHealth struct {
 }
 
 //
-// newHealth looks for a HEALTH entry in the objDef map, parses
+// objHealth looks for a HEALTH entry in the objDef map, parses
 // it and returns the CreatureHealth struct it defines, or nil
 // if no such entry was found, or it was the empty string.
 //
@@ -1206,20 +1328,24 @@ type CreatureHealth struct {
 // HEALTH {max lethal sub con flat? stable? condition [blur]}
 //         int int    int int bool  bool    str       {}/int
 //
-func newHealth(objDef map[string][]string, err error) (*CreatureHealth, error) {
+func objHealth(objDef map[string][]string, err error) (*CreatureHealth, error) {
 	if err != nil {
 		return nil, err
 	}
-	h := CreatureHealth{}
 	healthStats, ok := objDef["HEALTH"]
 	if !ok || len(strings.TrimSpace(healthStats[0])) == 0 {
 		return nil, err
 	}
 
+	return newHealth(healthStats[0], err)
+}
+
+func newHealth(healthStats string, err error) (*CreatureHealth, error) {
 	var hs []string
 	var hstats []interface{}
+	h := CreatureHealth{}
 
-	hs, err = tcllist.ParseTclList(healthStats[0])
+	hs, err = tcllist.ParseTclList(healthStats)
 	if err != nil {
 		return nil, err
 	}
@@ -1277,7 +1403,7 @@ type RadiusAoE struct {
 }
 
 //
-// newAoEShape looks for an AOE entry in the objDef map, returning a
+// objAoEShape looks for an AOE entry in the objDef map, returning a
 // RadiusAoE value or nil if no such entry was found or it was the
 // empty string.
 //
@@ -1285,7 +1411,7 @@ type RadiusAoE struct {
 // AOE {radius r color}
 //           float str
 //
-func newAoEShape(objDef map[string][]string, err error) (*RadiusAoE, error) {
+func objAoEShape(objDef map[string][]string, err error) (*RadiusAoE, error) {
 	if err != nil {
 		return nil, err
 	}
@@ -1357,13 +1483,7 @@ func (o CreatureToken) SaveData(data []string, prefix, id string) ([]string, err
 	if err != nil {
 		return nil, err
 	}
-	mm, err := saveEnum(o.MoveMode, enumChoices{
-		"land":   MoveModeLand,
-		"burrow": MoveModeBurrow,
-		"climb":  MoveModeClimb,
-		"fly":    MoveModeFly,
-		"swim":   MoveModeSwim,
-	})
+	mm, err := saveEnum(o.MoveMode, enumMoveModes)
 	if err != nil {
 		return nil, err
 	}
@@ -1420,10 +1540,10 @@ type PlayerToken struct {
 }
 
 //
-// newPlayer creates a new PlayerToken instance from the fields in objDef.
+// objPlayer creates a new PlayerToken instance from the fields in objDef.
 //
-func newPlayer(objId string, objDef map[string][]string) (PlayerToken, error) {
-	c, err := newCreature(objId, objDef)
+func objPlayer(objId string, objDef map[string][]string) (PlayerToken, error) {
+	c, err := objCreature(objId, objDef)
 	c.CreatureType = CreatureTypePlayer
 	return PlayerToken{
 		CreatureToken: c,
@@ -1456,10 +1576,10 @@ type MonsterToken struct {
 }
 
 //
-// newMonster creates a new MonsterToken instance from the fields in objDef.
+// objMonster creates a new MonsterToken instance from the fields in objDef.
 //
-func newMonster(objId string, objDef map[string][]string) (MonsterToken, error) {
-	c, err := newCreature(objId, objDef)
+func objMonster(objId string, objDef map[string][]string) (MonsterToken, error) {
+	c, err := objCreature(objId, objDef)
 	c.CreatureType = CreatureTypeMonster
 	return MonsterToken{
 		CreatureToken: c,
@@ -1646,7 +1766,7 @@ func ParseObjects(dataStream []string) ([]MapObject, map[string]ImageDefinition,
 	// Now we have collected all of the files, images, and object raw data.
 	// (It's necessary to do this as a first pass because objects are described
 	// on multiple lines of the data stream and may not be in order. They
-	// may even be interleaved. Now that we've sorted them out we can look
+	// may even be interleaved.) Now that we've sorted them out we can look
 	// at each object individually.
 	//
 	oList := make([]MapObject, 0, len(objects))
@@ -1658,9 +1778,9 @@ func ParseObjects(dataStream []string) ([]MapObject, map[string]ImageDefinition,
 		if ok {
 			switch mType[0] {
 			case "M":
-				o, err = newMonster(objId, objDef)
+				o, err = objMonster(objId, objDef)
 			case "P":
-				o, err = newPlayer(objId, objDef)
+				o, err = objPlayer(objId, objDef)
 			default:
 				err = fmt.Errorf("unknown creature type (%s) for ID %s", mType, objId)
 			}
@@ -1669,25 +1789,25 @@ func ParseObjects(dataStream []string) ([]MapObject, map[string]ImageDefinition,
 			if ok {
 				switch oType[0] {
 				case "aoe":
-					o, err = newSpellAreaOfEffectElement(objId, objDef)
+					o, err = objSpellAreaOfEffectElement(objId, objDef)
 				case "arc":
-					o, err = newArcElement(objId, objDef)
+					o, err = objArcElement(objId, objDef)
 				case "circ":
-					o, err = newCircleElement(objId, objDef)
+					o, err = objCircleElement(objId, objDef)
 				case "line":
-					o, err = newLineElement(objId, objDef)
+					o, err = objLineElement(objId, objDef)
 				case "poly":
-					o, err = newPolygonElement(objId, objDef)
+					o, err = objPolygonElement(objId, objDef)
 				case "rect":
-					o, err = newRectangleElement(objId, objDef)
+					o, err = objRectangleElement(objId, objDef)
 				case "text":
-					o, err = newTextElement(objId, objDef)
+					o, err = objTextElement(objId, objDef)
 				case "tile":
-					o, err = newTileElement(objId, objDef)
+					o, err = objTileElement(objId, objDef)
 				case "player":
-					o, err = newPlayer(objId, objDef)
+					o, err = objPlayer(objId, objDef)
 				case "monster":
-					o, err = newMonster(objId, objDef)
+					o, err = objMonster(objId, objDef)
 				default:
 					err = fmt.Errorf("unknown element type (%s) for ID %s", oType, objId)
 				}

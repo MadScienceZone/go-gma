@@ -15,8 +15,11 @@
 //
 // Client interface for the mapper service.
 //
+// EXPERIMENTAL CODE
+//
 // THIS PACKAGE IS STILL A WORK IN PROGRESS and has not been
-// completely tested yet.
+// completely tested yet. Although GMA generally is a stable
+// product, this module of it is new, and is not.
 //
 // This package handles the details of communicating with the
 // GMA mapper service communication channel used to keep the mapper
@@ -36,6 +39,13 @@
 //
 package mapper
 
+//
+// Since there's a fair amount of code below which is logically
+// divided up by server message type (sending or receiving), we
+// will use large banners to make it easy to scroll quickly
+// and visually distinguish each section with ease.
+//
+
 import (
 	"bufio"
 	"context"
@@ -43,7 +53,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"hash"
 	"log"
 	"net"
 	"strconv"
@@ -138,12 +147,15 @@ type Connection struct {
 	// The last error encountered while communicating with the server.
 	LastError error
 
-	server   net.Conn
-	reader   *bufio.Scanner
-	writer   *bufio.Writer
-	sendChan chan string
-	sendBuf  []string
-	signedOn bool
+	// The verbosity level of debugging log messages.
+	DebuggingLevel uint
+
+	server   net.Conn       // network socket to the server
+	reader   *bufio.Scanner // read interface to server
+	writer   *bufio.Writer  // write interface to server
+	sendChan chan string    // outgoing packets go through this channel
+	sendBuf  []string       // internal buffer of outgoing packets
+	signedOn bool           // do we have an active session now?
 
 	// If true, we will always try to reconnect to the server if we
 	// lose our connection.
@@ -175,6 +187,28 @@ type CharacterDefinition struct {
 
 	// Size codes of the threat area and creature token size.
 	Area, Size string
+}
+
+//
+// Text produces a simple text description of the receiving CharacterDefinition value.
+//
+func (c CharacterDefinition) Text() string {
+	return fmt.Sprintf("ID %q; Name %q; Zone color %q; Size %q; Threat Space %q",
+		c.ObjID, c.Name, c.Color, c.Size, c.Area)
+}
+
+type CharacterDefinitions map[string]CharacterDefinition
+
+//
+// Text describes the PCs in the receiving slice of CharacterDefinitions in a
+// simple multi-line text form.
+//
+func (cs CharacterDefinitions) Text() string {
+	var s strings.Builder
+	for k, c := range cs {
+		fmt.Fprintf(&s, "[%s] %s\n", k, c.Text())
+	}
+	return s.String()
 }
 
 //
@@ -289,6 +323,21 @@ func StayConnected(enable bool) connectionOption {
 }
 
 //
+// WithDebugging modifies the connection so that its operations
+// are logged to varying levels of verbosity:
+//   0 - no extra logging
+//   1 - each incoming/outgoing message is logged
+//   2 - more internal state is exposed
+//   3 - the full data for each incoming/outgoing message is logged
+//
+func WithDebugging(level uint) connectionOption {
+	return func(c *Connection) error {
+		c.DebuggingLevel = level
+		return nil
+	}
+}
+
+//
 // Create a new server connection value which can then be used to
 // manage our communication with the server.
 //
@@ -296,6 +345,7 @@ func StayConnected(enable bool) connectionOption {
 // to define the behavior desired for this connection:
 //   StayConnected(bool)
 //   WithAuthenticator(a)
+//   WithDebugging(level)
 //   WithContext(ctx)
 //   WithLogger(l)
 //   WithRetries(n)
@@ -324,11 +374,32 @@ func NewConnection(endpoint string, opts ...connectionOption) (Connection, error
 	return newCon, nil
 }
 
+//
+// Log debugging info at the given level.
+//
+func (c *Connection) debug(level uint, msg string) {
+	if c.DebuggingLevel >= level {
+		for i, line := range strings.Split(msg, "\n") {
+			if line != "" {
+				c.Logger.Printf("DEBUG%d.%02d: %s", level, i, line)
+			}
+		}
+	}
+}
+
+//
+// Close terminates the connection to the server.
+// Note that the Dial() function normally closes the connection
+// before it returns, so calling this explicitly should not
+// normally be necessary.
+//
+// Calling Close() will result in the Dial() function stopping
+// due to the connection disappearing, but it is better to cancel
+// the context being watched by Dial() instead.
+//
 func (c *Connection) Close() {
+	c.debug(1, "Close()")
 	c.server.Close()
-	//	c.reader = nil
-	//	c.writer = nil
-	// TODO
 }
 
 //
@@ -397,40 +468,30 @@ type MessagePayload interface {
 	RawMessage() []string
 }
 
-//
-// These are the server message to which a client may subscribe.
-//
 type ServerMessage byte
 
+//
+// These are the server messages to which a client may subscribe.
+//
 const (
 	AddCharacter = iota
 	AddImage
 	AddObjAttributes
 	AdjustView
-	CacheFile
 	ChatMessage
 	Clear
 	ClearChat
 	ClearFrom
 	CombatMode
 	Comment
-	//N	DefineDicePresets
-	//N? FilterDicePresets
-	//->LoadFrom LoadFile
 	LoadFrom
 	LoadObject
 	Marco
 	Mark
 	PlaceSomeone
-	//N	Polo
-	//N QueryDicePresets
 	QueryImage
-	//N	QueryPeers
 	RemoveObjAttributes
-	//N	RollDice
 	RollResult
-	//N	Sync
-	//N	SyncChat
 	Toolbar
 	UpdateClock
 	UpdateDicePresets
@@ -440,7 +501,6 @@ const (
 	UpdateProgress
 	UpdateStatusMarker
 	UpdateTurn
-	//N	WriteOnly
 	UNKNOWN
 	ERROR
 	maximumServerMessage
@@ -517,7 +577,7 @@ type AddImageMessagePayload struct {
 }
 
 //
-// Tell the server and peers about an image they can use.
+// AddImage informs the server and peers about an image they can use.
 //
 func (c *Connection) AddImage(idef ImageDefinition) error {
 	if idef.IsLocalFile {
@@ -526,6 +586,14 @@ func (c *Connection) AddImage(idef ImageDefinition) error {
 	return c.send("AI@", idef.Name, idef.Zoom, idef.File)
 }
 
+//
+// AddImageData sends binary image data to peer clients.
+//
+// Generally, it is better to store an image file on the server, and
+// then call AddImage() to point others to find the image there, since
+// that will be more efficient than sending it through the mapper
+// protocol.
+//
 func (c *Connection) AddImageData(idef ImageDefinition, data []byte) error {
 	var dataBlocks []string
 	encoded := base64.StdEncoding.EncodeToString(data)
@@ -567,8 +635,13 @@ type AddObjAttributesMessagePayload struct {
 	Values   []string
 }
 
+//
+// AddObjAttributes informs peers to add a set of string values to the existing
+// value of an object attribute. The attribute must be one whose value is a list
+// of strings, such as STATUSLIST.
+//
 func (c *Connection) AddObjAttributes(objID, attrName string, values []string) error {
-	return c.send("OA+", objID, attrName, values)
+	return c.send("OA+", objID, strings.ToUpper(attrName), values)
 }
 
 //     _       _  _           _ __     ___
@@ -587,6 +660,13 @@ type AdjustViewMessagePayload struct {
 	XView, YView float64
 }
 
+//
+// AdjustView tells other clients to adjust their scrollbars
+// so that the x and y directions are scrolled to xview and
+// yview respectively, where those values are a fraction from
+// 0.0 to 1.0 indicating the proportion of the full range in
+// each direction.
+//
 func (c *Connection) AdjustView(xview, yview float64) error {
 	return c.send("AV", xview, yview)
 }
@@ -599,15 +679,9 @@ func (c *Connection) AdjustView(xview, yview float64) error {
 //
 
 //
-// CacheFile message: The client should take note of the given file
-// which may be referred to in the future. It is recommended that the
-// client pre-fetch the file into its cache.
+// CacheFile asks other clients to be sure they retrieve
+// and cache the map file with the given server ID.
 //
-type CacheFileMessagePayload struct {
-	BaseMessagePayload
-	FileDefinition
-}
-
 func (c *Connection) CacheFile(serverID string) error {
 	return c.send("M?", serverID)
 }
@@ -653,8 +727,15 @@ type ChatMessageMessagePayload struct {
 }
 
 const (
+	// ToGMOnly as one of the recipients to a ChatMessage()
+	// or Roll() method will cause the message or die-roll
+	// result to be sent to the GM only.
 	ToGMOnly = "%" // ChatMessage recipient is GM only
-	ToAll    = "*" // ChatMessage recipients are all users
+
+	// ToAll as one of the recipients to a ChatMessage()
+	// or Roll() method will cause the message to go to
+	// all connected clients.
+	ToAll = "*" // ChatMessage recipients are all users
 )
 
 //
@@ -670,14 +751,14 @@ func (c *Connection) ChatMessage(to []string, message string) error {
 }
 
 //
-// ChatMessageToAll is equivalent to ChatMessage addressed to all users.
+// ChatMessageToAll is equivalent to ChatMessage, but is addressed to all users.
 //
 func (c *Connection) ChatMessageToAll(message string) error {
 	return c.send("TO", "", ToAll, message)
 }
 
 //
-// ChatMessageToGM is equivalent to ChatMessage addressed only to the GM.
+// ChatMessageToGM is equivalent to ChatMessage, but is addressed only to the GM.
 //
 func (c *Connection) ChatMessageToGM(message string) error {
 	return c.send("TO", "", ToGMOnly, message)
@@ -705,7 +786,14 @@ type ClearMessagePayload struct {
 }
 
 //
-// Tell the server and peers about an image they can use.
+// Clear tells peers to remove objects from their canvases.
+// The objID may be one of the following:
+//   *                    Remove all objects
+//   E*                   Remove all map elements
+//   M*                   Remove all monster tokens
+//   P*                   Remove all player tokens
+//   [<imagename>=]<name> Remove token with given <name>
+//   <id>                 Remove object with given <id>
 //
 func (c *Connection) Clear(objID string) error {
 	return c.send("CLR", objID)
@@ -739,6 +827,13 @@ type ClearChatMessagePayload struct {
 	MessageID int
 }
 
+//
+// ClearChat tells peers to remove all messages from their
+// chat histories if target is zero. If target>0, then
+// all messages with IDs greater than target are removed.
+// Otherwise, if target<0 then only the most recent |target|
+// messages are kept.
+//
 func (c *Connection) ClearChat(target int, silently bool) error {
 	by := ""
 	if silently {
@@ -766,6 +861,11 @@ type ClearFromMessagePayload struct {
 	FileDefinition
 }
 
+//
+// ClearFrom tells all peers to load the map file with the
+// given server ID, but to remove from their canvases all
+// objects described in the file rather than loading them on.
+//
 func (c *Connection) ClearFrom(serverID string) error {
 	return c.send("CLR@", serverID)
 }
@@ -785,6 +885,9 @@ type CombatModeMessagePayload struct {
 	Enabled bool
 }
 
+//
+// CombatMode tells all peers to enable or disable combat mode.
+//
 func (c *Connection) CombatMode(enabled bool) error {
 	return c.send("CO", enabled)
 }
@@ -822,6 +925,11 @@ type CommentMessagePayload struct {
 // |_|   |_|_|\__\___|_|  |____/|_|\___\___|_|   |_|  \___||___/\___|\__|___/
 //
 
+//
+// FilterDicePresets asks the server to remove all of your
+// die-roll presets whose names match the given regular
+// expression.
+//
 func (c *Connection) FilterDicePresets(re string) error {
 	return c.send("DD/", re)
 }
@@ -849,6 +957,38 @@ type LoadFromMessagePayload struct {
 	Merge bool
 }
 
+//
+// LoadFrom asks other clients to load a map files from a local
+// disk file or from the server. The previous map contents are erased before
+// each file is loaded.
+//
+// If local is true, a local path is specified. This is DEPRECATED.
+//
+// Otherwise, the path should be the ID for the file stored on the server.
+//
+// If merge is true, then the current map elements are not deleted first.
+// In this case, the newly-loaded elements will be merged with what is already
+// on the map.
+//
+func (c *Connection) LoadFrom(path string, local bool, merge bool) error {
+	if merge {
+		if local {
+			return c.send("M", path)
+		} else {
+			return c.send("M@", path)
+		}
+	} else {
+		if local {
+			return c.send("L", path)
+		} else {
+			if err := c.send("CLR", "E*"); err != nil {
+				return err
+			}
+			return c.send("M@", path)
+		}
+	}
+}
+
 //  _                    _  ___  _     _           _
 // | |    ___   __ _  __| |/ _ \| |__ (_) ___  ___| |_
 // | |   / _ \ / _` |/ _` | | | | '_ \| |/ _ \/ __| __|
@@ -864,63 +1004,61 @@ type LoadObjectMessagePayload struct {
 	MapObject
 }
 
+//
+// Calculate the checksum for a data stream
+// of already-broken-out fields as a [][]string
+// (slice of lines, each of which is a slice of fields).
+//
+// The checksum is returned as a base-64-encoded string.
+//
 func streamChecksum(data [][]string) string {
-	cks := startStreamChecksum()
+	ck := sha256.New()
 	for _, item := range data {
-		addStreamChecksumFields(cks, item)
-	}
-	return finalizeStreamChecksum()
-}
-
-func streamChecksumStrings(data []string) string {
-	cks := startStreamChecksum()
-	for _, item := range data {
-		addStreamChecksumString(cks, item)
-	}
-	return finalizeStreamChecksum()
-}
-
-func startStreamChecksum() hash.Hash {
-	return sha256.New()
-}
-
-func addStreamChecksumString(ck *hash.Hash, data string) {
-	ck.Write([]byte(data))
-}
-
-func addStreamChecksumFields(ck *hash.Hash, data []string) {
-	for i, field := range data {
-		if i > 0 {
-			ck.Write([]byte{' '})
+		for i, field := range item {
+			if i > 0 {
+				ck.Write([]byte{' '})
+			}
+			ck.Write([]byte(field))
 		}
-		ck.Write([]byte(field))
 	}
-}
-
-func finalizeStreamChecksum(ck *hash.Hash) string {
 	return base64.StdEncoding.EncodeToString(ck.Sum(nil))
 }
 
-/* XXX
-func (c *Connection) LoadObject(me MapElement) error {
-	data := me.ToStrings()
+//
+// Calculate the checksum for a data stream
+// of raw lines (not broken out into fields).
+//
+// The checksum is returned as a base-64-encoded string.
+//
+func streamChecksumStrings(data []string) string {
+	ck := sha256.New()
+	for _, item := range data {
+		ck.Write([]byte(item))
+	}
+	return base64.StdEncoding.EncodeToString(ck.Sum(nil))
+}
+
+//
+// LoadObject sends a MapObject to all peers.
+//
+func (c *Connection) LoadObject(me MapObject) error {
+	data, err := SaveObjects([]MapObject{me}, nil, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("Unable to send map object: %v", err)
 	}
 
 	if err := c.send("LS"); err != nil {
 		return err
 	}
 	for _, a := range data {
-		if err := c.send("LS:", a...); err != nil {
+		if err := c.send("LS:", a); err != nil {
 			c.send("LS.", "0")
 			return err
 		}
 	}
-	c.send("LS.", fmt.Sprintf("%d", len(data)), streamChecksum(data))
+	c.send("LS.", fmt.Sprintf("%d", len(data)), streamChecksumStrings(data))
 	return nil
 }
-*/
 
 //  __  __
 // |  \/  | __ _ _ __ ___ ___
@@ -954,6 +1092,10 @@ type MarkMessagePayload struct {
 	Coordinates
 }
 
+//
+// Mark tells clients to visibly mark a location centered
+// on the given (x, y) coordinates.
+//
 func (c *Connection) Mark(x, y float64) error {
 	return c.send("MARK", x, y)
 }
@@ -979,6 +1121,16 @@ type PlaceSomeoneMessagePayload struct {
 	CreatureToken
 }
 
+//
+// PlaceSomeone tells all peers to add a new creature token on their
+// maps. The parameter passed must be either a PlayerToken or MonsterToken.
+//
+// If the creature is already on the map, it will be replaced by the
+// new one being presented here. Thus, PlaceSomeone may be used to change
+// the name or location of an existing creature, although the preferred
+// way to do that would be to use UpdateObjAttributes() to change those
+// specific attributes of the creature directly.
+//
 func (c *Connection) PlaceSomeone(someone interface{}) error {
 	if player, ok := someone.(PlayerToken); ok {
 		return c.send("PS", player.ObjID(), player.Color, player.Name,
@@ -1009,16 +1161,27 @@ type QueryImageMessagePayload struct {
 	ImageDefinition
 }
 
+//
+// QueryImage asks the server and peers if anyone else knows
+// where to find the data for the given image name and zoom factor.
+// If someone does, you'll receive an AddImage message.
+//
 func (c *Connection) QueryImage(idef ImageDefinition) error {
 	return c.send("AI?", idef.Name, idef.Zoom)
 }
 
-//  ____                                ___  _     _    _   _   _        _ _           _
-// |  _ \ ___ _ __ ___   _____   _____ / _ \| |__ (_)  / \ | |_| |_ _ __(_) |__  _   _| |_ ___  ___
-// | |_) / _ \ '_ ` _ \ / _ \ \ / / _ \ | | | '_ \| | / _ \| __| __| '__| | '_ \| | | | __/ _ \/ __|
-// |  _ <  __/ | | | | | (_) \ V /  __/ |_| | |_) | |/ ___ \ |_| |_| |  | | |_) | |_| | ||  __/\__ \
-// |_| \_\___|_| |_| |_|\___/ \_/ \___|\___/|_.__// /_/   \_\__|\__|_|  |_|_.__/ \__,_|\__\___||___/
+//  ____                                ___  _     _
+// |  _ \ ___ _ __ ___   _____   _____ / _ \| |__ (_)
+// | |_) / _ \ '_ ` _ \ / _ \ \ / / _ \ | | | '_ \| |
+// |  _ <  __/ | | | | | (_) \ V /  __/ |_| | |_) | |
+// |_| \_\___|_| |_| |_|\___/ \_/ \___|\___/|_.__// |
 //                                              |__/
+//     _   _   _        _ _           _
+//    / \ | |_| |_ _ __(_) |__  _   _| |_ ___  ___
+//   / _ \| __| __| '__| | '_ \| | | | __/ _ \/ __|
+//  / ___ \ |_| |_| |  | | |_) | |_| | ||  __/\__ \
+// /_/   \_\__|\__|_|  |_|_.__/ \__,_|\__\___||___/
+//
 
 //
 // RemoveObjAttributes message: Adjust the multi-value attribute
@@ -1032,8 +1195,13 @@ type RemoveObjAttributesMessagePayload struct {
 	Values   []string
 }
 
+//
+// RemoveObjAttributes informs peers to remove a set of string values from the existing
+// value of an object attribute. The attribute must be one whose value is a list
+// of strings, such as STATUSLIST.
+//
 func (c *Connection) RemoveObjAttributes(objID, attrName string, values []string) error {
-	return c.send("OA-", objID, attrName, values)
+	return c.send("OA-", objID, strings.ToUpper(attrName), values)
 }
 
 //  ____       _ _ ____  _
@@ -1043,6 +1211,24 @@ func (c *Connection) RemoveObjAttributes(objID, attrName string, values []string
 // |_| \_\___/|_|_|____/|_|\___\___|
 //
 
+//
+// RollDice sends a rollspec such as "d20+12" or "6d6 fire"
+// to the server, initiating a die roll using the server's
+// built-in facility for that.
+//
+// This will result in a response in the form of a RollResult
+// message. If something went wrong when trying to satisfy
+// the request, you'll receive a ChatMessage with an explanation
+// instead.
+//
+// The to parameter lists the users who should receive the
+// results of the die roll, in the same way as recipients are
+// listed to the ChatMessage() function.
+//
+// The rollspec may have any form that would be accepted to the
+// dice.Roll function and dice.DieRoller.DoRoll method. See the dice package for details.
+// https://pkg.go.dev/github.com/fizban-of-ragnarok/go-gma/v4/dice#DieRoller.DoRoll
+//
 func (c *Connection) RollDice(to []string, rollspec string) error {
 	return c.send("D", to, rollspec)
 }
@@ -1056,6 +1242,7 @@ func (c *Connection) RollDiceToAll(message string) error {
 
 //
 // RollDiceToGM is equivalent to RollDice addressed only to the GM.
+// This is a "blind" roll; only the GM will see the result.
 //
 func (c *Connection) RollDiceToGM(message string) error {
 	return c.send("D", ToGMOnly, message)
@@ -1094,6 +1281,10 @@ type DicePreset struct {
 	RollSpec string
 }
 
+//
+// DefineDicePresets replaces any existing die-roll presets you have
+// stored on the server with the new set passed as the presets parameter.
+//
 func (c *Connection) DefineDicePresets(presets []DicePreset) error {
 	var plist [][]string
 	for _, p := range presets {
@@ -1102,6 +1293,10 @@ func (c *Connection) DefineDicePresets(presets []DicePreset) error {
 	return c.send("DD", plist)
 }
 
+//
+// AddDicePresets is like DefineDicePresets except that it adds the presets
+// passed in to the existing set rather than replacing them.
+//
 func (c *Connection) AddDicePresets(presets []DicePreset) error {
 	var plist [][]string
 	for _, p := range presets {
@@ -1110,6 +1305,11 @@ func (c *Connection) AddDicePresets(presets []DicePreset) error {
 	return c.send("DD+", plist)
 }
 
+//
+// QueryDicePresets requests that the server send you the die-roll
+// presets currently stored for you. It will send you an UpdateDicePresets
+// message.
+//
 func (c *Connection) QueryDicePresets() error {
 	return c.send("DR")
 }
@@ -1117,7 +1317,6 @@ func (c *Connection) QueryDicePresets() error {
 //
 // UpdateClock message: change the game clock
 //
-
 type UpdateClockMessagePayload struct {
 	BaseMessagePayload
 
@@ -1141,8 +1340,24 @@ type UpdateDicePresetsMessagePayload struct {
 }
 
 type DieRollPreset struct {
-	Name        string
+	// The name by which this die-roll preset is identified to the user.
+	// This must be unique among that user's presets.
+	//
+	// Clients typically
+	// sort these names before displaying them.
+	// Note that if a vertical bar ("|") appears in the name, all text
+	// up to and including the bar are suppressed from display. This allows
+	// for the displayed names to be forced into a particular order on-screen,
+	// and allow a set of presets to appear to have the same name from the user's
+	// point of view.
+	Name string
+
+	// A text description of the purpose for this die-roll specification.
 	Description string
+
+	// The die-roll specification to send to the server. This must be in a
+	// form acceptable to the dice.Roll function. For details, see
+	// https://pkg.go.dev/github.com/fizban-of-ragnarok/go-gma/v4/dice#DieRoller.DoRoll
 	DieRollSpec string
 }
 
@@ -1155,13 +1370,28 @@ type UpdateInitiativeMessagePayload struct {
 	InitiativeList []InitiativeSlot
 }
 
+//
+// An InitiativeSlot describes the creature occupying a given
+// slot of the initiative list.
+//
 type InitiativeSlot struct {
-	Slot             int
-	CurrentHP        int
-	Name             string
-	IsHolding        bool
+	// The slot number (currently 0–59, corresponding to the 1/10th second "count" in the initiative round)
+	Slot int
+
+	// The current hit point total for the creature.
+	CurrentHP int
+
+	// The creature's name as displayed on the map.
+	Name string
+
+	// If true, the creature is holding their action.
+	IsHolding bool
+
+	// If true, the creature has a readied action.
 	HasReadiedAction bool
-	IsFlatFooted     bool
+
+	// It true, the creature is flat-footed.
+	IsFlatFooted bool
 }
 
 //
@@ -1175,11 +1405,23 @@ type UpdateObjAttributesMessagePayload struct {
 	NewAttrs map[string]interface{}
 }
 
-/*
-coordinate string<->struct conversion with mapobj
-
-func (c *Connection) UpdateObjAttributes(objID string, attrs map[string]interface{}) error {
-*/
+//
+// UpdateObjAttributes informs peers that they should modify the
+// specified object's attributes which are mentioned in the newAttrs
+// map. This maps attribute names to their new values.
+//
+func (c *Connection) UpdateObjAttributes(objID string, newAttrs map[string]interface{}) error {
+	var kvlist []interface{}
+	for k, v := range newAttrs {
+		kvlist = append(kvlist, strings.ToUpper(k))
+		kvlist = append(kvlist, v)
+	}
+	kvField, err := tcllist.ToDeepTclString(kvlist...)
+	if err != nil {
+		return fmt.Errorf("Error in newAttrs list: %v", err)
+	}
+	return c.send("OA", objID, kvField)
+}
 
 //
 // UpdatePeerList message: notifies the client that the list of
@@ -1189,15 +1431,35 @@ type UpdatePeerListMessagePayload struct {
 	BaseMessagePayload
 	PeerList []Peer
 }
+
+//
+// Peer describes each peer we can reach via our server connection.
+//
 type Peer struct {
-	Addr            string
-	User            string
-	Client          string
-	LastPolo        float64
+	// IP address and port of the peer
+	Addr string
+
+	// The username provided by the peer when it authenticated
+	User string
+
+	// A description of the peer client program (provided by that client)
+	Client string
+
+	// How many seconds ago the peer last answered a "still alive?" ping from the server
+	LastPolo float64
+
+	// True if the client authenticated successfully
 	IsAuthenticated bool
-	IsMe            bool
-	IsMain          bool
-	IsWriteOnly     bool
+
+	// True if this structure describes the connection of this client program
+	IsMe bool
+
+	// True if the peer is running as the "main" or "primary" client
+	IsMain bool
+
+	// True if the peer client is not paying attention to any incoming
+	// messages
+	IsWriteOnly bool
 }
 
 //
@@ -1206,7 +1468,7 @@ type Peer struct {
 // to the server.
 //
 func (c *Connection) QueryPeers() error {
-	c.send("/CONN")
+	return c.send("/CONN")
 }
 
 //
@@ -1252,10 +1514,67 @@ type UpdateStatusMarkerMessagePayload struct {
 	StatusMarkerDefinition
 }
 
+//
+// A StatusMarkerDefinition describes each creature token status
+// that the map clients indicate.
+//
 type StatusMarkerDefinition struct {
+	// The name of the condition
 	Condition string
-	Shape     string
-	Color     string
+
+	// The shape of the marker to be drawn on the token. This may
+	// be one of the following:
+	//   |v  small downward-pointing triangle against the left edge
+	//   v|  small downward-pointing triangle against the right edge
+	//   |o  small circle against the left edge
+	//   o|  small circle against the right edge
+	//   |<> small diamond against the left edge
+	//   <>| small diamond against the right edge
+	//   /   slash from upper right to lower left
+	//   \   slash from upper left to lower right
+	//   //  double slash from upper right to lower left
+	//   \\  double slash from upper left to lower right
+	//   -   horizontal line through the center of the token
+	//   =   double horizontal line through the center
+	//   |   vertical line through the center
+	//   ||  double vertical line through the center
+	//   +   cross (vertical and horizontal lines) through center
+	//   #   double cross (vertical and horizontal lines) through center
+	//   V   large downward-pointing triangle around token
+	//   ^   large upward-pointing triangle around token
+	//   <>  large diamond around token
+	//   O   large circle around token
+	Shape string
+
+	// The color to draw the marker. If the name begins with a pair
+	// of hyphens (e.g., "--red") then the marker is drawn with long
+	// dashed lines. If it begins with dots (e.g., "..blue") it is
+	// drawn with short dashed lines.
+	//
+	// The special color "*" may be used to indicate that the marker
+	// should be drawn in the same color as the creature's threat zone.
+	Color string
+}
+
+//
+// Text produces a simple text description of a StatusMarkerDefinition structure.
+//
+func (c StatusMarkerDefinition) Text() string {
+	return fmt.Sprintf("Condition %q: Shape=%q, Color=%q", c.Condition, c.Shape, c.Color)
+}
+
+type StatusMarkerDefinitions map[string]StatusMarkerDefinition
+
+//
+// Text produces a simple text description of a slice of StatusMarkerDefinitions
+// as a multi-line string.
+//
+func (cs StatusMarkerDefinitions) Text() string {
+	var s strings.Builder
+	for k, c := range cs {
+		fmt.Fprintf(&s, "[%s] %s\n", k, c.Text())
+	}
+	return s.String()
 }
 
 //
@@ -1364,6 +1683,7 @@ func (c *Connection) SyncChat(target int) error {
 //
 func (c *Connection) Dial() {
 	var err error
+	defer c.Close()
 
 	c.signedOn = false
 	for {
@@ -1380,13 +1700,15 @@ func (c *Connection) Dial() {
 			break
 		}
 	}
-	// XXX close out all our stuff
 }
 
 func (c *Connection) tryConnect() error {
 	var err error
 	var conn net.Conn
 	var i uint
+
+	c.debug(2, "tryConnect() started")
+	defer c.debug(2, "tryConnect() ended")
 
 	for i = 0; c.Retries == 0 || i < c.Retries; i++ {
 		if c.Timeout == 0 {
@@ -1439,13 +1761,11 @@ syncloop:
 	return nil
 }
 
-//
-// We will block here on the assumption that the caller
-// will put us in a goroutine to meet their own concurrency
-// needs, if any.
-//
 func (c *Connection) login(done chan error) {
 	defer close(done)
+
+	c.debug(2, "login() started")
+	defer c.debug(2, "login() ended")
 
 	c.Logger.Printf("mapper: Initial server negotiation...")
 	syncDone := false
@@ -1454,12 +1774,16 @@ func (c *Connection) login(done chan error) {
 	c.Preamble = nil
 
 	for !syncDone && c.reader.Scan() {
+		if c.DebuggingLevel >= 3 {
+			c.debug(3, util.Hexdump(c.reader.Bytes()))
+		}
 		f, err := tcllist.ParseTclList(c.reader.Text())
 		if err != nil {
 			c.Logger.Printf("mapper: unable to parse message from server: %v", err)
 			done <- err
 			return
 		}
+		c.debug(1, "server->"+f[0])
 
 		if len(f) == 0 {
 			// empty line is ok, we just ignore it
@@ -1474,7 +1798,8 @@ func (c *Connection) login(done chan error) {
 			fv, err := tcllist.ConvertTypes(f, "si*")
 			if err != nil {
 				c.Logger.Printf("mapper: error in server greeting (%v): %v", f, err)
-				continue // XXX should this be fatal?
+				done <- fmt.Errorf("server greeting %v could not be parsed: %v", f, err)
+				return
 			}
 			c.Protocol = fv[1].(int)
 
@@ -1577,13 +1902,18 @@ func (c *Connection) login(done chan error) {
 	}
 
 	// If we're still waiting for authentication results, do that...
+	c.debug(2, "Switched to authentication result scanner")
 	for authPending && c.reader.Scan() {
+		if c.DebuggingLevel >= 3 {
+			c.debug(3, util.Hexdump(c.reader.Bytes()))
+		}
 		f, err := tcllist.ParseTclList(c.reader.Text())
 		if err != nil {
 			c.Logger.Printf("mapper: unable to parse message from server: %v", err)
 			done <- err
 			return
 		}
+		c.debug(1, "server->"+f[0])
 
 		if len(f) == 0 {
 			// empty line is ok, we just ignore it
@@ -1623,7 +1953,22 @@ func (c *Connection) login(done chan error) {
 		return
 	}
 
-	c.filterSubscriptions()
+	if err := c.filterSubscriptions(); err != nil {
+		done <- err
+		return
+	}
+
+	if c.DebuggingLevel >= 2 {
+		c.debug(2, "Completed server sign-on process")
+		if c.Authenticator != nil {
+			c.debug(2, fmt.Sprintf("Logged in as %s", c.Authenticator.Username))
+		}
+		c.debug(2, fmt.Sprintf("Server is using protocol version %d", c.Protocol))
+		c.debug(2, fmt.Sprintf("Defined Characters:\n%s", CharacterDefinitions(c.Characters).Text()))
+		c.debug(2, fmt.Sprintf("Defined Status Markers:\n%s", StatusMarkerDefinitions(c.Conditions).Text()))
+		c.debug(2, "Preamble:\n"+strings.Join(c.Preamble, "\n"))
+		c.debug(2, fmt.Sprintf("Last error: %v", c.LastError))
+	}
 }
 
 func (c *Connection) receiveDSM(f []string) error {
@@ -1676,18 +2021,18 @@ func (c *Connection) receiveDSM(f []string) error {
 // ->(login)              GRANTED <name>|GM
 // ->UpdateTurn           I {<r> <c> <s> <m> <h>} <id>|""|*Monsters*|/<regex>
 // ->UpdateInitiative     IL {{<name> <hold> <ready> <hp> <flat> <slot#>} ...}
-//.<>LoadFrom             L {<path> ...}              (clear map before each)
-//.                       M {<path> ...}              (merge to map)
-//.                       M@ <serverid>               (merge to map)
-//.<>LoadObject           LS
-//.                       LS: <data>                  (repeated)
-//.                       LS. <#lines> <sha256>
-//.                       LS. 0                       (NEW: cancel LS)
-//.<>CacheFile            M? <serverid>
+// <>LoadFrom             L {<path> ...}              (clear map before each)
+//                        M {<path> ...}              (merge to map)
+//                        M@ <serverid>               (merge to map)
+// <>LoadObject           LS
+//                        LS: <data>                  (repeated)
+//                        LS. <#lines> <sha256>
+//                        LS. 0                       (NEW: cancel LS)
+// <>LoadFrom             M? <serverid>
 // ->Marco                MARCO
 // <>Mark                 MARK <x> <y>
 // <-WriteOnly            NO
-//.<>UpdateObjAttributes  OA <objid> {<key> <value ...}
+// <>UpdateObjAttributes  OA <objid> {<key> <value ...}
 // <>AddObjAttributes     OA+ <objid> <key> {<value> ...}
 // <>RemoveObjAttributes  OA- <objid> <key> {<value> ...}
 // ->(login)              OK <version> [<challenge>]
@@ -1704,9 +2049,9 @@ func (c *Connection) receiveDSM(f []string) error {
 //                        CONN: <i> you|peer <addr> <user> <client> <auth> <primary> <writeonly> <lastseen>
 //                        CONN. <#lines> <sha256>
 
-func (c *Connection) finishStream(f string, started bool, dataLen int, checksum string) (bool, error) {
+func (c *Connection) finishStream(f []string, started bool, dataLen int, checksum string) (bool, error) {
 	fv, err := tcllist.ConvertTypes(f, "si*")
-	if err {
+	if err != nil {
 		return false, fmt.Errorf("cannot parse stream-end message %q: %v", f, err)
 	}
 	if !started {
@@ -1721,6 +2066,7 @@ func (c *Connection) finishStream(f string, started bool, dataLen int, checksum 
 	if dataLen != fv[1].(int) {
 		return false, fmt.Errorf("stream transfer had %d elements but expected %d", dataLen, fv[1].(int))
 	}
+	return true, nil
 }
 
 //
@@ -1730,18 +2076,30 @@ func (c *Connection) listen(done chan error) {
 	defer func() {
 		close(done)
 		c.Logger.Printf("mapper: stopped listening to server")
+		c.debug(2, "listen() ended")
 	}()
+	c.debug(2, "listen() started")
 
 	var (
 		imageDataBuffer []string
 		imageDataDef    ImageDefinition
+		currentImage    string
 		presetBuffer    [][]string
+		currentPreset   string
 		peerBuffer      [][]string
+		currentPeer     string
+		objBuffer       []string
+		currentObj      string
+		rPeerBuffer     []string
+		rPresetBuffer   []string
 	)
 
 	strike := 0
 	c.Logger.Printf("mapper: listening for server messages to dispatch...")
 	for c.reader.Scan() {
+		if c.DebuggingLevel >= 3 {
+			c.debug(3, util.Hexdump(c.reader.Bytes()))
+		}
 		f, err := tcllist.ParseTclList(c.reader.Text())
 		if err != nil {
 			c.reportError(fmt.Errorf("mapper: unable to parse message \"%s\" from server: %v", c.reader.Text(), err))
@@ -1755,6 +2113,7 @@ func (c *Connection) listen(done chan error) {
 		} else {
 			strike = 0
 		}
+		c.debug(1, "server->"+f[0])
 
 		if len(f) == 0 {
 			continue // skip blank lines
@@ -1762,6 +2121,9 @@ func (c *Connection) listen(done chan error) {
 
 		payload := BaseMessagePayload{
 			rawMessage: f,
+		}
+		if c.DebuggingLevel >= 3 {
+			c.debug(3, fmt.Sprintf("Payload: %q", f))
 		}
 
 	payloadSelection:
@@ -1863,6 +2225,40 @@ func (c *Connection) listen(done chan error) {
 			}
 
 		case "AC":
+			//    _   ___
+			//   /_\ / __|
+			//  / _ \ (__
+			// /_/ \_\___|
+			//
+			// AC <name> <id> <color> <area> <size>
+			//
+			if len(f) != 6 {
+				c.reportError(fmt.Errorf("mapper: AddCharacter message field count %d wrong", len(f)))
+				continue
+			}
+			// add to character list
+			c.Characters[f[1]] = CharacterDefinition{
+				Name:  f[1],
+				ObjID: f[2],
+				Color: f[3],
+				Area:  f[4],
+				Size:  f[5],
+			}
+			ch, ok := c.Subscriptions[AddCharacter]
+			if ok {
+				payload.messageType = AddCharacter
+				ch <- AddCharacterMessagePayload{
+					BaseMessagePayload: payload,
+					CharacterDefinition: CharacterDefinition{
+						Name:  f[1],
+						ObjID: f[2],
+						Color: f[3],
+						Area:  f[4],
+						Size:  f[5],
+					},
+				}
+			}
+
 		case "AI":
 			//    _   ___
 			//   /_\ |_ _|
@@ -1873,16 +2269,17 @@ func (c *Connection) listen(done chan error) {
 			// AI: <data>
 			// AI. <#lines> <sha256>
 			//
-			ch, ok := c.Subscriptions[AddImage]
+			_, ok := c.Subscriptions[AddImage]
 			if ok {
-				if imageDataBuffer != nil {
+				if currentImage != "" {
 					c.reportError(fmt.Errorf("AI encountered before previous one ended"))
 				}
 				fv, err := tcllist.ConvertTypes(f, "ssf")
-				if err {
+				if err != nil {
 					c.reportError(fmt.Errorf("cannot parse AI message from server: %v", err))
 					break
 				}
+				currentImage = c.reader.Text()
 				imageDataBuffer = nil
 				imageDataDef.Name = fv[1].(string)
 				imageDataDef.Zoom = fv[2].(float64)
@@ -1893,9 +2290,9 @@ func (c *Connection) listen(done chan error) {
 			}
 
 		case "AI:":
-			ch, ok := c.Subscriptions[AddImage]
+			_, ok := c.Subscriptions[AddImage]
 			if ok {
-				if imageDataDef.Zoom == 0 {
+				if currentImage == "" {
 					c.reportError(fmt.Errorf("AI: message received before AI"))
 					break
 				}
@@ -1909,7 +2306,7 @@ func (c *Connection) listen(done chan error) {
 		case "AI.":
 			ch, ok := c.Subscriptions[AddImage]
 			if ok {
-				imgOk, err := finishStream(f, imageDataDef.Zoom != 0, len(imageDataBuffer),
+				imgOk, err := c.finishStream(f, currentImage != "", len(imageDataBuffer),
 					streamChecksumStrings(imageDataBuffer))
 				if err != nil {
 					c.reportError(fmt.Errorf("bad AddImage transfer: %v", err))
@@ -1919,6 +2316,11 @@ func (c *Connection) listen(done chan error) {
 					if err != nil {
 						c.reportError(fmt.Errorf("Image data could not be decoded: %v", err))
 					} else {
+						r := make([]string, 0, 2+len(imageDataBuffer))
+						r = append(r, currentImage)
+						r = append(r, imageDataBuffer...)
+						r = append(r, payload.rawMessage...)
+						payload.rawMessage = r
 						payload.messageType = AddImage
 						ch <- AddImageMessagePayload{
 							BaseMessagePayload: payload,
@@ -1933,6 +2335,7 @@ func (c *Connection) listen(done chan error) {
 				}
 				imageDataBuffer = nil
 				imageDataDef = ImageDefinition{}
+				currentImage = ""
 			}
 
 		case "AI@":
@@ -2047,7 +2450,7 @@ func (c *Connection) listen(done chan error) {
 					c.reportError(fmt.Errorf("Invalid ClearChat message: %v", err))
 				} else {
 					payload.messageType = ClearChat
-					by := fv[1].(sring)
+					by := fv[1].(string)
 					silent := false
 					if by == "*" {
 						by = ""
@@ -2120,36 +2523,43 @@ func (c *Connection) listen(done chan error) {
 			// CONN: <i> you|peer <addr> <user> <client> <auth> <primary> <writeonly> <lastseen>
 			// CONN. <#peers> <sha256>
 			//
-			ch, ok := c.Subscriptions[UpdatePeerList]
+			_, ok := c.Subscriptions[UpdatePeerList]
 			if ok {
-				if peerBuffer != nil {
+				if currentPeer != "" {
 					c.reportError(fmt.Errorf("CONN encountered before previous one ended"))
 				}
 				presetBuffer = nil
+				rPresetBuffer = nil
+				currentPeer = c.reader.Text()
 			}
 
 		case "CONN:":
-			ch, ok := c.Subscriptions[UpdatePeerList]
+			_, ok := c.Subscriptions[UpdatePeerList]
 			if ok {
+				if currentPeer == "" {
+					c.reportError(fmt.Errorf("CONN: enountered before CONN"))
+					break
+				}
 				if len(f) != 10 {
 					c.reportError(fmt.Errorf("CONN: message field count wrong (%d)", len(f)))
 					break
 				}
-				thisSet = make([]string, 10)
+				thisSet := make([]string, 10)
 				copy(thisSet, f)
 				peerBuffer = append(peerBuffer, thisSet)
+				rPeerBuffer = append(rPeerBuffer, c.reader.Text())
 			}
 
 		case "CONN.":
 			ch, ok := c.Subscriptions[UpdatePeerList]
 			if ok {
-				ccOk, err := c.finishStream(f, true, len(peerBuffer), streamChecksum(peerBuffer))
+				ccOk, err := c.finishStream(f, currentPeer != "", len(peerBuffer), streamChecksum(peerBuffer))
 				if err != nil {
 					c.reportError(fmt.Errorf("bad peer list transfer: %v", err))
 				}
+				plist := make([]Peer, 0, len(peerBuffer))
 				if ccOk {
-					plist := make([]Peer, 0, len(peerBuffer))
-					for i, preset := range presetBuffer {
+					for i, preset := range peerBuffer {
 						pv, err := tcllist.ConvertTypes(preset, "sissss???f")
 						if err != nil {
 							c.reportError(fmt.Errorf("bad peer list transfer: %v", err))
@@ -2174,13 +2584,20 @@ func (c *Connection) listen(done chan error) {
 					}
 				}
 				if ccOk {
+					rm := make([]string, 0, 2+len(rPeerBuffer))
+					rm = append(rm, currentPeer)
+					rm = append(rm, rPeerBuffer...)
+					rm = append(rm, payload.rawMessage...)
+					payload.rawMessage = rm
 					payload.messageType = UpdatePeerList
 					ch <- UpdatePeerListMessagePayload{
 						BaseMessagePayload: payload,
 						PeerList:           plist,
 					}
 				}
+				currentPeer = ""
 				peerBuffer = nil
+				rPeerBuffer = nil
 			}
 
 		case "CS":
@@ -2208,43 +2625,51 @@ func (c *Connection) listen(done chan error) {
 
 		case "DD=":
 			//  ___  ___
-			// |   \|   \
-			// | |) | |) |
-			// |___/|___/
+			// |   \|   \ ___
+			// | |) | |) |___|
+			// |___/|___/|___|
 			//
 			// DD=
 			// DD: <i> <name> <desc> <spec>
 			// DD. <#defs> <sha256>
 			//
-			ch, ok := c.Subscriptions[UpdateDicePresets]
+			_, ok := c.Subscriptions[UpdateDicePresets]
 			if ok {
-				if presetBuffer != nil {
-					c.reportError(fmt.Errorf("DD encountered before previous one ended"))
+				if currentPreset != "" {
+					c.reportError(fmt.Errorf("UpdateDicePresets message started before previous one ended"))
 				}
 				presetBuffer = nil
+				rPresetBuffer = nil
+				currentPreset = c.reader.Text()
 			}
 
 		case "DD:":
-			ch, ok := c.Subscriptions[UpdateDicePresets]
+			_, ok := c.Subscriptions[UpdateDicePresets]
 			if ok {
-				if len(f) != 5 {
-					c.reportError(fmt.Errorf("DD: message field count wrong (%d)", len(f)))
+				if currentPreset == "" {
+					c.reportError(fmt.Errorf("UpdateDicePresets message without start-of-stream"))
 					break
 				}
-				thisSet = make([]string, 5)
+
+				if len(f) != 5 {
+					c.reportError(fmt.Errorf("UpdateDicePresets message field count wrong (%d)", len(f)))
+					break
+				}
+				thisSet := make([]string, 5)
 				copy(thisSet, f)
 				presetBuffer = append(presetBuffer, thisSet)
+				rPresetBuffer = append(rPresetBuffer, c.reader.Text())
 			}
 
 		case "DD.":
 			ch, ok := c.Subscriptions[UpdateDicePresets]
 			if ok {
-				ddOk, err := c.finishStream(f, true, len(presetBuffer), streamChecksum(presetBuffer))
+				ddOk, err := c.finishStream(f, currentPreset != "", len(presetBuffer), streamChecksum(presetBuffer))
 				if err != nil {
 					c.reportError(fmt.Errorf("bad preset transfer: %v", err))
 				}
+				plist := make([]DieRollPreset, 0, len(presetBuffer))
 				if ddOk {
-					plist := make([]DieRollPreset, 0, len(presetBuffer))
 					for i, preset := range presetBuffer {
 						pv, err := tcllist.ConvertTypes(preset, "sisss")
 						if err != nil {
@@ -2258,13 +2683,18 @@ func (c *Connection) listen(done chan error) {
 							break
 						}
 						plist = append(plist, DieRollPreset{
-							Name:        pv[2],
-							Description: pv[3],
-							DieRollSpec: pv[4],
+							Name:        pv[2].(string),
+							Description: pv[3].(string),
+							DieRollSpec: pv[4].(string),
 						})
 					}
 				}
 				if ddOk {
+					r := make([]string, 0, len(rPresetBuffer)+2)
+					r = append(r, currentPreset)
+					r = append(r, rPresetBuffer...)
+					r = append(r, payload.rawMessage...)
+					payload.rawMessage = r
 					payload.messageType = UpdateDicePresets
 					ch <- UpdateDicePresetsMessagePayload{
 						BaseMessagePayload: payload,
@@ -2272,6 +2702,8 @@ func (c *Connection) listen(done chan error) {
 					}
 				}
 				presetBuffer = nil
+				rPresetBuffer = nil
+				currentPreset = ""
 			}
 
 		case "DENIED":
@@ -2283,7 +2715,7 @@ func (c *Connection) listen(done chan error) {
 			if len(f) > 1 {
 				c.reportError(fmt.Errorf("server denied access: %s", f[1]))
 			} else {
-				c.reportError(fmt.Errorf("server denied access: %s"))
+				c.reportError(fmt.Errorf("server denied access"))
 			}
 
 		case "DSM":
@@ -2395,12 +2827,202 @@ func (c *Connection) listen(done chan error) {
 			}
 
 		case "L":
+			//  _
+			// | |
+			// | |__
+			// |____|
+			//
+			// L {<path> ...}
+			//
+			ch, ok := c.Subscriptions[LoadFrom]
+			if ok {
+				files, err := tcllist.ParseTclList(f[1])
+				if err != nil {
+					c.reportError(fmt.Errorf("invalid LoadFrom file list: %v", err))
+					break
+				}
+
+				for _, file := range files {
+					payload.messageType = LoadFrom
+					ch <- LoadFromMessagePayload{
+						BaseMessagePayload: payload,
+						FileDefinition: FileDefinition{
+							File:        file,
+							IsLocalFile: true,
+						},
+					}
+				}
+			}
+
 		case "LS":
+			//  _    ___
+			// | |  / __|
+			// | |__\__ \
+			// |____|___/
+			//
+			// LS
+			// LS: <data>
+			// LS. <#lines> <sha256>
+			//
+			_, ok := c.Subscriptions[LoadObject]
+			_, ok2 := c.Subscriptions[AddImage]
+			_, ok3 := c.Subscriptions[LoadFrom]
+			if ok || ok2 || ok3 {
+				if currentObj != "" {
+					c.reportError(fmt.Errorf("LoadObject started before previous one ended"))
+				}
+				objBuffer = nil
+				currentObj = c.reader.Text()
+			}
+
 		case "LS:":
+			_, ok := c.Subscriptions[LoadObject]
+			_, ok2 := c.Subscriptions[AddImage]
+			_, ok3 := c.Subscriptions[LoadFrom]
+			if ok || ok2 || ok3 {
+				if currentObj == "" {
+					c.reportError(fmt.Errorf("LoadObject message received before start-of-stream"))
+					break
+				}
+				if len(f) != 2 {
+					c.reportError(fmt.Errorf("LS: message field count wrong (%d)", len(f)))
+					break
+				}
+				objBuffer = append(objBuffer, f[1])
+			}
+
 		case "LS.":
+			ch, ok := c.Subscriptions[LoadObject]
+			ich, iok := c.Subscriptions[AddImage]
+			fch, fok := c.Subscriptions[LoadFrom]
+			if ok || iok || fok {
+				imgOk, err := c.finishStream(f, currentObj != "", len(objBuffer), streamChecksumStrings(objBuffer))
+				if err != nil {
+					c.reportError(fmt.Errorf("bad LoadObject transfer: %v", err))
+				}
+				if imgOk {
+					objs, images, files, err := ParseObjects(objBuffer)
+					if err != nil {
+						c.reportError(fmt.Errorf("bad LoadObject transfer: %v", err))
+						break
+					}
+					r := make([]string, 0, 2+len(objBuffer))
+					r = append(r, currentObj)
+					r = append(r, objBuffer...)
+					r = append(r, payload.rawMessage...)
+					for _, o := range objs {
+						payload.rawMessage = r
+						payload.messageType = LoadObject
+						ch <- LoadObjectMessagePayload{
+							BaseMessagePayload: payload,
+							MapObject:          o,
+						}
+					}
+					if iok {
+						for _, im := range images {
+							payload.rawMessage = r
+							payload.messageType = AddImage
+							ich <- AddImageMessagePayload{
+								BaseMessagePayload: payload,
+								ImageDefinition:    im,
+							}
+						}
+					}
+					if fok {
+						for _, fi := range files {
+							payload.rawMessage = r
+							payload.messageType = LoadFrom
+							fch <- LoadFromMessagePayload{
+								BaseMessagePayload: payload,
+								FileDefinition:     fi,
+							}
+						}
+					}
+				}
+				currentObj = ""
+				objBuffer = nil
+			}
+
 		case "M":
+			//  __  __
+			// |  \/  |
+			// | |\/| |
+			// |_|  |_|
+			//
+			// M {path ...}
+			//
+			ch, ok := c.Subscriptions[LoadFrom]
+			if ok {
+				files, err := tcllist.ParseTclList(f[1])
+				if err != nil {
+					c.reportError(fmt.Errorf("invalid LoadFrom file list: %v", err))
+					break
+				}
+
+				for _, file := range files {
+					payload.messageType = LoadFrom
+					ch <- LoadFromMessagePayload{
+						BaseMessagePayload: payload,
+						FileDefinition: FileDefinition{
+							File:        file,
+							IsLocalFile: true,
+						},
+						Merge: true,
+					}
+				}
+			}
+
 		case "M@":
+			//  __  __  ____
+			// |  \/  |/ __ \
+			// | |\/| / / _` |
+			// |_|  |_\ \__,_|
+			//         \____/
+			//
+			// M@ <id>
+			//
+			ch, ok := c.Subscriptions[LoadFrom]
+			if ok {
+				if len(f) != 2 {
+					c.reportError(fmt.Errorf("invalid LoadFrom (M@) file list field count: %d", len(f)))
+					break
+				}
+				payload.messageType = LoadFrom
+				ch <- LoadFromMessagePayload{
+					BaseMessagePayload: payload,
+					FileDefinition: FileDefinition{
+						File:        f[1],
+						IsLocalFile: false,
+					},
+					Merge: true,
+				}
+			}
+
 		case "M?":
+			//  __  __ ___
+			// |  \/  |__ \
+			// | |\/| | /_/
+			// |_|  |_|(_)
+			//
+			// M? <id>
+			//
+			ch, ok := c.Subscriptions[LoadFrom]
+			if ok {
+				if len(f) != 2 {
+					c.reportError(fmt.Errorf("invalid LoadFrom (M?) message field count: %d", len(f)))
+					break
+				}
+				payload.messageType = LoadFrom
+				ch <- LoadFromMessagePayload{
+					BaseMessagePayload: payload,
+					FileDefinition: FileDefinition{
+						File:        f[1],
+						IsLocalFile: false,
+					},
+					CacheOnly: true,
+				}
+			}
+
 		case "MARCO":
 			//  __  __   _   ___  ___ ___
 			// |  \/  | /_\ | _ \/ __/ _ \
@@ -2441,6 +3063,164 @@ func (c *Connection) listen(done chan error) {
 							Y: fv[2].(float64),
 						},
 					}
+				}
+			}
+
+		case "OA":
+			//   ___   _
+			//  / _ \ /_\
+			// | (_) / _ \
+			//  \___/_/ \_\
+			//
+			// OA <id> {<key> <value> ...}
+			//
+			// XXX: Caveat: There is an ambiguous case for the SIZE
+			// attribute. Since we don't know the type of object these
+			// attributes are going into, we will take the most common
+			// case and assume SIZE will be a creature attribute and return
+			// it as a string value.
+			// The only other object which uses SIZE is a tile object, and
+			// I propose changing the attribute name for tiles to something
+			// distinct.
+			//
+			ch, ok := c.Subscriptions[UpdateObjAttributes]
+			if ok {
+				if len(f) != 3 {
+					c.reportError(fmt.Errorf("Invalid UpdateObjAttributes message: parameter list length %d", len(f)))
+					break
+				}
+				kvlist, err := tcllist.ParseTclList(f[2])
+				if err != nil {
+					c.reportError(fmt.Errorf("Invalid UpdateObjAttributes message: %v", err))
+					break
+				}
+				if (len(kvlist) % 2) != 0 {
+					c.reportError(fmt.Errorf("Invalid UpdateObjAttributes message: kvlist length not even"))
+					break
+				}
+				if len(kvlist) > 0 {
+					payload.messageType = UpdateObjAttributes
+					p := UpdateObjAttributesMessagePayload{
+						BaseMessagePayload: payload,
+						ObjID:              f[1],
+						NewAttrs:           make(map[string]interface{}),
+					}
+					for i := 0; i < len(kvlist); i += 2 {
+						atype, ok := attributeType(kvlist[i])
+						if !ok {
+							c.reportError(fmt.Errorf("Invalid %s attribute in UpdateObjAttributes; not recognized, assuming string value", kvlist[i]))
+							atype = "string"
+						}
+
+						switch atype {
+						case "enum":
+							var b byte
+							b, ok := enumToByte(kvlist[i], kvlist[i+1])
+							if !ok {
+								c.reportError(fmt.Errorf("Invalid %s value %s in UpdateObjAttributes; using default instead", kvlist[i], kvlist[i+1]))
+								b = 0
+							}
+							p.NewAttrs[kvlist[i]] = b
+
+						case "*RadiusAoE":
+							var aep *RadiusAoE
+							aoe, err := tcllist.Parse(kvlist[i+1], "sfs")
+							if err != nil {
+								c.reportError(fmt.Errorf("Invalid %s value %s in UpdateObjAttributes: %v; using nil", kvlist[i], kvlist[i+1], err))
+							} else if aoe[0].(string) != "radius" {
+								c.reportError(fmt.Errorf("Invalid %s value %s in UpdateObjAttributes: unknown radius type; using nil", kvlist[i], kvlist[i+1]))
+							} else {
+								aep = &RadiusAoE{
+									Radius: aoe[1].(float64),
+									Color:  aoe[2].(string),
+								}
+							}
+							p.NewAttrs[kvlist[i]] = aep
+
+						case "[]Coordinates":
+							var coords []Coordinates
+							cs, err := tcllist.ParseTclList(kvlist[i+1])
+							if err != nil {
+								c.reportError(fmt.Errorf("invalid %s value %s in UpdateObjAttributes: %v", kvlist[i], kvlist[i+1], err))
+							} else if len(cs)%2 != 0 {
+								c.reportError(fmt.Errorf("invalid %s value %s in UpdateObjAttributes: odd number of values", kvlist[i], kvlist[i+1]))
+							} else {
+								for j := 0; j < len(cs); j += 2 {
+									px, err := strconv.ParseFloat(cs[j], 64)
+									if err != nil {
+										c.reportError(fmt.Errorf("invalid %s value %s in UpdateObjAttributes at [%d](%s): %v", kvlist[i], kvlist[i+1], j, cs[j], err))
+										px = 0.0
+									}
+
+									py, err := strconv.ParseFloat(cs[j+1], 64)
+									if err != nil {
+										c.reportError(fmt.Errorf("invalid %s value %s in UpdateObjAttributes at [%d](%s): %v", kvlist[i], kvlist[i+1], j+1, cs[j+1], err))
+										py = 0.0
+									}
+
+									coords = append(coords, Coordinates{
+										X: px,
+										Y: py,
+									})
+								}
+								p.NewAttrs[kvlist[i]] = coords
+							}
+
+						case "*CreatureHealth":
+							hp, err := newHealth(kvlist[i+1], nil)
+							if err != nil {
+								c.reportError(fmt.Errorf("invalid %s value %s in UpdateObjAttributes: %v", kvlist[i], kvlist[i+1], err))
+								hp = nil
+							}
+							p.NewAttrs[kvlist[i]] = hp
+
+						case "[]string":
+							ss, err := tcllist.ParseTclList(kvlist[i+1])
+							if err != nil {
+								c.reportError(fmt.Errorf("invalid %s value %s in UpdateObjAttributes: %v", kvlist[i], kvlist[i+1], err))
+							}
+							p.NewAttrs[kvlist[i]] = ss
+
+						case "float64":
+							v, err := strconv.ParseFloat(kvlist[i+1], 64)
+							if err != nil {
+								c.reportError(fmt.Errorf("invalid %s value %s in UpdateObjAttributes: %v", kvlist[i], kvlist[i+1], err))
+								v = 0.0
+							}
+							p.NewAttrs[kvlist[i]] = v
+
+						case "bool":
+							var b bool
+							if kvlist[i+1] == "" {
+								b = false
+							} else {
+								var err error
+								b, err = strconv.ParseBool(kvlist[i+1])
+								if err != nil {
+									c.reportError(fmt.Errorf("invalid %s value %s in UpdateObjAttributes: %v", kvlist[i], kvlist[i+1], err))
+									b = false
+								}
+							}
+							p.NewAttrs[kvlist[i]] = b
+
+						case "int":
+							var v int
+							v, err := strconv.Atoi(kvlist[i+1])
+							if err != nil {
+								c.reportError(fmt.Errorf("invalid %s value %s in UpdateObjAttributes: %v", kvlist[i], kvlist[i+1], err))
+								v = 0
+							}
+							p.NewAttrs[kvlist[i]] = v
+
+						case "string":
+							p.NewAttrs[kvlist[i]] = kvlist[i+1]
+
+						default:
+							c.reportError(fmt.Errorf("Internal error: Unrecognized type %s for attribute %s in UpdateObjAttributes; using string instead", atype, kvlist[i]))
+							p.NewAttrs[kvlist[i]] = kvlist[i+1]
+						}
+					}
+					ch <- p
 				}
 			}
 
@@ -2527,7 +3307,8 @@ func (c *Connection) listen(done chan error) {
 					break
 				}
 
-				ct := CreatureTypeUnknown
+				var ct byte
+				ct = CreatureTypeUnknown
 				switch fv[6].(string) {
 				case "player":
 					ct = CreatureTypePlayer
@@ -2576,7 +3357,7 @@ func (c *Connection) listen(done chan error) {
 				var recipients []string
 				var toGM bool
 				var toAll bool
-				var dlist []StructuredDescription
+				var dlist []dice.StructuredDescription
 
 				recips, err := tcllist.ParseTclList(fv[2].(string))
 				if err != nil {
@@ -2594,7 +3375,7 @@ func (c *Connection) listen(done chan error) {
 				}
 				details, err := tcllist.ParseTclList(fv[5].(string))
 				if err != nil {
-					c.reportError(fmt.Errorf("Invalid RollResult detail list: %v", err))
+					c.reportError(fmt.Errorf("Invalid503-574-4067 RollResult detail list: %v", err))
 					break
 				}
 				for i, det := range details {
@@ -2604,7 +3385,7 @@ func (c *Connection) listen(done chan error) {
 						break payloadSelection
 					}
 
-					dlist = append(dlist, StructuredDescription{
+					dlist = append(dlist, dice.StructuredDescription{
 						Type:  ds[0],
 						Value: ds[1],
 					})
@@ -2746,6 +3527,8 @@ func (c *Connection) reportError(e error) {
 //
 func (c *Connection) interact() error {
 	defer c.Close()
+	c.debug(2, "interact() started")
+	defer c.debug(2, "interact() ended")
 
 	listenerDone := make(chan error, 1)
 	go c.listen(listenerDone)
@@ -2770,6 +3553,12 @@ func (c *Connection) interact() error {
 		// Send the next outgoing message in the buffer
 		//
 		if c.writer != nil && len(c.sendBuf) > 0 {
+			if c.DebuggingLevel >= 3 {
+				c.debug(3, util.Hexdump([]byte(c.sendBuf[0])))
+			}
+			if c.DebuggingLevel >= 1 {
+				c.debug(1, fmt.Sprintf("client->%q (%d)", c.sendBuf[0], len(c.sendBuf)))
+			}
 			if written, err := c.writer.WriteString(c.sendBuf[0]); err != nil {
 				return fmt.Errorf("only wrote %d of %d bytes: %v", written, len(c.sendBuf[0]), err)
 			}
@@ -2782,8 +3571,15 @@ func (c *Connection) interact() error {
 	}
 }
 
+//
+// send a packet formed from the parameters passed here
+// to the server. The server connection must be fully
+// established at this point as this notifies the interact
+// routine via the c.sendChan channel to pass the packet
+// on to the server.
+//
 func (c *Connection) send(fields ...interface{}) error {
-	packet, err := tcllist.ToDeepTclString(fields)
+	packet, err := tcllist.ToDeepTclString(fields...)
 	if err != nil {
 		return err
 	}
@@ -2799,12 +3595,25 @@ func (c *Connection) send(fields ...interface{}) error {
 	return nil
 }
 
+//
+// send a packet formed from the string parameters passed here
+// to the server directly. This should be used when the connection
+// is NOT yet established fully, since this talks to the server
+// directly on the assumption that the interact routine isn't
+// available yet to handle this.
+//
 func (c *Connection) rawSend(fields ...string) error {
 	packet, err := tcllist.ToTclString(fields)
 	if err != nil {
 		return err
 	}
 	packet += "\n"
+	if c.DebuggingLevel >= 3 {
+		c.debug(3, util.Hexdump([]byte(packet)))
+	}
+	if c.DebuggingLevel >= 1 {
+		c.debug(1, fmt.Sprintf("client->%q (raw)", packet))
+	}
 	if written, err := c.writer.WriteString(packet); err != nil {
 		return fmt.Errorf("only wrote %d of %d bytes: %v", written, len(packet), err)
 	}
@@ -2815,10 +3624,14 @@ func (c *Connection) rawSend(fields ...string) error {
 	return nil
 }
 
+//
+// Any time the subscription list changes,
+// we need to call this to let the server know what kinds of
+// messages the client wants to see.
+//
 func (c *Connection) filterSubscriptions() error {
 	subList := []string{"AC", "DSM", "MARCO"} // these are unconditional
 	for msg, _ := range c.Subscriptions {
-		// XXX double-check these as we work on interact()
 		switch msg {
 		case AddImage:
 			subList = append(subList, "AI", "AI:", "AI.", "AI@", "LS", "LS:", "LS.")
@@ -2826,8 +3639,6 @@ func (c *Connection) filterSubscriptions() error {
 			subList = append(subList, "OA+")
 		case AdjustView:
 			subList = append(subList, "AV")
-		case CacheFile:
-			subList = append(subList, "M?")
 		case ChatMessage:
 			subList = append(subList, "TO")
 		case Clear:
@@ -2841,7 +3652,7 @@ func (c *Connection) filterSubscriptions() error {
 		case Comment, UpdateProgress:
 			subList = append(subList, "//")
 		case LoadFrom:
-			subList = append(subList, "L", "M", "M@")
+			subList = append(subList, "L", "M", "M@", "M?", "LS", "LS:", "LS.")
 		case LoadObject:
 			subList = append(subList, "LS", "LS:", "LS.")
 		case Mark:
@@ -2876,8 +3687,14 @@ func (c *Connection) filterSubscriptions() error {
 		return err
 	}
 
-	c.send("ACCEPT", sl)
-	return nil
+	return c.send("ACCEPT", sl)
+}
+
+//
+// Tell the server to send us all possible messages.
+//
+func (c *Connection) unfilterSubscriptions() error {
+	return c.send("ACCEPT", "*")
 }
 
 // @[00]@| GMA 4.3.4

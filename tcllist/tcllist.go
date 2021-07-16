@@ -518,12 +518,9 @@ func ParseTclList(tcl_string string) ([]string, error) {
 //
 // Since the string representation of a TclList is type-agnostic,
 // we can't automatically
-// assume its elements should be specific types such as numeric values.
-// If it is known that they
-// should be, this function will run through the elements of the slice
-// converting its elements
-// to either int or float types wherever possible, returning the
-// converted data slice.
+// assume its elements should be specific types such as numeric values,
+// hence the need for this function to provide the missing type information
+// to complete the conversions.
 //
 // The types string controls this conversion. Each character indicates
 // the required type for the corresponding element in the input slice, as follows:
@@ -542,9 +539,9 @@ func ParseTclList(tcl_string string) ([]string, error) {
 // the slice at once, so you can directly access the slice elements as the
 // intended types without individually type-testing each one.
 //
-// The input slice must be exactly the number of elements in the input
-// slice unless the * character is used in types, so this function also
-// enforces that the expected number of data elements is present.
+// The input slice must have exactly the number of elements as characters
+// in the type string unless the * character is used in types, so this
+// function also enforces that the expected number of data elements is present.
 //
 func ConvertTypes(list []string, types string) ([]interface{}, error) {
 	converted := make([]interface{}, len(list))
@@ -620,6 +617,9 @@ func Parse(tclString, types string) ([]interface{}, error) {
 // uint32,
 // uint64,
 // and slices of any combination of the above.
+//
+// For example, ToDeepTclString("a", 12, 13.42, []string{"b", "c"})
+// returns the string "a 12 13.42 {b c}".
 //
 func ToDeepTclString(values ...interface{}) (string, error) {
 	var list []string
