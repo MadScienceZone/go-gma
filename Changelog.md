@@ -6,7 +6,11 @@
  * Supported GMA Mapper File Format: 17		<!-- @@##@@ -->
  * Effective Date: 16-Jul-2021			<!-- @@##@@ -->
 
-## v4.3.6-alpha
+## UNRELEASED 
+Moved SaveData methods for MapObjects back to being unepxorted. Users should
+only save via the provided high-level SaveObjects function.
+
+## v4.3.6 (alpha)
 Updates map file support to version 17.
 
 ## v4.3.5-alpha
@@ -21,15 +25,15 @@ slice of values (including nested sub-lists) into a Tcl string in one step.
 Otherwise one would need to convert non-string types to strings and then
 call `ToTclString()` (repeatedly, in the case of sub-lists).
 
-## v4.3.4
+## v4.3.4 (alpha)
 Correction to how auth objects manage byte slices. 
 
-## v4.3.3
+## v4.3.3 (alpha)
 Added text processing and utility functions.
 
-## v4.3.2
+## v4.3.2 (alpha)
 Cleaned up the module documentation. Un-exported some of the internals of the dice package
 that weren't supposed to have been exported.
 
-## v4.3.1
+## v4.3.1 (alpha)
 Initial move to its own repository. Implements the `auth`, `dice`, and `tcllist` packages.

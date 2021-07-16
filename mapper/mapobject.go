@@ -301,7 +301,7 @@ func attributeType(attrName string) (string, bool) {
 //
 type MapObject interface {
 	ObjID() string
-	SaveData([]string, string, string) ([]string, error)
+	saveData([]string, string, string) ([]string, error)
 }
 
 //
@@ -312,7 +312,7 @@ type MapObject interface {
 //         from an input source in objDef, which is a map of attribute name
 //         to a slice of strings broken out into fields.
 //
-//   <T>.SaveData(data, prefix, id) ([]string, error)
+//   <T>.saveData(data, prefix, id) ([]string, error)
 //      -- generate the save file data for this object. These are appended
 //         as individual strings (one per line) to the end of the strings
 //         in data. The new combined string slice is returned.
@@ -320,21 +320,21 @@ type MapObject interface {
 
 //
 // A coordinate pair to locate something on the map.
-// Coordinates are in standard map pixel units (10 pixels = 1 inch).
+// Coordinates are in standard map pixel units (10 pixels = 1 foot).
 //
 type Coordinates struct {
 	X, Y float64
 }
 
 //
-// SaveData converts a Coordinate pair to a text representation
+// saveData converts a Coordinate pair to a text representation
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.SaveData(), but simply
+// This works just as described for BaseMapElement.saveData(), but simply
 // saves the X and Y fields for the element's reference point.
 //
-func (c Coordinates) SaveData(data []string, prefix, id string) ([]string, error) {
+func (c Coordinates) saveData(data []string, prefix, id string) ([]string, error) {
 	return saveValues(data, prefix, id, []saveAttributes{
 		{"X", "f", true, c.X},
 		{"Y", "f", true, c.Y},
@@ -342,48 +342,48 @@ func (c Coordinates) SaveData(data []string, prefix, id string) ([]string, error
 }
 
 // Coordinates
-//  SaveData
+//  saveData
 //
 // MapObject
 //  BaseMapObject
 //   MapElement
 //     objMapElement
-//     SaveData
+//     saveData
 //    ArcElement
 //      objArcElement
-//      SaveData
+//      saveData
 //    CircleElement
 //      objCircleElement
-//      SaveData
+//      saveData
 //    LineElement
 //      objLineElement
-//      SaveData
+//      saveData
 //    PolygonElement
 //      objPolygonElement
-//      SaveData
+//      saveData
 //    RectangleElement
 //      objRectangleElement
-//      SaveData
+//      saveData
 //    SpellAreaOfEffect
 //      objSpellAreaOfEffect
-//      SaveData
+//      saveData
 //    (TextFont)
 //      objTextFont
 //    TextElement
 //      objTextElement
-//      SaveData
+//      saveData
 //    TileElement
 //      objTileElement
-//      SaveData
+//      saveData
 //   CreatureToken
 //     objCreature
-//     SaveData
+//     saveData
 //    PlayerToken
 //      objPlayer
-//      SaveData
+//      saveData
 //    MonsterToken
 //      objMonster
-//      SaveData
+//      saveData
 //    (CreatureHealth)
 //      objHealth
 //      newHealth
@@ -412,7 +412,7 @@ type BaseMapObject struct {
 }
 
 //
-// SaveData converts a MapObject to a text representation of that object
+// saveData converts a MapObject to a text representation of that object
 // in the map file format (suitable for sending to clients or saving to a disk
 // file). Each type must have one of these methods to satisfy the MapObject
 // interface.
@@ -428,7 +428,7 @@ type BaseMapObject struct {
 //
 // The object's ID as recorded in the saved data list is given by the id parameter.
 //
-func (o BaseMapObject) SaveData(data []string, prefix, id string) ([]string, error) {
+func (o BaseMapObject) saveData(data []string, prefix, id string) ([]string, error) {
 	return data, nil
 }
 
@@ -532,18 +532,18 @@ func objMapElement(objId string, objDef map[string][]string) (MapElement, error)
 }
 
 //
-// SaveData converts a MapElement to a text representation
+// saveData converts a MapElement to a text representation
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.SaveData().
+// This works just as described for BaseMapElement.saveData().
 //
-func (o MapElement) SaveData(data []string, prefix, id string) ([]string, error) {
+func (o MapElement) saveData(data []string, prefix, id string) ([]string, error) {
 	var err error
-	if data, err = o.BaseMapObject.SaveData(data, prefix, id); err != nil {
+	if data, err = o.BaseMapObject.saveData(data, prefix, id); err != nil {
 		return nil, err
 	}
-	if data, err = o.Coordinates.SaveData(data, prefix, id); err != nil {
+	if data, err = o.Coordinates.saveData(data, prefix, id); err != nil {
 		return nil, err
 	}
 
@@ -623,14 +623,14 @@ func objArcElement(objId string, objDef map[string][]string) (ArcElement, error)
 }
 
 //
-// SaveData converts an ArcElement to a text representation
+// saveData converts an ArcElement to a text representation
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.SaveData().
+// This works just as described for BaseMapElement.saveData().
 //
-func (o ArcElement) SaveData(data []string, prefix, id string) ([]string, error) {
-	data, err := o.MapElement.SaveData(data, prefix, id)
+func (o ArcElement) saveData(data []string, prefix, id string) ([]string, error) {
+	data, err := o.MapElement.saveData(data, prefix, id)
 	if err != nil {
 		return nil, err
 	}
@@ -676,14 +676,14 @@ func objCircleElement(objId string, objDef map[string][]string) (CircleElement, 
 }
 
 //
-// SaveData converts a CircleElement to a text representation
+// saveData converts a CircleElement to a text representation
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.SaveData().
+// This works just as described for BaseMapElement.saveData().
 //
-func (o CircleElement) SaveData(data []string, prefix, id string) ([]string, error) {
-	data, err := o.MapElement.SaveData(data, prefix, id)
+func (o CircleElement) saveData(data []string, prefix, id string) ([]string, error) {
+	data, err := o.MapElement.saveData(data, prefix, id)
 	if err != nil {
 		return nil, err
 	}
@@ -733,14 +733,14 @@ func objLineElement(objId string, objDef map[string][]string) (LineElement, erro
 }
 
 //
-// SaveData converts a LineElement to a text representation
+// saveData converts a LineElement to a text representation
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.SaveData().
+// This works just as described for BaseMapElement.saveData().
 //
-func (o LineElement) SaveData(data []string, prefix, id string) ([]string, error) {
-	data, err := o.MapElement.SaveData(data, prefix, id)
+func (o LineElement) saveData(data []string, prefix, id string) ([]string, error) {
+	data, err := o.MapElement.saveData(data, prefix, id)
 	if err != nil {
 		return nil, err
 	}
@@ -794,14 +794,14 @@ func objPolygonElement(objId string, objDef map[string][]string) (PolygonElement
 }
 
 //
-// SaveData converts a PolygonElement to a text representation
+// saveData converts a PolygonElement to a text representation
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.SaveData().
+// This works just as described for BaseMapElement.saveData().
 //
-func (o PolygonElement) SaveData(data []string, prefix, id string) ([]string, error) {
-	data, err := o.MapElement.SaveData(data, prefix, id)
+func (o PolygonElement) saveData(data []string, prefix, id string) ([]string, error) {
+	data, err := o.MapElement.saveData(data, prefix, id)
 	if err != nil {
 		return nil, err
 	}
@@ -851,14 +851,14 @@ func objRectangleElement(objId string, objDef map[string][]string) (RectangleEle
 }
 
 //
-// SaveData converts a RectangleElement to a text representation
+// saveData converts a RectangleElement to a text representation
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.SaveData().
+// This works just as described for BaseMapElement.saveData().
 //
-func (o RectangleElement) SaveData(data []string, prefix, id string) ([]string, error) {
-	data, err := o.MapElement.SaveData(data, prefix, id)
+func (o RectangleElement) saveData(data []string, prefix, id string) ([]string, error) {
+	data, err := o.MapElement.saveData(data, prefix, id)
 	if err != nil {
 		return nil, err
 	}
@@ -910,14 +910,14 @@ func objSpellAreaOfEffectElement(objId string, objDef map[string][]string) (Spel
 }
 
 //
-// SaveData converts a SpellAreaOfEffectElement to a text representation
+// saveData converts a SpellAreaOfEffectElement to a text representation
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.SaveData().
+// This works just as described for BaseMapElement.saveData().
 //
-func (o SpellAreaOfEffectElement) SaveData(data []string, prefix, id string) ([]string, error) {
-	data, err := o.MapElement.SaveData(data, prefix, id)
+func (o SpellAreaOfEffectElement) saveData(data []string, prefix, id string) ([]string, error) {
+	data, err := o.MapElement.saveData(data, prefix, id)
 	if err != nil {
 		return nil, err
 	}
@@ -1052,14 +1052,14 @@ func objTextElement(objId string, objDef map[string][]string) (TextElement, erro
 }
 
 //
-// SaveData converts a TextElement to a text representation
+// saveData converts a TextElement to a text representation
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.SaveData().
+// This works just as described for BaseMapElement.saveData().
 //
-func (o TextElement) SaveData(data []string, prefix, id string) ([]string, error) {
-	data, err := o.MapElement.SaveData(data, prefix, id)
+func (o TextElement) saveData(data []string, prefix, id string) ([]string, error) {
+	data, err := o.MapElement.saveData(data, prefix, id)
 	if err != nil {
 		return nil, err
 	}
@@ -1138,14 +1138,14 @@ func objTileElement(objId string, objDef map[string][]string) (TileElement, erro
 }
 
 //
-// SaveData converts a TileElement to a text representation
+// saveData converts a TileElement to a text representation
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.SaveData().
+// This works just as described for BaseMapElement.saveData().
 //
-func (o TileElement) SaveData(data []string, prefix, id string) ([]string, error) {
-	data, err := o.MapElement.SaveData(data, prefix, id)
+func (o TileElement) saveData(data []string, prefix, id string) ([]string, error) {
+	data, err := o.MapElement.saveData(data, prefix, id)
 	if err != nil {
 		return nil, err
 	}
@@ -1252,7 +1252,7 @@ type CreatureToken struct {
 	// using the "reach" alternate threat zone?
 	Reach bool
 
-	// Is the creature currently dead? (This take precedence over the
+	// Is the creature currently dead? (This takes precedence over the
 	// Health attribute's indication that the creature has taken a
 	// fatal amount of damage.)
 	Killed bool
@@ -1470,15 +1470,15 @@ func saveCreatureAoE(aoe *RadiusAoE) (string, error) {
 }
 
 //
-// SaveData converts a CreatureToken to a text representation
+// saveData converts a CreatureToken to a text representation
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.SaveData().
+// This works just as described for BaseMapElement.saveData().
 //
-func (o CreatureToken) SaveData(data []string, prefix, id string) ([]string, error) {
+func (o CreatureToken) saveData(data []string, prefix, id string) ([]string, error) {
 	var err error
-	if data, err = o.BaseMapObject.SaveData(data, prefix, id); err != nil {
+	if data, err = o.BaseMapObject.saveData(data, prefix, id); err != nil {
 		return nil, err
 	}
 
@@ -1562,14 +1562,14 @@ func objPlayer(objId string, objDef map[string][]string) (PlayerToken, error) {
 }
 
 //
-// SaveData converts a PlayerToken to a text representation
+// saveData converts a PlayerToken to a text representation
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.SaveData().
+// This works just as described for BaseMapElement.saveData().
 //
-func (o PlayerToken) SaveData(data []string, prefix, id string) ([]string, error) {
-	return o.CreatureToken.SaveData(data, "P", id)
+func (o PlayerToken) saveData(data []string, prefix, id string) ([]string, error) {
+	return o.CreatureToken.saveData(data, "P", id)
 }
 
 //________________________________________________________________________________
@@ -1598,14 +1598,14 @@ func objMonster(objId string, objDef map[string][]string) (MonsterToken, error) 
 }
 
 //
-// SaveData converts a MonsterToken to a text representation
+// saveData converts a MonsterToken to a text representation
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.SaveData().
+// This works just as described for BaseMapElement.saveData().
 //
-func (o MonsterToken) SaveData(data []string, prefix, id string) ([]string, error) {
-	return o.CreatureToken.SaveData(data, "M", id)
+func (o MonsterToken) saveData(data []string, prefix, id string) ([]string, error) {
+	return o.CreatureToken.saveData(data, "M", id)
 }
 
 //________________________________________________________________________________
@@ -2114,7 +2114,7 @@ func SaveObjects(objects []MapObject, images map[string]ImageDefinition, files [
 	}
 
 	for _, o := range objects {
-		data, err = o.SaveData(data, "", o.ObjID())
+		data, err = o.saveData(data, "", o.ObjID())
 		if err != nil {
 			return nil, fmt.Errorf("could not save object %s: %v", o.ObjID(), err)
 		}

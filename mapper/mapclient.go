@@ -70,8 +70,8 @@ import (
 // and protocol versions supported by this code.
 //
 const (
-	GMAMapperProtocol=332     // @@##@@ auto-configured
-	GMAVersionNumber="4.3.6" // @@##@@ auto-configured
+	GMAMapperProtocol              = 332     // @@##@@ auto-configured
+	GMAVersionNumber               = "4.3.6" // @@##@@ auto-configured
 	MINIMUM_SUPPORTED_MAP_PROTOCOL = 332
 	MAXIMUM_SUPPORTED_MAP_PROTOCOL = 332
 )
@@ -200,7 +200,7 @@ func (c CharacterDefinition) Text() string {
 type CharacterDefinitions map[string]CharacterDefinition
 
 //
-// Text describes the PCs in the receiving slice of CharacterDefinitions in a
+// Text describes the PCs in the receiving map of CharacterDefinitions in a
 // simple multi-line text form.
 //
 func (cs CharacterDefinitions) Text() string {
@@ -962,7 +962,8 @@ type LoadFromMessagePayload struct {
 // disk file or from the server. The previous map contents are erased before
 // each file is loaded.
 //
-// If local is true, a local path is specified. This is DEPRECATED.
+// If local is true, a local path is specified. This is discouraged in favor
+// of storing files on the server.
 //
 // Otherwise, the path should be the ID for the file stored on the server.
 //
@@ -1236,16 +1237,16 @@ func (c *Connection) RollDice(to []string, rollspec string) error {
 //
 // RollDiceToAll is equivalent to RollDice addressed to all users.
 //
-func (c *Connection) RollDiceToAll(message string) error {
-	return c.send("D", ToAll, message)
+func (c *Connection) RollDiceToAll(rollspec string) error {
+	return c.send("D", ToAll, rollspec)
 }
 
 //
 // RollDiceToGM is equivalent to RollDice addressed only to the GM.
 // This is a "blind" roll; only the GM will see the result.
 //
-func (c *Connection) RollDiceToGM(message string) error {
-	return c.send("D", ToGMOnly, message)
+func (c *Connection) RollDiceToGM(rollspec string) error {
+	return c.send("D", ToGMOnly, rollspec)
 }
 
 //
@@ -1270,25 +1271,14 @@ type RollResultMessagePayload struct {
 // |____/|_|\___\___|_|   |_|  \___||___/\___|\__|___/
 //
 
-type DicePreset struct {
-	// The name of the preset
-	Name string
-
-	// Description of the preset
-	Description string
-
-	// The die-roll specification string
-	RollSpec string
-}
-
 //
 // DefineDicePresets replaces any existing die-roll presets you have
 // stored on the server with the new set passed as the presets parameter.
 //
-func (c *Connection) DefineDicePresets(presets []DicePreset) error {
+func (c *Connection) DefineDicePresets(presets []DieRollPreset) error {
 	var plist [][]string
 	for _, p := range presets {
-		plist = append(plist, []string{p.Name, p.Description, p.RollSpec})
+		plist = append(plist, []string{p.Name, p.Description, p.DieRollSpec})
 	}
 	return c.send("DD", plist)
 }
@@ -1297,10 +1287,10 @@ func (c *Connection) DefineDicePresets(presets []DicePreset) error {
 // AddDicePresets is like DefineDicePresets except that it adds the presets
 // passed in to the existing set rather than replacing them.
 //
-func (c *Connection) AddDicePresets(presets []DicePreset) error {
+func (c *Connection) AddDicePresets(presets []DieRollPreset) error {
 	var plist [][]string
 	for _, p := range presets {
-		plist = append(plist, []string{p.Name, p.Description, p.RollSpec})
+		plist = append(plist, []string{p.Name, p.Description, p.DieRollSpec})
 	}
 	return c.send("DD+", plist)
 }
@@ -1339,6 +1329,11 @@ type UpdateDicePresetsMessagePayload struct {
 	Presets []DieRollPreset
 }
 
+//
+// DieRollPreset describes each die-roll specification the user
+// has stored on the server as a ready-to-go preset value which will
+// be used often, and needs to be persistent across gaming sessions.
+//
 type DieRollPreset struct {
 	// The name by which this die-roll preset is identified to the user.
 	// This must be unique among that user's presets.
@@ -1566,7 +1561,7 @@ func (c StatusMarkerDefinition) Text() string {
 type StatusMarkerDefinitions map[string]StatusMarkerDefinition
 
 //
-// Text produces a simple text description of a slice of StatusMarkerDefinitions
+// Text produces a simple text description of a map of StatusMarkerDefinitions
 // as a multi-line string.
 //
 func (cs StatusMarkerDefinitions) Text() string {
@@ -1670,8 +1665,9 @@ func (c *Connection) SyncChat(target int) error {
 // background while the rest of the appliction continues with other
 // tasks.
 //
-// Any errors encountered by the Dial() method will be reported on
-// the channel being watched for ERROR events.
+// Any errors encountered by the Dial() method will be reported to
+// the channel subscribed to watch for ERROR messages. If the client
+// application did not subscribe to ERROR messages, they will be logged.
 //
 // Example:
 //   ctx, cancel := context.Background()
