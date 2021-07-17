@@ -26,16 +26,16 @@
 // clients in sync with each other and with the other GMA tools.
 //
 // A client should establish a connection to the game server by
-// calling the Dial() method in this package. This function will
+// calling the Dial method in this package. This function will
 // sign on to the server and then enter a loop, sending incoming
 // server messages back on the channel(s) established via the
-// Subscribe() method. Dial() returns when the session with the
+// Subscribe method. Dial returns when the session with the
 // server has terminated.
 //
-// Typically, an application will invoke the Dial() method in a
+// Typically, an application will invoke the Dial method in a
 // goroutine. Calling the associated context's cancel function
 // will signal that we want to stop talking to the server, resulting
-// in the termination of the running Dial() method.
+// in the termination of the running Dial method.
 //
 package mapper
 
@@ -93,15 +93,16 @@ var AuthenticationRequired = errors.New("authenticator required for connection")
 var AuthenticationFailed = errors.New("access denied to server")
 
 //
-// A connection to the server is described by the Connection
-// type.
+// Connection describes a connection to the server. These are
+// created with NewConnection and then send methods such as
+// Subscribe and Dial.
 //
 type Connection struct {
 	// The context for our session, either one we created in the
-	// NewConnection() function or one we received from the caller.
+	// NewConnection function or one we received from the caller.
 	Context context.Context
 
-	// The server endpoint, in any form acceptable to the net.Dial()
+	// The server endpoint, in any form acceptable to the net.Dial
 	// function.
 	Endpoint string
 
@@ -172,7 +173,7 @@ func (c *Connection) IsReady() bool {
 }
 
 //
-// A CharacterDefinition describes a PC known as a regular player of the
+// CharacterDefinition describes a PC known as a regular player of the
 // game system.
 //
 type CharacterDefinition struct {
@@ -197,6 +198,16 @@ func (c CharacterDefinition) Text() string {
 		c.ObjID, c.Name, c.Color, c.Size, c.Area)
 }
 
+//
+// CharacterDefinitions is a collection of the known characters
+// in the game (note that these are the ones explicitly defined
+// by the server up-front, usually the player characters in the party,
+// which are special enough to be included in UI elements, not the
+// other characters and other creatures encountered during the game).
+//
+// These are collected in a map where the keys are the object IDs
+// of the characters.
+//
 type CharacterDefinitions map[string]CharacterDefinition
 
 //
@@ -212,18 +223,18 @@ func (cs CharacterDefinitions) Text() string {
 }
 
 //
-// Options which can be added to the NewConnection() function.
+// Options which can be added to the NewConnection function.
 //
 type connectionOption func(conn *Connection) error
 
 //
-// WithContext modifies the behavior of the NewConnection() function
+// WithContext modifies the behavior of the NewConnection function
 // by supplying a context for this connection, which may be used to
-// signal the Dial() method that the connection to the server should
+// signal the Dial method that the connection to the server should
 // be terminated.
 //
 // N.B.: When making the initial TCP connection to the server,
-// if there is a timeout value specified via WithTimeout(), then
+// if there is a timeout value specified via WithTimeout, then
 // a hanging connection will terminate when that timer expires,
 // regardless of the context. Otherwise, the connection will wait
 // indefinitely to complete OR until the context is cancelled.
@@ -236,9 +247,21 @@ func WithContext(ctx context.Context) connectionOption {
 }
 
 //
-// WithSubscription modifies the behavior of the NewConnection() function
+// WithSubscription modifies the behavior of the NewConnection function
 // by adding a server message subscription to the connection just as if
-// the Subscribe() method had been called on the connection value.
+// the Subscribe method had been called on the connection value.
+//
+// For example, this:
+//   server, err := NewConnection(endpoint,
+//                    WithSubscription(chats, ChatMessage, RollResult),
+//                    WithSubscription(oops, ERROR, UNKNOWN))
+//   go server.Dial()
+// is equivalent to this:
+//   server, err := NewConnection(endpoint)
+//   err = server.Subscribe(chats, ChatMessage, RollResult)
+//   err = server.Subscribe(oops, ERROR, UNKNOWN)
+//   go server.Dial()
+// (Of course, real production code should check the returned error values.)
 //
 func WithSubscription(ch chan MessagePayload, messages ...ServerMessage) connectionOption {
 	return func(c *Connection) error {
@@ -247,9 +270,11 @@ func WithSubscription(ch chan MessagePayload, messages ...ServerMessage) connect
 }
 
 //
-// WithAuthenticator modifies the behavior of the NewConnection() function
+// WithAuthenticator modifies the behavior of the NewConnection function
 // by adding an authenticator which will be used to identify the client
-// to the server.
+// to the server. If this option is not given, no attempt will be made
+// to authenticate, which is only appropriate for servers which do not
+// require authentication. (Which, hopefully, won't be the case anyway.)
 //
 func WithAuthenticator(a *auth.Authenticator) connectionOption {
 	return func(c *Connection) error {
@@ -259,8 +284,9 @@ func WithAuthenticator(a *auth.Authenticator) connectionOption {
 }
 
 //
-// WithLogger modifies the behavior of the NewConnection() function
-// by specifying a custom logger instead of the default one.
+// WithLogger modifies the behavior of the NewConnection function
+// by specifying a custom logger instead of the default one for
+// the Connection to use during its operations.
 //
 func WithLogger(l *log.Logger) connectionOption {
 	return func(c *Connection) error {
@@ -270,13 +296,14 @@ func WithLogger(l *log.Logger) connectionOption {
 }
 
 //
-// WithTimeout specifies the time to allow when making the TCP
+// WithTimeout modifies the behavior of the NewConnection function
+// by specifying the time to allow the Dial method to make the TCP
 // connection to the server. After this time expires, the attempt
 // is abandoned (but may be retried based on the value of
-// WithRetries(), if any).
+// WithRetries, if any).
 //
 // N.B.: When making the initial TCP connection to the server,
-// if there is a timeout value specified via WithTimeout(), then
+// if there is a timeout value specified via WithTimeout, then
 // a hanging connection will terminate when that timer expires,
 // regardless of the context (although a canceled context will
 // stop retry attempts). Otherwise, the connection will wait
@@ -290,11 +317,13 @@ func WithTimeout(t time.Duration) connectionOption {
 }
 
 //
-// WithRetries modifies the connection so that failed attempts
-// to make the TCP connection to the server will be tried again
-// the given number of times.
+// WithRetries modifies the behavior of the NewConnection function
+// to indicate how many times the Dial method should try to
+// establish a connection to the server before giving up.
 //
 // Setting this to 0 means to retry infinitely many times.
+// The default is to make a single attempt to connect to the
+// server.
 //
 func WithRetries(n uint) connectionOption {
 	return func(c *Connection) error {
@@ -304,16 +333,16 @@ func WithRetries(n uint) connectionOption {
 }
 
 //
-// StayConnected modifies the connection so that the Dial()
-// method will never return until the context is cancelled
-// or it failed to contact the server at all.
+// StayConnected modifies the behavior of the NewConnection call so that
+// when Dial is called on the new Connection, it will
+// continue to try to re-establish connections to the server
+// (if enable is true) until it utterly fails in the attempt.
+// This is useful in case connections to the server tend to
+// get inadvertently dropped, since this will allow the client
+// to automatically reconnect and resume operations.
 //
-// If the parameter is true, the stay-connected mode is enabled;
-// if false, it is disabled (the default).
-//
-// In other words, with this option in effect, if the server's
-// connection is lost, Dial() will simply try to reconnect and
-// continue operations.
+// If enable is false (the default), Dial will return as soon
+// as the server connection is dropped for any reason.
 //
 func StayConnected(enable bool) connectionOption {
 	return func(c *Connection) error {
@@ -323,8 +352,9 @@ func StayConnected(enable bool) connectionOption {
 }
 
 //
-// WithDebugging modifies the connection so that its operations
-// are logged to varying levels of verbosity:
+// WithDebugging modifies the behavior of the NewConnection function
+// so that the operations of the Connection's interaction with the
+// server are logged to varying levels of verbosity:
 //   0 - no extra logging
 //   1 - each incoming/outgoing message is logged
 //   2 - more internal state is exposed
@@ -338,7 +368,7 @@ func WithDebugging(level uint) connectionOption {
 }
 
 //
-// Create a new server connection value which can then be used to
+// NewConnection creates a new server connection value which can then be used to
 // manage our communication with the server.
 //
 // After the endpoint, you may specify any of the following options
@@ -351,6 +381,25 @@ func WithDebugging(level uint) connectionOption {
 //   WithRetries(n)
 //   WithSubscription(ch, msgs...)
 //   WithTimeout(t)
+//
+// Example:
+//   a := NewClientAuthenticator("fred", []byte("sekret"), "some random client")
+//   ctx, cancel := context.Background()
+//   defer cancel()
+//
+//   messages := make(chan MessagePayload, 10)
+//   problems := make(chan MessagePayload, 10)
+//
+//   server, err := NewConnection("mygame.example.org:2323",
+//                     WithAuthenticator(a),
+//                     WithContext(ctx),
+//                     StayConnected(true),
+//                     WithSubscription(messages, ChatMessage, RollResult),
+//                     WithSubscription(problems, ERROR, UNKNOWN))
+//   if err != nil {
+//      log.Fatalf("can't reach the server: %v", err)
+//   }
+//   go server.Dial()
 //
 func NewConnection(endpoint string, opts ...connectionOption) (Connection, error) {
 	newCon := Connection{
@@ -389,13 +438,13 @@ func (c *Connection) debug(level uint, msg string) {
 
 //
 // Close terminates the connection to the server.
-// Note that the Dial() function normally closes the connection
+// Note that the Dial function normally closes the connection
 // before it returns, so calling this explicitly should not
 // normally be necessary.
 //
-// Calling Close() will result in the Dial() function stopping
+// Calling Close will result in the Dial function stopping
 // due to the connection disappearing, but it is better to cancel
-// the context being watched by Dial() instead.
+// the context being watched by Dial instead.
 //
 func (c *Connection) Close() {
 	c.debug(1, "Close()")
@@ -407,14 +456,14 @@ func (c *Connection) Close() {
 // when they arrive.
 //
 // If multiple messages are specified, they are all directed to send their payloads
-// to the channel, which may use the MessageType() method to differentiate what
+// to the channel, which may use the MessageType method to differentiate what
 // kind of payload was sent.
 //
 // This method may be called multiple times for the same channel, in which case
 // the specified message(s) are added to the set which sends to that channel.
 //
-// If another Subscribe() method is called with the same ServerMessage that a
-// previous Subscribe() mentioned, that will change the subscription for that
+// If another Subscribe method is called with the same ServerMessage that a
+// previous Subscribe mentioned, that will change the subscription for that
 // message to go to the new channel instead of the previous one.
 //
 // Unless subscribed, the following default behaviors are assumed:
@@ -460,18 +509,30 @@ func (conn *Connection) Subscribe(ch chan MessagePayload, messages ...ServerMess
 }
 
 //
-// Incoming server messages are described by a structure of
-// a type implementing MessagePayload.
+// MessagePayload is an interface that includes any kind of message the server will
+// send to us.
 //
 type MessagePayload interface {
 	MessageType() ServerMessage
 	RawMessage() []string
 }
 
+//
+// ServerMessage is an arbitrary code which identifies specific message types that
+// we can receive from the server. This value is passed to the Subscribe method
+// and returned by the MessageType method. These values are intended for use
+// within an actively-running program but are not guaranteed to remain stable across
+// new releases of the code, so they should not be stored and re-used by a later
+// execution of the client, nor passed to other programs whose definition of these
+// values may not agree.
+//
 type ServerMessage byte
 
+// Despite the warning above, we'll do our best to avoid changing these values
+// if at all possible.
+
 //
-// These are the server messages to which a client may subscribe.
+// ServerMessage values (see the comments accompanying the type definition).
 //
 const (
 	AddCharacter = iota
@@ -507,18 +568,69 @@ const (
 )
 
 //
-// The bare minimum payload for any server message.
+// BaseMessagePayload is not a payload type that you should ever
+// encounter directly, but it is included in all other payload
+// types. It holds the bare minimum data for any server message.
 //
 type BaseMessagePayload struct {
 	rawMessage  []string
 	messageType ServerMessage
 }
 
-func (p BaseMessagePayload) RawMessage() []string       { return p.rawMessage }
+//
+// RawMessage returns the raw message received from the server before
+// it was parsed out into the MessagePayload the client should arguably
+// be looking at instead.
+//
+// The raw message data may be useful for debugging purposes or other
+// low-level poking around, though, so we make it available here. The value
+// returned is a slice of strings representing the fields of the received
+// message after being broken out into fields. For multi-line messages, it
+// will instead be a slice of un-broken-out lines.
+//
+func (p BaseMessagePayload) RawMessage() []string { return p.rawMessage }
+
+//
+// MessageType returns the type of message this MessagePayload represents.
+// This value will be the same as the ServerMessage value used for the
+// Subscribe function, and may be used with channels which receive multiple
+// kinds of messages to differentiate them, like so:
+//
+//   select {
+//   case p<-messages:
+//       // This channel may receive a ChatMessage or RollResult.
+//       switch p.MessageType() {
+//       case ChatMessage:
+//           // Do whatever with p.(ChatMessageMessagePayload)
+//       case RollResult:
+//           // Do whatever with p.(RollResultMessagePayload)
+//       default:
+//           // Something bad happened!
+//       }
+//    ...
+//   }
+//
+// You can also use a type switch to accomplish the same thing and avoid
+// the explicit type assertions:
+//   select {
+//   case p<-messages:
+//       // This channel may receive a ChatMessage or RollResult.
+//       switch msg := p.(type) {
+//       case ChatMessageMessagePayload:
+//           // Do whatever with msg
+//       case RollResultMessagePayload:
+//           // Do whatever with msg
+//       default:
+//           // Something bad happened!
+//       }
+//    ...
+//   }
+//
 func (p BaseMessagePayload) MessageType() ServerMessage { return p.messageType }
 
 //
-// An error encountered when trying to receive a message.
+// ErrorMessagePayload describes
+// an error which encountered when trying to receive a message.
 //
 type ErrorMessagePayload struct {
 	BaseMessagePayload
@@ -527,7 +639,8 @@ type ErrorMessagePayload struct {
 }
 
 //
-// We received a server message but have no idea what it is.
+// UnknownMessagePayload describes a server message we received
+// but have no idea what it is.
 //
 type UnknownMessagePayload struct {
 	BaseMessagePayload
@@ -542,14 +655,15 @@ type UnknownMessagePayload struct {
 //
 
 //
-// AddCharacter message: add a PC to the party
+// AddCharacterMessagePayload holds the information sent by the server's AddCharacter
+// message to add a new PC to the party. This is not done for most creatures
+// and NPCs encountered; it is for the PCs and significant NPCs who are important
+// enough to be treated specially by clients (such as being included in menus).
 //
 type AddCharacterMessagePayload struct {
 	BaseMessagePayload
 	CharacterDefinition
 }
-
-/* Clients may not send these */
 
 //________________________________________________________________________________
 //     _       _     _ ___
@@ -560,8 +674,11 @@ type AddCharacterMessagePayload struct {
 //                                         |___/
 
 //
-// AddImage message: the client should locally note the definition
-// of an image for later reference.
+// AddImageMessagePayload holds the information sent by the server's AddImage
+// message informing the client as to where it can locate an image's data.
+//
+// Call the AddImage method to send this message out to others if you know
+// of an image file they should be aware of.
 //
 type AddImageMessagePayload struct {
 	BaseMessagePayload
@@ -590,7 +707,7 @@ func (c *Connection) AddImage(idef ImageDefinition) error {
 // AddImageData sends binary image data to peer clients.
 //
 // Generally, it is better to store an image file on the server, and
-// then call AddImage() to point others to find the image there, since
+// then call AddImage to point others to find the image there, since
 // that will be more efficient than sending it through the mapper
 // protocol.
 //
@@ -624,9 +741,11 @@ func (c *Connection) AddImageData(idef ImageDefinition, data []byte) error {
 //                              |__/
 
 //
-// AddObjAttributes message: Adjust the multi-value attribute
-// of the object with the given ID by adding the new values
-// to it.
+// AddObjAttribuesMessagePayload holds the information sent by the server's AddObjAttributes
+// message. This tells the client to adjust the multi-value attribute
+// of the object with the given ID by adding the new values to it.
+//
+// Call the AddObjAttributes method to send this message out to other clients.
 //
 type AddObjAttributesMessagePayload struct {
 	BaseMessagePayload
@@ -652,8 +771,11 @@ func (c *Connection) AddObjAttributes(objID, attrName string, values []string) e
 //             |__/
 
 //
-// AdjustView message: Change your displayed map view to the given
-// fractions of the full canvas size.
+// AdjustViewMessagePayload holds the information sent by the server's AdjustView
+// message. This tells the client to set its viewable area so that its x and y
+// scrollbars are at the given proportion of their full range.
+//
+// Call the AdjustView method to send this message out to other clients.
 //
 type AdjustViewMessagePayload struct {
 	BaseMessagePayload
@@ -694,7 +816,7 @@ func (c *Connection) CacheFile(serverID string) error {
 //                                                   |___/
 
 //
-// Fields common to chat messages and die-roll results.
+// ChatCommon holds fields common to chat messages and die-roll results.
 //
 type ChatCommon struct {
 	// The name of the person sending the message.
@@ -715,8 +837,10 @@ type ChatCommon struct {
 }
 
 //
-// ChatMessage message: A chat message was received from the server
-// for the client to display.
+// ChatMessageMessagePayload holds the information sent by the server's ChatMessage
+// message. This is a message sent by other players or perhaps by the server itself.
+//
+// Call the ChatMessage, ChatMessageToAll, or ChatMessageToGM methods to send this message out to other clients.
 //
 type ChatMessageMessagePayload struct {
 	BaseMessagePayload
@@ -727,15 +851,15 @@ type ChatMessageMessagePayload struct {
 }
 
 const (
-	// ToGMOnly as one of the recipients to a ChatMessage()
-	// or Roll() method will cause the message or die-roll
+	// ToGMOnly as one of the recipients to a ChatMessage
+	// or Roll method will cause the message or die-roll
 	// result to be sent to the GM only.
-	ToGMOnly = "%" // ChatMessage recipient is GM only
+	ToGMOnly = "%"
 
-	// ToAll as one of the recipients to a ChatMessage()
-	// or Roll() method will cause the message to go to
+	// ToAll as one of the recipients to a ChatMessage
+	// or Roll method will cause the message to go to
 	// all connected clients.
-	ToAll = "*" // ChatMessage recipients are all users
+	ToAll = "*"
 )
 
 //
@@ -772,16 +896,22 @@ func (c *Connection) ChatMessageToGM(message string) error {
 //
 
 //
-// Clear message: The client should remove the given object from
-// its map. This ID may also be one of the following:
-//   *                    Remove all objects
-//   E*                   Remove all map elements
-//   M*                   Remove all monster tokens
-//   P*                   Remove all player tokens
-//   [<imagename>=]<name> Remove token with given <name>
+// ClearMessagePayload holds the information sent by the server's Clear
+// message. This tells the client to remove one or more objects from its
+// canvas.
+//
+// Call the Clear method to send this message out to other clients.
 //
 type ClearMessagePayload struct {
 	BaseMessagePayload
+
+	// The ObjID gives the object ID for the object to be removed, or one of
+	// the following:
+	//   *                    Remove all objects
+	//   E*                   Remove all map elements
+	//   M*                   Remove all monster tokens
+	//   P*                   Remove all player tokens
+	//   [<imagename>=]<name> Remove token with given <name>
 	ObjID string
 }
 
@@ -807,7 +937,10 @@ func (c *Connection) Clear(objID string) error {
 //
 
 //
-// ClearChat message: clear the client's chat history
+// ClearChatMessagePayload holds the information sent by the server's ClearChat
+// message. This tells the client to remove some messages from its chat history.
+//
+// Call the ClearChat method to send this message out to other clients.
 //
 type ClearChatMessagePayload struct {
 	BaseMessagePayload
@@ -853,8 +986,11 @@ func (c *Connection) ClearChat(target int, silently bool) error {
 //
 
 //
-// ClearFrom message: remove all elements in the map file
-// referenced.
+// ClearFromMessagePayload holds the information sent by the server's ClearFrom
+// message. This tells the client to remove all elements mentioned in the specified
+// map file.
+//
+// Call the ClearFrom method to send this message out to other clients.
 //
 type ClearFromMessagePayload struct {
 	BaseMessagePayload
@@ -878,10 +1014,15 @@ func (c *Connection) ClearFrom(serverID string) error {
 //
 
 //
-// CombatMode message: indicate if combat mode should be in effect.
+// CombatModeMessagePayload holds the information sent by the server's CombatMode
+// message. This tells the client to enter or exit combat (initiative) mode.
+//
+// Call the CombatMode method to send this message out to other clients.
 //
 type CombatModeMessagePayload struct {
 	BaseMessagePayload
+
+	// If true, we should be in combat mode.
 	Enabled bool
 }
 
@@ -893,7 +1034,8 @@ func (c *Connection) CombatMode(enabled bool) error {
 }
 
 //
-// Toolbar message: indicate if the client's toolbar should be displayed.
+// ToolbarMessagePayload holds the information sent by the server's Toolbar
+// message. This tells the client to display or hide its toolbar.
 //
 type ToolbarMessagePayload struct {
 	BaseMessagePayload
@@ -908,15 +1050,17 @@ type ToolbarMessagePayload struct {
 //
 
 //
-// Comment message: a server comment to the client. The client is
-// free to ignore these.
+// CommentMessagePayload holds the information sent by the server's Comment
+// message. This provides information from the server that the client is
+// free to ignore, but may find interesting. Nothing sent in comments is
+// critical to the operation of a client. However, some incidental bits
+// of information such as an advisement of currently-supported client
+// versions and progress gauge data are sent via comments.
 //
 type CommentMessagePayload struct {
 	BaseMessagePayload
 	Text string
 }
-
-/* Clients don't send these */
 
 //  _____ _ _ _            ____  _          ____                     _
 // |  ___(_) | |_ ___ _ __|  _ \(_) ___ ___|  _ \ _ __ ___  ___  ___| |_ ___
@@ -942,7 +1086,13 @@ func (c *Connection) FilterDicePresets(re string) error {
 //
 
 //
-// LoadFrom message: load elements from the given file.
+// LoadFromMessagePayload holds the information sent by the server's LoadFrom
+// message. This tells the client to open the file named (which may either be
+// a local disk file or one retrieved from the server), and either replacing their
+// current canvas contents with the elements from that file, or adding those
+// elements to the existing contents.
+//
+// Call the LoadFrom method to send this message out to other clients.
 //
 type LoadFromMessagePayload struct {
 	BaseMessagePayload
@@ -998,7 +1148,12 @@ func (c *Connection) LoadFrom(path string, local bool, merge bool) error {
 //                                  |__/
 
 //
-// LoadObject message: load an object from the server.
+// LoadObjectMessagePayload holds the information sent by the server's LoadObject
+// message. This tells the client to load the MapObject contained in the payload
+// structure. This is used when the server (on behalf of other clients, usually)
+// sends map objects directly rather than loading them from files.
+//
+// Call the LoadObject method to send this message out to other clients.
 //
 type LoadObjectMessagePayload struct {
 	BaseMessagePayload
@@ -1042,8 +1197,8 @@ func streamChecksumStrings(data []string) string {
 //
 // LoadObject sends a MapObject to all peers.
 //
-func (c *Connection) LoadObject(me MapObject) error {
-	data, err := SaveObjects([]MapObject{me}, nil, nil)
+func (c *Connection) LoadObject(mo MapObject) error {
+	data, err := SaveObjects([]MapObject{mo}, nil, nil)
 	if err != nil {
 		return fmt.Errorf("Unable to send map object: %v", err)
 	}
@@ -1069,14 +1224,17 @@ func (c *Connection) LoadObject(me MapObject) error {
 //
 
 //
-// Marco message: the server is asking if we are still
-// alive and responding. Reply by sending a Polo message.
+// MarcoMessagePayload holds the information sent by the server's Marco
+// message. This is a "ping" message the server periodically sends to all
+// clients to ensure they are still responding. A client who receives a
+// MARCO message is expected to respond with a POLO message.
+//
+// If the client doesn't subscribe to Marco messages, the Dial method
+// will automatically reply with Polo messages.
 //
 type MarcoMessagePayload struct {
 	BaseMessagePayload
 }
-
-/* clients don't send these */
 
 //  __  __            _
 // |  \/  | __ _ _ __| | __
@@ -1086,7 +1244,11 @@ type MarcoMessagePayload struct {
 //
 
 //
-// Mark message: visually mark the given map coordinates.
+// MarkMessagePayload holds the information sent by the server's Mark
+// message. This tells the client to
+// visually mark the given map coordinates.
+//
+// Call the Mark method to send this message out to other clients.
 //
 type MarkMessagePayload struct {
 	BaseMessagePayload
@@ -1109,13 +1271,17 @@ func (c *Connection) Mark(x, y float64) error {
 //
 
 //
-// PlaceSomeone message: introduce a new creature token,
+// PlaceSomeoneMessagePayload holds the information sent by the server's PlaceSomeone
+// message. This tells the client to
+// introduce a new creature token,
 // or if that token is already on the board, update it
 // with the new information (usually just moving its location).
 //
 // Retain any existing attributes in the original which have nil
 // values here (notably, this server message never carries health
 // stats so that structure will always be nil).
+//
+// Call the PlaceSomeone method to send this message out to other clients.
 //
 type PlaceSomeoneMessagePayload struct {
 	BaseMessagePayload
@@ -1129,7 +1295,7 @@ type PlaceSomeoneMessagePayload struct {
 // If the creature is already on the map, it will be replaced by the
 // new one being presented here. Thus, PlaceSomeone may be used to change
 // the name or location of an existing creature, although the preferred
-// way to do that would be to use UpdateObjAttributes() to change those
+// way to do that would be to use UpdateObjAttributes to change those
 // specific attributes of the creature directly.
 //
 func (c *Connection) PlaceSomeone(someone interface{}) error {
@@ -1153,9 +1319,13 @@ func (c *Connection) PlaceSomeone(someone interface{}) error {
 //                        |___/                     |___/
 
 //
-// QueryImage message: a peer wants to know where to find a given
+// QueryImageMessagePayload holds the information sent by the server's QueryImage
+// message. This tells the client
+// that a peer wants to know where to find a given
 // image and the server didn't know either. If you know the definition
 // for that image, reply with an AddImage message of your own.
+//
+// Call the QueryImage method to send this message out to other clients.
 //
 type QueryImageMessagePayload struct {
 	BaseMessagePayload
@@ -1185,15 +1355,25 @@ func (c *Connection) QueryImage(idef ImageDefinition) error {
 //
 
 //
-// RemoveObjAttributes message: Adjust the multi-value attribute
-// of the object with the given ID by removing the new values
+// RemoveObjAttributesMessagePayload holds the information sent by the server's RemoveObjAttributes
+// message. This tells the client
+// to adjust the multi-value attribute
+// of the object with the given ID by removing the listed values
 // from it.
+//
+// Call the RemoveObjAttributes method to send this message out to other clients.
 //
 type RemoveObjAttributesMessagePayload struct {
 	BaseMessagePayload
-	ObjID    string
+
+	// The ID of the object to be modified
+	ObjID string
+
+	// The name of the attribute to modify. Must be one with a []string value.
 	AttrName string
-	Values   []string
+
+	// The values to remove from the attribute.
+	Values []string
 }
 
 //
@@ -1224,7 +1404,7 @@ func (c *Connection) RemoveObjAttributes(objID, attrName string, values []string
 //
 // The to parameter lists the users who should receive the
 // results of the die roll, in the same way as recipients are
-// listed to the ChatMessage() function.
+// listed to the ChatMessage function.
 //
 // The rollspec may have any form that would be accepted to the
 // dice.Roll function and dice.DieRoller.DoRoll method. See the dice package for details.
@@ -1235,23 +1415,22 @@ func (c *Connection) RollDice(to []string, rollspec string) error {
 }
 
 //
-// RollDiceToAll is equivalent to RollDice addressed to all users.
+// RollDiceToAll is equivalent to RollDice, sending the results to all users.
 //
 func (c *Connection) RollDiceToAll(rollspec string) error {
 	return c.send("D", ToAll, rollspec)
 }
 
 //
-// RollDiceToGM is equivalent to RollDice addressed only to the GM.
-// This is a "blind" roll; only the GM will see the result.
+// RollDiceToGM is equivalent to RollDice, sending the results only to the GM.
 //
 func (c *Connection) RollDiceToGM(rollspec string) error {
 	return c.send("D", ToGMOnly, rollspec)
 }
 
 //
-// RollResult message: the server has rolled dice for someone
-// and is sending out the results of that roll.
+// RollResultMessagePayload holds the information sent by the server's RollResult
+// message. This tells the client the results of a die roll.
 //
 type RollResultMessagePayload struct {
 	BaseMessagePayload
@@ -1305,7 +1484,8 @@ func (c *Connection) QueryDicePresets() error {
 }
 
 //
-// UpdateClock message: change the game clock
+// UpdateClockMessagePayload holds the information sent by the server's UpdateClock
+// message. This tells the client to update its clock display to the new value.
 //
 type UpdateClockMessagePayload struct {
 	BaseMessagePayload
@@ -1315,12 +1495,15 @@ type UpdateClockMessagePayload struct {
 	Absolute float64
 
 	// The elapsed time counter is now this many seconds from
-	// some epoch set by the GM.
+	// some reference point set by the GM (often the start of
+	// combat).
 	Relative float64
 }
 
 //
-// UpdateDicePresets message: the client should accept the die-roll presets
+// UpdateDicePresetsMessagePayload holds the information sent by the server's UpdateDicePresets
+// message. This tells the client to
+// accept the die-roll presets
 // described here, replacing any previous presets it was
 // using.
 //
@@ -1357,8 +1540,9 @@ type DieRollPreset struct {
 }
 
 //
-// UpdateInitiative message: updates the initiative order listing
-// for all combatants.
+// UpdateInitiativeMessagePayload holds the information sent by the server's UpdateInitiative
+// message. This tells the client that the initiative order has been changed. Its current
+// notion of the initiative order should be replaced by the one given here.
 //
 type UpdateInitiativeMessagePayload struct {
 	BaseMessagePayload
@@ -1366,7 +1550,7 @@ type UpdateInitiativeMessagePayload struct {
 }
 
 //
-// An InitiativeSlot describes the creature occupying a given
+// InitiativeSlot describes the creature occupying a given
 // slot of the initiative list.
 //
 type InitiativeSlot struct {
@@ -1390,13 +1574,20 @@ type InitiativeSlot struct {
 }
 
 //
-// UpdateObjAttributes message: updates an existing object
+// UpdateObjAttributesMessagePayload holds the information sent by the server's UpdateObjAttributes
+// message. This tells the client to update an existing object
 // with new attributes. Any attributes not listed here should
 // remain intact.
 //
+// Call the UpdateObjAttributes method to send this message out to other clients.
+//
 type UpdateObjAttributesMessagePayload struct {
 	BaseMessagePayload
-	ObjID    string
+
+	// The ID of the object to be modified.
+	ObjID string
+
+	// A map of attribute name to its new value.
 	NewAttrs map[string]interface{}
 }
 
@@ -1419,7 +1610,8 @@ func (c *Connection) UpdateObjAttributes(objID string, newAttrs map[string]inter
 }
 
 //
-// UpdatePeerList message: notifies the client that the list of
+// UpdatePeerListMessagePayload holds the information sent by the server's UpdatePeerList
+// message. This tells the client that the list of
 // other connected peers has changed.
 //
 type UpdatePeerListMessagePayload struct {
@@ -1467,7 +1659,9 @@ func (c *Connection) QueryPeers() error {
 }
 
 //
-// UpdateProgress message: advises the client of the status of an operation
+// UpdateProgressMessagePayload holds the information sent by the server's UpdateProgress
+// Comment notification. This
+// advises the client of the status of an operation
 // in progress. The client may wish to display a progress indicator to the
 // user.
 //
@@ -1495,14 +1689,16 @@ type UpdateProgressMessagePayload struct {
 }
 
 //
-// UpdateStatusMarker message: add or change a status marker to place
+// UpdateStatusMarkerMessagePayload holds the information sent by the server's UpdateStatusMarker
+// message. This tells the client
+// to add or change a status marker which may be placed
 // on creature tokens.
 //
 // Note: the server usually sends these upon login, which the Connection
 // struct stores internally. When this message is received, the Connection's
 // status marker list is updated regardless of whether the client is subscribed
-// to this message (which is may be if some overt action is required on its part
-// to (re-)define the status marker).
+// to this message (which it may be if some overt action is required on its part
+// to (re-)define the status marker later in the interaction).
 //
 type UpdateStatusMarkerMessagePayload struct {
 	BaseMessagePayload
@@ -1510,7 +1706,7 @@ type UpdateStatusMarkerMessagePayload struct {
 }
 
 //
-// A StatusMarkerDefinition describes each creature token status
+// StatusMarkerDefinition describes each creature token status
 // that the map clients indicate.
 //
 type StatusMarkerDefinition struct {
@@ -1558,6 +1754,10 @@ func (c StatusMarkerDefinition) Text() string {
 	return fmt.Sprintf("Condition %q: Shape=%q, Color=%q", c.Condition, c.Shape, c.Color)
 }
 
+//
+// StatusMarkerDefinitions is a map of a condition code name to the full
+// description of the marker to use for that condition.
+//
 type StatusMarkerDefinitions map[string]StatusMarkerDefinition
 
 //
@@ -1573,7 +1773,8 @@ func (cs StatusMarkerDefinitions) Text() string {
 }
 
 //
-// UpdateTurn message: declares whose turn it is in combat.
+// UpdateTurnMessagePayload holds the information sent by the server's UpdateTurn
+// message. This tells the client whose turn it is in combat.
 //
 type UpdateTurnMessagePayload struct {
 	BaseMessagePayload
@@ -1595,7 +1796,7 @@ type UpdateTurnMessagePayload struct {
 // only be sending.
 //
 // Regardless of sending this, clients should still read any
-// data that is sent anyway. The Dial() method does in fact do this
+// data that is sent anyway. The Dial method does in fact do this
 // in case a misbehaving server doesn't fully respect the WriteOnly
 // request.
 //
@@ -1621,13 +1822,13 @@ func (c *Connection) SyncChat(target int) error {
 }
 
 //
-// Concurrency and general flow of operation for Dial():
-// Dial() itself will block until the session with the server is completed.
+// Concurrency and general flow of operation for Dial:
+// Dial itself will block until the session with the server is completed.
 // Thus, a client program will probably run it in a goroutine, using
 // a channel subscribed to ERROR to receive any errors encountered by it
 // (otherwise the errors are at least logged).
 //
-// The Dial() call does have some concurrent operations of its own, though,
+// The Dial call does have some concurrent operations of its own, though,
 // to facilitate bidirectional communication with the service without
 // stopping the client application or tripping over its own feet.
 //
@@ -1659,13 +1860,13 @@ func (c *Connection) SyncChat(target int) error {
 // Dial connects to the server, negotiates the initial sign-on sequence
 // with it, and then enters a loop to receive messages from the server
 // until the connection is broken or the context is cancelled, at which
-// point the Dial() method returns.
+// point the Dial method returns.
 //
 // Dial is designed to be called in a goroutine so it can run in the
 // background while the rest of the appliction continues with other
 // tasks.
 //
-// Any errors encountered by the Dial() method will be reported to
+// Any errors encountered by the Dial method will be reported to
 // the channel subscribed to watch for ERROR messages. If the client
 // application did not subscribe to ERROR messages, they will be logged.
 //
@@ -1749,7 +1950,7 @@ syncloop:
 
 		case <-c.Context.Done():
 			c.Logger.Printf("mapper: context cancelled; closing connections and aborting login...")
-			c.Close() // this will abort the scanner in login()
+			c.Close() // this will abort the scanner in login
 			return fmt.Errorf("mapper: connection aborted by termination of context")
 		}
 	}
@@ -2133,6 +2334,7 @@ func (c *Connection) listen(done chan error) {
 			// // BEGIN  <id> <max>|* <title>
 			// // UPDATE <id> <value> [<newmax>]
 			// // END    <id>
+			// // <comment>
 			//
 			if len(f) > 2 && (f[1] == "BEGIN" || f[1] == "UPDATE" || f[1] == "END") {
 				payload.messageType = UpdateProgress

@@ -295,7 +295,7 @@ func attributeType(attrName string) (string, bool) {
 //              |_|             |__/
 
 //
-// A MapObject is anything the map server or client tracks and manages.
+// MapObject is anything the map server or client tracks and manages.
 // These are generally things that are displayed on-screen such as map features,
 // creature tokens, etc.
 //
@@ -319,7 +319,7 @@ type MapObject interface {
 //
 
 //
-// A coordinate pair to locate something on the map.
+// Coordinates give an (x, y) coordinate pair to locate something on the map.
 // Coordinates are in standard map pixel units (10 pixels = 1 foot).
 //
 type Coordinates struct {
@@ -396,7 +396,7 @@ func (c Coordinates) saveData(data []string, prefix, id string) ([]string, error
 //
 
 //
-// All MapObjects have these attributes in common, so will import
+// BaseMapObject holds attributes all MapObjects have in common, so they will import
 // BaseMapObject into their definitions by composition.
 //
 type BaseMapObject struct {
@@ -450,7 +450,7 @@ func (o BaseMapObject) ObjID() string {
 //              |_|
 
 //
-// A MapElement is a MapObject which represents a static map feature
+// MapElement is a MapObject which represents a static map feature
 // to be displayed.
 //
 // Each MapElement has at least one pair of (x, y) coordinates which
@@ -587,7 +587,7 @@ func (o MapElement) saveData(data []string, prefix, id string) ([]string, error)
 // /_/   \_\_|  \___|_____|_|\___|_| |_| |_|\___|_| |_|\__|
 //
 
-// An ArcElement is a MapElement that draws an arc on-screen.
+// ArcElement is a MapElement that draws an arc on-screen.
 // The arc is defined as a portion of a circle which is inscribed
 // within the rectangle formed by the reference point and the single
 // additional point in its Points attribute.
@@ -656,7 +656,7 @@ func (o ArcElement) saveData(data []string, prefix, id string) ([]string, error)
 //  \____|_|_|  \___|_|\___|_____|_|\___|_| |_| |_|\___|_| |_|\__|
 //
 
-// A CircleElement is a MapElement that draws an ellipse or circle on-screen.
+// CircleElement is a MapElement that draws an ellipse or circle on-screen.
 // The ellipse is described by the rectangle formed by the reference point
 // and the single point in the Points attribute (as diagonally opposing points),
 // with the circle/ellipse being inscribed in that rectangle.
@@ -700,7 +700,7 @@ func (o CircleElement) saveData(data []string, prefix, id string) ([]string, err
 // |_____|_|_| |_|\___|_____|_|\___|_| |_| |_|\___|_| |_|\__|
 //
 
-// A LineElement is a MapElement that draws a straight line segment from the
+// LineElement is a MapElement that draws a straight line segment from the
 // reference point to the single point in the Points attribute.
 //
 // If there are multiple points in the Points attribute, the element will
@@ -764,7 +764,7 @@ func (o LineElement) saveData(data []string, prefix, id string) ([]string, error
 // |_|   \___/|_|\__, |\__, |\___/|_| |_|_____|_|\___|_| |_| |_|\___|_| |_|\__|
 //               |___/ |___/
 
-// A PolygonElement is a MapElement that draws an arbitrary polygon, just as with
+// PolygonElement is a MapElement that draws an arbitrary polygon, just as with
 // the LineElement, but the interior of the shape described by the line segments
 // may be filled in as a solid shape.
 //
@@ -832,7 +832,7 @@ func (o PolygonElement) saveData(data []string, prefix, id string) ([]string, er
 // |_____|_|\___|_| |_| |_|\___|_| |_|\__|
 //
 
-// A RectangleElement is a MapElement which describes a rectangle as defined by
+// RectangleElement is a MapElement which describes a rectangle as defined by
 // diagonally opposing points: the reference point and the single coordinate pair
 // in the Points attribute.
 //
@@ -881,7 +881,7 @@ func (o RectangleElement) saveData(data []string, prefix, id string) ([]string, 
 // |_____|_| |_|  \___|\___|\__|_____|_|\___|_| |_| |_|\___|_| |_|\__|
 //
 
-// A SpellAreaOfEffectElement is a MapElement that shows a region on the map
+// SpellAreaOfEffectElement is a MapElement that shows a region on the map
 // affected by a spell or other area effect.
 //
 // The region has one of the following shapes as indicated by the AoEShape
@@ -942,7 +942,7 @@ func (o SpellAreaOfEffectElement) saveData(data []string, prefix, id string) ([]
 //
 
 //
-// A TextFont describes a font used by TextElements.
+// TextFont describes a font used by TextElements.
 //
 type TextFont struct {
 	// The name of the font family as recognized by Tk.
@@ -959,7 +959,7 @@ type TextFont struct {
 }
 
 //
-// A TextElement is a MapElement which displays text on the map.
+// TextElement is a MapElement which displays text on the map.
 //
 // The reference point is at the center of the text if Anchor is
 // AnchorCenter, or is at the top-left corner of the text if Anchor
@@ -1106,7 +1106,7 @@ func (o TextElement) saveData(data []string, prefix, id string) ([]string, error
 //
 
 //
-// A TileElement is a MapElement which displays a bitmap image on the map.
+// TileElement is a MapElement which displays a bitmap image on the map.
 // The upper-left corner of the image will be drawn at the reference point.
 //
 type TileElement struct {
@@ -1166,15 +1166,16 @@ func (o TileElement) saveData(data []string, prefix, id string) ([]string, error
 //  \____|_|  \___|\__,_|\__|\__,_|_|  \___||_|\___/|_|\_\___|_| |_|
 //
 
-// A CreatureToken is a MapObject (but not a MapElement) which displays a movable
-// token indicating the size and location of a creature in the game.
-//
 const (
 	CreatureTypeUnknown = iota
 	CreatureTypeMonster
 	CreatureTypePlayer
 )
 
+//
+// CreatureToken is a MapObject (but not a MapElement) which displays a movable
+// token indicating the size and location of a creature in the game.
+//
 type CreatureToken struct {
 	BaseMapObject
 
@@ -1296,7 +1297,7 @@ func objCreature(objId string, objDef map[string][]string) (CreatureToken, error
 }
 
 //
-// A CreatureHealth struct describes the current health statistics of a creature if we are
+// CreatureHealth describes the current health statistics of a creature if we are
 // tracking it for them.
 //
 type CreatureHealth struct {
@@ -1543,7 +1544,7 @@ func (o CreatureToken) saveData(data []string, prefix, id string) ([]string, err
 // |_|   |_|\__,_|\__, |\___|_|   |_|\___/|_|\_\___|_| |_|
 //                |___/
 
-// A PlayerToken is a CreatureToken which describes a player character
+// PlayerToken is a CreatureToken which describes a player character
 // or NPC ally.
 //
 type PlayerToken struct {
@@ -1580,7 +1581,7 @@ func (o PlayerToken) saveData(data []string, prefix, id string) ([]string, error
 // |_|  |_|\___/|_| |_|___/\__\___|_|   |_|\___/|_|\_\___|_| |_|
 //
 
-// A MonsterToken is a CreatureToken which describes a monster or NPC adversary.
+// MonsterToken is a CreatureToken which describes a monster or NPC adversary.
 //
 type MonsterToken struct {
 	CreatureToken
@@ -1616,7 +1617,7 @@ func (o MonsterToken) saveData(data []string, prefix, id string) ([]string, erro
 // |___|_| |_| |_|\__,_|\__, |\___|____/ \___|_| |_|_| |_|_|\__|_|\___/|_| |_|
 //                      |___/
 
-// An ImageDefinition describes an image as known to the mapper system.
+// ImageDefinition describes an image as known to the mapper system.
 // TileElements' Image attribute refers to the Name attribute of one of
 // these.
 //
@@ -1645,7 +1646,7 @@ type ImageDefinition struct {
 // |_|   |_|_|\___|____/ \___|_| |_|_| |_|_|\__|_|\___/|_| |_|
 //
 
-// A FileDefinition describes a file as known to the mapper which
+// FileDefinition describes a file as known to the mapper which
 // may be of interest to retrieve at some point.
 //
 type FileDefinition struct {
@@ -1943,6 +1944,7 @@ func objString(objDef map[string][]string, i int, fldName string, required bool,
 // choices is a map of string to byte value. It is an error if the string found in
 // the data set is not found among these choices.
 //
+
 type enumChoices map[string]byte
 
 func objEnum(objDef map[string][]string, i int, fldName string, required bool, choices enumChoices, err error) (byte, error) {
