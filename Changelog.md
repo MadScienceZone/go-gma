@@ -1,12 +1,12 @@
 # Changelog
 ## Current Version Information
- * GMA Core API Library Version: 4.3.6		<!-- @@##@@ -->
- * Supported GMA Mapper Version: 3.40.9		<!-- @@##@@ -->
+ * GMA Core API Library Version: 4.3.7		<!-- @@##@@ -->
+ * Supported GMA Mapper Version: 3.40.10		<!-- @@##@@ -->
  * Supported GMA Mapper Protocol: 332		<!-- @@##@@ -->
  * Supported GMA Mapper File Format: 17		<!-- @@##@@ -->
- * Effective Date: 16-Jul-2021			<!-- @@##@@ -->
+ * Effective Date: 17-Jul-2021			<!-- @@##@@ -->
 
-## UNRELEASED 
+## v4.3.7 (alpha)
 Moved SaveData methods for MapObjects back to being unepxorted. Users should
 only save via the provided high-level SaveObjects function.
 
