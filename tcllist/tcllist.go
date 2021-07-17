@@ -46,10 +46,6 @@
 // The tcllist Go package provides an easy interface to manipulate
 // Tcl  lists  as  Go  types.
 //
-// As of yet, this only converts to and from slices of strings. We will
-// extend this to manage mixed-types and nested lists if necessary, but
-// that might not be needed for this application. We'll see.
-//
 // TCL LIST FORMAT
 //
 // In  a  nutshell,  a  Tcl  list (as a string representation) is a space-delimited
