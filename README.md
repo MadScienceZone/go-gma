@@ -16,6 +16,8 @@ etc.
 While we intend to open source GMA eventually, it's not quite ready for
 general use (mostly because it needs to be generalized more to be playable
 on multiple game systems and less tied to the author's game group).
+The manual describing the full GMA product may be downloaded 
+[here](https://www.madscience.zone/gma/gma.pdf) (PDF, 61Mb).
 
 In the mean time, we're porting one part of the GMA suite (the interactive
 map server) to Go for increased stability and performance, which we will 
@@ -24,6 +26,10 @@ of the generalization issues that are gating the release of GMA.
 
 To support this, the `go-gma` repository holds parts of the core GMA API
 needed by the map server.
+
+
+## Documentation
+API docs may be viewed at [pkg.go.dev](https://pkg.go.dev/github.com/fizban-of-ragnarok/go-gma/v4).
 
 ## Versioning
 We are keeping the version numbers for this project in sync with
