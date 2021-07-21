@@ -1,19 +1,20 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___       ______      ______               #
-# (  ____ \(       )(  ___  )              /   )     / ___  \    / ___  \              #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \   \/   )  )             #
-# | |      | || || || (___) |            / (_) (_       ___) /       /  /              #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (       /  /               #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \     /  /                #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _  /  /                 #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \_/                  #
+#  _______  _______  _______                ___       ______       _____               #
+# (  ____ \(       )(  ___  )              /   )     / ___  \     / ___ \              #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \   ( (___) )             #
+# | |      | || || || (___) |            / (_) (_       ___) /    \     /              #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (     / ___ \              #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \   ( (   ) )             #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ ( (___) )             #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \_____/              #
 #                                                                                      #
 ########################################################################################
 */
 
 //
-// Misc. utility functions.
+// Package util provides miscellaneous utility functions that don't deserve
+// their own package.
 //
 package util
 
@@ -37,8 +38,7 @@ func splitToInts(s string) ([]int, error) {
 }
 
 //
-// VersionCompare
-// compares version strings a and b. These strings must consist of
+// VersionCompare compares version strings a and b. These strings must consist of
 // integers separated with dots, such as "2" or "3.1".
 // Any number of version levels are allowed, although generally
 // only 2 or 3 are of practical use.
@@ -85,8 +85,6 @@ type hdopt struct {
 	ascii bool
 }
 
-type hdoption func(*hdopt)
-
 //
 // Hexdump takes an array of bytes and returns a multi-line string
 // representing those bytes in a traditional hexdump format with
@@ -108,7 +106,7 @@ type hdoption func(*hdopt)
 // and/or
 // WithoutText.
 //
-func Hexdump(data []byte, opts ...hdoption) string {
+func Hexdump(data []byte, opts ...func(*hdopt)) string {
 	var result strings.Builder
 	result.Grow(64)
 
@@ -167,7 +165,7 @@ func Hexdump(data []byte, opts ...hdoption) string {
 //  00004444:  00 81 02 03 48 65 6C 6C 6F 2C 20 57 6F 72 6C 64  |....Hello, World|
 //  00004454:  E2 84 A2 3C 3E 41 42 43 44 45 46 47              |...<>ABCDEFG    |
 //
-func WithStartingAddress(a int) hdoption {
+func WithStartingAddress(a int) func(*hdopt) {
 	return func(o *hdopt) {
 		o.addr = a
 	}
@@ -189,7 +187,7 @@ func WithStartingAddress(a int) hdoption {
 //  00004454:  E2 84 A2 3C 3E 41 42 43  |...<>ABC|
 //  0000445C:  44 45 46 47              |DEFG    |
 //
-func WithWidth(w int) hdoption {
+func WithWidth(w int) func(*hdopt) {
 	return func(o *hdopt) {
 		o.width = w
 	}
@@ -206,7 +204,7 @@ func WithWidth(w int) hdoption {
 //  00000000:  0081 0203 4865 6C6C 6F2C 2057 6F72 6C64  |....Hello, World|
 //  00000010:  E284 A23C 3E41 4243 4445 4647            |...<>ABCDEFG    |
 //
-func WithWordSize(w int) hdoption {
+func WithWordSize(w int) func(*hdopt) {
 	return func(o *hdopt) {
 		o.word = w
 	}
@@ -227,7 +225,7 @@ func WithoutText(o *hdopt) {
 	o.ascii = false
 }
 
-// @[00]@| GMA 4.3.7
+// @[00]@| GMA 4.3.8
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.

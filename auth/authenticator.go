@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___       ______      ______               #
-# (  ____ \(       )(  ___  )              /   )     / ___  \    / ___  \              #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \   \/   )  )             #
-# | |      | || || || (___) |            / (_) (_       ___) /       /  /              #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (       /  /               #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \     /  /                #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _  /  /                 #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \_/                  #
+#  _______  _______  _______                ___       ______       _____               #
+# (  ____ \(       )(  ___  )              /   )     / ___  \     / ___ \              #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \   ( (___) )             #
+# | |      | || || || (___) |            / (_) (_       ___) /    \     /              #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (     / ___ \              #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \   ( (   ) )             #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ ( (___) )             #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \_____/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -18,7 +18,7 @@
 //                                                                                    //
 ////////////////////////////////////////////////////////////////////////////////////////
 
-// Calculates the challenge/response for a login attempt, and checks user input to
+// Package auth calculates the challenge/response for a login attempt, and checks user input to
 // determine if it was a valid response to the challenge.
 //
 // BACKGROUND AND SECURITY NOTES
@@ -250,8 +250,8 @@ func (a *Authenticator) GenerateChallenge() (string, error) {
 }
 
 //
-// CurrentChallenge
-// returns the last-generated challenge created by GenerateChallenge().
+// CurrentChallenge returns the last-generated challenge created by
+// GenerateChallenge.
 // (SERVER)
 //
 // This is returned as a base-64-encoded string suitable for transmitting
@@ -327,17 +327,17 @@ func (a *Authenticator) calcResponse(secret []byte) ([]byte, error) {
 func (a *Authenticator) AcceptChallenge(challenge string) (string, error) {
 	c, err := base64.StdEncoding.DecodeString(challenge)
 	if err != nil {
-		return "", fmt.Errorf("Bad challenge string: %v.", err)
+		return "", fmt.Errorf("bad challenge string: %v", err)
 	}
 
 	if len(c) < 2 {
-		return "", fmt.Errorf("Challenge value is too short")
+		return "", fmt.Errorf("challenge value is too short")
 	}
 	a.Challenge = c
 
 	response, err := a.calcResponse(a.Secret)
 	if err != nil {
-		return "", fmt.Errorf("Unable to generate response: %v", err)
+		return "", fmt.Errorf("unable to generate response: %v", err)
 	}
 
 	return base64.StdEncoding.EncodeToString(response), nil
@@ -360,23 +360,23 @@ func (a *Authenticator) ValidateResponse(response string) (bool, error) {
 	if len(a.Secret) == 0 {
 		return false, fmt.Errorf("No password configured")
 	}
-	binary_response, err := base64.StdEncoding.DecodeString(response)
+	binaryResponse, err := base64.StdEncoding.DecodeString(response)
 	if err != nil {
 		return false, fmt.Errorf("Error decoding client response: %v", err)
 	}
-	our_response, err := a.calcResponse(a.Secret)
+	ourResponse, err := a.calcResponse(a.Secret)
 	if err != nil {
 		return false, fmt.Errorf("Error validating client response: %v", err)
 	}
-	if bytesEqual(our_response, binary_response) {
+	if bytesEqual(ourResponse, binaryResponse) {
 		return true, nil
 	}
 	if len(a.GmSecret) > 0 {
-		our_response, err := a.calcResponse(a.GmSecret)
+		ourResponse, err := a.calcResponse(a.GmSecret)
 		if err != nil {
 			return false, fmt.Errorf("Error validating client response (gm): %v", err)
 		}
-		if bytesEqual(our_response, binary_response) {
+		if bytesEqual(ourResponse, binaryResponse) {
 			a.GmMode = true
 			return true, nil
 		}
@@ -427,7 +427,7 @@ func NewClientAuthenticator(username string, secret []byte, client string) *Auth
 	return a
 }
 
-// @[00]@| GMA 4.3.7
+// @[00]@| GMA 4.3.8
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.

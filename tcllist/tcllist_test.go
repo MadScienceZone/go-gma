@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___       ______      ______               #
-# (  ____ \(       )(  ___  )              /   )     / ___  \    / ___  \              #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \   \/   )  )             #
-# | |      | || || || (___) |            / (_) (_       ___) /       /  /              #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (       /  /               #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \     /  /                #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _  /  /                 #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \_/                  #
+#  _______  _______  _______                ___       ______       _____               #
+# (  ____ \(       )(  ___  )              /   )     / ___  \     / ___ \              #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \   ( (___) )             #
+# | |      | || || || (___) |            / (_) (_       ___) /    \     /              #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (     / ___ \              #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \   ( (   ) )             #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ ( (___) )             #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \_____/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -58,54 +58,54 @@ import (
 
 func TestTclList_Str2list(t *testing.T) {
 	type testcase struct {
-		tcl      string
-		list     []string
-		is_error bool
+		tcl     string
+		list    []string
+		isError bool
 	}
 
 	tests := []testcase{
-		{tcl: "a b c d", list: []string{"a", "b", "c", "d"}, is_error: false},
-		{tcl: "a  b c d", list: []string{"a", "b", "c", "d"}, is_error: false},
-		{tcl: "   a  b  c  d    ", list: []string{"a", "b", "c", "d"}, is_error: false},
-		{tcl: "a {b  c} d", list: []string{"a", "b  c", "d"}, is_error: false},
-		{tcl: "a {b  c}x d", list: []string{"a", "b  c", "d"}, is_error: true},
-		{tcl: "a {b c}{def} x d", list: []string{"a", "b  c", "d"}, is_error: true},
-		{tcl: "a b {{c d} e f}", list: []string{"a", "b", "{c d} e f"}, is_error: false},
-		{tcl: "a b {c d} e f}", list: []string{"a", "b", "{c d} e f"}, is_error: true},
-		{tcl: "a b{cd d} e f}", list: []string{"a", "b", "{c d} e f"}, is_error: true},
-		{tcl: "a b{cd d} e f", list: []string{"a", "b{cd", "d}", "e", "f"}, is_error: false},
-		{tcl: "a b{cd d}e e f", list: []string{"a", "b{cd", "d}e", "e", "f"}, is_error: false},
-		{tcl: "a b{cd d}}e e f", list: []string{"a", "b{cd", "d}e", "e", "f"}, is_error: true},
-		{tcl: "a b{cd d}{e e f", list: []string{"a", "b{cd", "d}e", "e", "f"}, is_error: true},
-		{tcl: "               ", list: []string{}, is_error: false},
-		{tcl: "", list: []string{}, is_error: false},
-		{tcl: "1 2 \"\" 5", list: []string{"1", "2", "", "5"}, is_error: false},
-		{tcl: "a \"b  c\" d", list: []string{"a", "b  c", "d"}, is_error: false},
-		{tcl: "a \"b  c\"x d", list: []string{"a", "b  c", "d"}, is_error: true},
-		{tcl: "a \"b c\"\"def\" x d", list: []string{"a", "b  c", "d"}, is_error: true},
-		{tcl: "a b \"{c d} e f\"", list: []string{"a", "b", "{c d} e f"}, is_error: false},
-		{tcl: "a b \"c d\" e f}", list: []string{"a", "b", "{c d} e f"}, is_error: true},
-		{tcl: "a b\"cd d\" e f}", list: []string{"a", "b", "{c d} e f"}, is_error: true},
-		{tcl: "a b\"cd d\" e f", list: []string{"a", "b\"cd", "d\"", "e", "f"}, is_error: false},
-		{tcl: "a b\"cd d\"e e f", list: []string{"a", "b\"cd", "d\"e", "e", "f"}, is_error: false},
-		{tcl: "1 2 {} 5", list: []string{"1", "2", "", "5"}, is_error: false},
-		{tcl: "spam eggs", list: []string{"spam", "eggs"}, is_error: false},
-		{tcl: "penguin {spam spam}", list: []string{"penguin", "spam spam"}, is_error: false},
-		{tcl: "penguin \\{spam spam}", list: []string{"penguin", "{spam", "spam}"}, is_error: true},
-		{tcl: "penguin \\{spam spam\\}", list: []string{"penguin", "{spam", "spam}"}, is_error: false},
-		{tcl: "aa \\{\\\"bb\\}cc dd", list: []string{"aa", "{\"bb}cc", "dd"}, is_error: false},
-		{tcl: "\\#aa bb dd", list: []string{"#aa", "bb", "dd"}, is_error: false},
-		{tcl: "\\#aa bb dd\\", list: []string{"#aa", "bb", "dd"}, is_error: true},
-		{tcl: "a b {this {is a} string}", list: []string{"a", "b", "this {is a} string"}, is_error: false},
-		{tcl: "a b {this \\{ too}", list: []string{"a", "b", "this { too"}, is_error: false},
-		{tcl: "a b this\\ \\{\\ too", list: []string{"a", "b", "this { too"}, is_error: false},
-		{tcl: "^\\$\\[.*\\]", list: []string{"^\\$\\[.*\\]"}, is_error: false},
+		{tcl: "a b c d", list: []string{"a", "b", "c", "d"}, isError: false},
+		{tcl: "a  b c d", list: []string{"a", "b", "c", "d"}, isError: false},
+		{tcl: "   a  b  c  d    ", list: []string{"a", "b", "c", "d"}, isError: false},
+		{tcl: "a {b  c} d", list: []string{"a", "b  c", "d"}, isError: false},
+		{tcl: "a {b  c}x d", list: []string{"a", "b  c", "d"}, isError: true},
+		{tcl: "a {b c}{def} x d", list: []string{"a", "b  c", "d"}, isError: true},
+		{tcl: "a b {{c d} e f}", list: []string{"a", "b", "{c d} e f"}, isError: false},
+		{tcl: "a b {c d} e f}", list: []string{"a", "b", "{c d} e f"}, isError: true},
+		{tcl: "a b{cd d} e f}", list: []string{"a", "b", "{c d} e f"}, isError: true},
+		{tcl: "a b{cd d} e f", list: []string{"a", "b{cd", "d}", "e", "f"}, isError: false},
+		{tcl: "a b{cd d}e e f", list: []string{"a", "b{cd", "d}e", "e", "f"}, isError: false},
+		{tcl: "a b{cd d}}e e f", list: []string{"a", "b{cd", "d}e", "e", "f"}, isError: true},
+		{tcl: "a b{cd d}{e e f", list: []string{"a", "b{cd", "d}e", "e", "f"}, isError: true},
+		{tcl: "               ", list: []string{}, isError: false},
+		{tcl: "", list: []string{}, isError: false},
+		{tcl: "1 2 \"\" 5", list: []string{"1", "2", "", "5"}, isError: false},
+		{tcl: "a \"b  c\" d", list: []string{"a", "b  c", "d"}, isError: false},
+		{tcl: "a \"b  c\"x d", list: []string{"a", "b  c", "d"}, isError: true},
+		{tcl: "a \"b c\"\"def\" x d", list: []string{"a", "b  c", "d"}, isError: true},
+		{tcl: "a b \"{c d} e f\"", list: []string{"a", "b", "{c d} e f"}, isError: false},
+		{tcl: "a b \"c d\" e f}", list: []string{"a", "b", "{c d} e f"}, isError: true},
+		{tcl: "a b\"cd d\" e f}", list: []string{"a", "b", "{c d} e f"}, isError: true},
+		{tcl: "a b\"cd d\" e f", list: []string{"a", "b\"cd", "d\"", "e", "f"}, isError: false},
+		{tcl: "a b\"cd d\"e e f", list: []string{"a", "b\"cd", "d\"e", "e", "f"}, isError: false},
+		{tcl: "1 2 {} 5", list: []string{"1", "2", "", "5"}, isError: false},
+		{tcl: "spam eggs", list: []string{"spam", "eggs"}, isError: false},
+		{tcl: "penguin {spam spam}", list: []string{"penguin", "spam spam"}, isError: false},
+		{tcl: "penguin \\{spam spam}", list: []string{"penguin", "{spam", "spam}"}, isError: true},
+		{tcl: "penguin \\{spam spam\\}", list: []string{"penguin", "{spam", "spam}"}, isError: false},
+		{tcl: "aa \\{\\\"bb\\}cc dd", list: []string{"aa", "{\"bb}cc", "dd"}, isError: false},
+		{tcl: "\\#aa bb dd", list: []string{"#aa", "bb", "dd"}, isError: false},
+		{tcl: "\\#aa bb dd\\", list: []string{"#aa", "bb", "dd"}, isError: true},
+		{tcl: "a b {this {is a} string}", list: []string{"a", "b", "this {is a} string"}, isError: false},
+		{tcl: "a b {this \\{ too}", list: []string{"a", "b", "this { too"}, isError: false},
+		{tcl: "a b this\\ \\{\\ too", list: []string{"a", "b", "this { too"}, isError: false},
+		{tcl: "^\\$\\[.*\\]", list: []string{"^\\$\\[.*\\]"}, isError: false},
 	}
 
 	for _, test := range tests {
 		t.Run("parse tests", func(t *testing.T) {
 			l, err := ParseTclList(test.tcl)
-			if test.is_error {
+			if test.isError {
 				if err == nil {
 					t.Fatalf("TCL \"%s\" was supposed to return an error but didn't.", test.tcl)
 				}
@@ -124,33 +124,33 @@ func TestTclList_Str2list(t *testing.T) {
 
 func TestTclList_List2str(t *testing.T) {
 	type testcase struct {
-		tcl      string
-		list     []string
-		is_error bool
+		tcl     string
+		list    []string
+		isError bool
 	}
 
 	tests := []testcase{
-		{tcl: "a b c d", list: []string{"a", "b", "c", "d"}, is_error: false},
-		{tcl: "a {b  c} d", list: []string{"a", "b  c", "d"}, is_error: false},
-		{tcl: "a b {{c d} e f}", list: []string{"a", "b", "{c d} e f"}, is_error: false},
-		{tcl: "a b\\{cd d\\} e f", list: []string{"a", "b{cd", "d}", "e", "f"}, is_error: false},
-		{tcl: "a b\\{cd d\\}e e f", list: []string{"a", "b{cd", "d}e", "e", "f"}, is_error: false},
-		{tcl: "", list: []string{}, is_error: false},
-		{tcl: "{}", list: []string{""}, is_error: false},
-		{tcl: "1 2 {} 5", list: []string{"1", "2", "", "5"}, is_error: false},
-		{tcl: "spam eggs", list: []string{"spam", "eggs"}, is_error: false},
-		{tcl: "penguin {spam spam}", list: []string{"penguin", "spam spam"}, is_error: false},
-		{tcl: "penguin \\{spam spam\\}", list: []string{"penguin", "{spam", "spam}"}, is_error: false},
-		{tcl: "aa {{\"bb}cc} dd", list: []string{"aa", "{\"bb}cc", "dd"}, is_error: false},
-		{tcl: "{#aa} bb dd", list: []string{"#aa", "bb", "dd"}, is_error: false},
-		{tcl: "a b {this {is a} string}", list: []string{"a", "b", "this {is a} string"}, is_error: false},
-		{tcl: "a b this\\ \\{\\ too", list: []string{"a", "b", "this { too"}, is_error: false},
+		{tcl: "a b c d", list: []string{"a", "b", "c", "d"}, isError: false},
+		{tcl: "a {b  c} d", list: []string{"a", "b  c", "d"}, isError: false},
+		{tcl: "a b {{c d} e f}", list: []string{"a", "b", "{c d} e f"}, isError: false},
+		{tcl: "a b\\{cd d\\} e f", list: []string{"a", "b{cd", "d}", "e", "f"}, isError: false},
+		{tcl: "a b\\{cd d\\}e e f", list: []string{"a", "b{cd", "d}e", "e", "f"}, isError: false},
+		{tcl: "", list: []string{}, isError: false},
+		{tcl: "{}", list: []string{""}, isError: false},
+		{tcl: "1 2 {} 5", list: []string{"1", "2", "", "5"}, isError: false},
+		{tcl: "spam eggs", list: []string{"spam", "eggs"}, isError: false},
+		{tcl: "penguin {spam spam}", list: []string{"penguin", "spam spam"}, isError: false},
+		{tcl: "penguin \\{spam spam\\}", list: []string{"penguin", "{spam", "spam}"}, isError: false},
+		{tcl: "aa {{\"bb}cc} dd", list: []string{"aa", "{\"bb}cc", "dd"}, isError: false},
+		{tcl: "{#aa} bb dd", list: []string{"#aa", "bb", "dd"}, isError: false},
+		{tcl: "a b {this {is a} string}", list: []string{"a", "b", "this {is a} string"}, isError: false},
+		{tcl: "a b this\\ \\{\\ too", list: []string{"a", "b", "this { too"}, isError: false},
 	}
 
 	for _, test := range tests {
 		t.Run("emit tests", func(t *testing.T) {
 			s, err := ToTclString(test.list)
-			if test.is_error {
+			if test.isError {
 				if err == nil {
 					t.Fatalf("List %v was supposed to return an error but didn't.", test.list)
 				}
@@ -177,8 +177,8 @@ func TestTclList_List2str(t *testing.T) {
 
 func TestTclList_ConvertTypes(t *testing.T) {
 	type testcase struct {
-		types    string
-		is_error bool
+		types   string
+		isError bool
 	}
 
 	src := []string{"abc", "def", "1", "12.32", "-2a"}
@@ -304,7 +304,7 @@ func TestTclList_Deep(t *testing.T) {
 	}
 }
 
-// @[00]@| GMA 4.3.7
+// @[00]@| GMA 4.3.8
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.

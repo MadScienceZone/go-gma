@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___       ______      ______               #
-# (  ____ \(       )(  ___  )              /   )     / ___  \    / ___  \              #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \   \/   )  )             #
-# | |      | || || || (___) |            / (_) (_       ___) /       /  /              #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (       /  /               #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \     /  /                #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _  /  /                 #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \_/                  #
+#  _______  _______  _______                ___       ______       _____               #
+# (  ____ \(       )(  ___  )              /   )     / ___  \     / ___ \              #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \   ( (___) )             #
+# | |      | || || || (___) |            / (_) (_       ___) /    \     /              #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (     / ___ \              #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \   ( (   ) )             #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ ( (___) )             #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \_____/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -110,26 +110,18 @@ type Dice struct {
 
 	// The random number generator to be used with this Dice
 	generator *rand.Rand
-}
 
-//
-// The parameters from which we construct a Dice
-//
-type diceOptions struct {
-	desc      string
-	qty       int
-	sides     int
-	bonus     int
-	diebonus  int
-	div       int
-	factor    int
-	generator *rand.Rand
+	//
+	// The parameters from which we construct a Dice
+	//
+	desc     string
+	qty      int
+	sides    int
+	bonus    int
+	diebonus int
+	div      int
+	factor   int
 }
-
-//
-// Options for NewDices
-//
-type newDiceOption func(*diceOptions) error
 
 //
 // ByDescription sets up a Dice value based on the
@@ -185,8 +177,8 @@ type newDiceOption func(*diceOptions) error
 // For example:
 //     d, err := New(ByDescription("3d6 + 12"))
 //
-func ByDescription(desc string) newDiceOption {
-	return func(o *diceOptions) error {
+func ByDescription(desc string) func(*Dice) error {
+	return func(o *Dice) error {
 		o.desc = desc
 		return nil
 	}
@@ -201,8 +193,8 @@ func ByDescription(desc string) newDiceOption {
 // For example, to create a Dice value for "3d6+10", you could do:
 //    d, err := New(ByDieType(3, 6, 10))
 //
-func ByDieType(qty, sides, bonus int) newDiceOption {
-	return func(o *diceOptions) error {
+func ByDieType(qty, sides, bonus int) func(*Dice) error {
+	return func(o *Dice) error {
 		o.qty = qty
 		o.sides = sides
 		o.bonus = bonus
@@ -214,8 +206,8 @@ func ByDieType(qty, sides, bonus int) newDiceOption {
 // WithDieBonus adds a per-die bonus of n which will be
 // added to every single die rolled.
 //
-func WithDieBonus(n int) newDiceOption {
-	return func(o *diceOptions) error {
+func WithDieBonus(n int) func(*Dice) error {
+	return func(o *Dice) error {
 		o.diebonus = n
 		return nil
 	}
@@ -228,8 +220,8 @@ func WithDieBonus(n int) newDiceOption {
 // DEPRECATED in favor of using WithDescription("... // n")
 // or WithDescription("... ÷ n")
 //
-func WithDiv(n int) newDiceOption {
-	return func(o *diceOptions) error {
+func WithDiv(n int) func(*Dice) error {
+	return func(o *Dice) error {
 		o.div = n
 		return nil
 	}
@@ -242,8 +234,8 @@ func WithDiv(n int) newDiceOption {
 // DEPRECATED in favor of using WithDescription("... * n")
 // or WithDescription("... × n")
 //
-func WithFactor(n int) newDiceOption {
-	return func(o *diceOptions) error {
+func WithFactor(n int) func(*Dice) error {
+	return func(o *Dice) error {
 		o.factor = n
 		return nil
 	}
@@ -255,8 +247,8 @@ func WithFactor(n int) newDiceOption {
 // (Per rand, this generator will not be safe for concurrent
 // use by multiple goroutines.)
 //
-func WithSeed(s int64) newDiceOption {
-	return func(o *diceOptions) error {
+func WithSeed(s int64) func(*Dice) error {
+	return func(o *Dice) error {
 		o.generator = rand.New(rand.NewSource(s))
 		return nil
 	}
@@ -267,15 +259,15 @@ func WithSeed(s int64) newDiceOption {
 // number generator created by the caller and passed in to this
 // option.  The generator must be of type rand.Source.
 //
-func WithGenerator(source rand.Source) newDiceOption {
-	return func(o *diceOptions) error {
+func WithGenerator(source rand.Source) func(*Dice) error {
+	return func(o *Dice) error {
 		o.generator = rand.New(source)
 		return nil
 	}
 }
 
-func withSharedGenerator(generator *rand.Rand) newDiceOption {
-	return func(o *diceOptions) error {
+func withSharedGenerator(generator *rand.Rand) func(*Dice) error {
+	return func(o *Dice) error {
 		o.generator = generator
 		return nil
 	}
@@ -301,7 +293,8 @@ type StructuredDescription struct {
 type StructuredDescriptionSet []StructuredDescription
 
 //
-// The full report is in the form of a StructuredResult type value.
+// StructuredResult provides a full, detailed report of the die-roll
+// operation.
 // See the documentation in dice(3) for full details.
 //
 // For example, making a die roll such as Roll("1d20+3|min 5|c")
@@ -413,20 +406,20 @@ func (d *dieConstant) getOperator() string { return d.Operator }
 // Apply the operator to values x and y. Note that this satisfies the
 // dieComponent interface but ignores the constant value itself.
 func (d *dieConstant) applyOp(x, y int) (int, error) {
-	return _apply_op(d.Operator, x, y)
+	return _applyOp(d.Operator, x, y)
 }
 
 // Apply the operator to the value x. For example, for the constant
 // i := dieConstant{"+", 3, "INT"}, i.evaluate(10) would return
 // 13 (i.e., "10 + 3 INT").
 func (d *dieConstant) evaluate(x int) (int, error) {
-	return _apply_op(d.Operator, x, d.Value)
+	return _applyOp(d.Operator, x, d.Value)
 }
 
 // For dieConstant values, this is the same evaluate(x),
 // since constants are... well... constant.
 func (d *dieConstant) maxValue(x int) (int, error) {
-	return _apply_op(d.Operator, x, d.Value)
+	return _applyOp(d.Operator, x, d.Value)
 }
 
 // For dieConstant values, this simply returns the constant value itself.
@@ -467,11 +460,11 @@ func (d *dieConstant) structuredDescribeRoll() []StructuredDescription {
 	return desc
 }
 
-func _apply_op(operator string, x, y int) (int, error) {
+func _applyOp(operator string, x, y int) (int, error) {
 	switch operator {
 	case "":
 		if x != 0 {
-			return 0, fmt.Errorf("Applying nil operation to non-nil initial value %d", x)
+			return 0, fmt.Errorf("applying nil operation to non-nil initial value %d", x)
 		}
 		return y, nil
 	case "+":
@@ -483,7 +476,7 @@ func _apply_op(operator string, x, y int) (int, error) {
 	case "//", "÷":
 		return x / y, nil
 	}
-	return 0, fmt.Errorf("Unable to apply unknown operator %s", operator)
+	return 0, fmt.Errorf("unable to apply unknown operator %s", operator)
 }
 
 //
@@ -539,7 +532,7 @@ func (d *dieSpec) getOperator() string { return d.Operator }
 // Apply the component's operator to the given values.
 //
 func (d *dieSpec) applyOp(x, y int) (int, error) {
-	return _apply_op(d.Operator, x, y)
+	return _applyOp(d.Operator, x, y)
 }
 
 //
@@ -648,7 +641,7 @@ func (d *dieSpec) evaluate(x int) (int, error) {
 		}
 	}
 
-	return _apply_op(d.Operator, x, d.Value)
+	return _applyOp(d.Operator, x, d.Value)
 }
 
 //
@@ -672,7 +665,7 @@ func (d *dieSpec) maxValue(x int) (int, error) {
 	}
 	d.History = append(d.History, this)
 	d.Value = reduceSums(d.History)[0]
-	return _apply_op(d.Operator, x, d.Value)
+	return _applyOp(d.Operator, x, d.Value)
 }
 
 //
@@ -737,11 +730,11 @@ func (d *dieSpec) isMaxRoll() bool {
 //
 func (d *dieSpec) structuredDescribeRoll() []StructuredDescription {
 	var desc []StructuredDescription
-	var roll_type string
+	var rollType string
 	if d.WasMaximized {
-		roll_type = "maxroll"
+		rollType = "maxroll"
 	} else {
-		roll_type = "roll"
+		rollType = "roll"
 	}
 
 	if d.Operator != "" {
@@ -765,7 +758,7 @@ func (d *dieSpec) structuredDescribeRoll() []StructuredDescription {
 			_, choice := maxOf(reduceSums(d.History))
 			for i, roll := range d.History {
 				if i == choice {
-					desc = append(desc, StructuredDescription{Type: roll_type, Value: strings.Join(intToStrings(roll), ",")})
+					desc = append(desc, StructuredDescription{Type: rollType, Value: strings.Join(intToStrings(roll), ",")})
 				} else {
 					desc = append(desc, StructuredDescription{Type: "discarded", Value: strings.Join(intToStrings(roll), ",")})
 				}
@@ -775,14 +768,14 @@ func (d *dieSpec) structuredDescribeRoll() []StructuredDescription {
 			_, choice := minOf(reduceSums(d.History))
 			for i, roll := range d.History {
 				if i == choice {
-					desc = append(desc, StructuredDescription{Type: roll_type, Value: strings.Join(intToStrings(roll), ",")})
+					desc = append(desc, StructuredDescription{Type: rollType, Value: strings.Join(intToStrings(roll), ",")})
 				} else {
 					desc = append(desc, StructuredDescription{Type: "discarded", Value: strings.Join(intToStrings(roll), ",")})
 				}
 			}
 		}
 	} else {
-		desc = append(desc, StructuredDescription{Type: roll_type, Value: strings.Join(intToStrings(d.History[0]), ",")})
+		desc = append(desc, StructuredDescription{Type: rollType, Value: strings.Join(intToStrings(d.History[0]), ",")})
 	}
 
 	if d.Label != "" {
@@ -805,70 +798,65 @@ func (d *dieSpec) structuredDescribeRoll() []StructuredDescription {
 //    d, err := New(ByDescription("15d6 + 12"))
 //    d, err := New(ByDieType(15, 6, 12))
 //
-func New(options ...newDiceOption) (*Dice, error) {
-	opts := &diceOptions{}
+func New(options ...func(*Dice) error) (*Dice, error) {
 	d := new(Dice)
 
 	for _, option := range options {
-		err := option(opts)
+		err := option(d)
 		if err != nil {
-			return nil, fmt.Errorf("Error setting options in dice.New(): %v", err)
+			return nil, fmt.Errorf("error setting options in dice.New(): %v", err)
 		}
 	}
 
-	if opts.generator != nil {
-		d.generator = opts.generator
-	}
-
-	if opts.desc != "" {
+	if d.desc != "" {
 		//
 		// some up-front error checking
 		//
-		used_threat, err := regexp.MatchString(`\bc(\d+)?([-+]\d+)?\b`, opts.desc)
+		usedThreat, err := regexp.MatchString(`\bc(\d+)?([-+]\d+)?\b`, d.desc)
 		if err != nil {
 			return nil, err
 		}
-		if used_threat {
-			return nil, fmt.Errorf("Confirmation specifier (c[threat][±bonus]) not allowed in this location. It must be at the end of a full DieRoller description string only.")
+		if usedThreat {
+			return nil, fmt.Errorf("confirmation specifier (c[threat][±bonus]) not allowed in this location. It must be at the end of a full DieRoller description string only")
 		}
 		//
 		// compile regular expressions
 		//
-		re_min := regexp.MustCompile(`^\s*min\s*([+-]?\d+)\s*$`)
-		re_max := regexp.MustCompile(`^\s*max\s*([+-]?\d+)\s*$`)
-		re_minmax := regexp.MustCompile(`\b(min|max)\s*[+-]?\d+`)
-		re_op_split := regexp.MustCompile(`[-+*×÷]|[^-+*×÷]+`)
-		re_is_op := regexp.MustCompile(`^[-+*×÷]$`)
-		re_is_die := regexp.MustCompile(`\d+\s*[dD]\d*\d+`)
-		re_constant := regexp.MustCompile(`^\s*(\d+)\s*(.*?)\s*$`)
+		reMin := regexp.MustCompile(`^\s*min\s*([+-]?\d+)\s*$`)
+		reMax := regexp.MustCompile(`^\s*max\s*([+-]?\d+)\s*$`)
+		reMinmax := regexp.MustCompile(`\b(min|max)\s*[+-]?\d+`)
+		reOpSplit := regexp.MustCompile(`[-+*×÷]|[^-+*×÷]+`)
+		reIsOp := regexp.MustCompile(`^[-+*×÷]$`)
+		reIsDie := regexp.MustCompile(`\d+\s*[dD]\d*\d+`)
+		reConstant := regexp.MustCompile(`^\s*(\d+)\s*(.*?)\s*$`)
 		//                                    max?    numerator    denominator       sides          best/worst         rerolls   label
 		//                                     _1_    __2__          __3__            __4___       _____5_____         __6__     __7__
-		re_die_spec := regexp.MustCompile(`^\s*(>)?\s*(\d*)\s*(?:/\s*(\d+))?\s*[Dd]\s*(%|\d+)\s*(?:(best|worst)\s*of\s*(\d+))?\s*(.*?)\s*$`)
+		reDieSpec := regexp.MustCompile(`^\s*(>)?\s*(\d*)\s*(?:/\s*(\d+))?\s*[Dd]\s*(%|\d+)\s*(?:(best|worst)\s*of\s*(\d+))?\s*(.*?)\s*$`)
 
 		//
 		// break apart the major pieces separated by |
 		// here, the first is the basic die spec. The others may be "min" or "max"
 		//
-		major_pieces := strings.Split(opts.desc, "|")
-		if len(major_pieces) == 0 {
-			return nil, fmt.Errorf("Apparently empty dice expression")
+		majorPieces := strings.Split(d.desc, "|")
+		if len(majorPieces) == 0 {
+			return nil, fmt.Errorf("apparently empty dice expression")
 		}
 
-		if len(major_pieces) > 1 {
-			opts.desc = strings.TrimSpace(major_pieces[0])
-			for _, modifier := range major_pieces[1:] {
-				if m := re_min.FindStringSubmatch(modifier); m != nil {
+		if len(majorPieces) > 1 {
+			d.desc = strings.TrimSpace(majorPieces[0])
+			for _, modifier := range majorPieces[1:] {
+				if m := reMin.FindStringSubmatch(modifier); m != nil {
 					d.MinValue, err = strconv.Atoi(m[1])
 					if err != nil {
 						return nil, err
 					}
-				} else if m := re_max.FindStringSubmatch(modifier); m != nil {
+				} else if m := reMax.FindStringSubmatch(modifier); m != nil {
 					d.MaxValue, err = strconv.Atoi(m[1])
 					if err != nil {
 						return nil, err
 					}
 				} else {
-					return nil, fmt.Errorf("Invalid global modifier %s", modifier)
+					return nil, fmt.Errorf("invalid global modifier %s", modifier)
 				}
 			}
 		}
@@ -880,36 +868,36 @@ func New(options ...newDiceOption) (*Dice, error) {
 		// We'll support the use of the unicode ÷ character in place of the older
 		// ASCII "//" operator as well.
 		//
-		expr := strings.Replace(opts.desc, "//", "÷", -1)
-		expr_parts := re_op_split.FindAllString(expr, -1)
-		expected_syntax := "[<n>[/<d>]] d [<sides>|%] [best|worst of <n>] [+|-|*|×|÷|// ...] ['|'min <n>] ['|'max <n>]"
+		expr := strings.Replace(d.desc, "//", "÷", -1)
+		exprParts := reOpSplit.FindAllString(expr, -1)
+		expectedSyntax := "[<n>[/<d>]] d [<sides>|%] [best|worst of <n>] [+|-|*|×|÷|// ...] ['|'min <n>] ['|'max <n>]"
 
-		if len(expr_parts) == 0 {
-			return nil, fmt.Errorf("Syntax error in die roll description \"%s\"; should be \"%s\"", opts.desc, expected_syntax)
+		if len(exprParts) == 0 {
+			return nil, fmt.Errorf("syntax error in die roll description \"%s\"; should be \"%s\"", d.desc, expectedSyntax)
 		}
 
 		//
-		// expr_parts is a list of alternating operators and values. We have an implied
+		// exprParts is a list of alternating operators and values. We have an implied
 		// 0 in front if the list begins with an operator. We'll add that to the list
 		// now if necessary, then run through the list, building up a stack of dieComponents
 		// to represent the expression we were given.
 		//
 		op := "nil"
-		if re_is_op.MatchString(expr_parts[0]) {
+		if reIsOp.MatchString(exprParts[0]) {
 			// We're starting with an operator. Push a 0 with no operator.
 			// then set up the operator to be applied to the next value.
 			d.multiDice = append(d.multiDice, &dieConstant{Value: 0})
-			op = expr_parts[0]
-			if len(expr_parts)%2 != 0 {
+			op = exprParts[0]
+			if len(exprParts)%2 != 0 {
 				// we have a number of values after the split that suggests the expression
 				// ends with a dangling operator, which we aren't going to stand for.
-				return nil, fmt.Errorf("Syntax error in die roll description \"%s\"; trailing operator not allowed.", opts.desc)
+				return nil, fmt.Errorf("syntax error in die roll description \"%s\"; trailing operator not allowed", d.desc)
 			}
 		} else {
-			if len(expr_parts)%2 == 0 {
+			if len(exprParts)%2 == 0 {
 				// likewise, but here we detect that in the case of the expression starting
 				// with an operator
-				return nil, fmt.Errorf("Syntax error in die roll description \"%s\"; trailing operator not allowed.", opts.desc)
+				return nil, fmt.Errorf("syntax error in die roll description \"%s\"; trailing operator not allowed", d.desc)
 			}
 		}
 
@@ -918,8 +906,8 @@ func New(options ...newDiceOption) (*Dice, error) {
 		// and values. If op is empty, we're expecting an operator. Otherwise,
 		// we take the next value from the list and apply the operator to it.
 		//
-		dice_count := 0
-		for _, part := range expr_parts {
+		diceCount := 0
+		for _, part := range exprParts {
 			if op == "" {
 				op = part
 				continue
@@ -933,21 +921,21 @@ func New(options ...newDiceOption) (*Dice, error) {
 				op = ""
 			}
 
-			x_values := re_die_spec.FindStringSubmatch(part)
-			if x_values == nil {
+			xValues := reDieSpec.FindStringSubmatch(part)
+			if xValues == nil {
 				//
 				// If this is just a constant, this will be easy.
 				//
-				x_values = re_constant.FindStringSubmatch(part)
-				if x_values != nil {
+				xValues = reConstant.FindStringSubmatch(part)
+				if xValues != nil {
 					dc := new(dieConstant)
 					dc.Operator = op
-					dc.Value, err = strconv.Atoi(x_values[1])
+					dc.Value, err = strconv.Atoi(xValues[1])
 					if err != nil {
-						return nil, fmt.Errorf("Value error in die roll subexpression \"%s\" in \"%s\"; %v", part, opts.desc, err)
+						return nil, fmt.Errorf("value error in die roll subexpression \"%s\" in \"%s\"; %v", part, d.desc, err)
 					}
-					if x_values[2] != "" {
-						dc.Label = x_values[2]
+					if xValues[2] != "" {
+						dc.Label = xValues[2]
 					}
 
 					d.multiDice = append(d.multiDice, dc)
@@ -957,7 +945,7 @@ func New(options ...newDiceOption) (*Dice, error) {
 				//
 				// Ok, doesn't look valid then.
 				//
-				return nil, fmt.Errorf("Syntax error in die roll subexpression \"%s\" in \"%s\"; should be \"%s\"", part, opts.desc, expected_syntax)
+				return nil, fmt.Errorf("syntax error in die roll subexpression \"%s\" in \"%s\"; should be \"%s\"", part, d.desc, expectedSyntax)
 			}
 
 			//
@@ -966,8 +954,8 @@ func New(options ...newDiceOption) (*Dice, error) {
 			// option that belongs at the end of the expression, not buried
 			// here in one of these.
 			//
-			if re_minmax.MatchString(part) {
-				return nil, fmt.Errorf("Syntax error in die roll subexpression \"%s\" in \"%s\"; min/max limits must appear after the final operator in the expression, since they apply to the entire set of dice rolls.", part, opts.desc)
+			if reMinmax.MatchString(part) {
+				return nil, fmt.Errorf("syntax error in die roll subexpression \"%s\" in \"%s\"; min/max limits must appear after the final operator in the expression, since they apply to the entire set of dice rolls", part, d.desc)
 			}
 
 			//
@@ -976,87 +964,87 @@ func New(options ...newDiceOption) (*Dice, error) {
 			//
 			ds := &dieSpec{generator: d.generator}
 			d._onlydie = ds
-			dice_count++
-			if x_values[1] != "" {
+			diceCount++
+			if xValues[1] != "" {
 				ds.InitialMax = true
 			}
-			if x_values[2] != "" {
-				ds.Numerator, err = strconv.Atoi(x_values[2])
+			if xValues[2] != "" {
+				ds.Numerator, err = strconv.Atoi(xValues[2])
 				if err != nil {
-					return nil, fmt.Errorf("Value error in die roll subexpression \"%s\": %v", part, err)
+					return nil, fmt.Errorf("value error in die roll subexpression \"%s\": %v", part, err)
 				}
 			} else {
 				ds.Numerator = 1
 			}
-			if x_values[3] != "" {
-				ds.Denominator, err = strconv.Atoi(x_values[3])
+			if xValues[3] != "" {
+				ds.Denominator, err = strconv.Atoi(xValues[3])
 				if err != nil {
-					return nil, fmt.Errorf("Value error in die roll subexpression \"%s\": %v", part, err)
+					return nil, fmt.Errorf("value error in die roll subexpression \"%s\": %v", part, err)
 				}
 			}
-			if x_values[4] == "%" {
+			if xValues[4] == "%" {
 				ds.Sides = 100
 			} else {
-				ds.Sides, err = strconv.Atoi(x_values[4])
+				ds.Sides, err = strconv.Atoi(xValues[4])
 				if err != nil {
-					return nil, fmt.Errorf("Value error in die roll subexpression \"%s\": %v", part, err)
+					return nil, fmt.Errorf("value error in die roll subexpression \"%s\": %v", part, err)
 				}
 			}
-			if x_values[5] != "" {
-				ds.Rerolls, err = strconv.Atoi(x_values[6])
+			if xValues[5] != "" {
+				ds.Rerolls, err = strconv.Atoi(xValues[6])
 				if err != nil {
-					return nil, fmt.Errorf("Value error in die roll subexpression \"%s\": %v", part, err)
+					return nil, fmt.Errorf("value error in die roll subexpression \"%s\": %v", part, err)
 				}
 				ds.Rerolls--
-				switch x_values[5] {
+				switch xValues[5] {
 				case "best":
 					ds.BestReroll = true
 				case "worst":
 					ds.BestReroll = false
 				default:
-					return nil, fmt.Errorf("Value error in die roll subexpression \"%s\": expecting \"best\" or \"worst\"", part)
+					return nil, fmt.Errorf("value error in die roll subexpression \"%s\": expecting \"best\" or \"worst\"", part)
 				}
 			}
-			if x_values[7] != "" {
-				if re_is_die.MatchString(x_values[7]) {
-					return nil, fmt.Errorf("Comment following die roll in \"%s\" looks like another die roll--did you forget an operator?", part)
+			if xValues[7] != "" {
+				if reIsDie.MatchString(xValues[7]) {
+					return nil, fmt.Errorf("comment following die roll in \"%s\" looks like another die roll--did you forget an operator?", part)
 				}
-				ds.Label = x_values[7]
+				ds.Label = xValues[7]
 			}
 			ds.Operator = op
 			d.multiDice = append(d.multiDice, ds)
 			op = ""
 		}
-		if dice_count != 1 {
+		if diceCount != 1 {
 			d._onlydie = nil
 		}
 	}
 
-	if opts.qty > 0 && opts.sides > 0 {
+	if d.qty > 0 && d.sides > 0 {
 		d.multiDice = append(d.multiDice, &dieSpec{
-			Numerator:   opts.qty,
-			Sides:       opts.sides,
-			DieBonus:    opts.diebonus,
-			Denominator: opts.div,
+			Numerator:   d.qty,
+			Sides:       d.sides,
+			DieBonus:    d.diebonus,
+			Denominator: d.div,
 			generator:   d.generator,
 		})
 	}
-	if opts.bonus < 0 {
+	if d.bonus < 0 {
 		d.multiDice = append(d.multiDice, &dieConstant{
 			Operator: "-",
-			Value:    -opts.bonus,
+			Value:    -d.bonus,
 		})
-	} else if opts.bonus > 0 {
+	} else if d.bonus > 0 {
 		d.multiDice = append(d.multiDice, &dieConstant{
 			Operator: "+",
-			Value:    opts.bonus,
+			Value:    d.bonus,
 		})
 	}
 
-	if opts.factor != 0 {
+	if d.factor != 0 {
 		d.multiDice = append(d.multiDice, &dieConstant{
 			Operator: "*",
-			Value:    opts.factor,
+			Value:    d.factor,
 		})
 	}
 
@@ -1085,28 +1073,28 @@ func (d *Dice) MaxRoll() (int, error) {
 // dice come up with their maximum values rather than rolling anything.
 //
 func (d *Dice) MaxRollToConfirm(bonus int) (int, error) {
-	roll_sum := 0
+	rollSum := 0
 	d._natural = 0
 	d.Rolled = false
 	var err error
 
 	for _, die := range d.multiDice {
-		roll_sum, err = die.maxValue(roll_sum)
+		rollSum, err = die.maxValue(rollSum)
 		if err != nil {
 			return 0, err
 		}
 	}
-	roll_sum += bonus
-	if d.MaxValue > 0 && roll_sum > d.MaxValue {
-		roll_sum = d.MaxValue
+	rollSum += bonus
+	if d.MaxValue > 0 && rollSum > d.MaxValue {
+		rollSum = d.MaxValue
 	}
-	if d.MinValue > 0 && roll_sum < d.MinValue {
-		roll_sum = d.MinValue
+	if d.MinValue > 0 && rollSum < d.MinValue {
+		rollSum = d.MinValue
 	}
 
-	d.LastValue = roll_sum
+	d.LastValue = rollSum
 	d.Rolled = true
-	return roll_sum, nil
+	return rollSum, nil
 }
 
 //
@@ -1135,10 +1123,10 @@ func (d *Dice) RollToConfirm(confirm bool, threat int, bonus int) (int, error) {
 		// if d._natural was 0, we haven't rolled the other roll yet;
 		// if it's < 0, we have but it doesn't qualify for confirmation.
 		if d._natural == 0 {
-			return 0, fmt.Errorf("You need to roll the dice first before confirming a critical roll.")
+			return 0, fmt.Errorf("you need to roll the dice first before confirming a critical roll")
 		}
 		if d._natural < 0 {
-			return 0, fmt.Errorf("You can't confirm a critical on this roll because it doesn't involve only a single die.")
+			return 0, fmt.Errorf("you can't confirm a critical on this roll because it doesn't involve only a single die")
 		}
 
 		//
@@ -1160,13 +1148,13 @@ func (d *Dice) RollToConfirm(confirm bool, threat int, bonus int) (int, error) {
 	// or trying to confirm a critical that we know needs to be
 	// confirmed.
 	//
-	roll_sum := 0
+	rollSum := 0
 	d._natural = 0
 	d.Rolled = false
 	var err error
 
 	for _, die := range d.multiDice {
-		roll_sum, err = die.evaluate(roll_sum)
+		rollSum, err = die.evaluate(rollSum)
 		if err != nil {
 			return 0, err
 		}
@@ -1180,30 +1168,29 @@ func (d *Dice) RollToConfirm(confirm bool, threat int, bonus int) (int, error) {
 		// d._natural to -1.
 		// Otherwise d._natural will be 0 (no dice involved at all) or the
 		// single natural die roll we found.
-		the_natural, def_threat := die.naturalRoll()
-		if the_natural != 0 {
+		theNatural, defThreat := die.naturalRoll()
+		if theNatural != 0 {
 			if d._natural == 0 {
-				d._natural, d._defthreat = the_natural, def_threat
+				d._natural, d._defthreat = theNatural, defThreat
 			} else {
 				d._natural, d._defthreat = -1, 0
 			}
 		}
 	}
-	roll_sum += bonus
-	if d.MaxValue > 0 && roll_sum > d.MaxValue {
-		roll_sum = d.MaxValue
+	rollSum += bonus
+	if d.MaxValue > 0 && rollSum > d.MaxValue {
+		rollSum = d.MaxValue
 	}
-	if d.MinValue > 0 && roll_sum < d.MinValue {
-		roll_sum = d.MinValue
+	if d.MinValue > 0 && rollSum < d.MinValue {
+		rollSum = d.MinValue
 	}
 
-	d.LastValue = roll_sum
+	d.LastValue = rollSum
 	d.Rolled = true
-	return roll_sum, nil
+	return rollSum, nil
 }
 
-// Description
-// produces a human-readable description of the die roll specification represented
+// Description produces a human-readable description of the die roll specification represented
 // by the Dice object.
 func (d *Dice) Description() (desc string) {
 	for _, die := range d.multiDice {
@@ -1219,8 +1206,7 @@ func (d *Dice) Description() (desc string) {
 }
 
 //
-// StructuredDescribeRoll
-// produces a detailed structured description of the result of rolling
+// StructuredDescribeRoll produces a detailed structured description of the result of rolling
 // the Dice, in a way that a caller can format as they see fit.
 //
 // If sfOpt is a non-empty string, then successMessage will be presented
@@ -1244,7 +1230,7 @@ func (d *Dice) StructuredDescribeRoll(sfOpt, successMessage, failureMessage stri
 	}
 	if sfOpt != "" {
 		if d._onlydie == nil || d._onlydie.Numerator != 1 {
-			return nil, fmt.Errorf("You can't indicate auto-success/fail (|sf option) because it involves multiple dice.")
+			return nil, fmt.Errorf("you can't indicate auto-success/fail (|sf option) because it involves multiple dice")
 		}
 		if d._onlydie.isMinRoll() {
 			desc = append(desc, StructuredDescription{Type: "fail", Value: failureMessage})
@@ -1344,6 +1330,30 @@ type DieRoller struct {
 }
 
 //
+// RandFloat64 generates a pseudorandom number in the range [0.0, 1.0) using
+// the same random number generator as used for die rolls. This means that it
+// affects the outcome of subsequent die rolls just as other die rolls do.
+//
+func (d *DieRoller) RandFloat64() float64 {
+	if d.generator == nil {
+		return rand.Float64()
+	}
+	return d.generator.Float64()
+}
+
+//
+// RandIntn generates a pseudorandom integer in the range [0, n) using
+// the same random number generator as used for die rolls. This means that it
+// affects the outcome of subsequent die rolls just as other die rolls do.
+//
+func (d *DieRoller) RandIntn(n int) int {
+	if d.generator == nil {
+		return rand.Intn(n)
+	}
+	return d.generator.Intn(n)
+}
+
+//
 // NewDieRoller creates a new DieRoller value, which provides the recommended
 // higher-level interface for rolling dice. This value can
 // then be used for as many die rolls as needed by calling its DoRoll()
@@ -1356,15 +1366,15 @@ type DieRoller struct {
 // Initially it is set up to roll a single d20, but this can be changed with
 // each DoRoll() call.
 //
-func NewDieRoller(options ...newDiceOption) (*DieRoller, error) {
+func NewDieRoller(options ...func(*Dice) error) (*DieRoller, error) {
 	var err error
 	dr := new(DieRoller)
-	opts := &diceOptions{}
+	opts := new(Dice)
 
 	for _, option := range options {
 		err := option(opts)
 		if err != nil {
-			return nil, fmt.Errorf("Error setting options in dice.NewDieRoller(): %v", err)
+			return nil, fmt.Errorf("error setting options in dice.NewDieRoller(): %v", err)
 		}
 	}
 
@@ -1400,21 +1410,21 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 	d.PctChance = -1
 	d.PctLabel = ""
 
-	re_label := regexp.MustCompile(`^\s*(.*?)\s*=\s*(.*?)\s*$`)
-	re_mod_minmax := regexp.MustCompile(`^\s*(min|max)\s*[+-]?\d+`)
-	re_mod_confirm := regexp.MustCompile(`^\s*c(\d+)?([-+]\d+)?\s*$`)
-	re_mod_until := regexp.MustCompile(`^\s*until\s*(-?\d+)\s*$`)
-	re_mod_repeat := regexp.MustCompile(`^\s*repeat\s*(\d+)\s*$`)
-	re_mod_maximized := regexp.MustCompile(`^\s*(!|maximized)\s*$`)
-	re_mod_dc := regexp.MustCompile(`^\s*[Dd][Cc]\s*(-?\d+)\s*$`)
-	re_mod_sf := regexp.MustCompile(`^\s*sf(?:\s+(\S.*?)(?:/(\S.*?))?)?\s*$`)
-	re_permutations := regexp.MustCompile(`\{(.*?)\}`)
-	re_pct_roll := regexp.MustCompile(`^\s*(\d+)%(.*)$`)
+	reLabel := regexp.MustCompile(`^\s*(.*?)\s*=\s*(.*?)\s*$`)
+	reModMinmax := regexp.MustCompile(`^\s*(min|max)\s*[+-]?\d+`)
+	reModConfirm := regexp.MustCompile(`^\s*c(\d+)?([-+]\d+)?\s*$`)
+	reModUntil := regexp.MustCompile(`^\s*until\s*(-?\d+)\s*$`)
+	reModRepeat := regexp.MustCompile(`^\s*repeat\s*(\d+)\s*$`)
+	reModMaximized := regexp.MustCompile(`^\s*(!|maximized)\s*$`)
+	reModDC := regexp.MustCompile(`^\s*[Dd][Cc]\s*(-?\d+)\s*$`)
+	reModSF := regexp.MustCompile(`^\s*sf(?:\s+(\S.*?)(?:/(\S.*?))?)?\s*$`)
+	rePermutations := regexp.MustCompile(`\{(.*?)\}`)
+	rePctRoll := regexp.MustCompile(`^\s*(\d+)%(.*)$`)
 
 	//
 	// Look for leading "<label>="
 	//
-	fields := re_label.FindStringSubmatch(spec)
+	fields := reLabel.FindStringSubmatch(spec)
 	if fields != nil {
 		spec = fields[2]
 		d.LabelText = fields[1]
@@ -1424,23 +1434,23 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 	// The remainder of the spec is a die-roll string followed by a number
 	// of global modifiers, separated by vertical bars.
 	//
-	major_pieces := strings.Split(spec, "|")
-	if len(major_pieces) == 0 {
-		return fmt.Errorf("Empty dice description")
+	majorPieces := strings.Split(spec, "|")
+	if len(majorPieces) == 0 {
+		return fmt.Errorf("empty dice description")
 	}
 
 	//
 	// If there are modifiers, process them now.
 	//
-	if len(major_pieces) > 1 {
-		spec = strings.TrimSpace(major_pieces[0])
-		for i := 1; i < len(major_pieces); i++ {
-			if re_mod_minmax.MatchString(major_pieces[i]) {
+	if len(majorPieces) > 1 {
+		spec = strings.TrimSpace(majorPieces[0])
+		for i := 1; i < len(majorPieces); i++ {
+			if reModMinmax.MatchString(majorPieces[i]) {
 				// min/max options need to be passed down to the Dice parser,
 				// so append it to the diespec string
-				spec += "|" + major_pieces[i]
+				spec += "|" + majorPieces[i]
 			} else {
-				if fields := re_mod_confirm.FindStringSubmatch(major_pieces[i]); fields != nil {
+				if fields := reModConfirm.FindStringSubmatch(majorPieces[i]); fields != nil {
 					//
 					// MODIFIER
 					// 	| c[<threat>][{+|-}<bonus>]
@@ -1450,13 +1460,13 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 					if fields[1] != "" {
 						d.critThreat, err = strconv.Atoi(fields[1])
 						if err != nil {
-							return fmt.Errorf("Value error in die roll confirm expression: %v", err)
+							return fmt.Errorf("value error in die roll confirm expression: %v", err)
 						}
 					}
 					if fields[2] != "" {
 						d.critBonus, err = strconv.Atoi(fields[2])
 						if err != nil {
-							return fmt.Errorf("Value error in die roll confirm expression: %v", err)
+							return fmt.Errorf("value error in die roll confirm expression: %v", err)
 						}
 					}
 					//
@@ -1469,7 +1479,7 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 					if d.FailMessage == "" {
 						d.FailMessage = "MISS"
 					}
-				} else if fields := re_mod_until.FindStringSubmatch(major_pieces[i]); fields != nil {
+				} else if fields := reModUntil.FindStringSubmatch(majorPieces[i]); fields != nil {
 					//
 					// MODIFIER
 					//  | until <n>
@@ -1477,9 +1487,9 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 					//
 					d.RepeatUntil, err = strconv.Atoi(fields[1])
 					if err != nil {
-						return fmt.Errorf("Value error in die roll until clause: %v", err)
+						return fmt.Errorf("value error in die roll until clause: %v", err)
 					}
-				} else if fields := re_mod_repeat.FindStringSubmatch(major_pieces[i]); fields != nil {
+				} else if fields := reModRepeat.FindStringSubmatch(majorPieces[i]); fields != nil {
 					//
 					// MODIFIER
 					//  | repeat <n>
@@ -1487,16 +1497,16 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 					//
 					d.RepeatFor, err = strconv.Atoi(fields[1])
 					if err != nil {
-						return fmt.Errorf("Value error in die roll repeat clause: %v", err)
+						return fmt.Errorf("value error in die roll repeat clause: %v", err)
 					}
-				} else if re_mod_maximized.MatchString(major_pieces[i]) {
+				} else if reModMaximized.MatchString(majorPieces[i]) {
 					//
 					// MODIFIER
 					//  | !|maximized
 					// Maximize all die rolls
 					//
 					d.DoMax = true
-				} else if fields := re_mod_dc.FindStringSubmatch(major_pieces[i]); fields != nil {
+				} else if fields := reModDC.FindStringSubmatch(majorPieces[i]); fields != nil {
 					//
 					// MODIFIER
 					//  | DC <n>
@@ -1504,9 +1514,9 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 					//
 					d.DC, err = strconv.Atoi(fields[1])
 					if err != nil {
-						return fmt.Errorf("Value error in die roll DC clause: %v", err)
+						return fmt.Errorf("value error in die roll DC clause: %v", err)
 					}
-				} else if fields := re_mod_sf.FindStringSubmatch(major_pieces[i]); fields != nil {
+				} else if fields := reModSF.FindStringSubmatch(majorPieces[i]); fields != nil {
 					//
 					// MODIFIER
 					//  | sf [<success>[/<fail>]]
@@ -1538,7 +1548,7 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 						d.FailMessage = "FAIL"
 					}
 				} else {
-					return fmt.Errorf("Global modifier option \"%s\" not understood; must be !, c, dc, min, max, maximized, sf, until, or repeat.", major_pieces[i])
+					return fmt.Errorf("global modifier option \"%s\" not understood; must be !, c, dc, min, max, maximized, sf, until, or repeat", majorPieces[i])
 				}
 			}
 		}
@@ -1561,11 +1571,11 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 	//  "d20+10+2d6+2"
 	//  "d20+5+2d6+2"
 	//
-	if perm_list := re_permutations.FindAllStringSubmatch(spec, -1); perm_list != nil {
-		for _, perm := range perm_list {
+	if permList := rePermutations.FindAllStringSubmatch(spec, -1); permList != nil {
+		for _, perm := range permList {
 			valueset := strings.Split(perm[1], "/")
 			if len(valueset) < 2 {
-				return fmt.Errorf("Invalid die-roll specification \"%s\": Values in braces must have more than one value separated by slashes.", perm[0])
+				return fmt.Errorf("invalid die-roll specification \"%s\": Values in braces must have more than one value separated by slashes", perm[0])
 			}
 			plist := make([]interface{}, len(valueset))
 			for i, p := range valueset {
@@ -1579,28 +1589,28 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 		// out of d.Permutations.
 		//
 		pos := -1
-		d.Template = re_permutations.ReplaceAllStringFunc(spec, func(_ string) string {
+		d.Template = rePermutations.ReplaceAllStringFunc(spec, func(_ string) string {
 			pos++
 			return "{" + strconv.Itoa(pos) + "}"
 		})
 	}
 
-	if fields := re_pct_roll.FindStringSubmatch(spec); fields != nil {
+	if fields := rePctRoll.FindStringSubmatch(spec); fields != nil {
 		//
 		// Special case: <n>% rolls percentile dice and
 		// returns true with a probability of n%.
 		//
 		if d.Permutations != nil {
-			return fmt.Errorf("Permutations with percentile die rolls are not supported.")
+			return fmt.Errorf("permutations with percentile die rolls are not supported")
 		}
 		if strings.Index(spec, "|") >= 0 {
-			return fmt.Errorf("Invalid global modifier for percentile die rolls: \"%s\"", spec)
+			return fmt.Errorf("invalid global modifier for percentile die rolls: \"%s\"", spec)
 		}
 		if d.Confirm {
-			return fmt.Errorf("You can't confirm critical percentile die rolls.")
+			return fmt.Errorf("you can't confirm critical percentile die rolls")
 		}
 		if d.DC != 0 {
-			return fmt.Errorf("You can't have a percentile die roll with a DC.")
+			return fmt.Errorf("you can't have a percentile die roll with a DC")
 		}
 		d.d, err = New(ByDieType(1, 100, 0), withSharedGenerator(d.generator))
 		if err != nil {
@@ -1765,13 +1775,13 @@ func (d *DieRoller) DoRoll(spec string) (string, []StructuredResult, error) {
 		}
 	}
 
-	var overall_results []StructuredResult
+	var overallResults []StructuredResult
 	var results []StructuredResult
 	var result int
 
-	repeat_iter := 0
-	repeat_count := 0
-	for repeat_iter < d.RepeatFor {
+	repeatIter := 0
+	repeatCount := 0
+	for repeatIter < d.RepeatFor {
 		if d.Template != "" {
 			// If we're working with a set of permutations, expand them now
 			// into their Cartesian product so we can then substitute each set
@@ -1784,26 +1794,26 @@ func (d *DieRoller) DoRoll(spec string) (string, []StructuredResult, error) {
 				if err != nil {
 					return "", nil, err
 				}
-				result, results, err = d.rollDice(repeat_iter, repeat_count)
+				result, results, err = d.rollDice(repeatIter, repeatCount)
 				if err != nil {
 					return "", nil, err
 				}
-				overall_results = append(overall_results, results...)
+				overallResults = append(overallResults, results...)
 			}
 		} else {
 			// Otherwise we already have the Dice object set up, just use it.
-			result, results, err = d.rollDice(repeat_iter, repeat_count)
+			result, results, err = d.rollDice(repeatIter, repeatCount)
 			if err != nil {
 				return "", nil, err
 			}
-			overall_results = append(overall_results, results...)
+			overallResults = append(overallResults, results...)
 		}
 
 		if d.RepeatUntil == 0 || result >= d.RepeatUntil {
-			repeat_iter++
+			repeatIter++
 		}
-		repeat_count++
-		if repeat_count >= 100 {
+		repeatCount++
+		if repeatCount >= 100 {
 			break
 		}
 	}
@@ -1811,7 +1821,7 @@ func (d *DieRoller) DoRoll(spec string) (string, []StructuredResult, error) {
 		d.d = nil
 	}
 
-	return d.LabelText, overall_results, nil
+	return d.LabelText, overallResults, nil
 }
 
 //
@@ -1832,9 +1842,9 @@ func substituteTemplateValues(template string, values []interface{}) string {
 // a critical roll) based on the exact specifications already set in place by
 // the caller.
 //
-func (d *DieRoller) rollDice(repeat_iter, repeat_count int) (int, []StructuredResult, error) {
+func (d *DieRoller) rollDice(repeatIter, repeatCount int) (int, []StructuredResult, error) {
 	var results []StructuredResult
-	var this_result []StructuredDescription
+	var thisResult []StructuredDescription
 	var result int
 	var err error
 
@@ -1843,7 +1853,7 @@ func (d *DieRoller) rollDice(repeat_iter, repeat_count int) (int, []StructuredRe
 	// in this case we want to indicate the margin above or below
 	// the DC that was rolled.
 	//
-	describe_dc_roll := func(dc, result int) (desc StructuredDescription) {
+	describeDCRoll := func(dc, result int) (desc StructuredDescription) {
 		if result > dc {
 			desc.Type = "exceeded"
 			desc.Value = strconv.Itoa(result - dc)
@@ -1859,11 +1869,11 @@ func (d *DieRoller) rollDice(repeat_iter, repeat_count int) (int, []StructuredRe
 
 	//
 	// How to report back on the options (aka modifiers) in play for the die roll.
-	// This updates the this_result value in-place.
+	// This updates the thisResult value in-place.
 	//
-	report_options := func() {
+	reportOptions := func() {
 		if d.Confirm {
-			this_result = append(this_result, StructuredDescription{
+			thisResult = append(thisResult, StructuredDescription{
 				Type: "moddelim", Value: "|",
 			})
 			c := "c"
@@ -1873,34 +1883,34 @@ func (d *DieRoller) rollDice(repeat_iter, repeat_count int) (int, []StructuredRe
 			if d.critBonus != 0 {
 				c += fmt.Sprintf("%+d", d.critBonus)
 			}
-			this_result = append(this_result, StructuredDescription{
+			thisResult = append(thisResult, StructuredDescription{
 				Type: "critspec", Value: c,
 			})
 		}
 		if d.RepeatFor > 1 {
-			this_result = append(this_result,
+			thisResult = append(thisResult,
 				StructuredDescription{Type: "moddelim", Value: "|"},
 				StructuredDescription{Type: "repeat", Value: strconv.Itoa(d.RepeatFor)},
-				StructuredDescription{Type: "iteration", Value: strconv.Itoa(repeat_count + 1)},
+				StructuredDescription{Type: "iteration", Value: strconv.Itoa(repeatCount + 1)},
 			)
 		}
 		if d.RepeatUntil != 0 {
-			this_result = append(this_result,
+			thisResult = append(thisResult,
 				StructuredDescription{Type: "moddelim", Value: "|"},
 				StructuredDescription{Type: "until", Value: strconv.Itoa(d.RepeatUntil)},
-				StructuredDescription{Type: "iteration", Value: strconv.Itoa(repeat_count + 1)},
-				describe_dc_roll(d.RepeatUntil, result),
+				StructuredDescription{Type: "iteration", Value: strconv.Itoa(repeatCount + 1)},
+				describeDCRoll(d.RepeatUntil, result),
 			)
 		}
 		if d.DC != 0 {
-			this_result = append(this_result,
+			thisResult = append(thisResult,
 				StructuredDescription{Type: "moddelim", Value: "|"},
 				StructuredDescription{Type: "dc", Value: strconv.Itoa(d.DC)},
-				describe_dc_roll(d.DC, result),
+				describeDCRoll(d.DC, result),
 			)
 		}
 		if d.sfOpt != "" {
-			this_result = append(this_result,
+			thisResult = append(thisResult,
 				StructuredDescription{Type: "moddelim", Value: "|"},
 				StructuredDescription{Type: "sf", Value: d.sfOpt},
 			)
@@ -1912,20 +1922,20 @@ func (d *DieRoller) rollDice(repeat_iter, repeat_count int) (int, []StructuredRe
 	// The result will be 0 or 1 and we'll describe the outcome in words
 	// like "hit" or "miss"
 	//
-	re_slash_delim := regexp.MustCompile(`\s*/\s*`)
-	report_pct_roll := func(chance int, label string, maximized bool) {
-		this_result = nil
-		built_in_labels := map[string]string{
+	reSlashDelim := regexp.MustCompile(`\s*/\s*`)
+	reportPctRoll := func(chance int, label string, maximized bool) {
+		thisResult = nil
+		builtInLabels := map[string]string{
 			"hit":  "miss",
 			"miss": "hit",
 		}
 		var labels []string
 
 		if label != "" {
-			labels = re_slash_delim.Split(strings.TrimSpace(label), 2)
+			labels = reSlashDelim.Split(strings.TrimSpace(label), 2)
 			if len(labels) == 1 {
 				// user provided the positive string; we need to make up the other
-				neg, ok := built_in_labels[labels[0]]
+				neg, ok := builtInLabels[labels[0]]
 				if ok {
 					labels = append(labels, neg)
 				} else {
@@ -1936,32 +1946,32 @@ func (d *DieRoller) rollDice(repeat_iter, repeat_count int) (int, []StructuredRe
 			labels = []string{"success", "fail"}
 		}
 		if result <= chance {
-			this_result = append(this_result, StructuredDescription{Type: "success", Value: labels[0]})
+			thisResult = append(thisResult, StructuredDescription{Type: "success", Value: labels[0]})
 		} else {
-			this_result = append(this_result, StructuredDescription{Type: "fail", Value: labels[1]})
+			thisResult = append(thisResult, StructuredDescription{Type: "fail", Value: labels[1]})
 		}
-		this_result = append(this_result,
+		thisResult = append(thisResult,
 			StructuredDescription{Type: "separator", Value: "="},
 			StructuredDescription{Type: "diespec", Value: fmt.Sprintf("%d%%", chance)},
 		)
 		if label != "" {
-			this_result = append(this_result,
+			thisResult = append(thisResult,
 				StructuredDescription{Type: "label", Value: strings.TrimSpace(label)})
 		}
 		if maximized {
-			this_result = append(this_result,
+			thisResult = append(thisResult,
 				StructuredDescription{Type: "maxroll", Value: strconv.Itoa(result)},
 				StructuredDescription{Type: "moddelim", Value: "|"},
 				StructuredDescription{Type: "fullmax", Value: "maximized"},
 			)
 		} else {
-			this_result = append(this_result,
+			thisResult = append(thisResult,
 				StructuredDescription{Type: "roll", Value: strconv.Itoa(result)})
 		}
 		if result <= chance {
-			results = append(results, StructuredResult{Result: 1, Details: this_result})
+			results = append(results, StructuredResult{Result: 1, Details: thisResult})
 		} else {
-			results = append(results, StructuredResult{Result: 0, Details: this_result})
+			results = append(results, StructuredResult{Result: 0, Details: thisResult})
 		}
 	}
 
@@ -1969,7 +1979,7 @@ func (d *DieRoller) rollDice(repeat_iter, repeat_count int) (int, []StructuredRe
 	// Enough of the preliminaries, let's get working.
 	//
 	if d.d == nil {
-		return 0, nil, fmt.Errorf("No defined Dice object to consume")
+		return 0, nil, fmt.Errorf("no defined Dice object to consume")
 	}
 
 	// MAXIMIZED DIE ROLLS_____________________________________________________
@@ -1987,39 +1997,39 @@ func (d *DieRoller) rollDice(repeat_iter, repeat_count int) (int, []StructuredRe
 			return 0, nil, err
 		}
 		if d.PctChance >= 0 {
-			report_pct_roll(d.PctChance, d.PctLabel, true)
+			reportPctRoll(d.PctChance, d.PctLabel, true)
 		} else {
 			sdesc, err := d.d.StructuredDescribeRoll(sfo, d.SuccessMessage, d.FailMessage, 0)
 			if err != nil {
 				return 0, nil, err
 			}
-			this_result = append(this_result, sdesc...)
-			report_options()
-			this_result = append(this_result,
+			thisResult = append(thisResult, sdesc...)
+			reportOptions()
+			thisResult = append(thisResult,
 				StructuredDescription{Type: "moddelim", Value: "|"},
 				StructuredDescription{Type: "fullmax", Value: "maximized"},
 			)
 			if d.Confirm {
-				results = append(results, StructuredResult{Result: result, Details: this_result})
+				results = append(results, StructuredResult{Result: result, Details: thisResult})
 				result2, err := d.d.MaxRollToConfirm(d.critBonus)
 				if err != nil {
 					return 0, nil, err
 				}
-				this_result = nil
+				thisResult = nil
 				sdesc, err := d.d.StructuredDescribeRoll(sfo, d.SuccessMessage, d.FailMessage, d.critBonus)
 				if err != nil {
 					return 0, nil, err
 				}
-				this_result = append(this_result,
+				thisResult = append(thisResult,
 					StructuredDescription{Type: "critlabel", Value: "Confirm:"})
-				this_result = append(this_result, sdesc...)
-				this_result = append(this_result,
+				thisResult = append(thisResult, sdesc...)
+				thisResult = append(thisResult,
 					StructuredDescription{Type: "moddelim", Value: "|"},
 					StructuredDescription{Type: "fullmax", Value: "maximized"},
 				)
-				results = append(results, StructuredResult{Result: result2, Details: this_result})
+				results = append(results, StructuredResult{Result: result2, Details: thisResult})
 			} else {
-				results = append(results, StructuredResult{Result: result, Details: this_result})
+				results = append(results, StructuredResult{Result: result, Details: thisResult})
 			}
 		}
 	} else {
@@ -2030,33 +2040,33 @@ func (d *DieRoller) rollDice(repeat_iter, repeat_count int) (int, []StructuredRe
 			return 0, nil, err
 		}
 		if d.PctChance >= 0 {
-			report_pct_roll(d.PctChance, d.PctLabel, false)
+			reportPctRoll(d.PctChance, d.PctLabel, false)
 		} else {
 			sdesc, err := d.d.StructuredDescribeRoll(sfo, d.SuccessMessage, d.FailMessage, 0)
 			if err != nil {
 				return 0, nil, err
 			}
-			this_result = append(this_result, sdesc...)
-			report_options()
+			thisResult = append(thisResult, sdesc...)
+			reportOptions()
 			if d.Confirm {
-				results = append(results, StructuredResult{Result: result, Details: this_result})
+				results = append(results, StructuredResult{Result: result, Details: thisResult})
 				result2, err := d.d.RollToConfirm(true, d.critThreat, d.critBonus)
 				if err != nil {
 					return 0, nil, err
 				}
 				if result2 != 0 {
-					this_result = nil
+					thisResult = nil
 					sdesc, err := d.d.StructuredDescribeRoll(sfo, d.SuccessMessage, d.FailMessage, d.critBonus)
 					if err != nil {
 						return 0, nil, err
 					}
-					this_result = append(this_result,
+					thisResult = append(thisResult,
 						StructuredDescription{Type: "critlabel", Value: "Confirm:"})
-					this_result = append(this_result, sdesc...)
-					results = append(results, StructuredResult{Result: result2, Details: this_result})
+					thisResult = append(thisResult, sdesc...)
+					results = append(results, StructuredResult{Result: result2, Details: thisResult})
 				}
 			} else {
-				results = append(results, StructuredResult{Result: result, Details: this_result})
+				results = append(results, StructuredResult{Result: result, Details: thisResult})
 			}
 		}
 	}
@@ -2093,7 +2103,7 @@ func RollOnce(spec string) (string, StructuredResult, error) {
 	}
 
 	if len(r) != 1 {
-		return "", StructuredResult{}, fmt.Errorf("Die roll spec calls for more than a single roll")
+		return "", StructuredResult{}, fmt.Errorf("die roll spec calls for more than a single roll")
 	}
 	return l, r[0], nil
 }
@@ -2109,7 +2119,7 @@ func (d *DieRoller) DoRollOnce(spec string) (string, StructuredResult, error) {
 	}
 
 	if len(r) != 1 {
-		return "", StructuredResult{}, fmt.Errorf("Die roll spec calls for more than a single roll")
+		return "", StructuredResult{}, fmt.Errorf("die roll spec calls for more than a single roll")
 	}
 	return l, r[0], nil
 }
@@ -2250,7 +2260,7 @@ func (sr StructuredDescriptionSet) Text() (string, error) {
 	return t.String(), nil
 }
 
-// @[00]@| GMA 4.3.7
+// @[00]@| GMA 4.3.8
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.

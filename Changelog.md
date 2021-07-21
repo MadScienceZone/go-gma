@@ -1,10 +1,16 @@
 # Changelog
 ## Current Version Information
- * GMA Core API Library Version: 4.3.7		<!-- @@##@@ -->
+ * GMA Core API Library Version: 4.3.8		<!-- @@##@@ -->
  * Supported GMA Mapper Version: 3.40.10		<!-- @@##@@ -->
  * Supported GMA Mapper Protocol: 332		<!-- @@##@@ -->
  * Supported GMA Mapper File Format: 17		<!-- @@##@@ -->
- * Effective Date: 17-Jul-2021			<!-- @@##@@ -->
+ * Effective Date: 21-Jul-2021			<!-- @@##@@ -->
+
+## v4.3.8 (alpha)
+Updated documentation. Lots of cleanup to make `golint` happier.
+Added random name generation package `namegen`.
+Added ability to get raw random number values from `dice.DieRoller` that use the same
+PRG.
 
 ## v4.3.7 (alpha)
 Moved SaveData methods for MapObjects back to being unepxorted. Users should

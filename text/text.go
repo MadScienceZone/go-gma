@@ -1,19 +1,19 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___       ______      ______               #
-# (  ____ \(       )(  ___  )              /   )     / ___  \    / ___  \              #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \   \/   )  )             #
-# | |      | || || || (___) |            / (_) (_       ___) /       /  /              #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (       /  /               #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \     /  /                #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _  /  /                 #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \_/                  #
+#  _______  _______  _______                ___       ______       _____               #
+# (  ____ \(       )(  ___  )              /   )     / ___  \     / ___ \              #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \   ( (___) )             #
+# | |      | || || || (___) |            / (_) (_       ___) /    \     /              #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (     / ___ \              #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \   ( (   ) )             #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ ( (___) )             #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \_____/              #
 #                                                                                      #
 ########################################################################################
 */
 
 //
-// Text processing facilities used by GMA.
+// Package text provides text processing facilities used by GMA.
 //
 package text
 
@@ -77,7 +77,7 @@ func ToRoman(i int) (string, error) {
 	var roman strings.Builder
 
 	if i < 0 {
-		return "", fmt.Errorf("Cannot represent negative values in Roman numerals.")
+		return "", fmt.Errorf("cannot represent negative values in Roman numerals")
 	}
 
 	if i == 0 {
@@ -142,8 +142,6 @@ type renderOptSet struct {
 	compact   bool
 }
 
-type renderOpts func(*renderOptSet)
-
 // AsPlainText may be added as an option to the Render() function
 // to select plain text output format.
 func AsPlainText(o *renderOptSet) {
@@ -177,7 +175,7 @@ func AsPostScript(o *renderOptSet) {
 // no other processing is made to the runes passed here; they are used as-is
 // in each case. This may change.
 //
-func WithBullets(bullets ...rune) renderOpts {
+func WithBullets(bullets ...rune) func(*renderOptSet) {
 	return func(o *renderOptSet) {
 		o.bulletSet = bullets
 	}
@@ -1145,7 +1143,7 @@ func enumVal(level, value int) string {
 //
 // ‡Must appear at the very beginning of a line.
 //
-func Render(text string, opts ...renderOpts) (string, error) {
+func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 	ops := renderOptSet{
 		formatter: &renderPlainTextFormatter{},
 		bulletSet: []rune{0},
@@ -1387,7 +1385,7 @@ func Render(text string, opts ...renderOpts) (string, error) {
 	return ops.formatter.finalize(), nil
 }
 
-// @[00]@| GMA 4.3.7
+// @[00]@| GMA 4.3.8
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.

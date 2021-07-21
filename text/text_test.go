@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___       ______      ______               #
-# (  ____ \(       )(  ___  )              /   )     / ___  \    / ___  \              #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \   \/   )  )             #
-# | |      | || || || (___) |            / (_) (_       ___) /       /  /              #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (       /  /               #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \     /  /                #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _  /  /                 #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \_/                  #
+#  _______  _______  _______                ___       ______       _____               #
+# (  ____ \(       )(  ___  )              /   )     / ___  \     / ___ \              #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \   ( (___) )             #
+# | |      | || || || (___) |            / (_) (_       ___) /    \     /              #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (     / ___ \              #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \   ( (   ) )             #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ ( (___) )             #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \_____/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -25,9 +25,8 @@ import (
 func min(a, b int) int {
 	if a > b {
 		return b
-	} else {
-		return a
 	}
+	return a
 }
 
 func TestToRoman(t *testing.T) {
@@ -131,7 +130,7 @@ func TestMarkupTextNull(t *testing.T) {
 		in   string
 		out  string
 		err  bool
-		opts []renderOpts
+		opts []func(*renderOptSet)
 	}
 
 	for i, test := range []testcase{
@@ -197,7 +196,7 @@ And this should start a new list:
             ‣  and a sub-list
 
 And this should start a new list:
-•  Not that you can tell with bullets.`, false, []renderOpts{WithBullets('•', '‣', '◦')}},
+•  Not that you can tell with bullets.`, false, []func(*renderOptSet){WithBullets('•', '‣', '◦')}},
 		{`This is a numbered list:
 #Item One
 #Item Two
@@ -266,7 +265,7 @@ func TestMarkupTextHTML(t *testing.T) {
 		in   string
 		out  string
 		err  bool
-		opts []renderOpts
+		opts []func(*renderOptSet)
 	}
 
 	for i, test := range []testcase{
@@ -309,7 +308,7 @@ And this should start a new list:
 
 And this should start a new list:
 *Not that you can tell with bullets.
-`, "<P>This is a bullet list:<UL style='list-style-type:\"\\2022\";'><LI>Item One<LI>Item <I>Tw</I>o<LI>Item Three * this is not a<BR/>bullet list<LI>But this is<UL style='list-style-type:\"\\2023\";'><LI>and a sub-list<UL style='list-style-type:\"\\25E6\";'><LI>and sub-sub-list<UL style='list-style-type:\"\\2022\";'><LI>four</UL></UL></UL></UL></P><P>And this should start a new list:<UL style='list-style-type:\"\\2022\";'><LI>Not that you can tell with bullets.</UL></P>", false, []renderOpts{WithBullets('•', '‣', '◦')}},
+`, "<P>This is a bullet list:<UL style='list-style-type:\"\\2022\";'><LI>Item One<LI>Item <I>Tw</I>o<LI>Item Three * this is not a<BR/>bullet list<LI>But this is<UL style='list-style-type:\"\\2023\";'><LI>and a sub-list<UL style='list-style-type:\"\\25E6\";'><LI>and sub-sub-list<UL style='list-style-type:\"\\2022\";'><LI>four</UL></UL></UL></UL></P><P>And this should start a new list:<UL style='list-style-type:\"\\2022\";'><LI>Not that you can tell with bullets.</UL></P>", false, []func(*renderOptSet){WithBullets('•', '‣', '◦')}},
 		{`This is a numbered list:
 #Item One
 #Item Two
@@ -352,7 +351,7 @@ func TestMarkupTextPostScript(t *testing.T) {
 		in   string
 		out  string
 		err  bool
-		opts []renderOpts
+		opts []func(*renderOptSet)
 	}
 
 	for i, test := range []testcase{
@@ -499,7 +498,7 @@ PsFF_nl
 	}
 }
 
-// @[00]@| GMA 4.3.7
+// @[00]@| GMA 4.3.8
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.
