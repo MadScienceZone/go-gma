@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___       ______       _____               #
-# (  ____ \(       )(  ___  )              /   )     / ___  \     / ___ \              #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \   ( (   ) )             #
-# | |      | || || || (___) |            / (_) (_       ___) /   ( (___) |             #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (     \____  |             #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \         ) |             #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ /\____) )             #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_)\______/              #
+#  _______  _______  _______                ___       ______       __    _______       #
+# (  ____ \(       )(  ___  )              /   )     / ___  \     /  \  (  __   )      #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \    \/) ) | (  )  |      #
+# | |      | || || || (___) |            / (_) (_       ___) /      | | | | /   |      #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (       | | | (/ /) |      #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \      | | |   / | |      #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _  __) (_|  (__) |      #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \____/(_______)      #
 #                                                                                      #
 ########################################################################################
 */
@@ -41,6 +41,12 @@
 // to try for. Also note that there are times when the generator may give up before
 // generating the quantity of names requested in order to avoid getting into a loop
 // that takes too much time to complete.
+//
+// This code, and specifically the individual Culture definition source files, uses
+// trademarks and/or copyrights owned by Paizo Inc., used under Paizo's Community Use
+// Policy (paizo.com/communityuse). We are expressly prohibited from charging you to
+// use or access this content. GMA is not published, endorsed, or specifically approved
+// by Paizo. For more information about Paizo Inc. and Paizo products, visit paizo.com.
 //
 package namegen
 
@@ -497,7 +503,7 @@ func pickSuffix(genderData map[string][]nameFragment, prefix string, dr *dice.Di
 	return choices[len(choices)-1].Suffix
 }
 
-// @[00]@| GMA 4.3.9
+// @[00]@| GMA 4.3.10
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.
