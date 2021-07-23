@@ -2,12 +2,12 @@
 ########################################################################################
 #  _______  _______  _______                ___       ______       _____               #
 # (  ____ \(       )(  ___  )              /   )     / ___  \     / ___ \              #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \   ( (___) )             #
-# | |      | || || || (___) |            / (_) (_       ___) /    \     /              #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (     / ___ \              #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \   ( (   ) )             #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ ( (___) )             #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \_____/              #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \   ( (   ) )             #
+# | |      | || || || (___) |            / (_) (_       ___) /   ( (___) |             #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (     \____  |             #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \         ) |             #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ /\____) )             #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_)\______/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -508,7 +508,7 @@ func ParseTclList(tclString string) ([]string, error) {
 
 //
 // ConvertTypes converts some or all of the elements in a string slice
-// such as that returned by ParseTclList() to a new slice of values
+// such as that returned by ParseTclList to a new slice of values
 // which have been converted to other data types as specified by the
 // caller.
 //
@@ -676,7 +676,7 @@ func ToDeepTclString(values ...interface{}) (string, error) {
 	return ToTclString(list)
 }
 
-// @[00]@| GMA 4.3.8
+// @[00]@| GMA 4.3.9
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.

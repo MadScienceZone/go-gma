@@ -2,12 +2,12 @@
 ########################################################################################
 #  _______  _______  _______                ___       ______       _____               #
 # (  ____ \(       )(  ___  )              /   )     / ___  \     / ___ \              #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \   ( (___) )             #
-# | |      | || || || (___) |            / (_) (_       ___) /    \     /              #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (     / ___ \              #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \   ( (   ) )             #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ ( (___) )             #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \_____/              #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \   ( (   ) )             #
+# | |      | || || || (___) |            / (_) (_       ___) /   ( (___) |             #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (     \____  |             #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \         ) |             #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ /\____) )             #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_)\______/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -334,7 +334,7 @@ type Coordinates struct {
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData(), but simply
+// This works just as described for BaseMapElement.saveData, but simply
 // saves the X and Y fields for the element's reference point.
 //
 func (c Coordinates) saveData(data []string, prefix, id string) ([]string, error) {
@@ -539,7 +539,7 @@ func objMapElement(objID string, objDef map[string][]string) (MapElement, error)
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData().
+// This works just as described for BaseMapElement.saveData.
 //
 func (o MapElement) saveData(data []string, prefix, id string) ([]string, error) {
 	var err error
@@ -630,7 +630,7 @@ func objArcElement(objID string, objDef map[string][]string) (ArcElement, error)
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData().
+// This works just as described for BaseMapElement.saveData.
 //
 func (o ArcElement) saveData(data []string, prefix, id string) ([]string, error) {
 	data, err := o.MapElement.saveData(data, prefix, id)
@@ -683,7 +683,7 @@ func objCircleElement(objID string, objDef map[string][]string) (CircleElement, 
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData().
+// This works just as described for BaseMapElement.saveData.
 //
 func (o CircleElement) saveData(data []string, prefix, id string) ([]string, error) {
 	data, err := o.MapElement.saveData(data, prefix, id)
@@ -740,7 +740,7 @@ func objLineElement(objID string, objDef map[string][]string) (LineElement, erro
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData().
+// This works just as described for BaseMapElement.saveData.
 //
 func (o LineElement) saveData(data []string, prefix, id string) ([]string, error) {
 	data, err := o.MapElement.saveData(data, prefix, id)
@@ -801,7 +801,7 @@ func objPolygonElement(objID string, objDef map[string][]string) (PolygonElement
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData().
+// This works just as described for BaseMapElement.saveData.
 //
 func (o PolygonElement) saveData(data []string, prefix, id string) ([]string, error) {
 	data, err := o.MapElement.saveData(data, prefix, id)
@@ -858,7 +858,7 @@ func objRectangleElement(objID string, objDef map[string][]string) (RectangleEle
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData().
+// This works just as described for BaseMapElement.saveData.
 //
 func (o RectangleElement) saveData(data []string, prefix, id string) ([]string, error) {
 	data, err := o.MapElement.saveData(data, prefix, id)
@@ -917,7 +917,7 @@ func objSpellAreaOfEffectElement(objID string, objDef map[string][]string) (Spel
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData().
+// This works just as described for BaseMapElement.saveData.
 //
 func (o SpellAreaOfEffectElement) saveData(data []string, prefix, id string) ([]string, error) {
 	data, err := o.MapElement.saveData(data, prefix, id)
@@ -1059,7 +1059,7 @@ func objTextElement(objID string, objDef map[string][]string) (TextElement, erro
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData().
+// This works just as described for BaseMapElement.saveData.
 //
 func (o TextElement) saveData(data []string, prefix, id string) ([]string, error) {
 	data, err := o.MapElement.saveData(data, prefix, id)
@@ -1145,7 +1145,7 @@ func objTileElement(objID string, objDef map[string][]string) (TileElement, erro
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData().
+// This works just as described for BaseMapElement.saveData.
 //
 func (o TileElement) saveData(data []string, prefix, id string) ([]string, error) {
 	data, err := o.MapElement.saveData(data, prefix, id)
@@ -1482,7 +1482,7 @@ func saveCreatureAoE(aoe *RadiusAoE) (string, error) {
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData().
+// This works just as described for BaseMapElement.saveData.
 //
 func (o CreatureToken) saveData(data []string, prefix, id string) ([]string, error) {
 	var err error
@@ -1574,7 +1574,7 @@ func objPlayer(objID string, objDef map[string][]string) (PlayerToken, error) {
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData().
+// This works just as described for BaseMapElement.saveData.
 //
 func (o PlayerToken) saveData(data []string, prefix, id string) ([]string, error) {
 	return o.CreatureToken.saveData(data, "P", id)
@@ -1610,7 +1610,7 @@ func objMonster(objID string, objDef map[string][]string) (MonsterToken, error) 
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData().
+// This works just as described for BaseMapElement.saveData.
 //
 func (o MonsterToken) saveData(data []string, prefix, id string) ([]string, error) {
 	return o.CreatureToken.saveData(data, "M", id)
@@ -2072,7 +2072,7 @@ func objCoordinateList(objDef map[string][]string, i int, fldName string, requir
 // |____/ \__,_| \_/ \___|\___/|_.__// |\___|\___|\__|___/
 //                                 |__/
 
-// SaveObjects reverses the operation of ParseObjects(). It accepts a slice of
+// SaveObjects reverses the operation of ParseObjects. It accepts a slice of
 // MapObjects, a map containing ImageDefinitions, and a slice of FileDefinitions,
 // and emits as a slice of strings a text description of those objects in the
 // map file format, suitable for saving to disk or sending to clients and servers.
@@ -2166,10 +2166,10 @@ type saveObjOpts struct {
 }
 
 //
-// WithoutHeader modifies a call to SaveObjects() by suppressing the
+// WithoutHeader modifies a call to SaveObjects by suppressing the
 // normal "__MAPPER__" header line that should be in a map file.
 //
-// This may be used, for example, if SaveObjects() is generating output
+// This may be used, for example, if SaveObjects is generating output
 // that will only be part of, but not the entire, saved data set.
 //
 func WithoutHeader(o *saveObjOpts) {
@@ -2177,7 +2177,7 @@ func WithoutHeader(o *saveObjOpts) {
 }
 
 //
-// WithDate modifies a call to SaveObjects() by specifying
+// WithDate modifies a call to SaveObjects by specifying
 // an already-determined date to record into the
 // "__MAPPER__" header line. Normally, the current date and time is
 // used.
@@ -2189,7 +2189,7 @@ func WithDate(d time.Time) func(*saveObjOpts) {
 }
 
 //
-// WithComment modifies a call to SaveObjects() by providing
+// WithComment modifies a call to SaveObjects by providing
 // a comment string to include in the "__MAPPER__" header line.
 //
 func WithComment(c string) func(*saveObjOpts) {
@@ -2200,7 +2200,7 @@ func WithComment(c string) func(*saveObjOpts) {
 
 //
 // This describes each attribute to save to the output
-// data set by the saveValues() function.
+// data set by the saveValues function.
 //
 type saveAttributes struct {
 	Tag      string
@@ -2273,7 +2273,7 @@ func saveValues(previous []string, prefix, objID string, attrs []saveAttributes)
 	return previous, nil
 }
 
-// @[00]@| GMA 4.3.8
+// @[00]@| GMA 4.3.9
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.

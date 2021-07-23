@@ -2,12 +2,12 @@
 ########################################################################################
 #  _______  _______  _______                ___       ______       _____               #
 # (  ____ \(       )(  ___  )              /   )     / ___  \     / ___ \              #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \   ( (___) )             #
-# | |      | || || || (___) |            / (_) (_       ___) /    \     /              #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (     / ___ \              #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \   ( (   ) )             #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ ( (___) )             #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \_____/              #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \   ( (   ) )             #
+# | |      | || || || (___) |            / (_) (_       ___) /   ( (___) |             #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (     \____  |             #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \         ) |             #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ /\____) )             #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_)\______/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -133,7 +133,7 @@ func FromRoman(roman string) (int, error) {
 //
 
 //
-// Options to the Render() function are tracked in
+// Options to the Render function are tracked in
 // this structure.
 //
 type renderOptSet struct {
@@ -142,26 +142,26 @@ type renderOptSet struct {
 	compact   bool
 }
 
-// AsPlainText may be added as an option to the Render() function
+// AsPlainText may be added as an option to the Render function
 // to select plain text output format.
 func AsPlainText(o *renderOptSet) {
 	o.formatter = &renderPlainTextFormatter{}
 }
 
-// AsHTML may be added as an option to the Render() function
+// AsHTML may be added as an option to the Render function
 // to select HTML output format.
 func AsHTML(o *renderOptSet) {
 	o.formatter = &renderHTMLFormatter{}
 }
 
-// AsPostScript may be added as an option to the Render() function
+// AsPostScript may be added as an option to the Render function
 // to select PostScript output format.
 func AsPostScript(o *renderOptSet) {
 	o.formatter = &renderPostScriptFormatter{}
 }
 
 //
-// WithBullets may be added as an option to the Render() function to
+// WithBullets may be added as an option to the Render function to
 // specify a custom set of bullet characters
 // to use for bulleted lists. The bullets passed
 // to this option are used in order, then the list
@@ -173,7 +173,14 @@ func AsPostScript(o *renderOptSet) {
 //
 // While the default bullet(s) are chosen appropriately for each output format,
 // no other processing is made to the runes passed here; they are used as-is
-// in each case. This may change.
+// in each case, but the following special characters are recognized and
+// translated to something sensible in each output format:
+//    •  U+2022 Standard bullet
+//    ‣  U+2023 Triangle bullet
+//    ⁃  U+2043 Hyphen bullet
+//    ○  U+25CB Unfilled circle bullet
+//    ☞  U+261E Pointing index bullet
+//    ★  U+2605 Star bullet
 //
 func WithBullets(bullets ...rune) func(*renderOptSet) {
 	return func(o *renderOptSet) {
@@ -182,7 +189,7 @@ func WithBullets(bullets ...rune) func(*renderOptSet) {
 }
 
 //
-// WithCompactText may be added as an option to the Render() function to
+// WithCompactText may be added as an option to the Render function to
 // specify that a more compact rendering of text
 // blocks in order to conserve paper real estate.
 //
@@ -197,7 +204,7 @@ func WithCompactText(o *renderOptSet) {
 
 //
 // Each output formatter must supply these methods
-// which the Render() function will invoke as it parses
+// which the Render function will invoke as it parses
 // the marked up source text.
 //
 type renderingFormatter interface {
@@ -263,7 +270,7 @@ func (f *renderPlainTextFormatter) newPar() {
 
 func (f *renderPlainTextFormatter) bulletListItem(level int, bullet rune) {
 	if bullet == 0 {
-		bullet = '*'
+		bullet = '\u2022'
 	}
 	fmt.Fprintf(&f.buf, "\n%*s%c  ", (level-1)*3, "", bullet)
 	f.indent = level
@@ -465,7 +472,24 @@ func (f *renderHTMLFormatter) bulletListItem(level int, bullet rune) {
 	if bullet == 0 {
 		f.levelSet(level, "UL", "")
 	} else {
-		f.levelSet(level, "UL", fmt.Sprintf("style='list-style-type:\"\\%X\";'", bullet))
+		var style string
+		switch bullet {
+		case '*', '\u2022':
+			style = "disc"
+		case '\u2023':
+			style = "\\2023"
+		case '\u2043', '-':
+			style = "-"
+		case '\u25cb', 'o':
+			style = "circle"
+		case '\u261e':
+			style = "\\261e"
+		case '\u2605':
+			style = "\\2605"
+		default:
+			style = fmt.Sprintf("\\%06x", bullet)
+		}
+		f.levelSet(level, "UL", "style='list-style-type:\""+style+"\";'")
 	}
 	f.buf.WriteString("<LI>")
 }
@@ -683,10 +707,20 @@ func (f *renderPostScriptFormatter) newPar() {
 func (f *renderPostScriptFormatter) bulletListItem(level int, bullet rune) {
 	var psb string
 
-	if bullet == 0 {
-		bullet = '*'
+	switch bullet {
+	case 0, '*', '\u2022':
 		psb = "^."
-	} else {
+	case '\u2023':
+		psb = ">"
+	case '\u2043', '-':
+		psb = "-"
+	case '\u25cb', 'o':
+		psb = "o"
+	case '\u261e':
+		psb = "[>>]"
+	case '\u2605':
+		psb = "*"
+	default:
 		psb = string(bullet)
 	}
 
@@ -1385,7 +1419,7 @@ func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 	return ops.formatter.finalize(), nil
 }
 
-// @[00]@| GMA 4.3.8
+// @[00]@| GMA 4.3.9
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.

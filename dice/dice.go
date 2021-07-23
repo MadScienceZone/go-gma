@@ -2,12 +2,12 @@
 ########################################################################################
 #  _______  _______  _______                ___       ______       _____               #
 # (  ____ \(       )(  ___  )              /   )     / ___  \     / ___ \              #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \   ( (___) )             #
-# | |      | || || || (___) |            / (_) (_       ___) /    \     /              #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (     / ___ \              #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \   ( (   ) )             #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ ( (___) )             #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \_____/              #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \   ( (   ) )             #
+# | |      | || || || (___) |            / (_) (_       ___) /   ( (___) |             #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (     \____  |             #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \         ) |             #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ /\____) )             #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_)\______/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -42,7 +42,7 @@
 //    label, result, err := dr.DoRollOnce("15d6 + 15 fire + 1 acid")
 //
 // There is also a lower-level abstraction of dice available via the Dice
-// type, created by the New() function, if for some reason the DieRoller
+// type, created by the New function, if for some reason the DieRoller
 // interface won't provide what is needed.
 //
 package dice
@@ -257,7 +257,7 @@ func WithSeed(s int64) func(*Dice) error {
 //
 // WithGenerator sets up the Dice value to use a random
 // number generator created by the caller and passed in to this
-// option.  The generator must be of type rand.Source.
+// option.
 //
 func WithGenerator(source rand.Source) func(*Dice) error {
 	return func(o *Dice) error {
@@ -361,7 +361,7 @@ type dieComponent interface {
 	// Apply the component's operator to the accumulated total x and its value.
 	evaluate(x int) (int, error)
 
-	// Like evaluate() but just assume the maximum possible value.
+	// Like evaluate but just assume the maximum possible value.
 	maxValue(x int) (int, error)
 
 	// Return the most recently calculated value.
@@ -724,7 +724,7 @@ func (d *dieSpec) isMaxRoll() bool {
 }
 
 //
-// Given a dieSpec value, the StructuredDescribeRoll() method
+// Given a dieSpec value, the StructuredDescribeRoll method
 // returns a detailed description of that component of the roll,
 // as a number of StructuredDescription values.
 //
@@ -1060,7 +1060,7 @@ func (d *Dice) Roll() (int, error) {
 }
 
 //
-// MaxRoll is an alternative to Roll() where
+// MaxRoll is an alternative to Roll where
 // instead of rolling the dice, it just assumes they all came up at their maximum
 // possible values. This does NOT set up for subsequent critical rolls.
 //
@@ -1205,37 +1205,77 @@ func (d *Dice) Description() (desc string) {
 	return
 }
 
+type sdrOptions struct {
+	autoSF         bool
+	successMessage string
+	failureMessage string
+	rollBonus      int
+}
+
+//
+// WithRollBonus augments the operation of a StructuredDescribeRoll call by
+// indicating that this roll included an extra bonus (not indicated by the user).
+//
+// This is not done if the bonus is 0 (zero).
+//
+func WithRollBonus(bonus int) func(*sdrOptions) {
+	return func(o *sdrOptions) {
+		o.rollBonus = bonus
+	}
+}
+
+//
+// WithAutoSF augments the operation of a StructuredDescribeRoll call by
+// indicating that a natural 1 indicates failure regardless of the modified
+// result's value, and a natural maximum roll similarly indicates success.
+//
+// In case an automatic success is indicated, the provided successMessage string
+// will be included in the structured description; likewise with failureMessage
+// in case of automatic failure.
+//
+// This behavior is enabled if the enabled parameter is true. Otherwise
+// no automatic success or failure interpretation will be made.
+//
+func WithAutoSF(enabled bool, successMessage, failureMessage string) func(*sdrOptions) {
+	return func(o *sdrOptions) {
+		o.autoSF = enabled
+		o.successMessage = successMessage
+		o.failureMessage = failureMessage
+	}
+}
+
 //
 // StructuredDescribeRoll produces a detailed structured description of the result of rolling
 // the Dice, in a way that a caller can format as they see fit.
 //
-// If sfOpt is a non-empty string, then successMessage will be presented
-// in the result list if the die-roll indicates a known-successful roll,
-// or failureMessage will be used if the die-roll indicates a known-failure value.
+// If you wish to interpret the die roll in light of a rule which allows for
+// a natural 1 to indicate automatic failure and a natural maximum die face
+// (e.g., natural 20 on a d20) to indicate automatic success, then add a
+// WithAutoSF option function call to the end of the argument list.
 //
-// If rollBonus is nonzero, a {"bonus", "±n"} result value will appear in the
-// structured description.
+// If this die roll included a bonus added to it for some reason (e.g., a
+// confirmation bonus on dice rolled to confirm a critical threat),
+// then add a WithRollBonus function call to the end of the argument list.
 //
-// Bug note:
-// (Why is sfOpt a string instead of a boolean? No good reason, it was just an
-// uncorrected artifact of the older implementation where sfOpt was empty or the
-// "|SF ..." option string while successMessage and failureMessages are values
-// parsed out of that string. Really, sfOpt should be a bool value.)
-//
-func (d *Dice) StructuredDescribeRoll(sfOpt, successMessage, failureMessage string, rollBonus int) ([]StructuredDescription, error) {
+func (d *Dice) StructuredDescribeRoll(options ...func(*sdrOptions)) ([]StructuredDescription, error) {
 	var desc []StructuredDescription
+	var opts sdrOptions
+
+	for _, o := range options {
+		o(&opts)
+	}
 
 	if !d.Rolled {
 		return nil, nil
 	}
-	if sfOpt != "" {
+	if opts.autoSF {
 		if d._onlydie == nil || d._onlydie.Numerator != 1 {
 			return nil, fmt.Errorf("you can't indicate auto-success/fail (|sf option) because it involves multiple dice")
 		}
 		if d._onlydie.isMinRoll() {
-			desc = append(desc, StructuredDescription{Type: "fail", Value: failureMessage})
+			desc = append(desc, StructuredDescription{Type: "fail", Value: opts.failureMessage})
 		} else if d._onlydie.isMaxRoll() {
-			desc = append(desc, StructuredDescription{Type: "success", Value: successMessage})
+			desc = append(desc, StructuredDescription{Type: "success", Value: opts.successMessage})
 		}
 	}
 
@@ -1246,8 +1286,8 @@ func (d *Dice) StructuredDescribeRoll(sfOpt, successMessage, failureMessage stri
 	for _, die := range d.multiDice {
 		desc = append(desc, die.structuredDescribeRoll()...)
 	}
-	if rollBonus != 0 {
-		desc = append(desc, StructuredDescription{Type: "bonus", Value: fmt.Sprintf("%+d", rollBonus)})
+	if opts.rollBonus != 0 {
+		desc = append(desc, StructuredDescription{Type: "bonus", Value: fmt.Sprintf("%+d", opts.rollBonus)})
 	}
 	if d.MinValue != 0 {
 		desc = append(desc,
@@ -1356,15 +1396,15 @@ func (d *DieRoller) RandIntn(n int) int {
 //
 // NewDieRoller creates a new DieRoller value, which provides the recommended
 // higher-level interface for rolling dice. This value can
-// then be used for as many die rolls as needed by calling its DoRoll()
-// or DoRollOnce() methods.
+// then be used for as many die rolls as needed by calling its DoRoll
+// or DoRollOnce methods.
 //
 // You may pass zero or more option specifiers to this function as already
-// described for the New() constructor, although the only ones which apply
+// described for the New constructor, although the only ones which apply
 // here are WithSeed(s) and WithGenerator(s).
 //
 // Initially it is set up to roll a single d20, but this can be changed with
-// each DoRoll() call.
+// each DoRoll call.
 //
 func NewDieRoller(options ...func(*Dice) error) (*DieRoller, error) {
 	var err error
@@ -1656,7 +1696,7 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 // list to indicate what the purpose of the die roll was for.
 //
 // <expression> can be anything that can be given as the description string
-// to the New() constructor (q.v.). At the end of the spec string there
+// to the New constructor (q.v.). At the end of the spec string there
 // may be zero or more options, each beginning with a vertical bar (“|”).
 //
 // These options may be any of the following:
@@ -1671,7 +1711,7 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 // This indicates that the roll may need a critical
 // confirmation roll to follow it. This will appear
 // as an additional result in the list of results returned
-// from the DoRoll() and DoRollOnce() methods.  If the <t> parameter is given,
+// from the DoRoll and DoRollOnce methods.  If the <t> parameter is given,
 // a natural roll equal to or greater than <t> is assumed to
 // be a critical threat. If a plus or minus sign followed by
 // a number <b> is appended to the option, then this value is
@@ -1999,7 +2039,7 @@ func (d *DieRoller) rollDice(repeatIter, repeatCount int) (int, []StructuredResu
 		if d.PctChance >= 0 {
 			reportPctRoll(d.PctChance, d.PctLabel, true)
 		} else {
-			sdesc, err := d.d.StructuredDescribeRoll(sfo, d.SuccessMessage, d.FailMessage, 0)
+			sdesc, err := d.d.StructuredDescribeRoll(WithAutoSF(sfo != "", d.SuccessMessage, d.FailMessage))
 			if err != nil {
 				return 0, nil, err
 			}
@@ -2016,7 +2056,9 @@ func (d *DieRoller) rollDice(repeatIter, repeatCount int) (int, []StructuredResu
 					return 0, nil, err
 				}
 				thisResult = nil
-				sdesc, err := d.d.StructuredDescribeRoll(sfo, d.SuccessMessage, d.FailMessage, d.critBonus)
+				sdesc, err := d.d.StructuredDescribeRoll(
+					WithAutoSF(sfo != "", d.SuccessMessage, d.FailMessage),
+					WithRollBonus(d.critBonus))
 				if err != nil {
 					return 0, nil, err
 				}
@@ -2042,7 +2084,8 @@ func (d *DieRoller) rollDice(repeatIter, repeatCount int) (int, []StructuredResu
 		if d.PctChance >= 0 {
 			reportPctRoll(d.PctChance, d.PctLabel, false)
 		} else {
-			sdesc, err := d.d.StructuredDescribeRoll(sfo, d.SuccessMessage, d.FailMessage, 0)
+			sdesc, err := d.d.StructuredDescribeRoll(
+				WithAutoSF(sfo != "", d.SuccessMessage, d.FailMessage))
 			if err != nil {
 				return 0, nil, err
 			}
@@ -2056,7 +2099,9 @@ func (d *DieRoller) rollDice(repeatIter, repeatCount int) (int, []StructuredResu
 				}
 				if result2 != 0 {
 					thisResult = nil
-					sdesc, err := d.d.StructuredDescribeRoll(sfo, d.SuccessMessage, d.FailMessage, d.critBonus)
+					sdesc, err := d.d.StructuredDescribeRoll(
+						WithAutoSF(sfo != "", d.SuccessMessage, d.FailMessage),
+						WithRollBonus(d.critBonus))
 					if err != nil {
 						return 0, nil, err
 					}
@@ -2089,12 +2134,12 @@ func Roll(spec string) (string, []StructuredResult, error) {
 	return d.DoRoll(spec)
 }
 
-// RollOnce is just like Roll() but adds the constraint that there may only be one result
+// RollOnce is just like Roll but adds the constraint that there may only be one result
 // returned (no confirmation rolls, no repeated rolls, etc., although multiple
 // dice such as "3d6+4d10" or "best of N" kinds of things are allowed). It is an error if the
 // die roll spec generates multiple results.
 //
-// The return value differs from Roll() in that only a single StructuredResult
+// The return value differs from Roll in that only a single StructuredResult
 // is returned rather than a slice of them.
 func RollOnce(spec string) (string, StructuredResult, error) {
 	l, r, err := Roll(spec)
@@ -2109,8 +2154,8 @@ func RollOnce(spec string) (string, StructuredResult, error) {
 }
 
 //
-// DoRollOnce is just like the DoRoll() method but adds the constraint that there may only be one result
-// returned, in the same way the RollOnce() function differs from the Roll() function.
+// DoRollOnce is just like the DoRoll method but adds the constraint that there may only be one result
+// returned, in the same way the RollOnce function differs from the Roll() function.
 //
 func (d *DieRoller) DoRollOnce(spec string) (string, StructuredResult, error) {
 	l, r, err := d.DoRoll(spec)
@@ -2260,7 +2305,7 @@ func (sr StructuredDescriptionSet) Text() (string, error) {
 	return t.String(), nil
 }
 
-// @[00]@| GMA 4.3.8
+// @[00]@| GMA 4.3.9
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.

@@ -2,12 +2,12 @@
 ########################################################################################
 #  _______  _______  _______                ___       ______       _____               #
 # (  ____ \(       )(  ___  )              /   )     / ___  \     / ___ \              #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \   ( (___) )             #
-# | |      | || || || (___) |            / (_) (_       ___) /    \     /              #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (     / ___ \              #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \   ( (   ) )             #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ ( (___) )             #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \_____/              #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \   ( (   ) )             #
+# | |      | || || || (___) |            / (_) (_       ___) /   ( (___) |             #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (     \____  |             #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \         ) |             #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ /\____) )             #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_)\______/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -65,7 +65,7 @@
 // program name is empty, "unnamed" will be used.
 //
 // The client then obtains a challenge from the server in the form of a base-64-encoded
-// string, which is passed to the AcceptChallenge() method:
+// string, which is passed to the AcceptChallenge method:
 //     response, err := a.AcceptChallenge(serverChallengeString)
 // This provides the response to send back to the server in order to log in.
 //
@@ -427,7 +427,7 @@ func NewClientAuthenticator(username string, secret []byte, client string) *Auth
 	return a
 }
 
-// @[00]@| GMA 4.3.8
+// @[00]@| GMA 4.3.9
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.

@@ -2,12 +2,12 @@
 ########################################################################################
 #  _______  _______  _______                ___       ______       _____               #
 # (  ____ \(       )(  ___  )              /   )     / ___  \     / ___ \              #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \   ( (___) )             #
-# | |      | || || || (___) |            / (_) (_       ___) /    \     /              #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (     / ___ \              #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \   ( (   ) )             #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ ( (___) )             #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \_____/              #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \   ( (   ) )             #
+# | |      | || || || (___) |            / (_) (_       ___) /   ( (___) |             #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (     \____  |             #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \         ) |             #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ /\____) )             #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_)\______/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -161,16 +161,16 @@ func TestMarkupTextNull(t *testing.T) {
 And this should start a new list:
 *Not that you can tell with bullets.
 `, `This is a bullet list:
-*  Item One
-*  Item Two
-*  Item Three * this is not a
+•  Item One
+•  Item Two
+•  Item Three * this is not a
    bullet list
-*  But this is
-   *  and a sub-list
-      *  and sub-sub-list
+•  But this is
+   •  and a sub-list
+      •  and sub-sub-list
 
 And this should start a new list:
-*  Not that you can tell with bullets.`, false, nil},
+•  Not that you can tell with bullets.`, false, nil},
 		{`This is a bullet list:
 *Item One
 *Item //Tw//o
@@ -308,7 +308,7 @@ And this should start a new list:
 
 And this should start a new list:
 *Not that you can tell with bullets.
-`, "<P>This is a bullet list:<UL style='list-style-type:\"\\2022\";'><LI>Item One<LI>Item <I>Tw</I>o<LI>Item Three * this is not a<BR/>bullet list<LI>But this is<UL style='list-style-type:\"\\2023\";'><LI>and a sub-list<UL style='list-style-type:\"\\25E6\";'><LI>and sub-sub-list<UL style='list-style-type:\"\\2022\";'><LI>four</UL></UL></UL></UL></P><P>And this should start a new list:<UL style='list-style-type:\"\\2022\";'><LI>Not that you can tell with bullets.</UL></P>", false, []func(*renderOptSet){WithBullets('•', '‣', '◦')}},
+`, "<P>This is a bullet list:<UL style='list-style-type:\"disc\";'><LI>Item One<LI>Item <I>Tw</I>o<LI>Item Three * this is not a<BR/>bullet list<LI>But this is<UL style='list-style-type:\"\\2023\";'><LI>and a sub-list<UL style='list-style-type:\"\\0025e6\";'><LI>and sub-sub-list<UL style='list-style-type:\"disc\";'><LI>four</UL></UL></UL></UL></P><P>And this should start a new list:<UL style='list-style-type:\"disc\";'><LI>Not that you can tell with bullets.</UL></P>", false, []func(*renderOptSet){WithBullets('•', '‣', '◦')}},
 		{`This is a numbered list:
 #Item One
 #Item Two
@@ -498,7 +498,7 @@ PsFF_nl
 	}
 }
 
-// @[00]@| GMA 4.3.8
+// @[00]@| GMA 4.3.9
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.

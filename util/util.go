@@ -2,12 +2,12 @@
 ########################################################################################
 #  _______  _______  _______                ___       ______       _____               #
 # (  ____ \(       )(  ___  )              /   )     / ___  \     / ___ \              #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \   ( (___) )             #
-# | |      | || || || (___) |            / (_) (_       ___) /    \     /              #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (     / ___ \              #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \   ( (   ) )             #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ ( (___) )             #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \_____/              #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \   ( (   ) )             #
+# | |      | || || || (___) |            / (_) (_       ___) /   ( (___) |             #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (     \____  |             #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \         ) |             #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _ /\____) )             #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_)\______/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -155,7 +155,7 @@ func Hexdump(data []byte, opts ...func(*hdopt)) string {
 }
 
 //
-// WithStartingAddress may be added as an option to the Hexdump() function
+// WithStartingAddress may be added as an option to the Hexdump function
 // to change the starting address of the data being shown.
 //
 // Example:
@@ -172,7 +172,7 @@ func WithStartingAddress(a int) func(*hdopt) {
 }
 
 //
-// WithWidth may be added as an option to the Hexdump() function
+// WithWidth may be added as an option to the Hexdump function
 // to change the output width in bytes.
 //
 // The behavior is undefined if the width is not a multiple
@@ -194,7 +194,7 @@ func WithWidth(w int) func(*hdopt) {
 }
 
 //
-// WithWordSize may be added as an option to the Hexdump() function
+// WithWordSize may be added as an option to the Hexdump function
 // to change the output word size in bytes.
 //
 // Example:
@@ -211,7 +211,7 @@ func WithWordSize(w int) func(*hdopt) {
 }
 
 //
-// WithoutText may be added as an option to the Hexdump() function
+// WithoutText may be added as an option to the Hexdump function
 // to suppress the text column from the generated display.
 //
 // Example:
@@ -225,7 +225,7 @@ func WithoutText(o *hdopt) {
 	o.ascii = false
 }
 
-// @[00]@| GMA 4.3.8
+// @[00]@| GMA 4.3.9
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.
