@@ -6,6 +6,10 @@
  * Supported GMA Mapper File Format: 17		<!-- @@##@@ -->
  * Effective Date: 22-Jul-2021			<!-- @@##@@ -->
 
+## v4.3.10 (alpha)
+Added note pointing to paizo's Community Use Policy and GMA's usage of Pathfinder
+game-related information.
+
 ## v4.3.9 (alpha)
 Since this is still in alpha, I'm taking the liberty to change the call to
 dice.StricturedDescribeRoll to correct the weirdness of having the sfOpt

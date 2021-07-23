@@ -35,3 +35,10 @@ API docs may be viewed at [pkg.go.dev](https://pkg.go.dev/github.com/fizban-of-r
 We are keeping the version numbers for this project in sync with
 the main GMA project, so version _x_._y_._z_ of `go-gma` will always
 be compatible with version _x_._y_._z_ of `gma`.
+
+## Legal Notice
+GMA uses trademarks and/or copyrights owned by Paizo Inc., used under Paizo's 
+Community Use Policy ([paizo.com/communityuse]()). We are expressly prohibited from 
+charging you to use or access this content. GMA is not published, endorsed, or 
+specifically approved by Paizo. For more information about Paizo Inc. and Paizo 
+products, visit [paizo.com]().
