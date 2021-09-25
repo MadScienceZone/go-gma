@@ -465,11 +465,11 @@ func TestObjLoadSmallMap(t *testing.T) {
 					t.Errorf("AoE expected to be nil but wasn't")
 				}
 				sEq(obj.Area, "S", "Area", t)
-				BEq(obj.MoveMode, MoveModeLand, "MoveMode", t)
+				BEq(byte(obj.MoveMode), byte(MoveModeLand), "MoveMode", t)
 				bEq(obj.Reach, false, "Reach", t)
 				bEq(obj.Killed, true, "Killed", t)
 				bEq(obj.Dim, true, "Dim", t)
-				BEq(obj.CreatureType, CreatureTypeMonster, "CreatureType", t)
+				BEq(byte(obj.CreatureType), byte(CreatureTypeMonster), "CreatureType", t)
 			case "39a1afc1b1aa4cac87eee32be93ebe9a":
 				sEq(obj.ID, "39a1afc1b1aa4cac87eee32be93ebe9a", "ID", t)
 				iEq(obj.Health.MaxHP, 45, "MaxHP", t)
@@ -494,11 +494,11 @@ func TestObjLoadSmallMap(t *testing.T) {
 					t.Errorf("AoE expected to be nil but wasn't")
 				}
 				sEq(obj.Area, "M", "Area", t)
-				BEq(obj.MoveMode, MoveModeLand, "MoveMode", t)
+				BEq(byte(obj.MoveMode), byte(MoveModeLand), "MoveMode", t)
 				bEq(obj.Reach, true, "Reach", t)
 				bEq(obj.Killed, false, "Killed", t)
 				bEq(obj.Dim, true, "Dim", t)
-				BEq(obj.CreatureType, CreatureTypeMonster, "CreatureType", t)
+				BEq(byte(obj.CreatureType), byte(CreatureTypeMonster), "CreatureType", t)
 			default:
 				t.Errorf("Found unexpected monster token %s", obj.ObjID())
 			}
@@ -528,11 +528,11 @@ func TestObjLoadSmallMap(t *testing.T) {
 					t.Errorf("AoE expected to be nil but wasn't")
 				}
 				sEq(obj.Area, "M", "Area", t)
-				BEq(obj.MoveMode, MoveModeFly, "MoveMode", t)
+				BEq(byte(obj.MoveMode), byte(MoveModeFly), "MoveMode", t)
 				bEq(obj.Reach, false, "Reach", t)
 				bEq(obj.Killed, false, "Killed", t)
 				bEq(obj.Dim, true, "Dim", t)
-				BEq(obj.CreatureType, CreatureTypePlayer, "CreatureType", t)
+				BEq(byte(obj.CreatureType), byte(CreatureTypePlayer), "CreatureType", t)
 			case "976e7148ae86409f99fdebf83f3f0904":
 				sEq(obj.ID, "976e7148ae86409f99fdebf83f3f0904", "ID", t)
 				if obj.Health != nil {
@@ -551,11 +551,11 @@ func TestObjLoadSmallMap(t *testing.T) {
 				fEq(obj.AoE.Radius, 2.0, "Radius", t)
 				sEq(obj.AoE.Color, "black", "Aoe Color", t)
 				sEq(obj.Area, "M", "Area", t)
-				BEq(obj.MoveMode, MoveModeFly, "MoveMode", t)
+				BEq(byte(obj.MoveMode), byte(MoveModeFly), "MoveMode", t)
 				bEq(obj.Reach, false, "Reach", t)
 				bEq(obj.Killed, false, "Killed", t)
 				bEq(obj.Dim, false, "Dim", t)
-				BEq(obj.CreatureType, CreatureTypePlayer, "CreatureType", t)
+				BEq(byte(obj.CreatureType), byte(CreatureTypePlayer), "CreatureType", t)
 			default:
 				t.Errorf("Found unexpected player token %s", obj.ObjID())
 			}
@@ -572,7 +572,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				bEq(obj.Locked, false, "tile Locked", t)
 				CEq(obj.Points, []Coordinates{}, "tile Points", t)
 				sEq(obj.Fill, "", "tile Fill", t)
-				BEq(obj.Dash, DashSolid, "tile Dash", t)
+				BEq(byte(obj.Dash), byte(DashSolid), "tile Dash", t)
 				sEq(obj.Line, "", "tile Line", t)
 				iEq(obj.Width, 0, "tile Width", t)
 				sEq(obj.Layer, "walls", "tile Layer", t)
@@ -619,7 +619,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 					{9848.0, 12282.0},
 				}, "poly 0268 Points", t)
 				sEq(obj.Fill, "#7e7f12", "poly 0268 Fill", t)
-				BEq(obj.Dash, DashSolid, "poly 0268 Dash", t)
+				BEq(byte(obj.Dash), byte(DashSolid), "poly 0268 Dash", t)
 				sEq(obj.Line, "#7e7f12", "poly 0268 Line", t)
 				iEq(obj.Width, 5, "poly 0268 Width", t)
 				sEq(obj.Layer, "walls", "poly 0268 Layer", t)
@@ -628,7 +628,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				sEq(obj.Group, "", "poly 0268 Group", t)
 				// PolygonElement
 				fEq(obj.Spline, 0, "poly 0268 Spline", t)
-				BEq(obj.Join, JoinBevel, "poly 0268 Join", t)
+				BEq(byte(obj.Join), byte(JoinBevel), "poly 0268 Join", t)
 			case "09426d492f784ad25684536c35e0d8d5":
 				// BaseMapObject
 				sEq(obj.ID, "09426d492f784ad25684536c35e0d8d5", "ID", t)
@@ -682,7 +682,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 					{9568.0, 13489.0},
 				}, "poly 0942 Points", t)
 				sEq(obj.Fill, "#000000", "poly 0942 Fill", t)
-				BEq(obj.Dash, DashSolid, "poly 0942 Dash", t)
+				BEq(byte(obj.Dash), byte(DashSolid), "poly 0942 Dash", t)
 				sEq(obj.Line, "#000000", "poly 0942 Line", t)
 				iEq(obj.Width, 2, "poly 0942 Width", t)
 				sEq(obj.Layer, "walls", "poly 0942 Layer", t)
@@ -691,7 +691,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				sEq(obj.Group, "", "poly 0942 Group", t)
 				// PolygonElement
 				fEq(obj.Spline, 0, "poly 0942 Spline", t)
-				BEq(obj.Join, JoinBevel, "poly 0942 Join", t)
+				BEq(byte(obj.Join), byte(JoinBevel), "poly 0942 Join", t)
 			case "0c36b6a97a074bd174cda800f07206f4":
 				// BaseMapObject
 				sEq(obj.ID, "0c36b6a97a074bd174cda800f07206f4", "ID", t)
@@ -722,7 +722,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 					{12581.0, 5851.0},
 				}, "poly 0c36 Points", t)
 				sEq(obj.Fill, "#000000", "poly 0c36 Fill", t)
-				BEq(obj.Dash, DashSolid, "poly 0c36 Dash", t)
+				BEq(byte(obj.Dash), byte(DashSolid), "poly 0c36 Dash", t)
 				sEq(obj.Line, "#000000", "poly 0c36 Line", t)
 				iEq(obj.Width, 5, "poly 0c36 Width", t)
 				sEq(obj.Layer, "walls", "poly 0c36 Layer", t)
@@ -731,7 +731,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				sEq(obj.Group, "", "poly 0c36 Group", t)
 				// PolygonElement
 				fEq(obj.Spline, 0, "poly 0c36 Spline", t)
-				BEq(obj.Join, JoinBevel, "poly 0c36 Join", t)
+				BEq(byte(obj.Join), byte(JoinBevel), "poly 0c36 Join", t)
 			default:
 				t.Errorf("Found unexpected polygon %s", obj.ObjID())
 			}
@@ -750,7 +750,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 					{321, 669},
 				}, "arc 13a2 Points", t)
 				sEq(obj.Fill, "#ff2600", "arc 13a2 Fill", t)
-				BEq(obj.Dash, DashSolid, "arc 13a2 Dash", t)
+				BEq(byte(obj.Dash), byte(DashSolid), "arc 13a2 Dash", t)
 				sEq(obj.Line, "black", "arc 13a2 Line", t)
 				iEq(obj.Width, 5, "arc 13a2 Width", t)
 				sEq(obj.Layer, "walls", "arc 13a2 Layer", t)
@@ -758,7 +758,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				iEq(obj.Level, 0, "arc 13a2 Level", t)
 				sEq(obj.Group, "", "arc 13a2 Group", t)
 				// ArcElement
-				BEq(obj.ArcMode, ArcModeArc, "arc 13a2 Arcmode", t)
+				BEq(byte(obj.ArcMode), byte(ArcModeArc), "arc 13a2 Arcmode", t)
 				fEq(obj.Start, 20, "arc 13a2 Start", t)
 				fEq(obj.Extent, 225, "arc 13a2 Extent", t)
 			case "5b1a4fa32af54eb2b35ebec0a4c88089":
@@ -774,7 +774,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 					{161, 485},
 				}, "arc 5b1a Points", t)
 				sEq(obj.Fill, "#ff2600", "arc 5b1a Fill", t)
-				BEq(obj.Dash, DashSolid, "arc 5b1a Dash", t)
+				BEq(byte(obj.Dash), byte(DashSolid), "arc 5b1a Dash", t)
 				sEq(obj.Line, "black", "arc 5b1a Line", t)
 				iEq(obj.Width, 5, "arc 5b1a Width", t)
 				sEq(obj.Layer, "walls", "arc 5b1a Layer", t)
@@ -782,7 +782,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				iEq(obj.Level, 0, "arc 5b1a Level", t)
 				sEq(obj.Group, "", "arc 5b1a Group", t)
 				// ArcElement
-				BEq(obj.ArcMode, ArcModePieSlice, "arc 5b1a Arcmode", t)
+				BEq(byte(obj.ArcMode), byte(ArcModePieSlice), "arc 5b1a Arcmode", t)
 				fEq(obj.Start, 140, "arc 5b1a Start", t)
 				fEq(obj.Extent, 61, "arc 5b1a Extent", t)
 			case "7b39f6dbeea44b8baa20032c443a0654":
@@ -798,7 +798,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 					{166, 375},
 				}, "arc 7b39 Points", t)
 				sEq(obj.Fill, "#ff2600", "arc 7b39 Fill", t)
-				BEq(obj.Dash, DashSolid, "arc 7b39 Dash", t)
+				BEq(byte(obj.Dash), byte(DashSolid), "arc 7b39 Dash", t)
 				sEq(obj.Line, "black", "arc 7b39 Line", t)
 				iEq(obj.Width, 5, "arc 7b39 Width", t)
 				sEq(obj.Layer, "walls", "arc 7b39 Layer", t)
@@ -806,7 +806,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				iEq(obj.Level, 0, "arc 57b39 Level", t)
 				sEq(obj.Group, "", "arc 7b39 Group", t)
 				// ArcElement
-				BEq(obj.ArcMode, ArcModeChord, "arc 7b39 Arcmode", t)
+				BEq(byte(obj.ArcMode), byte(ArcModeChord), "arc 7b39 Arcmode", t)
 				fEq(obj.Start, 151, "arc 7b39 Start", t)
 				fEq(obj.Extent, 235, "arc 7b39 Extent", t)
 			default:
@@ -827,7 +827,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 					{779, 291},
 				}, "line 2a17 Points", t)
 				sEq(obj.Fill, "#ff2600", "line 2a17 Fill", t)
-				BEq(obj.Dash, DashLong, "line 2a17 Dash", t)
+				BEq(byte(obj.Dash), byte(DashLong), "line 2a17 Dash", t)
 				sEq(obj.Line, "black", "line 2a17 Line", t)
 				iEq(obj.Width, 5, "line 2a17 Width", t)
 				sEq(obj.Layer, "walls", "line 2a17 Layer", t)
@@ -835,7 +835,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				iEq(obj.Level, 0, "line 2a17 Level", t)
 				sEq(obj.Group, "", "line 2a17 Group", t)
 				// LineElement
-				BEq(obj.Arrow, ArrowFirst, "line 2a17 Arrow", t)
+				BEq(byte(obj.Arrow), byte(ArrowFirst), "line 2a17 Arrow", t)
 			case "38f633da2d6749467f5406f187b8cc3f":
 				// BaseMapObject
 				sEq(obj.ID, "38f633da2d6749467f5406f187b8cc3f", "ID", t)
@@ -849,7 +849,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 					{10908, 14396},
 				}, "line 38f6 Points", t)
 				sEq(obj.Fill, "#000000", "line 38f6 Fill", t)
-				BEq(obj.Dash, DashSolid, "line 38f6 Dash", t)
+				BEq(byte(obj.Dash), byte(DashSolid), "line 38f6 Dash", t)
 				sEq(obj.Line, "black", "line 38f6 Line", t)
 				iEq(obj.Width, 5, "line 38f6 Width", t)
 				sEq(obj.Layer, "walls", "line 38f6 Layer", t)
@@ -857,7 +857,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				iEq(obj.Level, 0, "line 38f6 Level", t)
 				sEq(obj.Group, "", "line 38f6 Group", t)
 				// LineElement
-				BEq(obj.Arrow, ArrowNone, "line 38f6 Arrow", t)
+				BEq(byte(obj.Arrow), byte(ArrowNone), "line 38f6 Arrow", t)
 			case "61dc2ff4efe54be7a18791b338c29c5c":
 				// BaseMapObject
 				sEq(obj.ID, "61dc2ff4efe54be7a18791b338c29c5c", "ID", t)
@@ -871,7 +871,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 					{509, 378}, {650, 360},
 				}, "line 61dc Points", t)
 				sEq(obj.Fill, "#ff2600", "line 61dc Fill", t)
-				BEq(obj.Dash, DashLong, "line 61dc Dash", t)
+				BEq(byte(obj.Dash), byte(DashLong), "line 61dc Dash", t)
 				sEq(obj.Line, "black", "line 38f6 Line", t)
 				iEq(obj.Width, 5, "line 61dc Width", t)
 				sEq(obj.Layer, "walls", "line 61dc Layer", t)
@@ -879,7 +879,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				iEq(obj.Level, 0, "line 61dc Level", t)
 				sEq(obj.Group, "", "line 61dc Group", t)
 				// LineElement
-				BEq(obj.Arrow, ArrowFirst, "line 61dc Arrow", t)
+				BEq(byte(obj.Arrow), byte(ArrowFirst), "line 61dc Arrow", t)
 			default:
 				t.Errorf("Found unexpected line %s", obj.ObjID())
 			}
@@ -896,7 +896,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				bEq(obj.Locked, false, "text 2c4a Locked", t)
 				CEq(obj.Points, []Coordinates{}, "text 2c4a Points", t)
 				sEq(obj.Fill, "#ff2600", "text 2c4a Fill", t)
-				BEq(obj.Dash, DashSolid, "text 2c4a Dash", t)
+				BEq(byte(obj.Dash), byte(DashSolid), "text 2c4a Dash", t)
 				sEq(obj.Line, "", "text 2c4a Line", t)
 				iEq(obj.Width, 0, "text 2c4a Width", t)
 				sEq(obj.Layer, "walls", "text 2c4a Layer", t)
@@ -907,9 +907,9 @@ func TestObjLoadSmallMap(t *testing.T) {
 				sEq(obj.Text, "hello world", "text 2c4a Text", t)
 				sEq(obj.Font.Family, "Arial", "text 2c4a Font Family", t)
 				fEq(obj.Font.Size, 24, "text 2c4a Font Size", t)
-				BEq(obj.Font.Weight, FontWeightNormal, "text 2c4a Font Weight", t)
-				BEq(obj.Font.Slant, FontSlantRoman, "text 2c4a Font Slant", t)
-				BEq(obj.Anchor, AnchorCenter, "text 2c4a Anchor", t)
+				BEq(byte(obj.Font.Weight), byte(FontWeightNormal), "text 2c4a Font Weight", t)
+				BEq(byte(obj.Font.Slant), byte(FontSlantRoman), "text 2c4a Font Slant", t)
+				BEq(byte(obj.Anchor), byte(AnchorCenter), "text 2c4a Anchor", t)
 			default:
 				t.Errorf("Found unexpected line %s", obj.ObjID())
 			}
@@ -926,7 +926,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				bEq(obj.Locked, true, "rect 3988 Locked", t)
 				CEq(obj.Points, []Coordinates{{625, 160}}, "rect 3988 Points", t)
 				sEq(obj.Fill, "#ff2600", "rect 3988 Fill", t)
-				BEq(obj.Dash, DashSolid, "rect 3988 Dash", t)
+				BEq(byte(obj.Dash), byte(DashSolid), "rect 3988 Dash", t)
 				sEq(obj.Line, "black", "rect 3988 Line", t)
 				iEq(obj.Width, 5, "rect 3988 Width", t)
 				sEq(obj.Layer, "walls", "rect 3988 Layer", t)
@@ -945,7 +945,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				bEq(obj.Locked, false, "rect bf29 Locked", t)
 				CEq(obj.Points, []Coordinates{{355, 97}}, "rect bf29 Points", t)
 				sEq(obj.Fill, "", "rect bf29 Fill", t)
-				BEq(obj.Dash, DashSolid, "rect bf29 Dash", t)
+				BEq(byte(obj.Dash), byte(DashSolid), "rect bf29 Dash", t)
 				sEq(obj.Line, "black", "rect bf29 Line", t)
 				iEq(obj.Width, 5, "rect bf29 Width", t)
 				sEq(obj.Layer, "walls", "rect bf29 Layer", t)
@@ -969,7 +969,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				bEq(obj.Locked, false, "circ 2f5b Locked", t)
 				CEq(obj.Points, []Coordinates{{237, 150}}, "circ 2f5b Points", t)
 				sEq(obj.Fill, "", "circ 2f5b Fill", t)
-				BEq(obj.Dash, DashSolid, "circ 2f5b Dash", t)
+				BEq(byte(obj.Dash), byte(DashSolid), "circ 2f5b Dash", t)
 				sEq(obj.Line, "black", "circ 2f5b Line", t)
 				iEq(obj.Width, 5, "circ 2f5b Width", t)
 				sEq(obj.Layer, "walls", "circ 2f5b Layer", t)
@@ -993,7 +993,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				bEq(obj.Locked, false, "aoe 4b82 Locked", t)
 				CEq(obj.Points, []Coordinates{{500, 150}}, "aoe 4b82 Points", t)
 				sEq(obj.Fill, "black", "aoe 4b82 Fill", t)
-				BEq(obj.Dash, DashSolid, "aoe 4b82 Dash", t)
+				BEq(byte(obj.Dash), byte(DashSolid), "aoe 4b82 Dash", t)
 				sEq(obj.Line, "black", "aoe 4b82 Line", t)
 				iEq(obj.Width, 5, "aoe 4b82 Width", t)
 				sEq(obj.Layer, "walls", "aoe 4b82 Layer", t)
@@ -1001,7 +1001,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				iEq(obj.Level, 0, "aoe 4b82 Level", t)
 				sEq(obj.Group, "", "aoe 4b82 Group", t)
 				// SpellAreaOfEffectElement
-				BEq(obj.AoEShape, AoEShapeRadius, "aoe 4b82 AoE Shape", t)
+				BEq(byte(obj.AoEShape), byte(AoEShapeRadius), "aoe 4b82 AoE Shape", t)
 			case "afd136735d7e400082f331485e73f7a1":
 				// BaseMapObject
 				sEq(obj.ID, "afd136735d7e400082f331485e73f7a1", "ID", t)
@@ -1013,7 +1013,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				bEq(obj.Locked, false, "aoe afd1 Locked", t)
 				CEq(obj.Points, []Coordinates{{200, 200}}, "aoe afd1 Points", t)
 				sEq(obj.Fill, "#00f900", "aoe afd1 Fill", t)
-				BEq(obj.Dash, DashSolid, "aoe afd1 Dash", t)
+				BEq(byte(obj.Dash), byte(DashSolid), "aoe afd1 Dash", t)
 				sEq(obj.Line, "black", "aoe afd1 Line", t)
 				iEq(obj.Width, 5, "aoe afd1 Width", t)
 				sEq(obj.Layer, "walls", "aoe afd1 Layer", t)
@@ -1021,7 +1021,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				iEq(obj.Level, 0, "aoe afd1 Level", t)
 				sEq(obj.Group, "", "aoe afd1 Group", t)
 				// SpellAreaOfEffectElement
-				BEq(obj.AoEShape, AoEShapeRay, "aoe afd1 AoE Shape", t)
+				BEq(byte(obj.AoEShape), byte(AoEShapeRay), "aoe afd1 AoE Shape", t)
 			case "e68d5354f175401582866a75d806d8d7":
 				// BaseMapObject
 				sEq(obj.ID, "e68d5354f175401582866a75d806d8d7", "ID", t)
@@ -1033,7 +1033,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				bEq(obj.Locked, false, "aoe e68d Locked", t)
 				CEq(obj.Points, []Coordinates{{450, 800}}, "aoe e68d Points", t)
 				sEq(obj.Fill, "#00f900", "aoe e68d Fill", t)
-				BEq(obj.Dash, DashSolid, "aoe e68d Dash", t)
+				BEq(byte(obj.Dash), byte(DashSolid), "aoe e68d Dash", t)
 				sEq(obj.Line, "black", "aoe e68d Line", t)
 				iEq(obj.Width, 5, "aoe e68d Width", t)
 				sEq(obj.Layer, "walls", "aoe e68d Layer", t)
@@ -1041,7 +1041,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				iEq(obj.Level, 0, "aoe e68d Level", t)
 				sEq(obj.Group, "", "aoe e68d Group", t)
 				// SpellAreaOfEffectElement
-				BEq(obj.AoEShape, AoEShapeCone, "aoe e68d AoE Shape", t)
+				BEq(byte(obj.AoEShape), byte(AoEShapeCone), "aoe e68d AoE Shape", t)
 			default:
 				t.Errorf("Found unexpected aoe %s", obj.ObjID())
 			}

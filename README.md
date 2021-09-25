@@ -1,3 +1,4 @@
+[![Go Reference](https://pkg.go.dev/badge/github.com/fizban-of-ragnarok/go-gma.svg)](https://pkg.go.dev/github.com/fizban-of-ragnarok/go-gma)
 [![Coverage Status](https://coveralls.io/repos/github/fizban-of-ragnarok/go-gma/badge.svg?branch=main)](https://coveralls.io/github/fizban-of-ragnarok/go-gma?branch=main)
 ![GitHub](https://img.shields.io/github/license/fizban-of-ragnarok/go-gma)
 # go-gma

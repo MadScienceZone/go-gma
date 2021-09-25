@@ -70,8 +70,8 @@ import (
 // and protocol versions supported by this code.
 //
 const (
-	GMAMapperProtocol=332     // @@##@@ auto-configured
-	GMAVersionNumber="4.3.10" // @@##@@ auto-configured
+	GMAMapperProtocol           = 332      // @@##@@ auto-configured
+	GMAVersionNumber            = "4.3.10" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 332
 	MaximumSupportedMapProtocol = 332
 )
@@ -158,6 +158,9 @@ type Connection struct {
 	sendBuf  []string       // internal buffer of outgoing packets
 	signedOn bool           // do we have an active session now?
 
+	// The calendar system the server indicated as preferred, if any
+	CalendarSystem string
+
 	// If true, we will always try to reconnect to the server if we
 	// lose our connection.
 	StayConnected bool
@@ -242,6 +245,12 @@ func WithContext(ctx context.Context) func(*Connection) error {
 }
 
 //
+// ConnectionOption is an option to be passed to the NewConnection
+// function.
+//
+type ConnectionOption func(*Connection) error
+
+//
 // WithSubscription modifies the behavior of the NewConnection function
 // by adding a server message subscription to the connection just as if
 // the Subscribe method had been called on the connection value.
@@ -258,7 +267,7 @@ func WithContext(ctx context.Context) func(*Connection) error {
 //   go server.Dial()
 // (Of course, real production code should check the returned error values.)
 //
-func WithSubscription(ch chan MessagePayload, messages ...ServerMessage) func(*Connection) error {
+func WithSubscription(ch chan MessagePayload, messages ...ServerMessage) ConnectionOption {
 	return func(c *Connection) error {
 		return c.Subscribe(ch, messages...)
 	}
@@ -271,7 +280,7 @@ func WithSubscription(ch chan MessagePayload, messages ...ServerMessage) func(*C
 // to authenticate, which is only appropriate for servers which do not
 // require authentication. (Which, hopefully, won't be the case anyway.)
 //
-func WithAuthenticator(a *auth.Authenticator) func(*Connection) error {
+func WithAuthenticator(a *auth.Authenticator) ConnectionOption {
 	return func(c *Connection) error {
 		c.Authenticator = a
 		return nil
@@ -283,7 +292,7 @@ func WithAuthenticator(a *auth.Authenticator) func(*Connection) error {
 // by specifying a custom logger instead of the default one for
 // the Connection to use during its operations.
 //
-func WithLogger(l *log.Logger) func(*Connection) error {
+func WithLogger(l *log.Logger) ConnectionOption {
 	return func(c *Connection) error {
 		c.Logger = l
 		return nil
@@ -304,7 +313,7 @@ func WithLogger(l *log.Logger) func(*Connection) error {
 // stop retry attempts). Otherwise, the connection will wait
 // indefinitely to complete OR until the context is cancelled.
 //
-func WithTimeout(t time.Duration) func(*Connection) error {
+func WithTimeout(t time.Duration) ConnectionOption {
 	return func(c *Connection) error {
 		c.Timeout = t
 		return nil
@@ -320,7 +329,7 @@ func WithTimeout(t time.Duration) func(*Connection) error {
 // The default is to make a single attempt to connect to the
 // server.
 //
-func WithRetries(n uint) func(*Connection) error {
+func WithRetries(n uint) ConnectionOption {
 	return func(c *Connection) error {
 		c.Retries = n
 		return nil
@@ -339,7 +348,7 @@ func WithRetries(n uint) func(*Connection) error {
 // If enable is false (the default), Dial will return as soon
 // as the server connection is dropped for any reason.
 //
-func StayConnected(enable bool) func(*Connection) error {
+func StayConnected(enable bool) ConnectionOption {
 	return func(c *Connection) error {
 		c.StayConnected = enable
 		return nil
@@ -355,7 +364,7 @@ func StayConnected(enable bool) func(*Connection) error {
 //   2 - more internal state is exposed
 //   3 - the full data for each incoming/outgoing message is logged
 //
-func WithDebugging(level uint) func(*Connection) error {
+func WithDebugging(level uint) ConnectionOption {
 	return func(c *Connection) error {
 		c.DebuggingLevel = level
 		return nil
@@ -396,7 +405,7 @@ func WithDebugging(level uint) func(*Connection) error {
 //   }
 //   go server.Dial()
 //
-func NewConnection(endpoint string, opts ...func(*Connection) error) (Connection, error) {
+func NewConnection(endpoint string, opts ...ConnectionOption) (Connection, error) {
 	newCon := Connection{
 		Context:       context.Background(),
 		Endpoint:      endpoint,
@@ -530,7 +539,7 @@ type ServerMessage byte
 // ServerMessage values (see the comments accompanying the type definition).
 //
 const (
-	AddCharacter = iota
+	AddCharacter ServerMessage = iota
 	AddImage
 	AddObjAttributes
 	AdjustView
@@ -1162,11 +1171,11 @@ type LoadObjectMessagePayload struct {
 func streamChecksum(data [][]string) string {
 	ck := sha256.New()
 	for _, item := range data {
-		for i, field := range item {
-			if i > 0 {
-				ck.Write([]byte{' '})
+		if len(item) > 1 {
+			str, err := tcllist.ToTclString(item[1:])
+			if err == nil {
+				ck.Write([]byte(str))
 			}
-			ck.Write([]byte(field))
 		}
 	}
 	return base64.StdEncoding.EncodeToString(ck.Sum(nil))
@@ -1301,6 +1310,20 @@ func (c *Connection) PlaceSomeone(someone interface{}) error {
 			monster.Area, monster.Size, "monster", monster.Gx, monster.Gy, monster.Reach)
 	}
 	return fmt.Errorf("PlaceSomeone: argument not a PlayerToken or MonsterToken")
+}
+
+//  ____       _
+// |  _ \ ___ | | ___
+// | |_) / _ \| |/ _ \
+// |  __/ (_) | | (_) |
+// |_|   \___/|_|\___/
+//
+
+//
+// Polo send the client's response to the server's MARCO ping message.
+//
+func (c *Connection) Polo() error {
+	return c.send("POLO")
 }
 
 //   ___                        ___
@@ -2055,7 +2078,11 @@ func (c *Connection) login(done chan error) {
 				c.Logger.Printf("mapper: sync %02d: Added condition %s", recCount, f[1])
 
 			case "//":
-				if len(f) >= 5 && f[1] == "CORE" && f[2] == "UPDATE" && f[3] == "//" {
+				if len(f) >= 4 && f[1] == "CALENDAR" && f[2] == "//" {
+					// CALENDAR // system
+					c.CalendarSystem = f[3]
+					c.Logger.Printf("mapper: sync %02d: Server says to use %s calendar", recCount, f[3])
+				} else if len(f) >= 5 && f[1] == "CORE" && f[2] == "UPDATE" && f[3] == "//" {
 					// CORE UPDATE // version
 					advertisedVersion := f[4]
 					d, err := util.VersionCompare(GMAVersionNumber, advertisedVersion)
@@ -3488,7 +3515,7 @@ func (c *Connection) listen(done chan error) {
 					break
 				}
 
-				var ct byte
+				var ct CreatureTypeCode
 				ct = CreatureTypeUnknown
 				switch fv[6].(string) {
 				case "player":

@@ -77,8 +77,10 @@ func init() {
 //
 // These are the allowed values for the Dash attribute of a MapElement.
 //
+type DashType byte
+
 const (
-	DashSolid = iota
+	DashSolid DashType = iota
 	DashLong
 	DashMedium
 	DashShort
@@ -87,107 +89,121 @@ const (
 )
 
 var enumDashes = enumChoices{
-	"":    DashSolid,
-	"-":   DashLong,
-	",":   DashMedium,
-	".":   DashShort,
-	"-.":  DashLongShort,
-	"-..": DashLong2Short,
+	"":    byte(DashSolid),
+	"-":   byte(DashLong),
+	",":   byte(DashMedium),
+	".":   byte(DashShort),
+	"-.":  byte(DashLongShort),
+	"-..": byte(DashLong2Short),
 }
 
 //
 // These are the allowed values for the ArcMode attribute of an ArcElement.
 //
+type ArcModeType byte
+
 const (
-	ArcModePieSlice = iota
+	ArcModePieSlice ArcModeType = iota
 	ArcModeArc
 	ArcModeChord
 )
 
 var enumArcs = enumChoices{
-	"pieslice": ArcModePieSlice,
-	"arc":      ArcModeArc,
-	"chord":    ArcModeChord,
+	"pieslice": byte(ArcModePieSlice),
+	"arc":      byte(ArcModeArc),
+	"chord":    byte(ArcModeChord),
 }
 
 //
 // Valid values for a line's Arrow attribute.
 //
+type ArrowType byte
+
 const (
-	ArrowNone = iota
+	ArrowNone ArrowType = iota
 	ArrowFirst
 	ArrowLast
 	ArrowBoth
 )
 
 var enumArrows = enumChoices{
-	"none":  ArrowNone,
-	"first": ArrowFirst,
-	"last":  ArrowLast,
-	"both":  ArrowBoth,
+	"none":  byte(ArrowNone),
+	"first": byte(ArrowFirst),
+	"last":  byte(ArrowLast),
+	"both":  byte(ArrowBoth),
 }
 
 //
 // These are the allowed values for the Join attribute of a PolygonElement.
 //
+type JoinStyle byte
+
 const (
-	JoinBevel = iota
+	JoinBevel JoinStyle = iota
 	JoinMiter
 	JoinRound
 )
 
 var enumJoins = enumChoices{
-	"bevel": JoinBevel,
-	"miter": JoinMiter,
-	"round": JoinRound,
+	"bevel": byte(JoinBevel),
+	"miter": byte(JoinMiter),
+	"round": byte(JoinRound),
 }
 
 //
 // These are the valid values for the AoEShape attribute.
 //
+type AoEType byte
+
 const (
-	AoEShapeCone = iota
+	AoEShapeCone AoEType = iota
 	AoEShapeRadius
 	AoEShapeRay
 )
 
 var enumAoeShapes = enumChoices{
-	"cone":   AoEShapeCone,
-	"radius": AoEShapeRadius,
-	"ray":    AoEShapeRay,
+	"cone":   byte(AoEShapeCone),
+	"radius": byte(AoEShapeRadius),
+	"ray":    byte(AoEShapeRay),
 }
 
 //
 // The valid font weights.
 //
+type FontWeightType byte
+
 const (
-	FontWeightNormal = iota
+	FontWeightNormal FontWeightType = iota
 	FontWeightBold
 )
 
 var enumFontWeights = enumChoices{
-	"normal": FontWeightNormal,
-	"bold":   FontWeightBold,
+	"normal": byte(FontWeightNormal),
+	"bold":   byte(FontWeightBold),
 }
 
 //
 // The valid font slants.
 //
+type FontSlantType byte
+
 const (
-	FontSlantRoman = iota
+	FontSlantRoman FontSlantType = iota
 	FontSlantItalic
 )
 
 var enumFontSlants = enumChoices{
-	"roman":  FontSlantRoman,
-	"italic": FontSlantItalic,
+	"roman":  byte(FontSlantRoman),
+	"italic": byte(FontSlantItalic),
 }
 
 //
 // The valid values for the Anchor attribute of a TextElement.
 //
+type AnchorDirection byte
+
 const (
-	AnchorCenter = iota
+	AnchorCenter AnchorDirection = iota
 	AnchorNorth
 	AnchorSouth
 	AnchorEast
@@ -199,22 +215,24 @@ const (
 )
 
 var enumAnchors = enumChoices{
-	"center": AnchorCenter,
-	"n":      AnchorNorth,
-	"s":      AnchorSouth,
-	"e":      AnchorEast,
-	"w":      AnchorWest,
-	"ne":     AnchorNE,
-	"se":     AnchorSE,
-	"nw":     AnchorNW,
-	"sw":     AnchorSW,
+	"center": byte(AnchorCenter),
+	"n":      byte(AnchorNorth),
+	"s":      byte(AnchorSouth),
+	"e":      byte(AnchorEast),
+	"w":      byte(AnchorWest),
+	"ne":     byte(AnchorNE),
+	"se":     byte(AnchorSE),
+	"nw":     byte(AnchorNW),
+	"sw":     byte(AnchorSW),
 }
 
 //
 // The valid values for a creature's MoveMode attribute.
 //
+type MoveModeType byte
+
 const (
-	MoveModeLand = iota
+	MoveModeLand MoveModeType = iota
 	MoveModeBurrow
 	MoveModeClimb
 	MoveModeFly
@@ -222,11 +240,11 @@ const (
 )
 
 var enumMoveModes = enumChoices{
-	"fly":    MoveModeFly,
-	"climb":  MoveModeClimb,
-	"swim":   MoveModeSwim,
-	"burrow": MoveModeBurrow,
-	"land":   MoveModeLand,
+	"fly":    byte(MoveModeFly),
+	"climb":  byte(MoveModeClimb),
+	"swim":   byte(MoveModeSwim),
+	"burrow": byte(MoveModeBurrow),
+	"land":   byte(MoveModeLand),
 }
 
 //
@@ -496,7 +514,7 @@ type MapElement struct {
 	Group string
 
 	// The element's line(s) are to be drawn with this dash pattern.
-	Dash byte
+	Dash DashType
 
 	// Is this element currently concealed from view?
 	Hidden bool
@@ -517,6 +535,7 @@ func objMapElement(objID string, objDef map[string][]string) (MapElement, error)
 			ID: objID,
 		},
 	}
+	var b byte
 	e.X, err = objFloat(objDef, 0, "X", true, err)
 	e.Y, err = objFloat(objDef, 0, "Y", true, err)
 	e.Z, err = objInt(objDef, 0, "Z", true, err)
@@ -524,7 +543,8 @@ func objMapElement(objID string, objDef map[string][]string) (MapElement, error)
 	e.Group, err = objString(objDef, 0, "GROUP", false, err)
 	e.Points, err = objCoordinateList(objDef, 0, "POINTS", false, err)
 	e.Fill, err = objString(objDef, 0, "FILL", false, err)
-	e.Dash, err = objEnum(objDef, 0, "DASH", false, enumDashes, err)
+	b, err = objEnum(objDef, 0, "DASH", false, enumDashes, err)
+	e.Dash = DashType(b)
 	e.Line, err = objString(objDef, 0, "LINE", false, err)
 	e.Width, err = objInt(objDef, 0, "WIDTH", false, err)
 	e.Layer, err = objString(objDef, 0, "LAYER", false, err)
@@ -562,7 +582,7 @@ func (o MapElement) saveData(data []string, prefix, id string) ([]string, error)
 		}
 	}
 
-	da, err := saveEnum(o.Dash, enumDashes)
+	da, err := saveEnum(byte(o.Dash), enumDashes)
 	if err != nil {
 		return nil, err
 	}
@@ -606,7 +626,7 @@ func (o MapElement) saveData(data []string, prefix, id string) ([]string, error)
 //
 type ArcElement struct {
 	MapElement
-	ArcMode byte
+	ArcMode ArcModeType
 	Extent  float64
 	Start   float64
 }
@@ -619,7 +639,9 @@ func objArcElement(objID string, objDef map[string][]string) (ArcElement, error)
 	arc := ArcElement{
 		MapElement: me,
 	}
-	arc.ArcMode, err = objEnum(objDef, 0, "ARCMODE", true, enumArcs, err)
+	var b byte
+	b, err = objEnum(objDef, 0, "ARCMODE", true, enumArcs, err)
+	arc.ArcMode = ArcModeType(b)
 	arc.Start, err = objFloat(objDef, 0, "START", true, err)
 	arc.Extent, err = objFloat(objDef, 0, "EXTENT", true, err)
 	return arc, err
@@ -638,7 +660,7 @@ func (o ArcElement) saveData(data []string, prefix, id string) ([]string, error)
 		return nil, err
 	}
 
-	am, err := saveEnum(o.ArcMode, enumArcs)
+	am, err := saveEnum(byte(o.ArcMode), enumArcs)
 	if err != nil {
 		return nil, err
 	}
@@ -720,7 +742,7 @@ type LineElement struct {
 	MapElement
 
 	// What arrowheads, if any, to draw on the endpoints
-	Arrow byte
+	Arrow ArrowType
 }
 
 //
@@ -731,7 +753,9 @@ func objLineElement(objID string, objDef map[string][]string) (LineElement, erro
 	line := LineElement{
 		MapElement: me,
 	}
-	line.Arrow, err = objEnum(objDef, 0, "ARROW", false, enumArrows, err)
+	var b byte
+	b, err = objEnum(objDef, 0, "ARROW", false, enumArrows, err)
+	line.Arrow = ArrowType(b)
 	return line, err
 }
 
@@ -748,7 +772,7 @@ func (o LineElement) saveData(data []string, prefix, id string) ([]string, error
 		return nil, err
 	}
 
-	am, err := saveEnum(o.Arrow, enumArrows)
+	am, err := saveEnum(byte(o.Arrow), enumArrows)
 	if err != nil {
 		return nil, err
 	}
@@ -780,7 +804,7 @@ type PolygonElement struct {
 	Spline float64
 
 	// The join style to control how the intersection between line segments is drawn.
-	Join byte
+	Join JoinStyle
 }
 
 //
@@ -791,7 +815,9 @@ func objPolygonElement(objID string, objDef map[string][]string) (PolygonElement
 	poly := PolygonElement{
 		MapElement: me,
 	}
-	poly.Join, err = objEnum(objDef, 0, "JOIN", false, enumJoins, err)
+	var b byte
+	b, err = objEnum(objDef, 0, "JOIN", false, enumJoins, err)
+	poly.Join = JoinStyle(b)
 	poly.Spline, err = objFloat(objDef, 0, "SPLINE", false, err)
 	return poly, err
 }
@@ -809,7 +835,7 @@ func (o PolygonElement) saveData(data []string, prefix, id string) ([]string, er
 		return nil, err
 	}
 
-	jm, err := saveEnum(o.Join, enumJoins)
+	jm, err := saveEnum(byte(o.Join), enumJoins)
 	if err != nil {
 		return nil, err
 	}
@@ -897,7 +923,7 @@ type SpellAreaOfEffectElement struct {
 	MapElement
 
 	// The shape of the affected region of the map.
-	AoEShape byte
+	AoEShape AoEType
 }
 
 //
@@ -908,7 +934,9 @@ func objSpellAreaOfEffectElement(objID string, objDef map[string][]string) (Spel
 	sa := SpellAreaOfEffectElement{
 		MapElement: me,
 	}
-	sa.AoEShape, err = objEnum(objDef, 0, "AOESHAPE", true, enumAoeShapes, err)
+	var b byte
+	b, err = objEnum(objDef, 0, "AOESHAPE", true, enumAoeShapes, err)
+	sa.AoEShape = AoEType(b)
 	return sa, err
 }
 
@@ -925,7 +953,7 @@ func (o SpellAreaOfEffectElement) saveData(data []string, prefix, id string) ([]
 		return nil, err
 	}
 
-	ae, err := saveEnum(o.AoEShape, enumAoeShapes)
+	ae, err := saveEnum(byte(o.AoEShape), enumAoeShapes)
 	if err != nil {
 		return nil, err
 	}
@@ -955,10 +983,10 @@ type TextFont struct {
 	Size float64
 
 	// The font weight (normal or bold).
-	Weight byte
+	Weight FontWeightType
 
 	// The font slant (roman or italic).
-	Slant byte
+	Slant FontSlantType
 }
 
 //
@@ -978,7 +1006,7 @@ type TextElement struct {
 	Font TextFont
 
 	// Where is the reference point in relation to the text?
-	Anchor byte
+	Anchor AnchorDirection
 }
 
 //
@@ -1034,8 +1062,8 @@ func objTextFont(objDef map[string][]string, i int, fldName string, required boo
 	return TextFont{
 		Family: ff[0].(string),
 		Size:   ff[1].(float64),
-		Weight: w,
-		Slant:  s,
+		Weight: FontWeightType(w),
+		Slant:  FontSlantType(s),
 	}, err
 }
 
@@ -1050,7 +1078,9 @@ func objTextElement(objID string, objDef map[string][]string) (TextElement, erro
 
 	text.Text, err = objString(objDef, 0, "TEXT", true, err)
 	text.Font, err = objTextFont(objDef, 0, "FONT", true, err)
-	text.Anchor, err = objEnum(objDef, 0, "ANCHOR", false, enumAnchors, err)
+	var b byte
+	b, err = objEnum(objDef, 0, "ANCHOR", false, enumAnchors, err)
+	text.Anchor = AnchorDirection(b)
 	return text, err
 }
 
@@ -1067,15 +1097,15 @@ func (o TextElement) saveData(data []string, prefix, id string) ([]string, error
 		return nil, err
 	}
 
-	a, err := saveEnum(o.Anchor, enumAnchors)
+	a, err := saveEnum(byte(o.Anchor), enumAnchors)
 	if err != nil {
 		return nil, err
 	}
-	fw, err := saveEnum(o.Font.Weight, enumFontWeights)
+	fw, err := saveEnum(byte(o.Font.Weight), enumFontWeights)
 	if err != nil {
 		return nil, err
 	}
-	fs, err := saveEnum(o.Font.Slant, enumFontSlants)
+	fs, err := saveEnum(byte(o.Font.Slant), enumFontSlants)
 	if err != nil {
 		return nil, err
 	}
@@ -1173,8 +1203,10 @@ func (o TileElement) saveData(data []string, prefix, id string) ([]string, error
 // Creature type codes for the CreatureType field of CreatureToken
 // (and PlayerToken and MonsterToken) values.
 //
+type CreatureTypeCode byte
+
 const (
-	CreatureTypeUnknown = iota
+	CreatureTypeUnknown CreatureTypeCode = iota
 	CreatureTypeMonster
 	CreatureTypePlayer
 )
@@ -1254,7 +1286,7 @@ type CreatureToken struct {
 	// The method of locomotion currently being used by this creature.
 	// Normally this is MoveModeLand for land-based creatures which
 	// are walking/running.
-	MoveMode byte
+	MoveMode MoveModeType
 
 	// Is the creature currently wielding a reach weapon or otherwise
 	// using the "reach" alternate threat zone?
@@ -1270,7 +1302,7 @@ type CreatureToken struct {
 	Dim bool
 
 	// The creature type.
-	CreatureType byte
+	CreatureType CreatureTypeCode
 }
 
 //
@@ -1281,13 +1313,15 @@ func objCreature(objID string, objDef map[string][]string) (CreatureToken, error
 	c := CreatureToken{
 		CreatureType: CreatureTypeUnknown,
 	}
+	var b byte
 	c.ID = objID
 	c.Name, err = objString(objDef, 0, "NAME", true, err)
 	c.Gx, err = objFloat(objDef, 0, "GX", true, err)
 	c.Gy, err = objFloat(objDef, 0, "GY", true, err)
 	c.Health, err = objHealth(objDef, err)
 	c.Elev, err = objInt(objDef, 0, "ELEV", false, err)
-	c.MoveMode, err = objEnum(objDef, 0, "MOVEMODE", false, enumMoveModes, err)
+	b, err = objEnum(objDef, 0, "MOVEMODE", false, enumMoveModes, err)
+	c.MoveMode = MoveModeType(b)
 	c.Color, err = objString(objDef, 0, "COLOR", false, err)
 	c.Note, err = objString(objDef, 0, "NOTE", false, err)
 	c.Skin, err = objInt(objDef, 0, "SKIN", false, err)
@@ -1502,7 +1536,7 @@ func (o CreatureToken) saveData(data []string, prefix, id string) ([]string, err
 	if err != nil {
 		return nil, err
 	}
-	mm, err := saveEnum(o.MoveMode, enumMoveModes)
+	mm, err := saveEnum(byte(o.MoveMode), enumMoveModes)
 	if err != nil {
 		return nil, err
 	}
@@ -1954,6 +1988,11 @@ func objString(objDef map[string][]string, i int, fldName string, required bool,
 
 type enumChoices map[string]byte
 
+type enumDescriptor struct {
+	minValue, maxValue byte
+	choices            map[string]byte
+}
+
 func objEnum(objDef map[string][]string, i int, fldName string, required bool, choices enumChoices, err error) (byte, error) {
 	if err != nil {
 		return 0, err
@@ -2230,6 +2269,91 @@ func saveEnum(choice byte, choices enumChoices) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("value %v not in list of valid enum choices %v", choice, choices)
+}
+
+func enumToString(v byte, choices enumChoices, desc string) string {
+	s, err := saveEnum(v, choices)
+	if err != nil {
+		return fmt.Sprintf("(unknown %s)", desc)
+	}
+	return s
+}
+
+//
+// MoveModeString returns a string representation of the internal MoveMode value.
+//
+func MoveModeString(m MoveModeType) string {
+	return enumToString(byte(m), enumMoveModes, "move mode")
+}
+
+//
+// DashTypeString returns a string representation of the internal DashType value.
+//
+func DashTypeString(m DashType) string {
+	return enumToString(byte(m), enumDashes, "dash type")
+}
+
+//
+// ArcModeString returns a string representation of the internal ArcModeType value.
+//
+func ArcModeString(m ArcModeType) string {
+	return enumToString(byte(m), enumArcs, "arc type")
+}
+
+//
+// ArrowTypeString returns a string representation of the internal ArrowType value.
+//
+func ArrowTypeString(m ArrowType) string {
+	return enumToString(byte(m), enumArrows, "arrow type")
+}
+
+//
+// JoinStyleString returns a string representation of the internal JoinStyle value.
+//
+func JoinStyleString(m JoinStyle) string {
+	return enumToString(byte(m), enumJoins, "join style")
+}
+
+//
+// AoETypeString returns a string representation of the internal AoEType value.
+//
+func AoETypeString(m AoEType) string {
+	return enumToString(byte(m), enumAoeShapes, "AoE shape")
+}
+
+//
+// FontWeightString returns a string representation of the internal FontWeight value.
+//
+func FontWeightString(m FontWeightType) string {
+	return enumToString(byte(m), enumFontWeights, "font weight")
+}
+
+//
+// FontSlantString returns a string representation of the internal FontSlantType value.
+//
+func FontSlantString(m FontSlantType) string {
+	return enumToString(byte(m), enumFontSlants, "font slant")
+}
+
+//
+// AnchorDirectionString returns a string representation of the internal AnchorDirection value.
+//
+func AnchorDirectionString(m AnchorDirection) string {
+	return enumToString(byte(m), enumAnchors, "anchor direction")
+}
+
+//
+// CreatureTypeString returns a string representation of the internal CreatureTypeCode value.
+//
+func CreatureTypeString(t CreatureTypeCode) string {
+	switch t {
+	case CreatureTypeMonster:
+		return "monster"
+	case CreatureTypePlayer:
+		return "player"
+	default:
+		return "(unknown creature type)"
+	}
 }
 
 //
