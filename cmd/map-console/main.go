@@ -1025,15 +1025,10 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 			case "DD/":
 				// DD/ regex
 				if len(fields) != 2 {
-					fmt.Println(colorize("usage ERROR: wrong number of fields: D/ <regex>", "Red", mono))
+					fmt.Println(colorize("usage ERROR: wrong number of fields: DD/ <regex>", "Red", mono))
 					break
 				}
-				recips, err := tcllist.ParseTclList(fields[1])
-				if err != nil {
-					fmt.Println(colorize(fmt.Sprintf("ERROR in recipient list: %v", err), "Red", mono))
-					break
-				}
-				if err := server.RollDice(recips, fields[2]); err != nil {
+				if err := server.FilterDicePresets(fields[1]); err != nil {
 					fmt.Println(colorize(fmt.Sprintf("server ERROR: %v", err), "Red", mono))
 					break
 				}
