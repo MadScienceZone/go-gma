@@ -1,5 +1,5 @@
-[![Coverage Status](https://coveralls.io/repos/github/fizban-of-ragnarok/go-gma/badge.svg?branch=main)](https://coveralls.io/github/fizban-of-ragnarok/go-gma?branch=main)
-![GitHub](https://img.shields.io/github/license/fizban-of-ragnarok/go-gma)
+[![Coverage Status](https://coveralls.io/repos/github/MadScienceZone/go-gma/badge.svg?branch=main)](https://coveralls.io/github/MadScienceZone/go-gma?branch=main)
+![GitHub](https://img.shields.io/github/license/MadScienceZone/go-gma)
 # go-gma
 Golang port of the GMA core API libraries.
 
