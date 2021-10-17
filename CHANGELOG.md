@@ -1,10 +1,37 @@
 # Changelog
 ## Current Version Information
- * GMA Core API Library Version: 4.3.7		<!-- @@##@@ -->
+ * GMA Core API Library Version: 4.3.10		<!-- @@##@@ -->
  * Supported GMA Mapper Version: 3.40.10		<!-- @@##@@ -->
  * Supported GMA Mapper Protocol: 332		<!-- @@##@@ -->
  * Supported GMA Mapper File Format: 17		<!-- @@##@@ -->
- * Effective Date: 17-Jul-2021			<!-- @@##@@ -->
+ * Effective Date: 23-Jul-2021			<!-- @@##@@ -->
+
+## v4.3.10 (alpha)
+Added note pointing to paizo's Community Use Policy and GMA's usage of Pathfinder
+game-related information.
+
+## v4.3.9 (alpha)
+Since this is still in alpha, I'm taking the liberty to change the call to
+dice.StricturedDescribeRoll to correct the weirdness of having the sfOpt
+parameter, which should logically (no pun intended) be a bool value rather
+than a string, and also to provide a more flexible calling paradigm which
+doesn't require sending these values when they aren't needed.
+
+Updated handling of custom bullets in the text.Render function so that common
+bullet characters are translated to each output format. That means the plain text
+formatter outputs Unicode bullet runes now by default, too, so if you really want
+to use `*` (for example) as a bullet you'll need to specify that as a custom
+bullet rune explicitly, like:
+
+```go
+formattedText, err := text.Render(s, AsPlainText, WithBullets('*', '-'))
+```
+
+## v4.3.8 (alpha)
+Updated documentation. Lots of cleanup to make `golint` happier.
+Added random name generation package `namegen`.
+Added ability to get raw random number values from `dice.DieRoller` that use the same
+PRG.
 
 ## v4.3.7 (alpha)
 Moved SaveData methods for MapObjects back to being unepxorted. Users should

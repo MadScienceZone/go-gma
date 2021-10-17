@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___       ______      ______               #
-# (  ____ \(       )(  ___  )              /   )     / ___  \    / ___  \              #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \   \/   )  )             #
-# | |      | || || || (___) |            / (_) (_       ___) /       /  /              #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (       /  /               #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \     /  /                #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _  /  /                 #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \_/                  #
+#  _______  _______  _______                ___       ______       __    _______       #
+# (  ____ \(       )(  ___  )              /   )     / ___  \     /  \  (  __   )      #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \    \/) ) | (  )  |      #
+# | |      | || || || (___) |            / (_) (_       ___) /      | | | | /   |      #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (       | | | (/ /) |      #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \      | | |   / | |      #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _  __) (_|  (__) |      #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \____/(_______)      #
 #                                                                                      #
 ########################################################################################
 */
@@ -29,7 +29,7 @@
 // a simple string scanner in Go which will convert these string representations to and from Go slices.
 
 //
-// Convert between Tcl list strings and Go string slices.
+// Package tcllist converts between Tcl list strings and Go slices.
 //
 // Some of the older elements of GMA (which used to be entirely written in
 // the Tcl language, after it was ported from the even older C++ code) use
@@ -141,13 +141,13 @@ import (
 // original C code distributed in the Tcl core source code files "tclUtil.c",
 // "tclParse.c", "tclUtf.c", as a direct port of that original code to Go.
 //
-const t_CONVERT_NONE = 0
-const t_TCL_DONT_USE_BRACES = 1
-const t_CONVERT_BRACE = 2
-const t_CONVERT_ESCAPE = 4
-const t_CONVERT_MASK = (t_CONVERT_BRACE | t_CONVERT_ESCAPE)
-const t_TCL_DONT_QUOTE_HASH = 8
-const t_CONVERT_ANY = 16
+const tConvertNone = 0
+const tTclDontUseBraces = 1
+const tConvertBrace = 2
+const tConvertEscape = 4
+const tConvertMask = (tConvertBrace | tConvertEscape)
+const tTclDontQuoteHash = 8
+const tConvertAny = 16
 
 //
 // Tcl_ScanElement(string, flagPtr) -> len
@@ -155,156 +155,156 @@ const t_CONVERT_ANY = 16
 // and returns the string length needed to hold the string representation
 // of that element (an overestimation for allocation purposes)
 //
-func tcl_scan_element(element string, flags int) (int, int, error) {
+func tclScanElement(element string, flags int) (int, int, error) {
 	length := len(element)
-	nesting_level := 0
-	forbid_none := false
-	require_escape := false
+	nestingLevel := 0
+	forbidNone := false
+	requireEscape := false
 	extra := 0
-	bytes_needed := 0
-	prefer_escape := false
-	prefer_brace := false
-	brace_count := 0
-	after_backslash := false
+	bytesNeeded := 0
+	preferEscape := false
+	preferBrace := false
+	braceCount := 0
+	afterBackslash := false
 
 	if length == 0 {
-		return 2, t_CONVERT_BRACE, nil
+		return 2, tConvertBrace, nil
 	}
 
-	if element[0] == '#' && (flags&t_TCL_DONT_QUOTE_HASH) == 0 {
-		prefer_brace = true
+	if element[0] == '#' && (flags&tTclDontQuoteHash) == 0 {
+		preferBrace = true
 	}
 
 	if element[0] == '{' || element[0] == '"' {
-		forbid_none = true
-		prefer_brace = true
+		forbidNone = true
+		preferBrace = true
 	}
 
 	for i, r := range element {
-		if after_backslash {
+		if afterBackslash {
 			if r == '{' || r == '}' || r == '\\' {
 				extra++
 			} else if r == '\n' {
 				extra++
-				require_escape = true
+				requireEscape = true
 			}
-			after_backslash = false
+			afterBackslash = false
 			continue
 		}
 
 		switch r {
 		case '{':
-			brace_count++
+			braceCount++
 			extra++
-			nesting_level++
+			nestingLevel++
 		case '}':
 			extra++
-			nesting_level--
-			if nesting_level < 0 {
-				require_escape = true
+			nestingLevel--
+			if nestingLevel < 0 {
+				requireEscape = true
 			}
 		case ']', '"':
-			forbid_none = true
+			forbidNone = true
 			extra++
-			prefer_escape = true
+			preferEscape = true
 		case '[', '$', ';', ' ', '\f', '\n', '\r', '\t', '\v':
-			forbid_none = true
+			forbidNone = true
 			extra++
-			prefer_brace = true
+			preferBrace = true
 		case '\\':
 			extra++
 			if i+1 >= length {
-				require_escape = true
+				requireEscape = true
 				break
 			}
-			after_backslash = true
-			forbid_none = true
-			prefer_brace = true
+			afterBackslash = true
+			forbidNone = true
+			preferBrace = true
 		}
 	}
-	if nesting_level != 0 {
-		require_escape = true
+	if nestingLevel != 0 {
+		requireEscape = true
 	}
-	bytes_needed = length
-	if require_escape {
-		bytes_needed += extra
-		if element[0] == '#' && (flags&t_TCL_DONT_QUOTE_HASH) == 0 {
-			bytes_needed++
+	bytesNeeded = length
+	if requireEscape {
+		bytesNeeded += extra
+		if element[0] == '#' && (flags&tTclDontQuoteHash) == 0 {
+			bytesNeeded++
 		}
-		flags = t_CONVERT_ESCAPE
+		flags = tConvertEscape
 		goto overflow_check
 	}
 
-	if (flags & t_CONVERT_ANY) != 0 {
+	if (flags & tConvertAny) != 0 {
 		if extra < 2 {
 			extra = 2
 		}
-		flags &= ^t_CONVERT_ANY
-		flags |= t_TCL_DONT_USE_BRACES
+		flags &= ^tConvertAny
+		flags |= tTclDontUseBraces
 	}
 
-	if forbid_none {
-		if prefer_escape && !prefer_brace {
-			bytes_needed += (extra - brace_count)
-			if element[0] == '#' && (flags&t_TCL_DONT_QUOTE_HASH) == 0 {
-				bytes_needed++
+	if forbidNone {
+		if preferEscape && !preferBrace {
+			bytesNeeded += (extra - braceCount)
+			if element[0] == '#' && (flags&tTclDontQuoteHash) == 0 {
+				bytesNeeded++
 			}
-			if (flags & t_TCL_DONT_USE_BRACES) != 0 {
-				bytes_needed += brace_count
+			if (flags & tTclDontUseBraces) != 0 {
+				bytesNeeded += braceCount
 			}
-			flags = t_CONVERT_MASK
+			flags = tConvertMask
 			goto overflow_check
 		}
-		if (flags & t_TCL_DONT_USE_BRACES) != 0 {
-			bytes_needed += extra
-			if element[0] == '#' && (flags&t_TCL_DONT_QUOTE_HASH) == 0 {
-				bytes_needed++
+		if (flags & tTclDontUseBraces) != 0 {
+			bytesNeeded += extra
+			if element[0] == '#' && (flags&tTclDontQuoteHash) == 0 {
+				bytesNeeded++
 			}
 		} else {
-			bytes_needed += 2
+			bytesNeeded += 2
 		}
-		flags = t_CONVERT_BRACE
+		flags = tConvertBrace
 		goto overflow_check
 	}
 
-	if element[0] == '#' && (flags&t_TCL_DONT_QUOTE_HASH) == 0 {
-		bytes_needed += 2
+	if element[0] == '#' && (flags&tTclDontQuoteHash) == 0 {
+		bytesNeeded += 2
 	}
-	flags = t_CONVERT_NONE
+	flags = tConvertNone
 
 overflow_check:
-	if bytes_needed < 0 {
+	if bytesNeeded < 0 {
 		return 0, 0, fmt.Errorf("string length overflow")
 	}
-	return bytes_needed, flags, nil
+	return bytesNeeded, flags, nil
 }
 
-func tcl_convert_element(src string, flags int) string {
-	conversion := flags & t_CONVERT_MASK
+func tclConvertElement(src string, flags int) string {
+	conversion := flags & tConvertMask
 	var p strings.Builder
 
-	if (flags&t_TCL_DONT_USE_BRACES) != 0 && (conversion&t_CONVERT_BRACE) != 0 {
-		conversion = t_CONVERT_ESCAPE
+	if (flags&tTclDontUseBraces) != 0 && (conversion&tConvertBrace) != 0 {
+		conversion = tConvertEscape
 	}
 	if len(src) == 0 {
-		conversion = t_CONVERT_BRACE
+		conversion = tConvertBrace
 	} else {
-		if src[0] == '#' && (flags&t_TCL_DONT_QUOTE_HASH) == 0 {
-			if conversion == t_CONVERT_ESCAPE {
+		if src[0] == '#' && (flags&tTclDontQuoteHash) == 0 {
+			if conversion == tConvertEscape {
 				p.WriteRune('\\')
 				//p.WriteRune('#') we'll write this later
 			} else {
-				conversion = t_CONVERT_BRACE
+				conversion = tConvertBrace
 			}
 		}
 	}
 
-	if conversion == t_CONVERT_NONE {
+	if conversion == tConvertNone {
 		p.WriteString(src)
 		return p.String()
 	}
 
-	if conversion == t_CONVERT_BRACE {
+	if conversion == tConvertBrace {
 		p.WriteRune('{')
 		p.WriteString(src)
 		p.WriteRune('}')
@@ -316,7 +316,7 @@ func tcl_convert_element(src string, flags int) string {
 		case ']', '[', '$', ';', ' ', '\\', '"':
 			p.WriteRune('\\')
 		case '{', '}':
-			if conversion == t_CONVERT_ESCAPE {
+			if conversion == tConvertEscape {
 				p.WriteRune('\\')
 			}
 		case '\f':
@@ -373,19 +373,19 @@ func tcl_convert_element(src string, flags int) string {
 func ToTclString(listval []string) (string, error) {
 	var s strings.Builder
 
-	for element_idx, element := range listval {
-		if element_idx > 0 {
+	for elementIdx, element := range listval {
+		if elementIdx > 0 {
 			s.WriteRune(' ')
 		}
 		flags := 0
-		if element_idx > 0 {
-			flags = t_TCL_DONT_QUOTE_HASH
+		if elementIdx > 0 {
+			flags = tTclDontQuoteHash
 		}
-		_, flags, err := tcl_scan_element(element, flags)
+		_, flags, err := tclScanElement(element, flags)
 		if err != nil {
 			return "", err
 		}
-		s.WriteString(tcl_convert_element(element, flags))
+		s.WriteString(tclConvertElement(element, flags))
 	}
 	return s.String(), nil
 }
@@ -400,84 +400,84 @@ func ToTclString(listval []string) (string, error) {
 // is simply up to the program to use the element as a string or as
 // a sublist, so in the latter case you'll need to call ParseTclList
 // on that element.
-func ParseTclList(tcl_string string) ([]string, error) {
+func ParseTclList(tclString string) ([]string, error) {
 	l := make([]string, 0, 10)
 	level := 0
 	var s strings.Builder
 
-	between_elements := true
-	end_of_element := false
-	braced_string := false
-	literal_next := false
-	quoted_string := false
+	betweenElements := true
+	endOfElement := false
+	bracedString := false
+	literalNext := false
+	quotedString := false
 
-	for _, r := range tcl_string {
+	for _, r := range tclString {
 		// step through the string representation of the list,
 		// handling \{, \}, and \\ escapes as well as multiple
 		// spaces between elements
 		// We check for this specific set of whitespace characters
 		// instead of unicode.IsSpace because the Tcl spec says so.
-		if literal_next {
+		if literalNext {
 			if r != '{' && r != '}' && r != '\\' && r != '"' && r != ' ' && r != '#' {
 				_, _ = s.WriteRune('\\')
 			}
 			_, _ = s.WriteRune(r)
-			literal_next = false
+			literalNext = false
 			continue
 		}
 		if r == '\\' {
-			literal_next = true
+			literalNext = true
 			continue
 		}
-		if !braced_string && !quoted_string && strings.ContainsRune(" \t\n\v\f\r", r) {
-			if between_elements {
+		if !bracedString && !quotedString && strings.ContainsRune(" \t\n\v\f\r", r) {
+			if betweenElements {
 				continue // skip over multiple (superfluous) spaces
 			}
-			if end_of_element {
-				end_of_element = false // past that now
+			if endOfElement {
+				endOfElement = false // past that now
 			}
 			// not between elements? ship out what we were collecting
 			// and start a new one
 			l = append(l, s.String())
 			s.Reset()
-			between_elements = true
-			braced_string = false
-			quoted_string = false
+			betweenElements = true
+			bracedString = false
+			quotedString = false
 		} else {
-			if end_of_element {
+			if endOfElement {
 				// we got superfluous text after a closing brace
 				return l, fmt.Errorf("list element in braces (\"%s\") followed by '%c' instead of space", s.String(), r)
 			}
 			if r == '"' {
-				if between_elements {
+				if betweenElements {
 					// Quotes are just like braces except that they
 					// can't really nest.
-					between_elements = false
-					quoted_string = true
+					betweenElements = false
+					quotedString = true
 					continue
-				} else if quoted_string {
-					quoted_string = false
-					end_of_element = true
+				} else if quotedString {
+					quotedString = false
+					endOfElement = true
 					continue
 				}
 			} else if r == '{' {
-				level += 1
-				if between_elements {
+				level++
+				if betweenElements {
 					// this is the brace that starts a string which
 					// means it may allow leading spaces in the value
 					// so let's not retain the brace but stop looking
 					// for the next element
-					between_elements = false
-					braced_string = true
+					betweenElements = false
+					bracedString = true
 					continue
 				}
 			} else if r == '}' {
-				level -= 1
+				level--
 				if level == 0 {
-					if braced_string {
+					if bracedString {
 						// this should be the end of the string
-						end_of_element = true
-						braced_string = false
+						endOfElement = true
+						bracedString = false
 						continue // and don't keep the brace
 					}
 				}
@@ -485,22 +485,22 @@ func ParseTclList(tcl_string string) ([]string, error) {
 					return l, fmt.Errorf("too many right braces after \"%s\"", s.String())
 				}
 			}
-			if between_elements {
-				between_elements = false // we're in an element now
+			if betweenElements {
+				betweenElements = false // we're in an element now
 			}
 			_, _ = s.WriteRune(r)
 		}
 	}
-	if !between_elements {
+	if !betweenElements {
 		l = append(l, s.String())
 	}
 	if level != 0 {
 		return l, fmt.Errorf("unterminated brace at end of string")
 	}
-	if quoted_string {
+	if quotedString {
 		return l, fmt.Errorf("unterminated quote at end of string")
 	}
-	if literal_next {
+	if literalNext {
 		return l, fmt.Errorf("trailing backslash at end of string")
 	}
 	return l, nil
@@ -508,7 +508,7 @@ func ParseTclList(tcl_string string) ([]string, error) {
 
 //
 // ConvertTypes converts some or all of the elements in a string slice
-// such as that returned by ParseTclList() to a new slice of values
+// such as that returned by ParseTclList to a new slice of values
 // which have been converted to other data types as specified by the
 // caller.
 //
@@ -676,7 +676,7 @@ func ToDeepTclString(values ...interface{}) (string, error) {
 	return ToTclString(list)
 }
 
-// @[00]@| GMA 4.3.7
+// @[00]@| GMA 4.3.10
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.

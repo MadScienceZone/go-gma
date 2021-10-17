@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___       ______      ______               #
-# (  ____ \(       )(  ___  )              /   )     / ___  \    / ___  \              #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \   \/   )  )             #
-# | |      | || || || (___) |            / (_) (_       ___) /       /  /              #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (       /  /               #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \     /  /                #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _  /  /                 #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \_/                  #
+#  _______  _______  _______                ___       ______       __    _______       #
+# (  ____ \(       )(  ___  )              /   )     / ___  \     /  \  (  __   )      #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \    \/) ) | (  )  |      #
+# | |      | || || || (___) |            / (_) (_       ___) /      | | | | /   |      #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (       | | | (/ /) |      #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \      | | |   / | |      #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _  __) (_|  (__) |      #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \____/(_______)      #
 #                                                                                      #
 ########################################################################################
 */
@@ -36,26 +36,29 @@ import (
 )
 
 //
-// The GMA File Format version number current as of this build.
+// GMAMapperFileFormat gives
+// the GMA File Format version number current as of this build.
 // This is the format which will be used for saving map data.
 //
 const GMAMapperFileFormat = 17 // @@##@@ auto-configured
 //
-// This package can understand file formats starting with MINIMUM_SUPPORTED_MAP_FILE_FORMAT.
+// MinimumSupportedMapFileFormat gives the lowest file format this package can
+// understand.
 //
-const MINIMUM_SUPPORTED_MAP_FILE_FORMAT = 14
+const MinimumSupportedMapFileFormat = 14
 
 //
-// This package can understand file formats up to MAXIMUM_SUPPORTED_MAP_FILE_FORMAT.
+// MaximumSupportedMapFileFormat gives the highest file format this package
+// can understand. Saved data will be in this format.
 //
-const MAXIMUM_SUPPORTED_MAP_FILE_FORMAT = 17
+const MaximumSupportedMapFileFormat = 17
 
 func init() {
-	if MINIMUM_SUPPORTED_MAP_FILE_FORMAT > GMAMapperFileFormat || MAXIMUM_SUPPORTED_MAP_FILE_FORMAT < GMAMapperFileFormat {
-		if MINIMUM_SUPPORTED_MAP_FILE_FORMAT == MAXIMUM_SUPPORTED_MAP_FILE_FORMAT {
-			panic(fmt.Sprintf("BUILD ERROR: This version of mapper only supports file format %v, but version %v was the official one when this package was released!", MINIMUM_SUPPORTED_MAP_FILE_FORMAT, GMAMapperFileFormat))
+	if MinimumSupportedMapFileFormat > GMAMapperFileFormat || MaximumSupportedMapFileFormat < GMAMapperFileFormat {
+		if MinimumSupportedMapFileFormat == MaximumSupportedMapFileFormat {
+			panic(fmt.Sprintf("BUILD ERROR: This version of mapper only supports file format %v, but version %v was the official one when this package was released!", MinimumSupportedMapFileFormat, GMAMapperFileFormat))
 		} else {
-			panic(fmt.Sprintf("BUILD ERROR: This version of mapper only supports mapper file formats %v-%v, but version %v was the official one when this package was released!", MINIMUM_SUPPORTED_MAP_FILE_FORMAT, MAXIMUM_SUPPORTED_MAP_FILE_FORMAT, GMAMapperFileFormat))
+			panic(fmt.Sprintf("BUILD ERROR: This version of mapper only supports mapper file formats %v-%v, but version %v was the official one when this package was released!", MinimumSupportedMapFileFormat, MaximumSupportedMapFileFormat, GMAMapperFileFormat))
 		}
 	}
 }
@@ -331,7 +334,7 @@ type Coordinates struct {
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData(), but simply
+// This works just as described for BaseMapElement.saveData, but simply
 // saves the X and Y fields for the element's reference point.
 //
 func (c Coordinates) saveData(data []string, prefix, id string) ([]string, error) {
@@ -506,12 +509,12 @@ type MapElement struct {
 // objMapElement constructs a new MapElement from fields in objDef, generally as part of
 // constructing something that is a more specific kind of object.
 //
-func objMapElement(objId string, objDef map[string][]string) (MapElement, error) {
+func objMapElement(objID string, objDef map[string][]string) (MapElement, error) {
 	var err error
 
 	e := MapElement{
 		BaseMapObject: BaseMapObject{
-			ID: objId,
+			ID: objID,
 		},
 	}
 	e.X, err = objFloat(objDef, 0, "X", true, err)
@@ -536,7 +539,7 @@ func objMapElement(objId string, objDef map[string][]string) (MapElement, error)
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData().
+// This works just as described for BaseMapElement.saveData.
 //
 func (o MapElement) saveData(data []string, prefix, id string) ([]string, error) {
 	var err error
@@ -611,8 +614,8 @@ type ArcElement struct {
 //
 // objArcElement creates a new instance from the fields in objDef.
 //
-func objArcElement(objId string, objDef map[string][]string) (ArcElement, error) {
-	me, err := objMapElement(objId, objDef)
+func objArcElement(objID string, objDef map[string][]string) (ArcElement, error) {
+	me, err := objMapElement(objID, objDef)
 	arc := ArcElement{
 		MapElement: me,
 	}
@@ -627,7 +630,7 @@ func objArcElement(objId string, objDef map[string][]string) (ArcElement, error)
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData().
+// This works just as described for BaseMapElement.saveData.
 //
 func (o ArcElement) saveData(data []string, prefix, id string) ([]string, error) {
 	data, err := o.MapElement.saveData(data, prefix, id)
@@ -668,8 +671,8 @@ type CircleElement struct {
 //
 // objCircleElement creates a new instance from the fields in objDef.
 //
-func objCircleElement(objId string, objDef map[string][]string) (CircleElement, error) {
-	me, err := objMapElement(objId, objDef)
+func objCircleElement(objID string, objDef map[string][]string) (CircleElement, error) {
+	me, err := objMapElement(objID, objDef)
 	return CircleElement{
 		MapElement: me,
 	}, err
@@ -680,7 +683,7 @@ func objCircleElement(objId string, objDef map[string][]string) (CircleElement, 
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData().
+// This works just as described for BaseMapElement.saveData.
 //
 func (o CircleElement) saveData(data []string, prefix, id string) ([]string, error) {
 	data, err := o.MapElement.saveData(data, prefix, id)
@@ -723,8 +726,8 @@ type LineElement struct {
 //
 // objLineElement creates a new instance from the fields in objDef.
 //
-func objLineElement(objId string, objDef map[string][]string) (LineElement, error) {
-	me, err := objMapElement(objId, objDef)
+func objLineElement(objID string, objDef map[string][]string) (LineElement, error) {
+	me, err := objMapElement(objID, objDef)
 	line := LineElement{
 		MapElement: me,
 	}
@@ -737,7 +740,7 @@ func objLineElement(objId string, objDef map[string][]string) (LineElement, erro
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData().
+// This works just as described for BaseMapElement.saveData.
 //
 func (o LineElement) saveData(data []string, prefix, id string) ([]string, error) {
 	data, err := o.MapElement.saveData(data, prefix, id)
@@ -783,8 +786,8 @@ type PolygonElement struct {
 //
 // objPolygonElement creates a new instance from the fields in objDef.
 //
-func objPolygonElement(objId string, objDef map[string][]string) (PolygonElement, error) {
-	me, err := objMapElement(objId, objDef)
+func objPolygonElement(objID string, objDef map[string][]string) (PolygonElement, error) {
+	me, err := objMapElement(objID, objDef)
 	poly := PolygonElement{
 		MapElement: me,
 	}
@@ -798,7 +801,7 @@ func objPolygonElement(objId string, objDef map[string][]string) (PolygonElement
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData().
+// This works just as described for BaseMapElement.saveData.
 //
 func (o PolygonElement) saveData(data []string, prefix, id string) ([]string, error) {
 	data, err := o.MapElement.saveData(data, prefix, id)
@@ -843,8 +846,8 @@ type RectangleElement struct {
 //
 // objRectangleElement creates a new instance from the fields in objDef.
 //
-func objRectangleElement(objId string, objDef map[string][]string) (RectangleElement, error) {
-	me, err := objMapElement(objId, objDef)
+func objRectangleElement(objID string, objDef map[string][]string) (RectangleElement, error) {
+	me, err := objMapElement(objID, objDef)
 	return RectangleElement{
 		MapElement: me,
 	}, err
@@ -855,7 +858,7 @@ func objRectangleElement(objId string, objDef map[string][]string) (RectangleEle
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData().
+// This works just as described for BaseMapElement.saveData.
 //
 func (o RectangleElement) saveData(data []string, prefix, id string) ([]string, error) {
 	data, err := o.MapElement.saveData(data, prefix, id)
@@ -900,8 +903,8 @@ type SpellAreaOfEffectElement struct {
 //
 // objSpellAreaOfEffectElement creates a new instance from the fields in objDef.
 //
-func objSpellAreaOfEffectElement(objId string, objDef map[string][]string) (SpellAreaOfEffectElement, error) {
-	me, err := objMapElement(objId, objDef)
+func objSpellAreaOfEffectElement(objID string, objDef map[string][]string) (SpellAreaOfEffectElement, error) {
+	me, err := objMapElement(objID, objDef)
 	sa := SpellAreaOfEffectElement{
 		MapElement: me,
 	}
@@ -914,7 +917,7 @@ func objSpellAreaOfEffectElement(objId string, objDef map[string][]string) (Spel
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData().
+// This works just as described for BaseMapElement.saveData.
 //
 func (o SpellAreaOfEffectElement) saveData(data []string, prefix, id string) ([]string, error) {
 	data, err := o.MapElement.saveData(data, prefix, id)
@@ -1039,8 +1042,8 @@ func objTextFont(objDef map[string][]string, i int, fldName string, required boo
 //
 // objTextElement creates a new instance from the fields in objDef.
 //
-func objTextElement(objId string, objDef map[string][]string) (TextElement, error) {
-	me, err := objMapElement(objId, objDef)
+func objTextElement(objID string, objDef map[string][]string) (TextElement, error) {
+	me, err := objMapElement(objID, objDef)
 	text := TextElement{
 		MapElement: me,
 	}
@@ -1056,7 +1059,7 @@ func objTextElement(objId string, objDef map[string][]string) (TextElement, erro
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData().
+// This works just as described for BaseMapElement.saveData.
 //
 func (o TextElement) saveData(data []string, prefix, id string) ([]string, error) {
 	data, err := o.MapElement.saveData(data, prefix, id)
@@ -1126,8 +1129,8 @@ type TileElement struct {
 //
 // objTileElement creates a new instance from the fields in objDef.
 //
-func objTileElement(objId string, objDef map[string][]string) (TileElement, error) {
-	me, err := objMapElement(objId, objDef)
+func objTileElement(objID string, objDef map[string][]string) (TileElement, error) {
+	me, err := objMapElement(objID, objDef)
 	tile := TileElement{
 		MapElement: me,
 	}
@@ -1142,7 +1145,7 @@ func objTileElement(objId string, objDef map[string][]string) (TileElement, erro
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData().
+// This works just as described for BaseMapElement.saveData.
 //
 func (o TileElement) saveData(data []string, prefix, id string) ([]string, error) {
 	data, err := o.MapElement.saveData(data, prefix, id)
@@ -1166,6 +1169,10 @@ func (o TileElement) saveData(data []string, prefix, id string) ([]string, error
 //  \____|_|  \___|\__,_|\__|\__,_|_|  \___||_|\___/|_|\_\___|_| |_|
 //
 
+//
+// Creature type codes for the CreatureType field of CreatureToken
+// (and PlayerToken and MonsterToken) values.
+//
 const (
 	CreatureTypeUnknown = iota
 	CreatureTypeMonster
@@ -1269,12 +1276,12 @@ type CreatureToken struct {
 //
 // objCreature creates a new CreatureToken instance from the fields in objDef.
 //
-func objCreature(objId string, objDef map[string][]string) (CreatureToken, error) {
+func objCreature(objID string, objDef map[string][]string) (CreatureToken, error) {
 	var err error
 	c := CreatureToken{
 		CreatureType: CreatureTypeUnknown,
 	}
-	c.ID = objId
+	c.ID = objID
 	c.Name, err = objString(objDef, 0, "NAME", true, err)
 	c.Gx, err = objFloat(objDef, 0, "GX", true, err)
 	c.Gy, err = objFloat(objDef, 0, "GY", true, err)
@@ -1475,7 +1482,7 @@ func saveCreatureAoE(aoe *RadiusAoE) (string, error) {
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData().
+// This works just as described for BaseMapElement.saveData.
 //
 func (o CreatureToken) saveData(data []string, prefix, id string) ([]string, error) {
 	var err error
@@ -1554,8 +1561,8 @@ type PlayerToken struct {
 //
 // objPlayer creates a new PlayerToken instance from the fields in objDef.
 //
-func objPlayer(objId string, objDef map[string][]string) (PlayerToken, error) {
-	c, err := objCreature(objId, objDef)
+func objPlayer(objID string, objDef map[string][]string) (PlayerToken, error) {
+	c, err := objCreature(objID, objDef)
 	c.CreatureType = CreatureTypePlayer
 	return PlayerToken{
 		CreatureToken: c,
@@ -1567,7 +1574,7 @@ func objPlayer(objId string, objDef map[string][]string) (PlayerToken, error) {
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData().
+// This works just as described for BaseMapElement.saveData.
 //
 func (o PlayerToken) saveData(data []string, prefix, id string) ([]string, error) {
 	return o.CreatureToken.saveData(data, "P", id)
@@ -1590,8 +1597,8 @@ type MonsterToken struct {
 //
 // objMonster creates a new MonsterToken instance from the fields in objDef.
 //
-func objMonster(objId string, objDef map[string][]string) (MonsterToken, error) {
-	c, err := objCreature(objId, objDef)
+func objMonster(objID string, objDef map[string][]string) (MonsterToken, error) {
+	c, err := objCreature(objID, objDef)
 	c.CreatureType = CreatureTypeMonster
 	return MonsterToken{
 		CreatureToken: c,
@@ -1603,7 +1610,7 @@ func objMonster(objId string, objDef map[string][]string) (MonsterToken, error) 
 // in the map file format (suitable for sending to clients or saving to a disk
 // file).
 //
-// This works just as described for BaseMapElement.saveData().
+// This works just as described for BaseMapElement.saveData.
 //
 func (o MonsterToken) saveData(data []string, prefix, id string) ([]string, error) {
 	return o.CreatureToken.saveData(data, "M", id)
@@ -1709,7 +1716,7 @@ func ParseObjects(dataStream []string) ([]MapObject, map[string]ImageDefinition,
 				}
 				format = f
 
-				if format < MINIMUM_SUPPORTED_MAP_FILE_FORMAT || format > MAXIMUM_SUPPORTED_MAP_FILE_FORMAT {
+				if format < MinimumSupportedMapFileFormat || format > MaximumSupportedMapFileFormat {
 					return nil, nil, nil, fmt.Errorf("Error parsing data stream at line %d: file format version %d is not supported", lineNo, format)
 				}
 			}
@@ -1785,46 +1792,46 @@ func ParseObjects(dataStream []string) ([]MapObject, map[string]ImageDefinition,
 	var o MapObject
 	var err error
 
-	for objId, objDef := range objects {
+	for objID, objDef := range objects {
 		mType, ok := objDef["__mob_type__"]
 		if ok {
 			switch mType[0] {
 			case "M":
-				o, err = objMonster(objId, objDef)
+				o, err = objMonster(objID, objDef)
 			case "P":
-				o, err = objPlayer(objId, objDef)
+				o, err = objPlayer(objID, objDef)
 			default:
-				err = fmt.Errorf("unknown creature type (%s) for ID %s", mType, objId)
+				err = fmt.Errorf("unknown creature type (%s) for ID %s", mType, objID)
 			}
 		} else {
 			oType, ok := objDef["TYPE"]
 			if ok {
 				switch oType[0] {
 				case "aoe":
-					o, err = objSpellAreaOfEffectElement(objId, objDef)
+					o, err = objSpellAreaOfEffectElement(objID, objDef)
 				case "arc":
-					o, err = objArcElement(objId, objDef)
+					o, err = objArcElement(objID, objDef)
 				case "circ":
-					o, err = objCircleElement(objId, objDef)
+					o, err = objCircleElement(objID, objDef)
 				case "line":
-					o, err = objLineElement(objId, objDef)
+					o, err = objLineElement(objID, objDef)
 				case "poly":
-					o, err = objPolygonElement(objId, objDef)
+					o, err = objPolygonElement(objID, objDef)
 				case "rect":
-					o, err = objRectangleElement(objId, objDef)
+					o, err = objRectangleElement(objID, objDef)
 				case "text":
-					o, err = objTextElement(objId, objDef)
+					o, err = objTextElement(objID, objDef)
 				case "tile":
-					o, err = objTileElement(objId, objDef)
+					o, err = objTileElement(objID, objDef)
 				case "player":
-					o, err = objPlayer(objId, objDef)
+					o, err = objPlayer(objID, objDef)
 				case "monster":
-					o, err = objMonster(objId, objDef)
+					o, err = objMonster(objID, objDef)
 				default:
-					err = fmt.Errorf("unknown element type (%s) for ID %s", oType, objId)
+					err = fmt.Errorf("unknown element type (%s) for ID %s", oType, objID)
 				}
 			} else {
-				err = fmt.Errorf("element ID %s missing TYPE attribute", objId)
+				err = fmt.Errorf("element ID %s missing TYPE attribute", objID)
 			}
 		}
 		if err != nil {
@@ -2065,7 +2072,7 @@ func objCoordinateList(objDef map[string][]string, i int, fldName string, requir
 // |____/ \__,_| \_/ \___|\___/|_.__// |\___|\___|\__|___/
 //                                 |__/
 
-// SaveObjects reverses the operation of ParseObjects(). It accepts a slice of
+// SaveObjects reverses the operation of ParseObjects. It accepts a slice of
 // MapObjects, a map containing ImageDefinitions, and a slice of FileDefinitions,
 // and emits as a slice of strings a text description of those objects in the
 // map file format, suitable for saving to disk or sending to clients and servers.
@@ -2075,7 +2082,7 @@ func objCoordinateList(objDef map[string][]string, i int, fldName string, requir
 //   WithDate(t)     -- use the given date instead of the current one
 //   WithComment(s)  -- include the comment string in the header line
 //
-func SaveObjects(objects []MapObject, images map[string]ImageDefinition, files []FileDefinition, options ...saveOption) ([]string, error) {
+func SaveObjects(objects []MapObject, images map[string]ImageDefinition, files []FileDefinition, options ...func(*saveObjOpts)) ([]string, error) {
 	var err error
 	opts := saveObjOpts{}
 	data := make([]string, 0, 32)
@@ -2084,21 +2091,21 @@ func SaveObjects(objects []MapObject, images map[string]ImageDefinition, files [
 		o(&opts)
 	}
 
-	if !opts.SuppressHeader {
-		if opts.Date.IsZero() {
-			opts.Date = time.Now()
+	if !opts.suppressHeader {
+		if opts.date.IsZero() {
+			opts.date = time.Now()
 		}
 
 		fileDate, err := tcllist.ToTclString([]string{
-			strconv.FormatInt(opts.Date.Unix(), 10),
-			opts.Date.Format(time.UnixDate),
+			strconv.FormatInt(opts.date.Unix(), 10),
+			opts.date.Format(time.UnixDate),
 		})
 		if err != nil {
 			return nil, err
 		}
 
 		commentHdr, err := tcllist.ToTclString([]string{
-			opts.Comment,
+			opts.comment,
 			fileDate,
 		})
 		if err != nil {
@@ -2149,50 +2156,51 @@ func SaveObjects(objects []MapObject, images map[string]ImageDefinition, files [
 	return data, nil
 }
 
+//
+// saveObjOpts gives configuration options for how we save objects.
+//
 type saveObjOpts struct {
-	Comment        string
-	Date           time.Time
-	SuppressHeader bool
+	comment        string
+	date           time.Time
+	suppressHeader bool
 }
 
-type saveOption func(*saveObjOpts)
-
 //
-// WithoutHeader modifies a call to SaveObjects() by suppressing the
+// WithoutHeader modifies a call to SaveObjects by suppressing the
 // normal "__MAPPER__" header line that should be in a map file.
 //
-// This may be used, for example, if SaveObjects() is generating output
+// This may be used, for example, if SaveObjects is generating output
 // that will only be part of, but not the entire, saved data set.
 //
 func WithoutHeader(o *saveObjOpts) {
-	o.SuppressHeader = true
+	o.suppressHeader = true
 }
 
 //
-// WithDate modifies a call to SaveObjects() by specifying
+// WithDate modifies a call to SaveObjects by specifying
 // an already-determined date to record into the
 // "__MAPPER__" header line. Normally, the current date and time is
 // used.
 //
-func WithDate(d time.Time) saveOption {
+func WithDate(d time.Time) func(*saveObjOpts) {
 	return func(o *saveObjOpts) {
-		o.Date = d
+		o.date = d
 	}
 }
 
 //
-// WithComment modifies a call to SaveObjects() by providing
+// WithComment modifies a call to SaveObjects by providing
 // a comment string to include in the "__MAPPER__" header line.
 //
-func WithComment(c string) saveOption {
+func WithComment(c string) func(*saveObjOpts) {
 	return func(o *saveObjOpts) {
-		o.Comment = c
+		o.comment = c
 	}
 }
 
 //
 // This describes each attribute to save to the output
-// data set by the saveValues() function.
+// data set by the saveValues function.
 //
 type saveAttributes struct {
 	Tag      string
@@ -2265,7 +2273,7 @@ func saveValues(previous []string, prefix, objID string, attrs []saveAttributes)
 	return previous, nil
 }
 
-// @[00]@| GMA 4.3.7
+// @[00]@| GMA 4.3.10
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.

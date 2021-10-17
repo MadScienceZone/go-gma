@@ -1,19 +1,19 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___       ______      ______               #
-# (  ____ \(       )(  ___  )              /   )     / ___  \    / ___  \              #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \   \/   )  )             #
-# | |      | || || || (___) |            / (_) (_       ___) /       /  /              #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (       /  /               #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \     /  /                #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _  /  /                 #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \_/                  #
+#  _______  _______  _______                ___       ______       __    _______       #
+# (  ____ \(       )(  ___  )              /   )     / ___  \     /  \  (  __   )      #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \    \/) ) | (  )  |      #
+# | |      | || || || (___) |            / (_) (_       ___) /      | | | | /   |      #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (       | | | (/ /) |      #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \      | | |   / | |      #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _  __) (_|  (__) |      #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \____/(_______)      #
 #                                                                                      #
 ########################################################################################
 */
 
 //
-// Client interface for the mapper service.
+// Package mapper implements a standard client interface for the mapper service.
 //
 // EXPERIMENTAL CODE
 //
@@ -71,26 +71,26 @@ import (
 //
 const (
 	GMAMapperProtocol=332     // @@##@@ auto-configured
-	GMAVersionNumber="4.3.7" // @@##@@ auto-configured
-	MINIMUM_SUPPORTED_MAP_PROTOCOL = 332
-	MAXIMUM_SUPPORTED_MAP_PROTOCOL = 332
+	GMAVersionNumber="4.3.10" // @@##@@ auto-configured
+	MinimumSupportedMapProtocol = 332
+	MaximumSupportedMapProtocol = 332
 )
 
 func init() {
-	if MINIMUM_SUPPORTED_MAP_PROTOCOL > GMAMapperProtocol || MAXIMUM_SUPPORTED_MAP_PROTOCOL < GMAMapperProtocol {
-		if MINIMUM_SUPPORTED_MAP_PROTOCOL == MAXIMUM_SUPPORTED_MAP_PROTOCOL {
-			panic(fmt.Sprintf("BUILD ERROR: This version of mapclient only supports mapper protocol %v, but version %v was the official one when this package was released!", MINIMUM_SUPPORTED_MAP_PROTOCOL, GMAMapperProtocol))
+	if MinimumSupportedMapProtocol > GMAMapperProtocol || MaximumSupportedMapProtocol < GMAMapperProtocol {
+		if MinimumSupportedMapProtocol == MaximumSupportedMapProtocol {
+			panic(fmt.Sprintf("BUILD ERROR: This version of mapclient only supports mapper protocol %v, but version %v was the official one when this package was released!", MinimumSupportedMapProtocol, GMAMapperProtocol))
 		} else {
-			panic(fmt.Sprintf("BUILD ERROR: This version of mapclient only supports mapper protocols %v-%v, but version %v was the official one when this package was released!", MINIMUM_SUPPORTED_MAP_PROTOCOL, MAXIMUM_SUPPORTED_MAP_PROTOCOL, GMAMapperProtocol))
+			panic(fmt.Sprintf("BUILD ERROR: This version of mapclient only supports mapper protocols %v-%v, but version %v was the official one when this package was released!", MinimumSupportedMapProtocol, MaximumSupportedMapProtocol, GMAMapperProtocol))
 		}
 	}
 }
 
-// This is the error returned when the server requires authentication but we didn't provide any.
-var AuthenticationRequired = errors.New("authenticator required for connection")
+// ErrAuthenticationRequired is the error returned when the server requires authentication but we didn't provide any.
+var ErrAuthenticationRequired = errors.New("authenticator required for connection")
 
-// This is the error returned when our authentication was rejected by the server.
-var AuthenticationFailed = errors.New("access denied to server")
+// ErrAuthenticationFailed is the error returned when our authentication was rejected by the server.
+var ErrAuthenticationFailed = errors.New("access denied to server")
 
 //
 // Connection describes a connection to the server. These are
@@ -223,11 +223,6 @@ func (cs CharacterDefinitions) Text() string {
 }
 
 //
-// Options which can be added to the NewConnection function.
-//
-type connectionOption func(conn *Connection) error
-
-//
 // WithContext modifies the behavior of the NewConnection function
 // by supplying a context for this connection, which may be used to
 // signal the Dial method that the connection to the server should
@@ -239,7 +234,7 @@ type connectionOption func(conn *Connection) error
 // regardless of the context. Otherwise, the connection will wait
 // indefinitely to complete OR until the context is cancelled.
 //
-func WithContext(ctx context.Context) connectionOption {
+func WithContext(ctx context.Context) func(*Connection) error {
 	return func(c *Connection) error {
 		c.Context = ctx
 		return nil
@@ -263,7 +258,7 @@ func WithContext(ctx context.Context) connectionOption {
 //   go server.Dial()
 // (Of course, real production code should check the returned error values.)
 //
-func WithSubscription(ch chan MessagePayload, messages ...ServerMessage) connectionOption {
+func WithSubscription(ch chan MessagePayload, messages ...ServerMessage) func(*Connection) error {
 	return func(c *Connection) error {
 		return c.Subscribe(ch, messages...)
 	}
@@ -276,7 +271,7 @@ func WithSubscription(ch chan MessagePayload, messages ...ServerMessage) connect
 // to authenticate, which is only appropriate for servers which do not
 // require authentication. (Which, hopefully, won't be the case anyway.)
 //
-func WithAuthenticator(a *auth.Authenticator) connectionOption {
+func WithAuthenticator(a *auth.Authenticator) func(*Connection) error {
 	return func(c *Connection) error {
 		c.Authenticator = a
 		return nil
@@ -288,7 +283,7 @@ func WithAuthenticator(a *auth.Authenticator) connectionOption {
 // by specifying a custom logger instead of the default one for
 // the Connection to use during its operations.
 //
-func WithLogger(l *log.Logger) connectionOption {
+func WithLogger(l *log.Logger) func(*Connection) error {
 	return func(c *Connection) error {
 		c.Logger = l
 		return nil
@@ -309,7 +304,7 @@ func WithLogger(l *log.Logger) connectionOption {
 // stop retry attempts). Otherwise, the connection will wait
 // indefinitely to complete OR until the context is cancelled.
 //
-func WithTimeout(t time.Duration) connectionOption {
+func WithTimeout(t time.Duration) func(*Connection) error {
 	return func(c *Connection) error {
 		c.Timeout = t
 		return nil
@@ -325,7 +320,7 @@ func WithTimeout(t time.Duration) connectionOption {
 // The default is to make a single attempt to connect to the
 // server.
 //
-func WithRetries(n uint) connectionOption {
+func WithRetries(n uint) func(*Connection) error {
 	return func(c *Connection) error {
 		c.Retries = n
 		return nil
@@ -344,7 +339,7 @@ func WithRetries(n uint) connectionOption {
 // If enable is false (the default), Dial will return as soon
 // as the server connection is dropped for any reason.
 //
-func StayConnected(enable bool) connectionOption {
+func StayConnected(enable bool) func(*Connection) error {
 	return func(c *Connection) error {
 		c.StayConnected = enable
 		return nil
@@ -360,7 +355,7 @@ func StayConnected(enable bool) connectionOption {
 //   2 - more internal state is exposed
 //   3 - the full data for each incoming/outgoing message is logged
 //
-func WithDebugging(level uint) connectionOption {
+func WithDebugging(level uint) func(*Connection) error {
 	return func(c *Connection) error {
 		c.DebuggingLevel = level
 		return nil
@@ -401,7 +396,7 @@ func WithDebugging(level uint) connectionOption {
 //   }
 //   go server.Dial()
 //
-func NewConnection(endpoint string, opts ...connectionOption) (Connection, error) {
+func NewConnection(endpoint string, opts ...func(*Connection) error) (Connection, error) {
 	newCon := Connection{
 		Context:       context.Background(),
 		Endpoint:      endpoint,
@@ -494,18 +489,18 @@ func (c *Connection) Close() {
 //   service, err := NewConnection(endpoint)
 //   err = service.Subscribe(cm, ChatMessage)
 //
-func (conn *Connection) Subscribe(ch chan MessagePayload, messages ...ServerMessage) error {
+func (c *Connection) Subscribe(ch chan MessagePayload, messages ...ServerMessage) error {
 	for _, m := range messages {
 		if m >= maximumServerMessage {
 			return fmt.Errorf("server message ID %v not defined (illegal Subscribe call)", m)
 		}
 		if ch == nil {
-			delete(conn.Subscriptions, m)
+			delete(c.Subscriptions, m)
 		} else {
-			conn.Subscriptions[m] = ch
+			c.Subscriptions[m] = ch
 		}
 	}
-	return conn.filterSubscriptions()
+	return c.filterSubscriptions()
 }
 
 //
@@ -741,7 +736,7 @@ func (c *Connection) AddImageData(idef ImageDefinition, data []byte) error {
 //                              |__/
 
 //
-// AddObjAttribuesMessagePayload holds the information sent by the server's AddObjAttributes
+// AddObjAttributesMessagePayload holds the information sent by the server's AddObjAttributes
 // message. This tells the client to adjust the multi-value attribute
 // of the object with the given ID by adding the new values to it.
 //
@@ -1125,19 +1120,16 @@ func (c *Connection) LoadFrom(path string, local bool, merge bool) error {
 	if merge {
 		if local {
 			return c.send("M", path)
-		} else {
-			return c.send("M@", path)
 		}
-	} else {
-		if local {
-			return c.send("L", path)
-		} else {
-			if err := c.send("CLR", "E*"); err != nil {
-				return err
-			}
-			return c.send("M@", path)
-		}
+		return c.send("M@", path)
 	}
+	if local {
+		return c.send("L", path)
+	}
+	if err := c.send("CLR", "E*"); err != nil {
+		return err
+	}
+	return c.send("M@", path)
 }
 
 //  _                    _  ___  _     _           _
@@ -2000,15 +1992,15 @@ func (c *Connection) login(done chan error) {
 			}
 			c.Protocol = fv[1].(int)
 
-			if c.Protocol < MINIMUM_SUPPORTED_MAP_PROTOCOL {
-				c.Logger.Printf("mapper: Unable to connect to mapper with protocol older than %d (server offers %d)", MINIMUM_SUPPORTED_MAP_PROTOCOL, c.Protocol)
-				done <- fmt.Errorf("server version %d too old (must be at least %d)", c.Protocol, MINIMUM_SUPPORTED_MAP_PROTOCOL)
+			if c.Protocol < MinimumSupportedMapProtocol {
+				c.Logger.Printf("mapper: Unable to connect to mapper with protocol older than %d (server offers %d)", MinimumSupportedMapProtocol, c.Protocol)
+				done <- fmt.Errorf("server version %d too old (must be at least %d)", c.Protocol, MinimumSupportedMapProtocol)
 				return
 			}
-			if c.Protocol > MAXIMUM_SUPPORTED_MAP_PROTOCOL {
-				c.Logger.Printf("mapper: Unable to connect to mapper with protocol newer than %d (server offers %d)", MAXIMUM_SUPPORTED_MAP_PROTOCOL, c.Protocol)
+			if c.Protocol > MaximumSupportedMapProtocol {
+				c.Logger.Printf("mapper: Unable to connect to mapper with protocol newer than %d (server offers %d)", MaximumSupportedMapProtocol, c.Protocol)
 				c.Logger.Printf("mapper: ** UPGRADE GMA **")
-				done <- fmt.Errorf("server version %d too new (must be at most %d)", c.Protocol, MAXIMUM_SUPPORTED_MAP_PROTOCOL)
+				done <- fmt.Errorf("server version %d too new (must be at most %d)", c.Protocol, MaximumSupportedMapProtocol)
 				return
 			}
 			if c.Protocol >= 321 && len(f) >= 3 {
@@ -2016,7 +2008,7 @@ func (c *Connection) login(done chan error) {
 				// authentication)
 				if c.Authenticator == nil {
 					c.Logger.Printf("mapper: Server requires authentication but no authenticator was provided for the client.")
-					done <- AuthenticationRequired
+					done <- ErrAuthenticationRequired
 					return
 				}
 				c.Logger.Printf("mapper: authenticating to server")
@@ -2124,7 +2116,7 @@ func (c *Connection) login(done chan error) {
 			} else {
 				c.Logger.Printf("mapper: access denied by server")
 			}
-			done <- AuthenticationFailed
+			done <- ErrAuthenticationFailed
 			return
 
 		case "GRANTED":
@@ -3829,7 +3821,7 @@ func (c *Connection) filterSubscriptions() error {
 	}
 
 	subList := []string{"AC", "DSM", "MARCO"} // these are unconditional
-	for msg, _ := range c.Subscriptions {
+	for msg := range c.Subscriptions {
 		switch msg {
 		case AddImage:
 			subList = append(subList, "AI", "AI:", "AI.", "AI@", "LS", "LS:", "LS.")
@@ -3895,7 +3887,7 @@ func (c *Connection) unfilterSubscriptions() error {
 	return c.send("ACCEPT", "*")
 }
 
-// @[00]@| GMA 4.3.7
+// @[00]@| GMA 4.3.10
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
 // @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.
