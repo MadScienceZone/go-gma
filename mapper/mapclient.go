@@ -59,10 +59,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fizban-of-ragnarok/go-gma/v4/auth"
-	"github.com/fizban-of-ragnarok/go-gma/v4/dice"
-	"github.com/fizban-of-ragnarok/go-gma/v4/tcllist"
-	"github.com/fizban-of-ragnarok/go-gma/v4/util"
+	"github.com/MadScienceZone/go-gma/v4/auth"
+	"github.com/MadScienceZone/go-gma/v4/dice"
+	"github.com/MadScienceZone/go-gma/v4/tcllist"
+	"github.com/MadScienceZone/go-gma/v4/util"
 )
 
 //
@@ -1408,7 +1408,7 @@ func (c *Connection) RemoveObjAttributes(objID, attrName string, values []string
 //
 // The rollspec may have any form that would be accepted to the
 // dice.Roll function and dice.DieRoller.DoRoll method. See the dice package for details.
-// https://pkg.go.dev/github.com/fizban-of-ragnarok/go-gma/v4/dice#DieRoller.DoRoll
+// https://pkg.go.dev/github.com/MadScienceZone/go-gma/v4/dice#DieRoller.DoRoll
 //
 func (c *Connection) RollDice(to []string, rollspec string) error {
 	return c.send("D", to, rollspec)
@@ -1535,7 +1535,7 @@ type DieRollPreset struct {
 
 	// The die-roll specification to send to the server. This must be in a
 	// form acceptable to the dice.Roll function. For details, see
-	// https://pkg.go.dev/github.com/fizban-of-ragnarok/go-gma/v4/dice#DieRoller.DoRoll
+	// https://pkg.go.dev/github.com/MadScienceZone/go-gma/v4/dice#DieRoller.DoRoll
 	DieRollSpec string
 }
 

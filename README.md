@@ -29,7 +29,7 @@ needed by the map server.
 
 
 ## Documentation
-API docs may be viewed at [pkg.go.dev](https://pkg.go.dev/github.com/fizban-of-ragnarok/go-gma/v4).
+API docs may be viewed at [pkg.go.dev](https://pkg.go.dev/github.com/MadScienceZone/go-gma/v4).
 
 ## Versioning
 We are keeping the version numbers for this project in sync with
