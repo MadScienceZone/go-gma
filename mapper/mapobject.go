@@ -32,7 +32,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fizban-of-ragnarok/go-gma/v4/tcllist"
+	"github.com/MadScienceZone/go-gma/v4/tcllist"
 )
 
 //

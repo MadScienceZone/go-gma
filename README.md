@@ -1,6 +1,5 @@
-[![Go Reference](https://pkg.go.dev/badge/github.com/fizban-of-ragnarok/go-gma.svg)](https://pkg.go.dev/github.com/fizban-of-ragnarok/go-gma)
-[![Coverage Status](https://coveralls.io/repos/github/fizban-of-ragnarok/go-gma/badge.svg?branch=main)](https://coveralls.io/github/fizban-of-ragnarok/go-gma?branch=main)
-![GitHub](https://img.shields.io/github/license/fizban-of-ragnarok/go-gma)
+[![Coverage Status](https://coveralls.io/repos/github/MadScienceZone/go-gma/badge.svg?branch=main)](https://coveralls.io/github/MadScienceZone/go-gma?branch=main)
+![GitHub](https://img.shields.io/github/license/MadScienceZone/go-gma)
 # go-gma
 Golang port of the GMA core API libraries.
 
@@ -32,7 +31,7 @@ needed by the map server.
 
 
 ## Documentation
-API docs may be viewed at [pkg.go.dev](https://pkg.go.dev/github.com/fizban-of-ragnarok/go-gma/v4).
+API docs may be viewed at [pkg.go.dev](https://pkg.go.dev/github.com/MadScienceZone/go-gma/v4).
 
 ## Versioning
 We are keeping the version numbers for this project in sync with
