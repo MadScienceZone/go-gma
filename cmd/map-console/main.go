@@ -41,11 +41,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fizban-of-ragnarok/go-gma/v4/auth"
-	"github.com/fizban-of-ragnarok/go-gma/v4/gma"
-	"github.com/fizban-of-ragnarok/go-gma/v4/mapper"
-	"github.com/fizban-of-ragnarok/go-gma/v4/tcllist"
-	"github.com/fizban-of-ragnarok/go-gma/v4/util"
+	"github.com/MadScienceZone/go-gma/v4/auth"
+	"github.com/MadScienceZone/go-gma/v4/gma"
+	"github.com/MadScienceZone/go-gma/v4/mapper"
+	"github.com/MadScienceZone/go-gma/v4/tcllist"
+	"github.com/MadScienceZone/go-gma/v4/util"
 )
 
 const GMAVersionNumber = "4.3.7" //@@##@@
