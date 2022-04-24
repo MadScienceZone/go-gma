@@ -1343,33 +1343,33 @@ func objCreature(objID string, objDef map[string][]string) (CreatureToken, error
 //
 type CreatureHealth struct {
 	// The maximum hit points possible for the creature.
-	MaxHP int
+	MaxHP int `json:",omitempty"`
 
 	// The amount of lethal and non-lethal damage suffered by the creature.
-	LethalDamage    int
-	NonLethalDamage int
+	LethalDamage    int `json:",omitempty"`
+	NonLethalDamage int `json:",omitempty"`
 
 	// The grace amount of hit points a creature may suffer over their maximum before
 	// they are actually dead (as opposed to critically wounded). This is generally
 	// the creature's Constitution score, hence the name.
-	Con int
+	Con int `json:",omitempty"`
 
 	// Is the creature flat-footed?
-	IsFlatFooted bool
+	IsFlatFooted bool `json:",omitempty"`
 
 	// Has the creature been stabilized to prevent death while critically wounded?
-	IsStable bool
+	IsStable bool `json:",omitempty"`
 
 	// Override the map client's idea of how to display the creature's health condition.
 	// Normally this is the empty string which allows the client to calculate it from the
 	// information available to it.
-	Condition string
+	Condition string `json:",omitempty"`
 
 	// If 0, the creature's health is displayed accurately on the map. Otherwise,
 	// this gives the percentage by which to "blur" the hit points as seen by the
 	// players. For example, if HpBlur is 10, then hit points are displayed only in
 	// 10% increments.
-	HpBlur int
+	HpBlur int `json:",omitempty"`
 }
 
 //
