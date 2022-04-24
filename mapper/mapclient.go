@@ -53,6 +53,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"runtime"
 	"strings"
 	"time"
 
@@ -151,8 +152,7 @@ type Connection struct {
 	DebuggingLevel uint
 
 	serverConn MapConnection
-	sendChan   chan string // outgoing packets go through this channel
-	signedOn   bool        // do we have an active session now?
+	signedOn   bool // do we have an active session now?
 
 	// The calendar system the server indicated as preferred, if any
 	CalendarSystem string
@@ -168,7 +168,7 @@ type Connection struct {
 // the connection is ready for interactive use.
 //
 func (c *Connection) IsReady() bool {
-	return c.reader != nil && c.writer != nil && c.signedOn
+	return c.serverConn.reader != nil && c.serverConn.writer != nil && c.signedOn
 }
 
 //
@@ -410,8 +410,10 @@ func NewConnection(endpoint string, opts ...ConnectionOption) (Connection, error
 		Conditions:    make(map[string]StatusMarkerDefinition),
 		Retries:       1,
 		Logger:        log.Default(),
-		sendChan:      make(chan string, 16),
 		Gauges:        make(map[string]*UpdateProgressMessagePayload),
+		serverConn: MapConnection{
+			sendChan: make(chan string, 16),
+		},
 	}
 
 	for _, o := range opts {
@@ -448,7 +450,7 @@ func (c *Connection) debug(level uint, msg string) {
 //
 func (c *Connection) Close() {
 	c.debug(1, "Close()")
-	c.server.Close()
+	c.serverConn.Close()
 }
 
 //
@@ -514,7 +516,7 @@ func (c *Connection) Subscribe(ch chan MessagePayload, messages ...ServerMessage
 //
 type MessagePayload interface {
 	MessageType() ServerMessage
-	RawMessage() []string
+	RawMessage() string
 	RawBytes() []byte
 }
 
@@ -538,7 +540,7 @@ type ServerMessage byte
 const (
 	Accept ServerMessage = iota
 	AddCharacter
-	AddDieRollPresets
+	AddDicePresets
 	AddImage
 	AddObjAttributes
 	AdjustView
@@ -568,6 +570,7 @@ const (
 	PlaceSomeone
 	Polo
 	Priv
+	QueryDicePresets
 	QueryImage
 	QueryPeers
 	Ready
@@ -587,6 +590,7 @@ const (
 	UpdateTurn
 	UpdateVersions
 	World
+	WriteOnly
 	UNKNOWN
 	ERROR
 	maximumServerMessage
@@ -598,7 +602,7 @@ const (
 // types. It holds the bare minimum data for any server message.
 //
 type BaseMessagePayload struct {
-	rawMessage  []string      `json:"-"`
+	rawMessage  string        `json:"-"`
 	messageType ServerMessage `json:"-"`
 }
 
@@ -613,8 +617,8 @@ type BaseMessagePayload struct {
 // message after being broken out into fields. For multi-line messages, it
 // will instead be a slice of un-broken-out lines.
 //
-func (p BaseMessagePayload) RawMessage() []string { return p.rawMessage }
-func (p BaseMessagePayload) RawBytes() []byte     { return []byte(p.rawMessage) }
+func (p BaseMessagePayload) RawMessage() string { return p.rawMessage }
+func (p BaseMessagePayload) RawBytes() []byte   { return []byte(p.rawMessage) }
 
 //
 // MessageType returns the type of message this MessagePayload represents.
@@ -759,11 +763,13 @@ func (c *Connection) AddImage(idef ImageDefinition) error {
 //
 func (c *Connection) AddImageData(idef ImageDefinition, data []byte) error {
 	return c.serverConn.send(AddImage, AddImageMessagePayload{
-		File:        idef.File,
-		ImageData:   data,
-		IsLocalFile: false,
-		Name:        idef.Name,
-		Zoom:        idef.Zoom,
+		ImageDefinition: ImageDefinition{
+			File:        idef.File,
+			IsLocalFile: false,
+			Name:        idef.Name,
+			Zoom:        idef.Zoom,
+		},
+		ImageData: data,
 	})
 }
 
@@ -828,7 +834,7 @@ type AdjustViewMessagePayload struct {
 // each direction.
 //
 func (c *Connection) AdjustView(xview, yview float64) error {
-	return c.serverConn.Send(AdjustView, AdjustViewMessagePayload{
+	return c.serverConn.send(AdjustView, AdjustViewMessagePayload{
 		XView: xview,
 		YView: yview,
 	})
@@ -872,9 +878,11 @@ type AuthMessagePayload struct {
 //
 func (c *Connection) CacheFile(serverID string) error {
 	return c.serverConn.send(LoadFrom, LoadFromMessagePayload{
-		CacheOnly:   true,
-		File:        serverID,
-		IsLocalFile: false,
+		FileDefinition: FileDefinition{
+			File:        serverID,
+			IsLocalFile: false,
+		},
+		CacheOnly: true,
 	})
 }
 
@@ -941,8 +949,10 @@ type ChatMessageMessagePayload struct {
 //
 func (c *Connection) ChatMessage(to []string, message string) error {
 	return c.serverConn.send(ChatMessage, ChatMessageMessagePayload{
-		Recipients: to,
-		Text:       message,
+		ChatCommon: ChatCommon{
+			Recipients: to,
+		},
+		Text: message,
 	})
 }
 
@@ -951,8 +961,10 @@ func (c *Connection) ChatMessage(to []string, message string) error {
 //
 func (c *Connection) ChatMessageToAll(message string) error {
 	return c.serverConn.send(ChatMessage, ChatMessageMessagePayload{
-		ToAll: true,
-		Text:  message,
+		ChatCommon: ChatCommon{
+			ToAll: true,
+		},
+		Text: message,
 	})
 }
 
@@ -961,7 +973,9 @@ func (c *Connection) ChatMessageToAll(message string) error {
 //
 func (c *Connection) ChatMessageToGM(message string) error {
 	return c.serverConn.send(ChatMessage, ChatMessageMessagePayload{
-		ToGM: true,
+		ChatCommon: ChatCommon{
+			ToGM: true,
+		},
 		Text: message,
 	})
 }
@@ -1080,8 +1094,10 @@ type ClearFromMessagePayload struct {
 //
 func (c *Connection) ClearFrom(serverID string) error {
 	return c.serverConn.send(ClearFrom, ClearFromMessagePayload{
-		File:        serverID,
-		IsLocalFile: false,
+		FileDefinition: FileDefinition{
+			File:        serverID,
+			IsLocalFile: false,
+		},
 	})
 }
 
@@ -1248,9 +1264,11 @@ type LoadFromMessagePayload struct {
 //
 func (c *Connection) LoadFrom(path string, local bool, merge bool) error {
 	return c.serverConn.send(LoadFrom, LoadFromMessagePayload{
-		File:        path,
-		IsLocalFile: local,
-		Merge:       merge,
+		FileDefinition: FileDefinition{
+			File:        path,
+			IsLocalFile: local,
+		},
+		Merge: merge,
 	})
 }
 
@@ -1403,8 +1421,10 @@ type MarkMessagePayload struct {
 //
 func (c *Connection) Mark(x, y float64) error {
 	return c.serverConn.send(Mark, MarkMessagePayload{
-		X: x,
-		Y: y,
+		Coordinates: Coordinates{
+			X: x,
+			Y: y,
+		},
 	})
 }
 
@@ -1459,6 +1479,10 @@ func (c *Connection) PlaceSomeone(someone interface{}) error {
 //
 func (c *Connection) Polo() error {
 	return c.serverConn.send(Polo, nil)
+}
+
+type PoloMessagePayload struct {
+	BaseMessagePayload
 }
 
 //  ____       _
@@ -1596,8 +1620,10 @@ func (c *Connection) RemoveObjAttributes(objID, attrName string, values []string
 //
 func (c *Connection) RollDice(to []string, rollspec string) error {
 	return c.serverConn.send(RollDice, RollDiceMessagePayload{
-		Recipients: to,
-		RollSpec:   rollspec,
+		ChatCommon: ChatCommon{
+			Recipients: to,
+		},
+		RollSpec: rollspec,
 	})
 }
 
@@ -1618,7 +1644,9 @@ type RollDiceMessagePayload struct {
 //
 func (c *Connection) RollDiceToAll(rollspec string) error {
 	return c.serverConn.send(RollDice, RollDiceMessagePayload{
-		ToAll:    true,
+		ChatCommon: ChatCommon{
+			ToAll: true,
+		},
 		RollSpec: rollspec,
 	})
 }
@@ -1628,7 +1656,9 @@ func (c *Connection) RollDiceToAll(rollspec string) error {
 //
 func (c *Connection) RollDiceToGM(rollspec string) error {
 	return c.serverConn.send(RollDice, RollDiceMessagePayload{
-		ToGM:     true,
+		ChatCommon: ChatCommon{
+			ToGM: true,
+		},
 		RollSpec: rollspec,
 	})
 }
@@ -1692,6 +1722,10 @@ type AddDicePresetsMessagePayload struct {
 //
 func (c *Connection) QueryDicePresets() error {
 	return c.serverConn.send(QueryDicePresets, nil)
+}
+
+type QueryDicePresetsMessagePayload struct {
+	BaseMessagePayload
 }
 
 //
@@ -1863,6 +1897,10 @@ func (c *Connection) QueryPeers() error {
 	return c.serverConn.send(QueryPeers, nil)
 }
 
+type QueryPeersMessagePayload struct {
+	BaseMessagePayload
+}
+
 //
 // UpdateProgressMessagePayload holds the information sent by the server's UpdateProgress
 // Comment notification. This
@@ -2025,6 +2063,10 @@ func (c *Connection) Sync() error {
 	return c.serverConn.send(Sync, nil)
 }
 
+type SyncMessagePayload struct {
+	BaseMessagePayload
+}
+
 //
 // SyncChat requests that the server (re-)send past messages
 // greater than the target message ID (target≥0) or the most
@@ -2171,7 +2213,7 @@ func (c *Connection) tryConnect() error {
 		return err
 	}
 
-	c.serverConn.server = conn
+	c.serverConn.conn = conn
 	c.serverConn.reader = bufio.NewScanner(conn)
 	c.serverConn.writer = bufio.NewWriter(conn)
 
@@ -2209,11 +2251,11 @@ func (c *Connection) login(done chan error) {
 	c.Logger.Printf("mapper: Initial server negotiation...")
 	syncDone := false
 	authPending := false
-	recCount := 0
 	c.Preamble = nil
 
 	for !syncDone {
-		if incomingPacket := c.serverConn.receive(done); incomingPacket == nil {
+		incomingPacket := c.serverConn.receive(done)
+		if incomingPacket == nil {
 			break
 		}
 
@@ -2245,7 +2287,7 @@ func (c *Connection) login(done chan error) {
 				}
 				c.Logger.Printf("mapper: authenticating to server")
 				c.Authenticator.Reset()
-				authResponse, err := c.Authenticator.AcceptChallenge(response.Challenge)
+				authResponse, err := c.Authenticator.AcceptChallengeBytes(response.Challenge)
 				if err != nil {
 					c.Logger.Printf("mapper: Error accepting server's challenge: %v", err)
 					done <- err
@@ -2264,13 +2306,13 @@ func (c *Connection) login(done chan error) {
 			}
 			syncDone = true
 
-		case AddPersonMessagePayload:
-			c.receiveAddPerson(response)
+		case AddCharacterMessagePayload:
+			c.receiveAddCharacter(response)
 
-		case DefineStatusMarkerMessagePayload:
+		case UpdateStatusMarkerMessagePayload:
 			c.receiveDSM(response)
 
-		case UpdateWorldMessagePayload:
+		case WorldMessagePayload:
 			c.CalendarSystem = response.Calendar
 
 		case UpdateVersionsMessagePayload:
@@ -2293,7 +2335,8 @@ func (c *Connection) login(done chan error) {
 	// If we're still waiting for authentication results, do that...
 	c.debug(2, "Switched to authentication result scanner")
 	for authPending {
-		if incomingPacket := c.serverConn.receive(done); incomingPacket == nil {
+		incomingPacket := c.serverConn.receive(done)
+		if incomingPacket == nil {
 			break
 		}
 		if c.DebuggingLevel >= 3 {
@@ -2306,7 +2349,7 @@ func (c *Connection) login(done chan error) {
 			return
 
 		case GrantedMessagePayload:
-			c.logger.Printf("mapper: access granted for %s", response.User)
+			c.Logger.Printf("mapper: access granted for %s", response.User)
 			authPending = false
 			if c.Authenticator != nil {
 				c.Authenticator.Username = response.User
@@ -2316,7 +2359,7 @@ func (c *Connection) login(done chan error) {
 			// Ignore
 
 		default:
-			c.Logger.Printf("mapper: unexpected server message while waiting for authentication to complete", f)
+			c.Logger.Printf("mapper: unexpected server message %v while waiting for authentication to complete", incomingPacket.MessageType())
 		}
 	}
 	if authPending {
@@ -2327,7 +2370,8 @@ func (c *Connection) login(done chan error) {
 	// wait for server READY signal, accept incoming preliminary data
 waitForReady:
 	for {
-		if incomingPacket := c.serverConn.receive(done); incomingPacket == nil {
+		incomingPacket := c.serverConn.receive(done)
+		if incomingPacket == nil {
 			break
 		}
 
@@ -2336,13 +2380,13 @@ waitForReady:
 		}
 
 		switch response := incomingPacket.(type) {
-		case AddPersonMessagePayload:
-			c.receiveAddPerson(response)
+		case AddCharacterMessagePayload:
+			c.receiveAddCharacter(response)
 
-		case DefineStatusMarkerMessagePayload:
+		case UpdateStatusMarkerMessagePayload:
 			c.receiveDSM(response)
 
-		case UpdateWorldMessagePayload:
+		case WorldMessagePayload:
 			c.CalendarSystem = response.Calendar
 
 		case UpdateVersionsMessagePayload:
@@ -2381,7 +2425,7 @@ waitForReady:
 	}
 }
 
-func (c *Connection) receiveDSM(d DefineStatusMarkerMessagePayload) {
+func (c *Connection) receiveDSM(d UpdateStatusMarkerMessagePayload) {
 	c.Conditions[d.Condition] = StatusMarkerDefinition{
 		Condition: d.Condition,
 		Shape:     d.Shape,
@@ -2389,7 +2433,7 @@ func (c *Connection) receiveDSM(d DefineStatusMarkerMessagePayload) {
 	}
 }
 
-func (c *Connection) receiveAddPerson(d AddPersonMessagePayload) {
+func (c *Connection) receiveAddCharacter(d AddCharacterMessagePayload) {
 	c.Characters[d.Name] = CharacterDefinition{
 		Name:  d.Name,
 		ObjID: d.ObjID,
@@ -2399,7 +2443,7 @@ func (c *Connection) receiveAddPerson(d AddPersonMessagePayload) {
 	}
 }
 
-func (c *Connection) receiveUpdateVersions(d UpdateVersionsUpdatePayload) {
+func (c *Connection) receiveUpdateVersions(d UpdateVersionsMessagePayload) {
 	for _, pkg := range d.Packages {
 		c.PackageUpdatesAvailable[pkg.Name] = append(c.PackageUpdatesAvailable[pkg.Name], pkg.Instances...)
 	}
@@ -2416,24 +2460,10 @@ func (c *Connection) listen(done chan error) {
 	}()
 	c.debug(2, "listen() started")
 
-	var (
-		imageDataBuffer []string
-		imageDataDef    ImageDefinition
-		currentImage    string
-		presetBuffer    [][]string
-		currentPreset   string
-		peerBuffer      [][]string
-		currentPeer     string
-		objBuffer       []string
-		currentObj      string
-		rPeerBuffer     []string
-		rPresetBuffer   []string
-	)
-
-	strike := 0
 	c.Logger.Printf("mapper: listening for server messages to dispatch...")
 	for {
-		if incomingPacket := c.serverConn.receive(done); incomingPacket == nil {
+		incomingPacket := c.serverConn.receive(done)
+		if incomingPacket == nil {
 			break
 		}
 
@@ -2641,15 +2671,17 @@ func (c *Connection) listen(done chan error) {
 			c.reportError(fmt.Errorf("server message type %v received after it would have made sense (ignored)", cmd.MessageType()))
 
 		case AcceptMessagePayload, AddDicePresetsMessagePayload, AuthMessagePayload, DefineDicePresetsMessagePayload, FilterDicePresetsMessagePayload,
-			PoloMessagePayload, QueryDicePresetsMessagePayload, QueryPeerListMessagePayload, RemoveDevicePresets, RollDiceMessagePayload,
+			PoloMessagePayload, QueryDicePresetsMessagePayload, QueryPeersMessagePayload, RollDiceMessagePayload,
 			SyncChatMessagePayload, SyncMessagePayload:
 			c.reportError(fmt.Errorf("server message type %v should not be sent to a client (ignored)", cmd.MessageType()))
 
 		default:
 			if ch, ok := c.Subscriptions[UNKNOWN]; ok {
-				payload.messageType = UNKNOWN
 				ch <- UnknownMessagePayload{
-					BaseMessagePayload: payload,
+					BaseMessagePayload: BaseMessagePayload{
+						messageType: UNKNOWN,
+						rawMessage:  incomingPacket.RawMessage(),
+					},
 				}
 			} else {
 				c.Logger.Printf("received unknown server message type: \"%v\"", cmd.MessageType())
@@ -2666,7 +2698,7 @@ func (c *Connection) reportError(e error) {
 	if ch, ok := c.Subscriptions[ERROR]; ok {
 		ch <- ErrorMessagePayload{
 			BaseMessagePayload: BaseMessagePayload{
-				rawMessage:  nil,
+				rawMessage:  "",
 				messageType: ERROR,
 			},
 			Error: e,
@@ -2705,7 +2737,7 @@ func (c *Connection) interact() error {
 		case err := <-listenerDone:
 			c.Logger.Printf("interact: listener done (%v), stopping", err)
 			return err
-		case packet := <-c.sendChan:
+		case packet := <-c.serverConn.sendChan:
 			c.serverConn.sendBuf = append(c.serverConn.sendBuf, packet)
 		default:
 		}
@@ -2746,7 +2778,7 @@ func (c *Connection) filterSubscriptions() error {
 		switch msg {
 		//Accept
 		//AddCharacter (mandatory)
-		//AddDieRollPresets
+		//AddDicePresets
 		//Auth
 		//Challenge
 		//DefineDicePresets
@@ -2783,26 +2815,26 @@ func (c *Connection) filterSubscriptions() error {
 			subList = append(subList, "CLR@")
 		case CombatMode:
 			subList = append(subList, "CO")
-		case Comment, UpdateProgress:
+		case Comment:
 			subList = append(subList, "//")
 		case LoadFrom:
 			subList = append(subList, "L")
 		case LoadArcObject:
-			subList = append(sublist, "LS-ARC")
+			subList = append(subList, "LS-ARC")
 		case LoadCircleObject:
-			subList = append(sublist, "LS-CIRC")
+			subList = append(subList, "LS-CIRC")
 		case LoadLineObject:
-			subList = append(sublist, "LS-LINE")
+			subList = append(subList, "LS-LINE")
 		case LoadPolygonObject:
-			subList = append(sublist, "LS-POLY")
+			subList = append(subList, "LS-POLY")
 		case LoadRectangleObject:
-			subList = append(sublist, "LS-RECT")
+			subList = append(subList, "LS-RECT")
 		case LoadSpellAreaOfEffectObject:
-			subList = append(sublist, "LS-SAOE")
+			subList = append(subList, "LS-SAOE")
 		case LoadTextObject:
-			subList = append(sublist, "LS-TEXT")
+			subList = append(subList, "LS-TEXT")
 		case LoadTileObject:
-			subList = append(sublist, "LS-TILE")
+			subList = append(subList, "LS-TILE")
 		case Mark:
 			subList = append(subList, "MARK")
 		case PlaceSomeone:
@@ -2844,6 +2876,47 @@ func (c *Connection) unfilterSubscriptions() error {
 	return c.serverConn.send(Accept, AcceptMessagePayload{
 		Messages: nil,
 	})
+}
+
+//
+// CheckVersionOfProgram looks to see if there's a newer version of
+// the given program for the client's architecture.
+// If so, it returns the information for that update.
+//
+func (c *Connection) CheckVersionOf(program, currentVersion string) (*PackageVersion, error) {
+	availableVersions, ok := c.PackageUpdatesAvailable[program]
+	if !ok {
+		return nil, nil // the requested program isn't advertised at all
+	}
+
+	var selection *PackageVersion
+
+	for _, instance := range availableVersions {
+		if instance.OS == "" {
+			if instance.Arch == "" && selection == nil {
+				selection = &instance
+			} else if instance.Arch == runtime.GOARCH {
+				selection = &instance
+			}
+		} else if instance.OS == runtime.GOOS && instance.Arch == runtime.GOARCH {
+			selection = &instance
+			break
+		}
+	}
+
+	if selection == nil {
+		return nil, nil
+	}
+	// now selection points to the most specific entry we have for the
+	// client's OS and architecture.
+	cmp, err := util.VersionCompare(currentVersion, selection.Version)
+	if err != nil {
+		return nil, err
+	}
+	if cmp < 0 {
+		return selection, nil
+	}
+	return nil, nil
 }
 
 // @[00]@| GMA 4.3.10

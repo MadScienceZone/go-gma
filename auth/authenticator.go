@@ -333,14 +333,25 @@ func (a *Authenticator) AcceptChallenge(challenge string) (string, error) {
 	if len(c) < 2 {
 		return "", fmt.Errorf("challenge value is too short")
 	}
-	a.Challenge = c
-
-	response, err := a.calcResponse(a.Secret)
+	response, err := a.AcceptChallengeBytes(c)
 	if err != nil {
-		return "", fmt.Errorf("unable to generate response: %v", err)
+		return "", err
 	}
 
 	return base64.StdEncoding.EncodeToString(response), nil
+}
+
+//
+// AcceptChallengeBytes is like Accept Challenge but takes the raw binary
+// challenge and emits the raw binay response as []byte slices.
+//
+func (a *Authenticator) AcceptChallengeBytes(challenge []byte) ([]byte, error) {
+	a.Challenge = challenge
+	response, err := a.calcResponse(a.Secret)
+	if err != nil {
+		return nil, fmt.Errorf("unable to generate response: %v", err)
+	}
+	return response, nil
 }
 
 //

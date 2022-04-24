@@ -23,6 +23,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"strings"
 )
@@ -32,13 +33,16 @@ import (
 var ErrProtocol = errors.New("internal protocol error")
 
 type MapConnection struct {
-	conn    net.Conn       // network socket
-	reader  *bufio.Scanner // read interface to socket
-	writer  *bufio.Writer  // write interface to socket
-	sendBuf []string       // internal buffer of outgoing packets
+	conn     net.Conn       // network socket
+	reader   *bufio.Scanner // read interface to socket
+	writer   *bufio.Writer  // write interface to socket
+	sendBuf  []string       // internal buffer of outgoing packets
+	sendChan chan string    // outgoing packets go through this channel
 }
 
-func (c *MapConnection) Close() {}
+func (c *MapConnection) Close() {
+	c.conn.Close()
+}
 
 //
 // send sends a message to the peer using the mapper protocol.
@@ -53,8 +57,8 @@ func (c *MapConnection) send(command ServerMessage, data interface{}) error {
 		if ac, ok := data.(AddCharacterMessagePayload); ok {
 			return c.sendJSON("AC", ac)
 		}
-	case AddDieRollPresets:
-		if ad, ok := data.(AddDieRollPresetsMessagePayload); ok {
+	case AddDicePresets:
+		if ad, ok := data.(AddDicePresetsMessagePayload); ok {
 			return c.sendJSON("DD+", ad)
 		}
 	case AddImage:
@@ -65,7 +69,7 @@ func (c *MapConnection) send(command ServerMessage, data interface{}) error {
 			return c.sendJSON("AI", ai)
 		}
 	case AddObjAttributes:
-		if oa, ok := data.(AddObjectAttributesMessagePayload); ok {
+		if oa, ok := data.(AddObjAttributesMessagePayload); ok {
 			return c.sendJSON("OA+", oa)
 		}
 	case AdjustView:
@@ -145,7 +149,7 @@ func (c *MapConnection) send(command ServerMessage, data interface{}) error {
 		if ob, ok := data.(LineElement); ok {
 			return c.sendJSON("LS-LINE", ob)
 		}
-		if ob, ok := data.(LoadLinebjectMessagePayload); ok {
+		if ob, ok := data.(LoadLineObjectMessagePayload); ok {
 			return c.sendJSON("LS-LINE", ob)
 		}
 	case LoadPolygonObject:
@@ -222,7 +226,7 @@ func (c *MapConnection) send(command ServerMessage, data interface{}) error {
 	case Ready:
 		return c.sendln("READY", "")
 	case RemoveObjAttributes:
-		if oa, ok := data.(RemoveObjectAttributesMessagePayload); ok {
+		if oa, ok := data.(RemoveObjAttributesMessagePayload); ok {
 			return c.sendJSON("OA-", oa)
 		}
 	case RollDice:
@@ -256,7 +260,7 @@ func (c *MapConnection) send(command ServerMessage, data interface{}) error {
 			return c.sendJSON("IL", i)
 		}
 	case UpdateObjAttributes:
-		if oa, ok := data.(UpdateObjectAttributesMessagePayload); ok {
+		if oa, ok := data.(UpdateObjAttributesMessagePayload); ok {
 			return c.sendJSON("OA", oa)
 		}
 	case UpdatePeerList:
@@ -305,7 +309,7 @@ func (c *MapConnection) sendJSON(commandWord string, data interface{}) error {
 
 func (c *MapConnection) sendln(commandWord, data string) error {
 	if strings.ContainsAny(data, "\n\r") {
-		return fmt.Error("protocol error: outgoing data packet may not contain newlines")
+		return fmt.Errorf("protocol error: outgoing data packet may not contain newlines")
 	}
 	var packet strings.Builder
 
@@ -317,7 +321,7 @@ func (c *MapConnection) sendln(commandWord, data string) error {
 	packet.WriteString("\n")
 
 	select {
-	case c.sendChan <- packet:
+	case c.sendChan <- packet.String():
 	default:
 		return fmt.Errorf("unable to send to server (Dial() not running?")
 	}
@@ -348,10 +352,6 @@ func (c *MapConnection) receive(done chan error) MessagePayload {
 			BaseMessagePayload: payload,
 			Text:               c.reader.Text()[2:],
 		}
-	}
-
-	if hasJsonPart && !json.Valid(jsonString) {
-		// TODO
 	}
 
 	switch commandWord {
@@ -536,13 +536,13 @@ func (c *MapConnection) receive(done chan error) MessagePayload {
 		return p
 
 	case "DSM":
-		p := DefineStatusMarkerMessagePayload{BaseMessagePayload: payload}
+		p := UpdateStatusMarkerMessagePayload{BaseMessagePayload: payload}
 		if hasJsonPart {
 			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
 				break
 			}
 		}
-		p.messageType = DefineStatusMarker
+		p.messageType = UpdateStatusMarker
 		return p
 
 	case "GRANTED":
@@ -566,13 +566,13 @@ func (c *MapConnection) receive(done chan error) MessagePayload {
 		return p
 
 	case "IL":
-		p := UpdateInitiativeListMessagePayload{BaseMessagePayload: payload}
+		p := UpdateInitiativeMessagePayload{BaseMessagePayload: payload}
 		if hasJsonPart {
 			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
 				break
 			}
 		}
-		p.messageType = UpdateInitiativeList
+		p.messageType = UpdateInitiative
 		return p
 
 	case "L":
@@ -681,37 +681,37 @@ func (c *MapConnection) receive(done chan error) MessagePayload {
 		return p
 
 	case "OA":
-		p := UpdateObjectAttributesMessagePayload{BaseMessagePayload: payload}
+		p := UpdateObjAttributesMessagePayload{BaseMessagePayload: payload}
 		if hasJsonPart {
 			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
 				break
 			}
 		}
-		p.messageType = UpdateObjectAttributes
+		p.messageType = UpdateObjAttributes
 		return p
 
 	case "OA+":
-		p := AddObjectAttributesMessagePayload{BaseMessagePayload: payload}
+		p := AddObjAttributesMessagePayload{BaseMessagePayload: payload}
 		if hasJsonPart {
 			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
 				break
 			}
 		}
-		p.messageType = AddObjectAttributes
+		p.messageType = AddObjAttributes
 		return p
 
 	case "OA-":
-		p := RemoveObjectAttributesMessagePayload{BaseMessagePayload: payload}
+		p := RemoveObjAttributesMessagePayload{BaseMessagePayload: payload}
 		if hasJsonPart {
 			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
 				break
 			}
 		}
-		p.messageType = RemoveObjectAttributes
+		p.messageType = RemoveObjAttributes
 		return p
 
 	case "OK":
-		p := CallengeMessagePayload{BaseMessagePayload: payload}
+		p := ChallengeMessagePayload{BaseMessagePayload: payload}
 		if hasJsonPart {
 			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
 				break
@@ -761,13 +761,13 @@ func (c *MapConnection) receive(done chan error) MessagePayload {
 		return p
 
 	case "ROLL":
-		p := RollResultsMessagePayload{BaseMessagePayload: payload}
+		p := RollResultMessagePayload{BaseMessagePayload: payload}
 		if hasJsonPart {
 			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
 				break
 			}
 		}
-		p.messageType = RollResults
+		p.messageType = RollResult
 		return p
 
 	case "SYNC":
@@ -816,13 +816,13 @@ func (c *MapConnection) receive(done chan error) MessagePayload {
 		return p
 
 	case "WORLD":
-		p := UpdateWorldMessagePayload{BaseMessagePayload: payload}
+		p := WorldMessagePayload{BaseMessagePayload: payload}
 		if hasJsonPart {
 			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
 				break
 			}
 		}
-		p.messageType = UpdateWorld
+		p.messageType = World
 		return p
 
 	case "/CONN":
@@ -836,17 +836,12 @@ func (c *MapConnection) receive(done chan error) MessagePayload {
 	}
 
 	if err != nil {
-		done <- err
+		payload.messageType = ERROR
+		return ErrorMessagePayload{
+			BaseMessagePayload: payload,
+			Error:              err,
+		}
 	}
-}
 
-/*
-func (c *ClientConnection) AddCharacter(name, objID, color, area, size string) error {
-	return c.XXX.send(AddCharacter, AddCharacterMessagePayload{
-		Name:  name,
-		ObjID: objID,
-		Color: color,
-		Area:  area,
-		Size:  size})
+	return nil
 }
-*/

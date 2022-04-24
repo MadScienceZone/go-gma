@@ -90,7 +90,14 @@ func main() {
 			mapper.CombatMode,
 			mapper.Comment,
 			mapper.LoadFrom,
-			mapper.LoadObject,
+			mapper.LoadArcObject,
+			mapper.LoadCircleObject,
+			mapper.LoadLineObject,
+			mapper.LoadPolygonObject,
+			mapper.LoadRectangleObject,
+			mapper.LoadSpellAreaOfEffectObject,
+			mapper.LoadTextObject,
+			mapper.LoadTileObject,
 			mapper.Marco,
 			mapper.Mark,
 			mapper.PlaceSomeone,
@@ -112,7 +119,8 @@ func main() {
 	if pass != "" {
 		a := auth.NewClientAuthenticator(user, []byte(pass),
 			fmt.Sprintf("map-console %s", GMAVersionNumber))
-		conOpts = append(conOpts, mapper.WithAuthenticator(a))
+		conOpts = append(conOpts, mapper.WithAuthenticator(a),
+			mapper.WithDebugging(5))
 	}
 	server, conerr := mapper.NewConnection(host+":"+port, conOpts...)
 	if conerr != nil {
@@ -137,6 +145,15 @@ func main() {
 		time.Sleep(100 * time.Millisecond)
 	}
 	fmt.Println(colorize("Connected to server.", "Green", mono))
+
+	update, err := server.CheckVersionOf("core", GMAVersionNumber)
+	if err != nil {
+		log.Printf("Error checking for version updates: %v", err)
+	} else if update != nil {
+		log.Printf("UPDATE AVAILABLE! You are running version %v of GMA.", GMAVersionNumber)
+		log.Printf("UPDATE AVAILABLE! Version %v is available for %v on %v.", update.Version, update.OS, update.Arch)
+	}
+
 	fmt.Printf("Server protocol %d; using %s calendar.\n", server.Protocol, server.CalendarSystem)
 	fmt.Println("Characters Defined:")
 	fmt.Println(colorize("NAME----------- ID-------- COLOR----- AREA SIZE", "Blue", mono))
@@ -481,8 +498,48 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"merge", m.Merge},
 		)
 
-	case mapper.LoadObjectMessagePayload:
-		printFields(mono, "LoadObject",
+		//	case mapper.LoadObjectMessagePayload:
+		//		printFields(mono, "LoadObject",
+		//			fieldDesc{"objID", m.ObjID()},
+		//			fieldDesc{"obj", describeObject(mono, m)},
+		//		)
+	case mapper.LoadArcObjectMessagePayload:
+		printFields(mono, "LoadArcObject",
+			fieldDesc{"objID", m.ObjID()},
+			fieldDesc{"obj", describeObject(mono, m)},
+		)
+	case mapper.LoadCircleObjectMessagePayload:
+		printFields(mono, "LoadCircleObject",
+			fieldDesc{"objID", m.ObjID()},
+			fieldDesc{"obj", describeObject(mono, m)},
+		)
+	case mapper.LoadLineObjectMessagePayload:
+		printFields(mono, "LoadLineObject",
+			fieldDesc{"objID", m.ObjID()},
+			fieldDesc{"obj", describeObject(mono, m)},
+		)
+	case mapper.LoadPolygonObjectMessagePayload:
+		printFields(mono, "LoadPolygonObject",
+			fieldDesc{"objID", m.ObjID()},
+			fieldDesc{"obj", describeObject(mono, m)},
+		)
+	case mapper.LoadRectangleObjectMessagePayload:
+		printFields(mono, "LoadRectangleObject",
+			fieldDesc{"objID", m.ObjID()},
+			fieldDesc{"obj", describeObject(mono, m)},
+		)
+	case mapper.LoadSpellAreaOfEffectObjectMessagePayload:
+		printFields(mono, "LoadSpellAreaOfEffectObject",
+			fieldDesc{"objID", m.ObjID()},
+			fieldDesc{"obj", describeObject(mono, m)},
+		)
+	case mapper.LoadTextObjectMessagePayload:
+		printFields(mono, "LoadTextObject",
+			fieldDesc{"objID", m.ObjID()},
+			fieldDesc{"obj", describeObject(mono, m)},
+		)
+	case mapper.LoadTileObjectMessagePayload:
+		printFields(mono, "LoadTileObject",
 			fieldDesc{"objID", m.ObjID()},
 			fieldDesc{"obj", describeObject(mono, m)},
 		)
