@@ -294,17 +294,17 @@ func (c *MapConnection) send(command ServerMessage, data interface{}) error {
 		return c.sendln("NO", "")
 	}
 
-	return ErrProtocol
+	return fmt.Errorf("send: invalid command or data type")
 }
 
 func (c *MapConnection) sendJSON(commandWord string, data interface{}) error {
 	if data == nil {
 		return c.sendln(commandWord, "")
 	}
-	if j, err := json.Marshal(data); err != nil {
+	if j, err := json.Marshal(data); err == nil {
 		return c.sendln(commandWord, string(j))
 	}
-	return ErrProtocol
+	return fmt.Errorf("send: %v", err)
 }
 
 func (c *MapConnection) sendln(commandWord, data string) error {
