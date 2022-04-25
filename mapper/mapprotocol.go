@@ -41,7 +41,9 @@ type MapConnection struct {
 }
 
 func (c *MapConnection) Close() {
-	c.conn.Close()
+	if c.conn != nil {
+		c.conn.Close()
+	}
 }
 
 //
@@ -298,6 +300,7 @@ func (c *MapConnection) send(command ServerMessage, data interface{}) error {
 }
 
 func (c *MapConnection) sendJSON(commandWord string, data interface{}) error {
+	var err error
 	if data == nil {
 		return c.sendln(commandWord, "")
 	}

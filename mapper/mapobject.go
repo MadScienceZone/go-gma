@@ -484,7 +484,7 @@ type MapElement struct {
 
 	// Objects which need additional coordinate pairs to describe their
 	// geometry (beyond the standard reference point) store them here.
-	Points []Coordinates
+	Points []Coordinates `json:",omitempty"`
 
 	// The z "coordinate" is the vertical stacking order relative to the other
 	// displayed on-screen objects.
@@ -493,34 +493,34 @@ type MapElement struct {
 	// The colors used to draw the element's outline and/or to fill it's interior.
 	// These may be standard color names such as "blue" or an RGB string such as
 	// "#336699". A fill color that is the empty string means not to fill that element.
-	Line string
-	Fill string
+	Line string `json:",omitempty"`
+	Fill string `json:",omitempty"`
 
 	// The width in pixel units to draw the element's outline.
-	Width int
+	Width int `json:",omitempty"`
 
 	// The map layer this element belongs to.
-	Layer string
+	Layer string `json:",omitempty"`
 
 	// The dungeon level where this element appears. Typically, level 0
 	// is the default (ground) level, with level numbers increasing as
 	// 1, 2, 3, etc., for floors above it, and with underground levels
 	// counting down as -1, -2, -3, etc.
-	Level int
+	Level int `json:",omitempty"`
 
 	// Elements may be arranged into logical groups to be manipulated
 	// together. This is the ID of the group to which this belongs, or
 	// is empty if this element is not grouped.
-	Group string
+	Group string `json:",omitempty"`
 
 	// The element's line(s) are to be drawn with this dash pattern.
-	Dash DashType
+	Dash DashType `json:",omitempty"`
 
 	// Is this element currently concealed from view?
-	Hidden bool
+	Hidden bool `json:",omitempty"`
 
 	// Is the object locked from editing by the user?
-	Locked bool
+	Locked bool `json:",omitempty"`
 }
 
 //
@@ -742,7 +742,7 @@ type LineElement struct {
 	MapElement
 
 	// What arrowheads, if any, to draw on the endpoints
-	Arrow ArrowType
+	Arrow ArrowType `json:",omitempty"`
 }
 
 //
@@ -801,10 +801,10 @@ type PolygonElement struct {
 	// Spline gives the factor to use when smoothing the sides of the polygon between
 	// its points. 0 means not to smooth them at all, resulting in a shape with straight
 	// edges between the vertices. Otherwise, larger values provide greater smoothing.
-	Spline float64
+	Spline float64 `json:",omitempty"`
 
 	// The join style to control how the intersection between line segments is drawn.
-	Join JoinStyle
+	Join JoinStyle `json:",omitempty"`
 }
 
 //
@@ -983,10 +983,10 @@ type TextFont struct {
 	Size float64
 
 	// The font weight (normal or bold).
-	Weight FontWeightType
+	Weight FontWeightType `json:",omitempty"`
 
 	// The font slant (roman or italic).
-	Slant FontSlantType
+	Slant FontSlantType `json:",omitempty"`
 }
 
 //
@@ -1006,7 +1006,7 @@ type TextElement struct {
 	Font TextFont
 
 	// Where is the reference point in relation to the text?
-	Anchor AnchorDirection
+	Anchor AnchorDirection `json:",omitempty"`
 }
 
 //
@@ -1153,7 +1153,7 @@ type TileElement struct {
 	// can use the bounding box to indicate where the tile should be.
 	// If the bounding box is not known, these values may both
 	// be zero.
-	BBHeight, BBWidth float64
+	BBHeight, BBWidth float64 `json:",omitempty"`
 }
 
 //
@@ -1223,7 +1223,7 @@ type CreatureToken struct {
 	Name string
 
 	// If non-nil, this tracks the health status of the creature.
-	Health *CreatureHealth
+	Health *CreatureHealth `json:",omitempty"`
 
 	// Grid (x, y) coordinates for the reference point of the
 	// creature.  Unlike MapElement coordinates, these are in
@@ -1236,7 +1236,7 @@ type CreatureToken struct {
 	//
 	// Skin is 0 for the default appearance of the creature, 1
 	// for the alternate image, 2 for the 2nd alternate image, etc.
-	Skin int
+	Skin int `json:",omitempty"`
 
 	// If the different "skins" are different sizes, this is a list
 	// of size codes for each of them. For example, if there are 3
@@ -1245,18 +1245,18 @@ type CreatureToken struct {
 	// If this is empty or nil, all skins are assumed to be the
 	// size specified in the Size attribute. Note that SkinSize
 	// also sets the Area at the same time.
-	SkinSize []string
+	SkinSize []string `json:",omitempty"`
 
 	// Current elevation in feet relative to the "floor" of the
 	// current location.
-	Elev int
+	Elev int `json:",omitempty"`
 
 	// The color to draw the creature's threat zone when in combat.
 	Color string
 
 	// A note to attach to the creature token to indicate special
 	// conditions affecting the creature which are not otherwise shown.
-	Note string
+	Note string `json:",omitempty"`
 
 	// The tactical size category of the creature ("S", "M", "L",
 	// etc). Lower-case letters indicate the "wide" version of the
@@ -1273,7 +1273,7 @@ type CreatureToken struct {
 	// are arbitrary and defined by the server according to the needs
 	// of the particular game, but may include things such
 	// as "confused", "helpless", "hasted", etc.
-	StatusList []string
+	StatusList []string `json:",omitempty"`
 
 	// If there is a spell effect radiating from the creature, its
 	// area of effect is described by this value. If there is none,
@@ -1281,25 +1281,25 @@ type CreatureToken struct {
 	//
 	// Currently only radius emanations are supported. In future, the
 	// type of this attribute may change to handle other shapes.
-	AoE *RadiusAoE
+	AoE *RadiusAoE `json:",omitempty"`
 
 	// The method of locomotion currently being used by this creature.
 	// Normally this is MoveModeLand for land-based creatures which
 	// are walking/running.
-	MoveMode MoveModeType
+	MoveMode MoveModeType `json:",omitempty"`
 
 	// Is the creature currently wielding a reach weapon or otherwise
 	// using the "reach" alternate threat zone?
-	Reach bool
+	Reach bool `json:",omitempty"`
 
 	// Is the creature currently dead? (This takes precedence over the
 	// Health attribute's indication that the creature has taken a
 	// fatal amount of damage.)
-	Killed bool
+	Killed bool `json:",omitempty"`
 
 	// In combat, if this is true, the token is "dimmed" to indicate
 	// that it is not their turn to act.
-	Dim bool
+	Dim bool `json:",omitempty"`
 
 	// The creature type.
 	CreatureType CreatureTypeCode
@@ -1676,7 +1676,7 @@ type ImageDefinition struct {
 	// If IsLocalFile is true, File is the name of the image file on disk;
 	// otherwise it is the server's internal ID by which you may request
 	// that file from the server.
-	IsLocalFile bool
+	IsLocalFile bool `json:",omitempty"`
 }
 
 //________________________________________________________________________________
@@ -1697,7 +1697,7 @@ type FileDefinition struct {
 	// If IsLocalFile is true, File is the name of the file on disk;
 	// otherwise it is the server's internal ID by which you may request
 	// that file from the server.
-	IsLocalFile bool
+	IsLocalFile bool `json:",omitempty"`
 }
 
 //________________________________________________________________________________

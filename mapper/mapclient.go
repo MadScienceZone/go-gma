@@ -403,14 +403,15 @@ func WithDebugging(level uint) ConnectionOption {
 //
 func NewConnection(endpoint string, opts ...ConnectionOption) (Connection, error) {
 	newCon := Connection{
-		Context:       context.Background(),
-		Endpoint:      endpoint,
-		Subscriptions: make(map[ServerMessage]chan MessagePayload),
-		Characters:    make(map[string]CharacterDefinition),
-		Conditions:    make(map[string]StatusMarkerDefinition),
-		Retries:       1,
-		Logger:        log.Default(),
-		Gauges:        make(map[string]*UpdateProgressMessagePayload),
+		Context:                 context.Background(),
+		Endpoint:                endpoint,
+		Subscriptions:           make(map[ServerMessage]chan MessagePayload),
+		Characters:              make(map[string]CharacterDefinition),
+		Conditions:              make(map[string]StatusMarkerDefinition),
+		Retries:                 1,
+		Logger:                  log.Default(),
+		Gauges:                  make(map[string]*UpdateProgressMessagePayload),
+		PackageUpdatesAvailable: make(map[string][]PackageVersion),
 		serverConn: MapConnection{
 			sendChan: make(chan string, 16),
 		},

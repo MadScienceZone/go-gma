@@ -114,13 +114,13 @@ func main() {
 			mapper.UpdateStatusMarker,
 			mapper.UpdateTurn,
 		),
+		mapper.WithDebugging(5),
 	}
 
 	if pass != "" {
 		a := auth.NewClientAuthenticator(user, []byte(pass),
 			fmt.Sprintf("map-console %s", GMAVersionNumber))
-		conOpts = append(conOpts, mapper.WithAuthenticator(a),
-			mapper.WithDebugging(5))
+		conOpts = append(conOpts, mapper.WithAuthenticator(a))
 	}
 	server, conerr := mapper.NewConnection(host+":"+port, conOpts...)
 	if conerr != nil {
@@ -166,6 +166,15 @@ func main() {
 	for _, def := range server.Conditions {
 		fmt.Println(colorize(fmt.Sprintf("%-15s %-5s %-10s", def.Condition, def.Shape, def.Color), "Yellow", mono))
 	}
+
+	fmt.Println("Available Software Updates:")
+	fmt.Println(colorize("PACKAGE--- OS-------- ARCH------ VERSION", "Blue", mono))
+	for name, pkg := range server.PackageUpdatesAvailable {
+		for _, vers := range pkg {
+			fmt.Println(colorize(fmt.Sprintf("%-10s %-10s %-10s %s", name, vers.OS, vers.Arch, vers.Version), "Yellow", mono))
+		}
+	}
+
 	go readUserInput(mono, cancel, server)
 
 	if server.CalendarSystem == "" {
