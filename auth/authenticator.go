@@ -118,20 +118,20 @@
 // directly, the way it is used by the map server and its clients uses the following
 // protocol:
 //
-//  (server->client) "OK <v> <challenge>"
+//  (server->client) OK {"Protocol":<v>, "Challenge":"<challenge>"}
 // The server's greeting to the client includes this line which gives the server's
 // protocol version (<v>) and a base-64 encoding of the binary challenge value (C in the
 // algorithm described above)
 //
-//  (server<-client) "AUTH <response> [<user> <client>]"
+//  (server<-client) AUTH {"Response":"<response>", "User":"<user>", "Client":"<client>"}
 // The client's response is sent with this line, where <response> is the base-64
 // encoded representation of the response to the challenge (D above), and the optional <user> and
 // <client> values are the desired user name and description of the client program.
 //
-//  (server->client) "DENIED [<message>]"
+//  (server->client) DENIED {"Reason":"<message>"}
 // Server response indicating that the authentication was unsuccessful.
 //
-//  (server->client) "GRANTED <user>"
+//  (server->client) GRANTED {"User":"<user>"}
 // Server response indicating that the authentication was successful. The <user> value is
 // "GM" if the GM password was used, or the user name supplied by the user, which will be
 // the name they're known by inside the game map (usually a character name). If the user
