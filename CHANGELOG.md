@@ -4,7 +4,11 @@
  * Supported GMA Mapper Version: 3.40.10		<!-- @@##@@ -->
  * Supported GMA Mapper Protocol: 332		<!-- @@##@@ -->
  * Supported GMA Mapper File Format: 17		<!-- @@##@@ -->
- * Effective Date: 23-Jul-2021			<!-- @@##@@ -->
+ * Effective Date: 25-Apr-2022			<!-- @@##@@ -->
+
+## v4.3.12 (alpha)
+Added additional core GMA functions and the map-console tool, which gives an
+interactive interface from the command line to the map server.
 
 ## v4.3.10 (alpha)
 Added note pointing to paizo's Community Use Policy and GMA's usage of Pathfinder
