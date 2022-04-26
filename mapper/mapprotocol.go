@@ -41,7 +41,9 @@ type MapConnection struct {
 }
 
 func (c *MapConnection) Close() {
-	c.conn.Close()
+	if c.conn != nil {
+		c.conn.Close()
+	}
 }
 
 //
