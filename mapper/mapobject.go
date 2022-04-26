@@ -1369,7 +1369,7 @@ type CreatureHealth struct {
 	// this gives the percentage by which to "blur" the hit points as seen by the
 	// players. For example, if HpBlur is 10, then hit points are displayed only in
 	// 10% increments.
-	HpBlur int `json:",omitempty"`
+	HPBlur int `json:",omitempty"`
 }
 
 //
@@ -1419,7 +1419,7 @@ func newHealth(healthStats string, err error) (*CreatureHealth, error) {
 	h.IsFlatFooted = hstats[4].(bool)
 	h.IsStable = hstats[5].(bool)
 	h.Condition = hstats[6].(string)
-	h.HpBlur = hstats[7].(int)
+	h.HPBlur = hstats[7].(int)
 	return &h, err
 }
 
