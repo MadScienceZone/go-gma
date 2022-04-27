@@ -130,7 +130,7 @@ func TestObjLoadOnePlayer(t *testing.T) {
 				IsFlatFooted:    false,
 				IsStable:        false,
 				Condition:       "",
-				HpBlur:          10,
+				HPBlur:          10,
 			},
 			Name:       "Jigu",
 			Gx:         31.0,
@@ -450,7 +450,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				bEq(obj.Health.IsFlatFooted, false, "IsFlatFooted", t)
 				bEq(obj.Health.IsStable, false, "IsStable", t)
 				sEq(obj.Health.Condition, "", "Condition", t)
-				iEq(obj.Health.HpBlur, 0, "HpBlur", t)
+				iEq(obj.Health.HPBlur, 0, "HPBlur", t)
 				sEq(obj.Name, "Fleshdreg #4", "Name", t)
 				fEq(obj.Gx, 27.0, "Gx", t)
 				fEq(obj.Gy, 22.0, "Gy", t)
@@ -479,7 +479,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				bEq(obj.Health.IsFlatFooted, false, "IsFlatFooted", t)
 				bEq(obj.Health.IsStable, false, "IsStable", t)
 				sEq(obj.Health.Condition, "", "Condition", t)
-				iEq(obj.Health.HpBlur, 0, "HpBlur", t)
+				iEq(obj.Health.HPBlur, 0, "HPBlur", t)
 				sEq(obj.Name, "barbarian2=Caroll", "Name", t)
 				fEq(obj.Gx, 19.0, "Gx", t)
 				fEq(obj.Gy, 19.0, "Gy", t)
@@ -513,7 +513,7 @@ func TestObjLoadSmallMap(t *testing.T) {
 				bEq(obj.Health.IsFlatFooted, false, "IsFlatFooted", t)
 				bEq(obj.Health.IsStable, false, "IsStable", t)
 				sEq(obj.Health.Condition, "surprised", "Condition", t)
-				iEq(obj.Health.HpBlur, 0, "HpBlur", t)
+				iEq(obj.Health.HPBlur, 0, "HPBlur", t)
 				sEq(obj.Name, "Jigu", "Name", t)
 				fEq(obj.Gx, 31.0, "Gx", t)
 				fEq(obj.Gy, 14.0, "Gy", t)

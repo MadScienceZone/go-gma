@@ -265,7 +265,7 @@ func describeObject(mono bool, obj interface{}) string {
 				fieldDesc{"flat", (*o).IsFlatFooted},
 				fieldDesc{"stable", (*o).IsStable},
 				fieldDesc{"condition", (*o).Condition},
-				fieldDesc{"blur", (*o).HpBlur},
+				fieldDesc{"blur", (*o).HPBlur},
 			))
 		}
 

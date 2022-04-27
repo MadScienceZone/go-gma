@@ -27,7 +27,12 @@
 package mapper
 
 import (
+	"bufio"
+	"encoding/json"
 	"fmt"
+	"io"
+	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -40,18 +45,18 @@ import (
 // the GMA File Format version number current as of this build.
 // This is the format which will be used for saving map data.
 //
-const GMAMapperFileFormat = 17 // @@##@@ auto-configured
+const GMAMapperFileFormat = 20 // @@##@@ auto-configured
 //
 // MinimumSupportedMapFileFormat gives the lowest file format this package can
 // understand.
 //
-const MinimumSupportedMapFileFormat = 14
+const MinimumSupportedMapFileFormat = 20
 
 //
 // MaximumSupportedMapFileFormat gives the highest file format this package
 // can understand. Saved data will be in this format.
 //
-const MaximumSupportedMapFileFormat = 17
+const MaximumSupportedMapFileFormat = 20
 
 func init() {
 	if MinimumSupportedMapFileFormat > GMAMapperFileFormat || MaximumSupportedMapFileFormat < GMAMapperFileFormat {
@@ -88,6 +93,7 @@ const (
 	DashLong2Short
 )
 
+/*
 var enumDashes = enumChoices{
 	"":    byte(DashSolid),
 	"-":   byte(DashLong),
@@ -96,6 +102,7 @@ var enumDashes = enumChoices{
 	"-.":  byte(DashLongShort),
 	"-..": byte(DashLong2Short),
 }
+*/
 
 //
 // These are the allowed values for the ArcMode attribute of an ArcElement.
@@ -108,11 +115,13 @@ const (
 	ArcModeChord
 )
 
+/*
 var enumArcs = enumChoices{
 	"pieslice": byte(ArcModePieSlice),
 	"arc":      byte(ArcModeArc),
 	"chord":    byte(ArcModeChord),
 }
+*/
 
 //
 // Valid values for a line's Arrow attribute.
@@ -126,12 +135,14 @@ const (
 	ArrowBoth
 )
 
+/*
 var enumArrows = enumChoices{
 	"none":  byte(ArrowNone),
 	"first": byte(ArrowFirst),
 	"last":  byte(ArrowLast),
 	"both":  byte(ArrowBoth),
 }
+*/
 
 //
 // These are the allowed values for the Join attribute of a PolygonElement.
@@ -144,11 +155,13 @@ const (
 	JoinRound
 )
 
+/*
 var enumJoins = enumChoices{
 	"bevel": byte(JoinBevel),
 	"miter": byte(JoinMiter),
 	"round": byte(JoinRound),
 }
+*/
 
 //
 // These are the valid values for the AoEShape attribute.
@@ -161,11 +174,13 @@ const (
 	AoEShapeRay
 )
 
+/*
 var enumAoeShapes = enumChoices{
 	"cone":   byte(AoEShapeCone),
 	"radius": byte(AoEShapeRadius),
 	"ray":    byte(AoEShapeRay),
 }
+*/
 
 //
 // The valid font weights.
@@ -177,10 +192,12 @@ const (
 	FontWeightBold
 )
 
+/*
 var enumFontWeights = enumChoices{
 	"normal": byte(FontWeightNormal),
 	"bold":   byte(FontWeightBold),
 }
+*/
 
 //
 // The valid font slants.
@@ -214,6 +231,7 @@ const (
 	AnchorSE
 )
 
+/*
 var enumAnchors = enumChoices{
 	"center": byte(AnchorCenter),
 	"n":      byte(AnchorNorth),
@@ -225,6 +243,7 @@ var enumAnchors = enumChoices{
 	"nw":     byte(AnchorNW),
 	"sw":     byte(AnchorSW),
 }
+*/
 
 //
 // The valid values for a creature's MoveMode attribute.
@@ -239,6 +258,7 @@ const (
 	MoveModeSwim
 )
 
+/*
 var enumMoveModes = enumChoices{
 	"fly":    byte(MoveModeFly),
 	"climb":  byte(MoveModeClimb),
@@ -246,7 +266,9 @@ var enumMoveModes = enumChoices{
 	"burrow": byte(MoveModeBurrow),
 	"land":   byte(MoveModeLand),
 }
+*/
 
+/*
 //
 // This returns the underlying Go data type
 // for attribute values as a string. If the boolean
@@ -275,7 +297,9 @@ func enumToByte(attrName, value string) (evalue byte, ok bool) {
 	}
 	return
 }
+*/
 
+/*
 //
 // This returns a string describing the expected data type
 // of a MapObject's attribute.
@@ -306,6 +330,7 @@ func attributeType(attrName string) (string, bool) {
 	}
 	return "string", false
 }
+*/
 
 //________________________________________________________________________________
 //  __  __              ___  _     _           _
@@ -322,7 +347,7 @@ func attributeType(attrName string) (string, bool) {
 //
 type MapObject interface {
 	ObjID() string
-	saveData([]string, string, string) ([]string, error)
+	//	saveData([]string, string, string) ([]string, error)
 }
 
 //
@@ -347,6 +372,7 @@ type Coordinates struct {
 	X, Y float64
 }
 
+/*
 //
 // saveData converts a Coordinate pair to a text representation
 // in the map file format (suitable for sending to clients or saving to a disk
@@ -361,6 +387,7 @@ func (c Coordinates) saveData(data []string, prefix, id string) ([]string, error
 		{"Y", "f", true, c.Y},
 	})
 }
+*/
 
 // Coordinates
 //  saveData
@@ -1367,7 +1394,7 @@ type CreatureHealth struct {
 
 	// If 0, the creature's health is displayed accurately on the map. Otherwise,
 	// this gives the percentage by which to "blur" the hit points as seen by the
-	// players. For example, if HpBlur is 10, then hit points are displayed only in
+	// players. For example, if HPBlur is 10, then hit points are displayed only in
 	// 10% increments.
 	HPBlur int `json:",omitempty"`
 }
@@ -1439,7 +1466,7 @@ func saveHealth(h *CreatureHealth) (string, error) {
 	data = append(data, saveBool(h.IsFlatFooted))
 	data = append(data, saveBool(h.IsStable))
 	data = append(data, h.Condition)
-	data = append(data, fmt.Sprintf("%d", h.HpBlur))
+	data = append(data, fmt.Sprintf("%d", h.HPBlur))
 	return tcllist.ToTclString(data)
 }
 
@@ -2395,6 +2422,262 @@ func saveValues(previous []string, prefix, objID string, attrs []saveAttributes)
 		}
 	}
 	return previous, nil
+}
+
+type MapMetaData struct {
+	Timestamp   int64  `json:",omitempty"`
+	DateTime    string `json:",omitempty"`
+	Comment     string `json:",omitempty"`
+	Location    string `json:",omitempty"`
+	FileVersion uint   `json:"-"`
+}
+
+//
+// WriteMapFile writes mapper data to a named file.
+//
+func WriteMapFile(path string, objList []MapObject, meta MapMetaData) error {
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Printf("WARNING: mapobject WriteMapFile was unable to close the output file: %v\n", err)
+		}
+	}()
+	return SaveMapFile(file, objList, meta)
+}
+
+//
+// SaveMapFile writes a mapper file.
+//
+func SaveMapFile(output *io.Writer, objList []MapObject, meta MapMetaData) error {
+	writer := bufio.NewWriter(output)
+	writer.WriteString("__MAPPER__:20\n")
+	if meta.Timestamp == 0 {
+		now := time.Now()
+		meta.Timestamp = now.Unix()
+		meta.DateTime = now.String()
+	}
+	data, err := json.MarshalIndent(meta, "", "    ")
+	if err != nil {
+		return err
+	}
+	writer.WriteString("__META__ ")
+	writer.WriteString(data)
+	writer.WriteString("\n")
+
+	for obj := range objList {
+		data, err := json.MarshalIndent(obj, "", "    ")
+		if err != nil {
+			return err.Errorf("unable to serialize map object: %v", err)
+		}
+
+		switch obj.(type) {
+		case ArcElement:
+			writer.WriteString("__ARC__ ")
+		case CircleElement:
+			writer.WriteString("__CIRC__ ")
+		case LineElement:
+			writer.WriteString("__LINE__ ")
+		case PolygonElement:
+			writer.WriteString("__POLY__ ")
+		case RectangleElement:
+			writer.WriteString("__RECT__ ")
+		case SpellAreaOfEffectElement:
+			writer.WriteString("__SAOE__ ")
+		case TextElement:
+			writer.WriteString("__TEXT__ ")
+		case TileElement:
+			writer.WriteString("__TILE__ ")
+		case ImageDefinition:
+			writer.WriteString("__IMG__ ")
+		case FileDefinition:
+			writer.WriteString("__MAP__ ")
+		case CreatureToken:
+			writer.WriteString("__CREATURE__ ")
+		default:
+			return err.Errorf("unable to serialize map object: unsupported type")
+		}
+		writer.WriteString(data)
+		writer.WriteString("\n")
+	}
+	writer.WriteString("__EOF__\n")
+	return nil
+}
+
+func ReadMapFile(path string) ([]MapObject, MapMetaData, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, MapMetaData{}, err
+	}
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Printf("WARNING: mapobject ReadMapFile was unable to close the file: %v", err)
+		}
+	}()
+	return LoadMapFile(file)
+}
+
+//
+// LoadMapFile reads a mapper file with file format >= 20, returning
+// a slice of map elements.
+//
+func LoadMapFile(input *io.Reader) ([]MapObject, MapMetaData, error) {
+	//
+	// The map file format consists of an initial line of the form
+	//    __MAPPER__:<version>
+	//
+	// This is followed by zero or more object definitions which are
+	// of the form
+	//    __<type>__ <json>
+	// where <json> may be a multi-line structure. The start of each
+	// new object is marked with the __<type>__ string, so the breaking
+	// up of <json> must not result in an accidental line starting with
+	// that pattern. Disallowing a newline in the middle of a string should
+	// accomplish that.
+	// OR
+	//    __META__ <json>		for file metadata
+	//    __IMG__ <json>        for an image file definition
+	//    __MAP__ <json>        for a map file definition
+	//    __CREATURE__ <json>   for a general creature definition
+	//
+	// The final line is of the form
+	//    __EOF__
+	//
+	// Despite the indentation above, the line MUST begin with __ to signal
+	// each of these.
+	//
+	var meta MapMetaData
+	var objList []MapObject
+	var f []string
+	var v uint64
+
+	startPattern := regexp.MustCompile("^__MAPPER__:(\\d+)\\s*$")
+	recordPattern := regexp.MustCompile("^__(.?*)__ (.+)$")
+	eofPattern := regexp.MustCompile("^__EOF__$")
+	scanner := bufio.NewScanner(input)
+	if !scanner.Scan() {
+		// no data
+		return nil, meta, nil
+	}
+
+	if f = startPattern.FindStringSubmatch(scanner.Text()); f == nil {
+		return nil, meta, fmt.Errorf("invalid map file format")
+	}
+	if v, err := strconv.ParseUint(f[1], 10, 64); err != nil {
+		return nil, meta, fmt.Errorf("invalid map file format: can't parse version \"%v\": %v", f[1], err)
+	}
+	meta.FileVersion = v
+	if v < MinimumSupportedMapFileFormat || v > MaximumSupportedMapFileFormat {
+		if MinimumSupportedMapFileFormat == MaximumSupportedMapFileFormat {
+			return nil, meta, fmt.Errorf("cannot read map file format version %d (only version %d is supported)", v, MinimumSupportedMapFileFormat)
+		}
+		return nil, meta, fmt.Errorf("cannot read map file format version %d (only versions %d-%d are supported)", v, MinimumSupportedMapFileFormat, MaximumSupportedMapFileFormat)
+	}
+
+	for scanner.Scan() {
+	rescan:
+		if strings.TrimSpace(scanner.Text()) == "" {
+			continue
+		}
+		if eofPattern.MatchString(scanner.Text()) {
+			return objList, meta, nil
+		}
+		if f = recordPattern.FindStringSubmatch(scanner.Text()); f == nil {
+			return nil, meta, fmt.Errorf("invalid map file format: unexpected data \"%v\"", scanner.Text())
+		}
+		// Start of record type f[1] with start of JSON string f[2]
+		// collect more lines of JSON data...
+		var dataPacket strings.Builder
+		dataPacket.Write(f[2])
+
+		for scanner.Scan() {
+			if strings.HasPrefix(scanner.Text(), "__") {
+				var err error
+
+				switch f[1] {
+				case "META":
+					err = json.Unmarshal([]byte(dataPacket.String()), &meta)
+
+				case "ARC":
+					var arc ArcElement
+					if err = json.Unmarshal([]byte(dataPacket.String()), &arc); err == nil {
+						objList = append(objList, arc)
+					}
+
+				case "CIRC":
+					var circle CircleElement
+					if err = json.Unmarshal([]byte(dataPacket.String()), &circle); err == nil {
+						objList = append(objList, circle)
+					}
+
+				case "LINE":
+					var line LineElement
+					if err = json.Unmarshal([]byte(dataPacket.String()), &line); err == nil {
+						objList = append(objList, line)
+					}
+
+				case "POLY":
+					var poly PolygonElement
+					if err = json.Unmarshal([]byte(dataPacket.String()), &poly); err == nil {
+						objList = append(objList, poly)
+					}
+
+				case "RECT":
+					var rect RectangleElement
+					if err = json.Unmarshal([]byte(dataPacket.String()), &rect); err == nil {
+						objList = append(objList, rect)
+					}
+
+				case "SAOE":
+					var effect SpellAreaofEffectElement
+					if err = json.Unmarshal([]byte(dataPacket.String()), &effect); err == nil {
+						objList = append(objList, effect)
+					}
+
+				case "TEXT":
+					var text TextElement
+					if err = json.Unmarshal([]byte(dataPacket.String()), &text); err == nil {
+						objList = append(objList, text)
+					}
+
+				case "TILE":
+					var tile TileElement
+					if err = json.Unmarshal([]byte(dataPacket.String()), &tile); err == nil {
+						objList = append(objList, tile)
+					}
+
+				case "IMG":
+					var img ImageDefinition
+					if err = json.Unmarshal([]byte(dataPacket.String()), &img); err == nil {
+						objList = append(objList, img)
+					}
+
+				case "MAP":
+					var file FileDefinition
+					if err = json.Unmarshal([]byte(dataPacket.String()), &file); err == nil {
+						objList = append(objList, file)
+					}
+
+				case "CREATURE":
+					var mob CreatureToken
+					if err = json.Unmarshal([]byte(dataPacket.String()), &mob); err == nil {
+						objList = append(objList, mob)
+					}
+
+				default:
+					return nil, meta, fmt.Errorf("invalid map file format: unexpected record type \"%s\"", f[1])
+				}
+				if err != nil {
+					return nil, meta, fmt.Errorf("invalid map file format: %v", err)
+				}
+				goto rescan
+			}
+			dataPacket.Write(scanner.Text())
+		}
+	}
+	return nil, meta, fmt.Errorf("invalid map file format: unexpected end of file")
 }
 
 // @[00]@| GMA 4.3.10
