@@ -33,6 +33,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -1263,6 +1264,34 @@ func SaveMapFile(output io.Writer, objList []interface{}, meta MapMetaData) erro
 	writer.WriteString(string(data))
 	writer.WriteString("\n")
 
+	//
+	// To produce consistent output (and aid testing), we
+	// will always write out records sorted by ObjID values.
+	//
+	sort.Slice(objList, func(i, j int) bool {
+		switch a := objList[i].(type) {
+		case ImageDefinition:
+			if b, ok := objList[j].(ImageDefinition); ok {
+				return a.Name < b.Name
+			}
+			return true // images are less than everything else
+
+		case FileDefinition:
+			if b, ok := objList[j].(FileDefinition); ok {
+				return a.File < b.File
+			}
+			return true // files are next after image definitions
+
+		case MapObject:
+			if b, ok := objList[j].(MapObject); ok {
+				return a.ObjID() < b.ObjID()
+			}
+			return false // objects go last
+		default:
+			return i < j
+		}
+	})
+
 	for _, obj := range objList {
 		data, err := json.MarshalIndent(obj, "", "    ")
 		if err != nil {
@@ -1494,17 +1523,27 @@ func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta stri
 		m.Size, err = objString(mob, 0, "SIZE", false, err)
 		m.Area, err = objString(mob, 0, "AREA", false, err)
 		m.StatusList, err = objStrings(mob, 0, "STATUSLIST", false, err)
-		if _, ok := mob["AOE"]; ok {
-			atype, err := objString(mob, 0, "AOE", true, err)
-			if atype != "radius" {
-				err = fmt.Errorf("invalid AOE type \"%s\"", atype)
+		if aoeStruct, ok := mob["AOE"]; ok {
+			ss, err := tcllist.ParseTclList(aoeStruct[0])
+			if err != nil {
+				return fmt.Errorf("legacy file %s %s has invalid AOE: %v", ct, objID, err)
 			}
-			radius, err := objFloat(mob, 1, "AOE", true, err)
-			color, err := objString(mob, 2, "AOE", true, err)
+			if len(ss) > 0 {
+				aob := map[string][]string{
+					"AOE": ss,
+				}
 
-			m.AoE = &RadiusAoE{
-				Radius: radius,
-				Color:  color,
+				atype, err := objString(aob, 0, "AOE", true, err)
+				if atype != "radius" {
+					err = fmt.Errorf("invalid AOE type \"%s\"", atype)
+				}
+				radius, err := objFloat(aob, 1, "AOE", true, err)
+				color, err := objString(aob, 2, "AOE", true, err)
+
+				m.AoE = &RadiusAoE{
+					Radius: radius,
+					Color:  color,
+				}
 			}
 		}
 		if s, ok := mob["MOVEMODE"]; ok {
@@ -1868,7 +1907,7 @@ func LoadMapFile(input io.Reader) ([]interface{}, MapMetaData, error) {
 	}
 
 	if f = startPattern.FindStringSubmatch(scanner.Text()); f == nil {
-		return nil, meta, fmt.Errorf("invalid map file format")
+		return nil, meta, fmt.Errorf("invalid map file format in initial header")
 	}
 	if v, err = strconv.ParseUint(f[1], 10, 64); err != nil {
 		return nil, meta, fmt.Errorf("invalid map file format: can't parse version \"%v\": %v", f[1], err)

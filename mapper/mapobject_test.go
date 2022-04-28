@@ -243,7 +243,7 @@ P SPAM:PC73 eggs
 }
 
 func TestObjLoadSmallMap(t *testing.T) {
-	objs, _, err := LoadMapFile(strings.NewReader(`__MAPPER__:14 {{testing here} {1589430476 {Wed May 13 21:27:56 PDT 2020}}}
+	objs, _, err := LoadMapFile(strings.NewReader(`__MAPPER__:17 {{testing here} {1589430476 {Wed May 13 21:27:56 PDT 2020}}}
 Z:0006bc4a7063427b8fb1f8990a24b980 1965
 X:0006bc4a7063427b8fb1f8990a24b980 2100.0
 Y:0006bc4a7063427b8fb1f8990a24b980 7350.0
@@ -495,406 +495,676 @@ LAYER:e68d5354f175401582866a75d806d8d7 walls
 POINTS:e68d5354f175401582866a75d806d8d7 {450.0 800.0}
 DASH:e68d5354f175401582866a75d806d8d7 {}
 `))
-	expected_save := `
-__MAPPER__:20
+	expected_save := `__MAPPER__:20
 __META__ {
-	"Timestamp": 1,
-	"DateTime": "n/a",
-	"Comment": "no",
-	"Location": "here",
-	"FileVersion": 999
+    "Timestamp": 1,
+    "DateTime": "n/a",
+    "Comment": "no",
+    "Location": "here"
 }
 __TILE__ {
-	"ID": "0006bc4a7063427b8fb1f8990a24b980",
-	"X": 2100,
-	"Y": 7350,
-	"Z": 1965,
-	"Layer": "walls",
-	"Image": "parquet22",
-	"BBHeight": 57,
-	"BBWidth": 100.5,
+    "ID": "0006bc4a7063427b8fb1f8990a24b980",
+    "X": 2100,
+    "Y": 7350,
+    "Z": 1965,
+    "Layer": "walls",
+    "Image": "parquet22",
+    "BBHeight": 57,
+    "BBWidth": 100.5
 }
 __POLY__ {
-	"ID": "0268e7eeb78e41ff82fddc4f5f0e2c1d",
-	"X": 10888,
-	"Y": 12642,
-	"Z": 271,
-	"Points": [
-		{"X": 10882, "Y": 12698},
-		{"X": 10866, "Y": 12738},
-		{"X": 10832, "Y": 12776},
-		{"X": 10806, "Y": 12816},
-		{"X": 10762, "Y": 12866},
-		{"X": 10682, "Y": 12928},
-		{"X": 10582, "Y": 12970},
-		{"X": 10500, "Y": 13024},
-		{"X": 10452, "Y": 13074},
-		{"X": 10358, "Y": 13100},
-		{"X": 10262, "Y": 13098},
-		{"X": 10144, "Y": 13060},
-		{"X": 10052, "Y": 13044},
-		{"X": 9964, "Y": 13044},
-		{"X": 9902, "Y": 12992},
-		{"X": 9828, "Y": 13010},
-		{"X": 9778, "Y": 13048},
-		{"X": 9848, "Y": 12282}
-	],
-	"Width": 5,
-	"Layer": "walls",
-	"Fill": "#7e7f12",
-	"Line": "#7e7f12"
+    "ID": "0268e7eeb78e41ff82fddc4f5f0e2c1d",
+    "X": 10888,
+    "Y": 12642,
+    "Points": [
+        {
+            "X": 10882,
+            "Y": 12698
+        },
+        {
+            "X": 10866,
+            "Y": 12738
+        },
+        {
+            "X": 10832,
+            "Y": 12776
+        },
+        {
+            "X": 10806,
+            "Y": 12816
+        },
+        {
+            "X": 10762,
+            "Y": 12866
+        },
+        {
+            "X": 10682,
+            "Y": 12928
+        },
+        {
+            "X": 10582,
+            "Y": 12970
+        },
+        {
+            "X": 10500,
+            "Y": 13024
+        },
+        {
+            "X": 10452,
+            "Y": 13074
+        },
+        {
+            "X": 10358,
+            "Y": 13100
+        },
+        {
+            "X": 10262,
+            "Y": 13098
+        },
+        {
+            "X": 10144,
+            "Y": 13060
+        },
+        {
+            "X": 10052,
+            "Y": 13044
+        },
+        {
+            "X": 9964,
+            "Y": 13044
+        },
+        {
+            "X": 9902,
+            "Y": 12992
+        },
+        {
+            "X": 9828,
+            "Y": 13010
+        },
+        {
+            "X": 9778,
+            "Y": 13048
+        },
+        {
+            "X": 9848,
+            "Y": 12282
+        }
+    ],
+    "Z": 271,
+    "Line": "#7e7f12",
+    "Fill": "#7e7f12",
+    "Width": 5,
+    "Layer": "walls"
 }
 __POLY__ {
-	"ID": "09426d492f784ad25684536c35e0d8d5",
-	"X": 9591,
-	"Y": 13222,
-	"Z": 25,
-	"POINTS": [
-		{"X": 9600, "Y": 13233},
-		{"X": 9609, "Y": 13249}, 
-		{"X": 9626, "Y": 13290}, 
-		{"X": 9633, "Y": 13310}, 
-		{"X": 9639, "Y": 13327}, 
-		{"X": 9647, "Y": 13356}, 
-		{"X": 9651, "Y": 13373}, 
-		{"X": 9655, "Y": 13403}, 
-		{"X": 9658, "Y": 13418}, 
-		{"X": 9663, "Y": 13445}, 
-		{"X": 9669, "Y": 13477}, 
-		{"X": 9690, "Y": 13517}, 
-		{"X": 9691, "Y": 13535}, 
-		{"X": 9698, "Y": 13553}, 
-		{"X": 9708, "Y": 13579}, 
-		{"X": 9715, "Y": 13605}, 
-		{"X": 9719, "Y": 13618}, 
-		{"X": 9725, "Y": 13641}, 
-		{"X": 9730, "Y": 13664}, 
-		{"X": 9751, "Y": 13690}, 
-		{"X": 9761, "Y": 13707}, 
-		{"X": 9767, "Y": 13721}, 
-		{"X": 9774, "Y": 13733}, 
-		{"X": 9795, "Y": 13752}, 
-		{"X": 9767, "Y": 13754}, 
-		{"X": 9757, "Y": 13743}, 
-		{"X": 9752, "Y": 13732}, 
-		{"X": 9745, "Y": 13720}, 
-		{"X": 9721, "Y": 13684}, 
-		{"X": 9715, "Y": 13672}, 
-		{"X": 9711, "Y": 13665}, 
-		{"X": 9691, "Y": 13637}, 
-		{"X": 9682, "Y": 13621}, 
-		{"X": 9664, "Y": 13596}, 
-		{"X": 9650, "Y": 13581}, 
-		{"X": 9637, "Y": 13564}, 
-		{"X": 9627, "Y": 13548}, 
-		{"X": 9607, "Y": 13524}, 
-		{"X": 9586, "Y": 13504}, 
-		{"X": 9572, "Y": 13492}, 
-		{"X": 9568, "Y": 13489}
-	],
-	"WIDTH": 2,
-	"LAYER": "walls",
-	"FILL": "#000000",
-	"LINE": "#000000"
+    "ID": "09426d492f784ad25684536c35e0d8d5",
+    "X": 9591,
+    "Y": 13222,
+    "Points": [
+        {
+            "X": 9600,
+            "Y": 13233
+        },
+        {
+            "X": 9609,
+            "Y": 13249
+        },
+        {
+            "X": 9626,
+            "Y": 13290
+        },
+        {
+            "X": 9633,
+            "Y": 13310
+        },
+        {
+            "X": 9639,
+            "Y": 13327
+        },
+        {
+            "X": 9647,
+            "Y": 13356
+        },
+        {
+            "X": 9651,
+            "Y": 13373
+        },
+        {
+            "X": 9655,
+            "Y": 13403
+        },
+        {
+            "X": 9658,
+            "Y": 13418
+        },
+        {
+            "X": 9663,
+            "Y": 13445
+        },
+        {
+            "X": 9669,
+            "Y": 13477
+        },
+        {
+            "X": 9690,
+            "Y": 13517
+        },
+        {
+            "X": 9691,
+            "Y": 13535
+        },
+        {
+            "X": 9698,
+            "Y": 13553
+        },
+        {
+            "X": 9708,
+            "Y": 13579
+        },
+        {
+            "X": 9715,
+            "Y": 13605
+        },
+        {
+            "X": 9719,
+            "Y": 13618
+        },
+        {
+            "X": 9725,
+            "Y": 13641
+        },
+        {
+            "X": 9730,
+            "Y": 13664
+        },
+        {
+            "X": 9751,
+            "Y": 13690
+        },
+        {
+            "X": 9761,
+            "Y": 13707
+        },
+        {
+            "X": 9767,
+            "Y": 13721
+        },
+        {
+            "X": 9774,
+            "Y": 13733
+        },
+        {
+            "X": 9795,
+            "Y": 13752
+        },
+        {
+            "X": 9767,
+            "Y": 13754
+        },
+        {
+            "X": 9757,
+            "Y": 13743
+        },
+        {
+            "X": 9752,
+            "Y": 13732
+        },
+        {
+            "X": 9745,
+            "Y": 13720
+        },
+        {
+            "X": 9721,
+            "Y": 13684
+        },
+        {
+            "X": 9715,
+            "Y": 13672
+        },
+        {
+            "X": 9711,
+            "Y": 13665
+        },
+        {
+            "X": 9691,
+            "Y": 13637
+        },
+        {
+            "X": 9682,
+            "Y": 13621
+        },
+        {
+            "X": 9664,
+            "Y": 13596
+        },
+        {
+            "X": 9650,
+            "Y": 13581
+        },
+        {
+            "X": 9637,
+            "Y": 13564
+        },
+        {
+            "X": 9627,
+            "Y": 13548
+        },
+        {
+            "X": 9607,
+            "Y": 13524
+        },
+        {
+            "X": 9586,
+            "Y": 13504
+        },
+        {
+            "X": 9572,
+            "Y": 13492
+        },
+        {
+            "X": 9568,
+            "Y": 13489
+        }
+    ],
+    "Z": 25,
+    "Line": "#000000",
+    "Fill": "#000000",
+    "Width": 2,
+    "Layer": "walls"
 }
 __POLY__ {
-	"ID": "0c36b6a97a074bd174cda800f07206f4",
-	"X": 12598,
-	"Y": 5697,
-	"Z": 57,
-	"Points": [
-		{"X": 12630, "Y": 5689}, 
-		{"X": 12646, "Y": 5684}, 
-		{"X": 12668, "Y": 5677}, 
-		{"X": 12694, "Y": 5670}, 
-		{"X": 12738, "Y": 5665}, 
-		{"X": 12793, "Y": 5659}, 
-		{"X": 12845, "Y": 5657}, 
-		{"X": 12900, "Y": 5652}, 
-		{"X": 12945, "Y": 5763}, 
-		{"X": 12901, "Y": 5848}, 
-		{"X": 12865, "Y": 5848}, 
-		{"X": 12814, "Y": 5849}, 
-		{"X": 12752, "Y": 5842}, 
-		{"X": 12716, "Y": 5845}, 
-		{"X": 12675, "Y": 5850}, 
-		{"X": 12647, "Y": 5848}, 
-		{"X": 12612, "Y": 5845}, 
-		{"X": 12581, "Y": 5851}
-	],
-	"Width": 5,
-	"Layer": "walls",
-	"Fill": "#000000",
-	"Line": "#000000"
+    "ID": "0c36b6a97a074bd174cda800f07206f4",
+    "X": 12598,
+    "Y": 5697,
+    "Points": [
+        {
+            "X": 12630,
+            "Y": 5689
+        },
+        {
+            "X": 12646,
+            "Y": 5684
+        },
+        {
+            "X": 12668,
+            "Y": 5677
+        },
+        {
+            "X": 12694,
+            "Y": 5670
+        },
+        {
+            "X": 12738,
+            "Y": 5665
+        },
+        {
+            "X": 12793,
+            "Y": 5659
+        },
+        {
+            "X": 12845,
+            "Y": 5657
+        },
+        {
+            "X": 12900,
+            "Y": 5652
+        },
+        {
+            "X": 12945,
+            "Y": 5763
+        },
+        {
+            "X": 12901,
+            "Y": 5848
+        },
+        {
+            "X": 12865,
+            "Y": 5848
+        },
+        {
+            "X": 12814,
+            "Y": 5849
+        },
+        {
+            "X": 12752,
+            "Y": 5842
+        },
+        {
+            "X": 12716,
+            "Y": 5845
+        },
+        {
+            "X": 12675,
+            "Y": 5850
+        },
+        {
+            "X": 12647,
+            "Y": 5848
+        },
+        {
+            "X": 12612,
+            "Y": 5845
+        },
+        {
+            "X": 12581,
+            "Y": 5851
+        }
+    ],
+    "Z": 57,
+    "Line": "#000000",
+    "Fill": "#000000",
+    "Width": 5,
+    "Layer": "walls"
 }
 __ARC__ {
-	"ID": "13a2dd4a64a94e178509744e1a0a4481",
-	"X": 473,
-	"Y": 523,
-	"Z": 8,
-	"Points": [
-		{"X": 321, "Y": 669}
-	],
-	"ArcMode": 1,
-	"Line": "black",
-	"Fill": "#ff2600",
-	"Layer": "walls",
-	"Width": 5,
-	"Start": 20,
-	"Extent": 225
+    "ID": "13a2dd4a64a94e178509744e1a0a4481",
+    "X": 473,
+    "Y": 523,
+    "Points": [
+        {
+            "X": 321,
+            "Y": 669
+        }
+    ],
+    "Z": 8,
+    "Line": "black",
+    "Fill": "#ff2600",
+    "Width": 5,
+    "Layer": "walls",
+    "ArcMode": 1,
+    "Extent": 225,
+    "Start": 20
 }
 __LINE__ {
-	"ID": "2a1751827a954d8fad688da8e431502a",
-	"X": 675,
-	"Y": 584,
-	"Z": 1,
-	"Width": 5,
-	"Dash": 1,
-	"Line": "black",
-	"Arrow": 1,
-	"Layer": "walls",
-	"Fill": "#ff2600",
-	"Points": [
-		{"X": 779, "Y": 291}
-	]
+    "ID": "2a1751827a954d8fad688da8e431502a",
+    "X": 675,
+    "Y": 584,
+    "Points": [
+        {
+            "X": 779,
+            "Y": 291
+        }
+    ],
+    "Z": 1,
+    "Line": "black",
+    "Fill": "#ff2600",
+    "Width": 5,
+    "Layer": "walls",
+    "Dash": 1,
+    "Arrow": 1
 }
 __TEXT__ {
-	"ID": "2c4a8ae53c5c4cbdb902d581402230e7",
-	"X": 565,
-	"Y": 707,
-	"Z": 9,
-	"Layer": "walls",
-	"Fill": "#ff2600",
-	"Text": "hello world",
-	"Font": {
-		"Family": "Arial",
-		"Size": 24
-	}
+    "ID": "2c4a8ae53c5c4cbdb902d581402230e7",
+    "X": 565,
+    "Y": 707,
+    "Z": 9,
+    "Fill": "#ff2600",
+    "Layer": "walls",
+    "Text": "hello world",
+    "Font": {
+        "Family": "Arial",
+        "Size": 24
+    }
 }
 __CREATURE__ {
-	"ID": "2df3e0a104614c5cb76f31836bc3f84d",
-	"Gx": 27,
-	"Gy": 22,
-	"Size": "S",
-	"Area": "S",
-	"Color": "red",
-	"CreatureType: 1,
-	"Name": "Fleshdreg #4",
-	"Dim": true,
-	"Killed": true,
-	"Health": {
-		"MaxHP": 9,
-		"LethalDamage": 29,
-		"Con": 15
-	}
+    "ID": "2df3e0a104614c5cb76f31836bc3f84d",
+    "Name": "Fleshdreg #4",
+    "Health": {
+        "MaxHP": 9,
+        "LethalDamage": 29,
+        "Con": 15
+    },
+    "Gx": 27,
+    "Gy": 22,
+    "Color": "red",
+    "Size": "S",
+    "Area": "S",
+    "Killed": true,
+    "Dim": true,
+    "CreatureType": 1
 }
 __LINE__ {
-	"ID": "38f633da2d6749467f5406f187b8cc3f",
-	"X": 10810,
-	"Y": 14350,
-	"Z": 12,
-	"Points": [
-		{"X": 10908, "Y": 14396}
-	],
-	"Width": 5,
-	"Line": "black",
-	"Layer": "walls",
-	"Fill": "#000000"
+    "ID": "38f633da2d6749467f5406f187b8cc3f",
+    "X": 10810,
+    "Y": 14350,
+    "Points": [
+        {
+            "X": 10908,
+            "Y": 14396
+        }
+    ],
+    "Z": 12,
+    "Line": "black",
+    "Fill": "#000000",
+    "Width": 5,
+    "Layer": "walls"
 }
 __RECT__ {
-	"ID": "39880f0c6e904bf9a866d9af8783fd70",
-	"X": 445.5,
-	"Y": 33,
-	"Z": 3,
-	"Points": [
-		{"X": 625, "Y": 160}
-	],
-	"Line": "black",
-	"Fill": "#ff2600",
-	"Layer": "walls",
-	"Width": 5,
-	"Locked": 1
+    "ID": "39880f0c6e904bf9a866d9af8783fd70",
+    "X": 445.5,
+    "Y": 33,
+    "Points": [
+        {
+            "X": 625,
+            "Y": 160
+        }
+    ],
+    "Z": 3,
+    "Line": "black",
+    "Fill": "#ff2600",
+    "Width": 5,
+    "Layer": "walls",
+    "Locked": true
 }
 __CREATURE__ {
-	"ID": "39a1afc1b1aa4cac87eee32be93ebe9a",
-	"Gx: 19,
-	"Gy: 19,
-	"Area: "M",
-	"Size: "M",
-	"Dim": true,
-	"Reach": true,
-	"Name": "barbarian2=Caroll",
-	"CreatureType": 1,
-	"Color": red
-	"StatusList": [
-		"stable"
-	],
-	"CreatureHealth": {
-		"MaxHP": 45,
-		"LethalDamage": 56,
-		"Con": 14
-	}
+    "ID": "39a1afc1b1aa4cac87eee32be93ebe9a",
+    "Name": "barbarian2=Caroll",
+    "Health": {
+        "MaxHP": 45,
+        "LethalDamage": 56,
+        "Con": 14
+    },
+    "Gx": 19,
+    "Gy": 19,
+    "Color": "red",
+    "Size": "M",
+    "Area": "M",
+    "StatusList": [
+        "stable"
+    ],
+    "Reach": true,
+    "Dim": true,
+    "CreatureType": 1
 }
 __CIRC__ {
-	"ID": "3f5b6a2655214928b868daad9a97db4d",
-	"X": 110,
-	"Y": 18,
-	"Z": 5,
-	"Points": [
-		{"X": 237, "Y": 150}
-	],
-	"Width": 5,
-	"Line": "black",
-	"Layer": "walls"
+    "ID": "3f5b6a2655214928b868daad9a97db4d",
+    "X": 110,
+    "Y": 18,
+    "Points": [
+        {
+            "X": 237,
+            "Y": 150
+        }
+    ],
+    "Z": 5,
+    "Line": "black",
+    "Width": 5,
+    "Layer": "walls"
 }
 __SAOE__ {
-	"ID": "4b82e91b987d412b9c1a2b5110319072",
-	"X": 500,
-	"Y": 400,
-	"Z": 99999999,
-	"Points": [
-		{"X": 500, "Y": 150}
-	],
-	"Width": 5,
-	"Fill": "black",
-	"Line": "black",
-	"AoEShape": 1,
-	"Layer": "walls"
+    "ID": "4b82e91b987d412b9c1a2b5110319072",
+    "X": 500,
+    "Y": 400,
+    "Points": [
+        {
+            "X": 500,
+            "Y": 150
+        }
+    ],
+    "Z": 99999999,
+    "Line": "black",
+    "Fill": "black",
+    "Width": 5,
+    "Layer": "walls",
+    "AoEShape": 1
 }
 __ARC__ {
-	"ID": "5b1a4fa32af54eb2b35ebec0a4c88089",
-	"X": 59,
-	"Y": 309,
-	"Z": 6,
-	"POINTS": [
-		{"X": 161, "Y": 485}
-	],
-	"WIDTH": 5,
-	"LINE": "black",
-	"LAYER": "walls",
-	"FILL": "#ff2600",
-	"START": 140,
-	"EXTENT": 61
+    "ID": "5b1a4fa32af54eb2b35ebec0a4c88089",
+    "X": 59,
+    "Y": 309,
+    "Points": [
+        {
+            "X": 161,
+            "Y": 485
+        }
+    ],
+    "Z": 6,
+    "Line": "black",
+    "Fill": "#ff2600",
+    "Width": 5,
+    "Layer": "walls",
+    "ArcMode": 0,
+    "Extent": 61,
+    "Start": 140
 }
 __LINE__ {
-	"ID": "61dc2ff4efe54be7a18791b338c29c5c",
-	"X": 604,
-	"Y": 229,
-	"Z": 2,
-	"Points": [
-		{"X": 509, "Y": 378},
-		{"X": 650, "Y": 360}
-	],
-	"Dash": 1,
-	"Width": 5,
-	"Line": "black",
-	"Arrow": 1,
-	"Layer": "walls",
-	"Fill": "#ff2600"
+    "ID": "61dc2ff4efe54be7a18791b338c29c5c",
+    "X": 604,
+    "Y": 229,
+    "Points": [
+        {
+            "X": 509,
+            "Y": 378
+        },
+        {
+            "X": 650,
+            "Y": 360
+        }
+    ],
+    "Z": 2,
+    "Line": "black",
+    "Fill": "#ff2600",
+    "Width": 5,
+    "Layer": "walls",
+    "Dash": 1,
+    "Arrow": 1
 }
 __ARC__ {
-	"ID": "7b39f6dbeea44b8baa20032c443a0654",
-	X: 126,
-	Y: 274,
-	Z: 7,
-	POINTS: [
-		{"X": 166, "Y": 375}
-	],
-	WIDTH: 5,
-	LINE: "black",
-	ARCMODE: 2,
-	LAYER: "walls",
-	FILL: "#ff2600",
-	START: 151,
-	EXTENT: 235
+    "ID": "7b39f6dbeea44b8baa20032c443a0654",
+    "X": 126,
+    "Y": 274,
+    "Points": [
+        {
+            "X": 166,
+            "Y": 375
+        }
+    ],
+    "Z": 7,
+    "Line": "black",
+    "Fill": "#ff2600",
+    "Width": 5,
+    "Layer": "walls",
+    "ArcMode": 2,
+    "Extent": 235,
+    "Start": 151
 }
 __CREATURE__ {
-	"ID": "976e7148ae86409f99fdebf83f3f0904",
-	"Gx": 6,
-	"Gy": 6,
-	"Skin": 1,
-	"Elev": "20",
-	"Name": "Jigu2",
-	"Area": "M",
-	"Size": "M",
-	"MoveMode": 3,
-	"Color": "green",
-	"CreatureType": 2,
-	"StatusList": [
-		"confused",
-		"exhausted",
-		"nauseated"
-	],
-	"AoE": {
-		"Radius": 2,
-		"Color": "black"
-	},
-	"Note": "spam spam"
+    "ID": "976e7148ae86409f99fdebf83f3f0904",
+    "Name": "Jigu2",
+    "Gx": 6,
+    "Gy": 6,
+    "Skin": 1,
+    "Elev": 20,
+    "Color": "green",
+    "Note": "spam spam",
+    "Size": "M",
+    "Area": "M",
+    "StatusList": [
+        "confused",
+        "exhausted",
+        "nauseated"
+    ],
+    "AoE": {
+        "Radius": 2,
+        "Color": "black"
+    },
+    "MoveMode": 3,
+    "CreatureType": 2
 }
 __CREATURE__ {
-	"ID": "PC73",
-	"Name": "Jigu",
-	"Gx": 31,
-	"Gy": 14,
-	"Dim": true,
-	"Skin": 1,
-	"Elev": 30,
-	"Area": "M",
-	"Size": "M",
-	"Color": "blue",
-	"MoveMode": 3,
-	"CreatureType": 2,
-	"Health": {
-		"MaxHP": 28,
-		"LethalDamage": 6,
-		"NonLethalDamage": 1,
-		"Con": 16,
-		"Condition": "surprised"
-	},
-	"SkinSize": [
-		"M",
-		"L"
-	],
-	"Note": "Mirror Image 2"
+    "ID": "PC73",
+    "Name": "Jigu",
+    "Health": {
+        "MaxHP": 28,
+        "LethalDamage": 6,
+        "NonLethalDamage": 1,
+        "Con": 16,
+        "Condition": "surprised"
+    },
+    "Gx": 31,
+    "Gy": 14,
+    "Skin": 1,
+    "SkinSize": [
+        "M",
+        "L"
+    ],
+    "Elev": 30,
+    "Color": "blue",
+    "Note": "Mirror Image 2",
+    "Size": "M",
+    "Area": "M",
+    "MoveMode": 3,
+    "Dim": true,
+    "CreatureType": 2
 }
 __SAOE__ {
-	"ID": "afd136735d7e400082f331485e73f7a1",
-	"X": 150,
-	"Y": 600,
-	"Z": 99999999,
-	"Points": [
-		{"X": 200, "Y": 200}
-	],
-	"Width": 5,
-	"Line": "black"
-	"AoEShape": 2,
-	"Layer": "walls",
-	"Fill": "#00f900"
+    "ID": "afd136735d7e400082f331485e73f7a1",
+    "X": 150,
+    "Y": 600,
+    "Points": [
+        {
+            "X": 200,
+            "Y": 200
+        }
+    ],
+    "Z": 99999999,
+    "Line": "black",
+    "Fill": "#00f900",
+    "Width": 5,
+    "Layer": "walls",
+    "AoEShape": 2
 }
 __RECT__ {
-	"ID": "bf29dfa85cc54498bb33a2d7523d9edc",
-	"X": 289,
-	"Y": 36,
-	"Z": 4,
-	"Width": 5,
-	"Line": black,
-	"Layer": walls,
-	"Points": [
-		{"X": 355, "Y": 97}
-	]
+    "ID": "bf29dfa85cc54498bb33a2d7523d9edc",
+    "X": 289,
+    "Y": 36,
+    "Points": [
+        {
+            "X": 355,
+            "Y": 97
+        }
+    ],
+    "Z": 4,
+    "Line": "black",
+    "Width": 5,
+    "Layer": "walls"
 }
 __SAOE__ {
-	"ID": "e68d5354f175401582866a75d806d8d7",
-	"Width": 5,
-	"Y": 800,
-	"X": 850,
-	"Z": 99999999,
-	"Line": "black",
-	"Layer": "walls",
-	"Fill": "#00f900",
-	"Points": [
-		{"X": 450, "Y": 800}
-	]
+    "ID": "e68d5354f175401582866a75d806d8d7",
+    "X": 850,
+    "Y": 800,
+    "Points": [
+        {
+            "X": 450,
+            "Y": 800
+        }
+    ],
+    "Z": 99999999,
+    "Line": "black",
+    "Fill": "#00f900",
+    "Width": 5,
+    "Layer": "walls",
+    "AoEShape": 0
 }
 __EOF__
 `
@@ -939,6 +1209,9 @@ __EOF__
 					BEq(byte(obj.CreatureType), byte(CreatureTypeMonster), "CreatureType", t)
 				case "39a1afc1b1aa4cac87eee32be93ebe9a":
 					sEq(obj.ID, "39a1afc1b1aa4cac87eee32be93ebe9a", "ID", t)
+					if obj.Health == nil {
+						t.Fatalf("nil health record")
+					}
 					iEq(obj.Health.MaxHP, 45, "MaxHP", t)
 					iEq(obj.Health.LethalDamage, 56, "LethalDamage", t)
 					iEq(obj.Health.NonLethalDamage, 0, "NonLethalDamage", t)
@@ -1591,17 +1864,20 @@ func uEq(a, b uint, msg string, t *testing.T) {
 }
 
 func sEq(a, b, msg string, t *testing.T) {
+	var line int
 	if a != b {
 		if len(a) != len(b) {
 			t.Errorf("%s: lengths differ (%d vs %d) actual=\"%s\" expected=\"%s\"", msg, len(a), len(b), a, b)
-		} else {
-			for i := 0; i < len(a); i++ {
-				if a[i] != b[i] {
-					t.Errorf("%s: strings differ at position %d (%v vs %v)", msg, i, a[i], b[i])
-				}
-			}
-			t.Errorf("%s: actual=\"%s\" expected=\"%s\"", msg, a, b)
 		}
+		for i := 0; i < len(a) && i < len(b); i++ {
+			if b[i] == '\n' {
+				line++
+			}
+			if a[i] != b[i] {
+				t.Fatalf("%s: strings differ at position %d (line %d) (%s vs %s)", msg, i, line, a[i-10:i+10], b[i-10:i+10])
+			}
+		}
+		t.Errorf("%s: actual=\"%s\" expected=\"%s\"", msg, a, b)
 	}
 }
 
@@ -1612,6 +1888,9 @@ func SEq(a, b []string, msg string, t *testing.T) {
 }
 
 func CEq(a, b []Coordinates, msg string, t *testing.T) {
+	if len(a) == len(b) && len(a) == 0 {
+		return
+	}
 	if !reflect.DeepEqual(a, b) {
 		t.Errorf("%s: actual coordinate set:", msg)
 		for _, coords := range a {
