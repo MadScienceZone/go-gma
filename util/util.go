@@ -225,6 +225,28 @@ func WithoutText(o *hdopt) {
 	o.ascii = false
 }
 
+//
+// PluralizeString emits a properly-pluralized version of a string,
+// by adding an "s" for quantities other than one.
+//
+func PluralizeString(base string, qty int) string {
+	if qty == 1 {
+		return base
+	}
+	return base + "s"
+}
+
+//
+// PluralizeCustom emits a properly-pluralized version of a string,
+// where that is more complicated than just adding an "s" to the end.
+//
+func PluralizeCustom(base, singularSuffix, pluralSuffix string, qty int) string {
+	if qty == 1 {
+		return base + singularSuffix
+	}
+	return base + pluralSuffix
+}
+
 // @[00]@| GMA 4.3.10
 // @[01]@|
 // @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
