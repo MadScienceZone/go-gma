@@ -434,17 +434,21 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"size", m.Size},
 		)
 	case mapper.AddImageMessagePayload:
-		if m.ImageData != nil {
-			printFields(mono, "AddImage",
-				fieldDesc{"data", fmt.Sprintf("(%d bytes)", len(m.ImageData))},
-			)
-		} else {
-			printFields(mono, "AddImage",
-				fieldDesc{"name", m.Name},
-				fieldDesc{"zoom", m.Zoom},
-				fieldDesc{"file", m.File},
-				fieldDesc{"local", m.IsLocalFile},
-			)
+		for i, inst := range m.Sizes {
+			if inst.ImageData != nil {
+				printFields(mono, fmt.Sprintf("AddImage %d of %d", i+1, len(m.Sizes)),
+					fieldDesc{"name", m.Name},
+					fieldDesc{"zoom", inst.Zoom},
+					fieldDesc{"data", fmt.Sprintf("(%d bytes)", len(inst.ImageData))},
+				)
+			} else {
+				printFields(mono, fmt.Sprintf("AddImage %d of %d", i+1, len(m.Sizes)),
+					fieldDesc{"name", m.Name},
+					fieldDesc{"zoom", inst.Zoom},
+					fieldDesc{"file", inst.File},
+					fieldDesc{"local", inst.IsLocalFile},
+				)
+			}
 		}
 
 	case mapper.AddObjAttributesMessagePayload:
@@ -569,12 +573,14 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 		)
 
 	case mapper.QueryImageMessagePayload:
-		printFields(mono, "QueryImage",
-			fieldDesc{"zoom", m.Zoom},
-			fieldDesc{"name", m.Name},
-			fieldDesc{"file", m.File},
-			fieldDesc{"local", m.IsLocalFile},
-		)
+		for i, inst := range m.Sizes {
+			printFields(mono, fmt.Sprintf("QueryImage %d of %d", i+1, len(m.Sizes)),
+				fieldDesc{"name", m.Name},
+				fieldDesc{"zoom", inst.Zoom},
+				fieldDesc{"file", inst.File},
+				fieldDesc{"local", inst.IsLocalFile},
+			)
+		}
 
 	case mapper.RemoveObjAttributesMessagePayload:
 		printFields(mono, "RemoveObjAttributes",
@@ -845,13 +851,6 @@ func readLines(filename string) ([]string, error) {
 	return data, scanner.Err()
 }
 
-func plural(n int) string {
-	if n == 1 {
-		return ""
-	}
-	return "s"
-}
-
 //
 // readUserInput takes lines of input from the user which correspond to
 // map server requests. While the Python version of the map-console
@@ -927,11 +926,12 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 					fmt.Println(colorize(fmt.Sprintf("I/O ERROR: %v", err), "Red", mono))
 					break
 				}
-				if err := server.AddImageData(mapper.ImageDefinition{
-					Zoom:        v[2].(float64),
-					Name:        v[1].(string),
-					IsLocalFile: true,
-				}, data); err != nil {
+				if err := server.AddImage(mapper.ImageDefinition{
+					Name: v[1].(string),
+					Sizes: []mapper.ImageInstance{
+						{Zoom: v[2].(float64), ImageData: data},
+					},
+				}); err != nil {
 					fmt.Println(colorize(fmt.Sprintf("server ERROR: %v", err), "Red", mono))
 					break
 				}
@@ -949,8 +949,10 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 					break
 				}
 				if err := server.QueryImage(mapper.ImageDefinition{
-					Zoom: v[2].(float64),
 					Name: v[1].(string),
+					Sizes: []mapper.ImageInstance{
+						{Zoom: v[2].(float64)},
+					},
 				}); err != nil {
 					fmt.Println(colorize(fmt.Sprintf("server ERROR: %v", err), "Red", mono))
 					break
@@ -964,10 +966,10 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 					break
 				}
 				if err := server.AddImage(mapper.ImageDefinition{
-					Name:        v[1].(string),
-					Zoom:        v[2].(float64),
-					File:        v[3].(string),
-					IsLocalFile: false,
+					Name: v[1].(string),
+					Sizes: []mapper.ImageInstance{
+						{Zoom: v[2].(float64), File: v[3].(string), IsLocalFile: false},
+					},
 				}); err != nil {
 					fmt.Println(colorize(fmt.Sprintf("server ERROR: %v", err), "Red", mono))
 					break

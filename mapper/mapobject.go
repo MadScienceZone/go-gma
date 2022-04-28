@@ -30,6 +30,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"regexp"
 	"strconv"
@@ -470,9 +471,11 @@ type BaseMapObject struct {
 //
 // The object's ID as recorded in the saved data list is given by the id parameter.
 //
+/*
 func (o BaseMapObject) saveData(data []string, prefix, id string) ([]string, error) {
 	return data, nil
 }
+*/
 
 //
 // ObjID returns the unique ID of a MapObject.
@@ -941,6 +944,7 @@ type PlayerToken struct {
 	CreatureToken
 }
 
+/*
 //
 // saveData converts a PlayerToken to a text representation
 // in the map file format (suitable for sending to clients or saving to a disk
@@ -951,6 +955,7 @@ type PlayerToken struct {
 func (o PlayerToken) saveData(data []string, prefix, id string) ([]string, error) {
 	return o.CreatureToken.saveData(data, "P", id)
 }
+*/
 
 //________________________________________________________________________________
 //  __  __                 _           _____     _
@@ -974,17 +979,21 @@ type MonsterToken struct {
 // |___|_| |_| |_|\__,_|\__, |\___|____/ \___|_| |_|_| |_|_|\__|_|\___/|_| |_|
 //                      |___/
 
+//
 // ImageDefinition describes an image as known to the mapper system.
 // TileElements' Image attribute refers to the Name attribute of one of
 // these.
 //
 type ImageDefinition struct {
+	// The name of the image as known within the mapper.
+	Name  string
+	Sizes []ImageInstance
+}
+
+type ImageInstance struct {
 	// The zoom (magnification) level this bitmap represents for the given
 	// image.
 	Zoom float64
-
-	// The name of the image as known within the mapper.
-	Name string
 
 	// The filename by which the image can be retrieved.
 	File string
@@ -993,6 +1002,11 @@ type ImageDefinition struct {
 	// otherwise it is the server's internal ID by which you may request
 	// that file from the server.
 	IsLocalFile bool `json:",omitempty"`
+
+	// If non-nil, this holds the image data received directly
+	// from the server. This usage is not recommended but still
+	// supported.
+	ImageData []byte `json:",omitempty"`
 }
 
 //________________________________________________________________________________
@@ -1233,7 +1247,7 @@ func WriteMapFile(path string, objList []interface{}, meta MapMetaData) error {
 //
 // SaveMapFile writes a mapper file.
 //
-func SaveMapFile(output *os.File, objList []interface{}, meta MapMetaData) error {
+func SaveMapFile(output io.Writer, objList []interface{}, meta MapMetaData) error {
 	writer := bufio.NewWriter(output)
 	writer.WriteString("__MAPPER__:20\n")
 	if meta.Timestamp == 0 {
@@ -1330,7 +1344,6 @@ func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta stri
 	// lines in the file and then assemble them into objects.
 	//
 	var rawFiles []string
-	var rawImages []ImageDefinition
 	var objList []interface{}
 	var err error
 
@@ -1338,6 +1351,7 @@ func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta stri
 	rawData := make(map[string]map[string][]string)
 	rawMonsters := make(map[string]map[string][]string)
 	rawPlayers := make(map[string]map[string][]string)
+	rawImages := make(map[string]ImageDefinition)
 
 	metaList, err := tcllist.ParseTclList(legacyMeta)
 	if err != nil {
@@ -1398,21 +1412,29 @@ func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta stri
 				return nil, meta, fmt.Errorf("legacy map file has improperly formed I record: %v", err)
 			}
 			serverID := ff[3].(string)
+
+			var def ImageDefinition
+			var ok bool
+			def, ok = rawImages[ff[1].(string)]
+			if !ok {
+				def = ImageDefinition{
+					Name: ff[1].(string),
+				}
+			}
 			if len(serverID) > 0 && serverID[0] == '@' {
-				rawImages = append(rawImages, ImageDefinition{
-					Name:        ff[1].(string),
+				def.Sizes = append(def.Sizes, ImageInstance{
 					Zoom:        ff[2].(float64),
 					File:        serverID[1:],
 					IsLocalFile: false,
 				})
 			} else {
-				rawImages = append(rawImages, ImageDefinition{
-					Name:        ff[1].(string),
+				def.Sizes = append(def.Sizes, ImageInstance{
 					Zoom:        ff[2].(float64),
 					File:        serverID,
 					IsLocalFile: true,
 				})
 			}
+			rawImages[ff[1].(string)] = def
 
 		default:
 			attr, objID, ok := strings.Cut(f[0], ":")
@@ -1427,6 +1449,92 @@ func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta stri
 	}
 
 	// Now assemble the collected data into a collection of MapObjects
+	writeCreature := func(ct string, mob map[string][]string, m *CreatureToken, objID string) error {
+		if t, ok := mob["TYPE"]; !ok || len(t) < 1 || t[0] != ct {
+			return fmt.Errorf("legacy file %s %s has missing or invalid TYPE", ct, objID)
+		}
+		m.Name, err = objString(mob, 0, "NAME", true, err)
+		if healthStruct, ok := mob["HEALTH"]; ok {
+			ss, err := tcllist.ParseTclList(healthStruct[0])
+			if err != nil {
+				return fmt.Errorf("legacy file %s %s has invalid HEALTH: %v", ct, objID, err)
+			}
+			if len(ss) > 0 {
+				hob := map[string][]string{
+					"HEALTH": ss,
+				}
+				maxhp, err := objInt(hob, 0, "HEALTH", true, err)
+				lethal, err := objInt(hob, 1, "HEALTH", true, err)
+				subdual, err := objInt(hob, 2, "HEALTH", true, err)
+				con, err := objInt(hob, 3, "HEALTH", true, err)
+				flat, err := objBool(hob, 4, "HEALTH", true, err)
+				stab, err := objBool(hob, 5, "HEALTH", true, err)
+				cond, err := objString(hob, 6, "HEALTH", false, err)
+				blur, err := objInt(hob, 7, "HEALTH", false, err)
+
+				m.Health = &CreatureHealth{
+					MaxHP:           maxhp,
+					LethalDamage:    lethal,
+					NonLethalDamage: subdual,
+					Con:             con,
+					IsFlatFooted:    flat,
+					IsStable:        stab,
+					Condition:       cond,
+					HPBlur:          blur,
+				}
+			}
+		}
+		m.Gx, err = objFloat(mob, 0, "GX", false, err)
+		m.Gy, err = objFloat(mob, 0, "GY", false, err)
+		m.Skin, err = objInt(mob, 0, "SKIN", false, err)
+		m.SkinSize, err = objStrings(mob, 0, "SKINSIZE", false, err)
+		m.Elev, err = objInt(mob, 0, "ELEV", false, err)
+		m.Color, err = objString(mob, 0, "COLOR", false, err)
+		m.Note, err = objString(mob, 0, "NOTE", false, err)
+		m.Size, err = objString(mob, 0, "SIZE", false, err)
+		m.Area, err = objString(mob, 0, "AREA", false, err)
+		m.StatusList, err = objStrings(mob, 0, "STATUSLIST", false, err)
+		if _, ok := mob["AOE"]; ok {
+			atype, err := objString(mob, 0, "AOE", true, err)
+			if atype != "radius" {
+				err = fmt.Errorf("invalid AOE type \"%s\"", atype)
+			}
+			radius, err := objFloat(mob, 1, "AOE", true, err)
+			color, err := objString(mob, 2, "AOE", true, err)
+
+			m.AoE = &RadiusAoE{
+				Radius: radius,
+				Color:  color,
+			}
+		}
+		if s, ok := mob["MOVEMODE"]; ok {
+			if len(s) > 0 {
+				switch s[0] {
+				case "fly":
+					m.MoveMode = MoveModeFly
+				case "climb":
+					m.MoveMode = MoveModeClimb
+				case "swim":
+					m.MoveMode = MoveModeSwim
+				case "burrow":
+					m.MoveMode = MoveModeBurrow
+				case "land", "":
+					m.MoveMode = MoveModeLand
+				default:
+					return fmt.Errorf("legacy file %s %s has invalid MOVEMODE: unsupported mode \"%s\"", ct, objID, s)
+				}
+			}
+		}
+		m.Reach, err = objBool(mob, 0, "REACH", false, err)
+		m.Killed, err = objBool(mob, 0, "KILLED", false, err)
+		m.Dim, err = objBool(mob, 0, "DIM", false, err)
+		objList = append(objList, *m)
+		if err != nil {
+			return fmt.Errorf("legacy file %s %s: %v", ct, objID, err)
+		}
+		return nil
+	}
+
 	for objID, mob := range rawMonsters {
 		m := CreatureToken{
 			BaseMapObject: BaseMapObject{
@@ -1434,83 +1542,11 @@ func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta stri
 			},
 			CreatureType: CreatureTypeMonster,
 		}
-
-		if t, ok := mob["TYPE"]; !ok || len(t) < 1 || t[0] != "monster" {
-			return nil, meta, fmt.Errorf("legacy file monster %s has missing or invalid TYPE", objID)
-		}
-		m.Name, err = objString(mob, 0, "NAME", true, err)
-		if _, ok := mob["HEALTH"]; ok {
-			maxhp, err := objInt(mob, 0, "HEALTH", true, err)
-			lethal, err := objInt(mob, 1, "HEALTH", true, err)
-			subdual, err := objInt(mob, 2, "HEALTH", true, err)
-			con, err := objInt(mob, 3, "HEALTH", true, err)
-			flat, err := objBool(mob, 4, "HEALTH", true, err)
-			stab, err := objBool(mob, 5, "HEALTH", true, err)
-			cond, err := objString(mob, 6, "HEALTH", false, err)
-			blur, err := objInt(mob, 7, "HEALTH", false, err)
-
-			m.Health = &CreatureHealth{
-				MaxHP:           maxhp,
-				LethalDamage:    lethal,
-				NonLethalDamage: subdual,
-				Con:             con,
-				IsFlatFooted:    flat,
-				IsStable:        stab,
-				Condition:       cond,
-				HPBlur:          blur,
-			}
-		}
-		m.Gx, err = objFloat(mob, 0, "GX", false, err)
-		m.Gy, err = objFloat(mob, 0, "GY", false, err)
-		m.Skin, err = objInt(mob, 0, "SKIN", false, err)
-		m.SkinSize, err = objStrings(mob, 0, "SKINSIZE", false, err)
-		m.Elev, err = objInt(mob, 0, "ELEV", false, err)
-		m.Color, err = objString(mob, 0, "COLOR", false, err)
-		m.Note, err = objString(mob, 0, "NOTE", false, err)
-		m.Size, err = objString(mob, 0, "SIZE", false, err)
-		m.Area, err = objString(mob, 0, "AREA", false, err)
-		m.StatusList, err = objStrings(mob, 0, "STATUSLIST", false, err)
-		if _, ok := mob["AOE"]; ok {
-			atype, err := objString(mob, 0, "AOE", true, err)
-			if atype != "radius" {
-				err = fmt.Errorf("invalid AOE type \"%s\"", atype)
-			}
-			radius, err := objFloat(mob, 1, "AOE", true, err)
-			color, err := objString(mob, 2, "AOE", true, err)
-
-			m.AoE = &RadiusAoE{
-				Radius: radius,
-				Color:  color,
-			}
-		}
-		if s, ok := mob["MOVEMODE"]; ok {
-			if len(s) > 0 {
-				switch s[0] {
-				case "fly":
-					m.MoveMode = MoveModeFly
-				case "climb":
-					m.MoveMode = MoveModeClimb
-				case "swim":
-					m.MoveMode = MoveModeSwim
-				case "burrow":
-					m.MoveMode = MoveModeBurrow
-				case "land", "":
-					m.MoveMode = MoveModeLand
-				default:
-					return nil, meta, fmt.Errorf("legacy file monster %s has invalid MOVEMODE: unsupported mode \"%s\"", objID, s)
-				}
-			}
-		}
-		m.Reach, err = objBool(mob, 0, "REACH", false, err)
-		m.Killed, err = objBool(mob, 0, "KILLED", false, err)
-		m.Dim, err = objBool(mob, 0, "DIM", false, err)
-		objList = append(objList, m)
-		if err != nil {
-			return nil, meta, fmt.Errorf("legacy file monster %s: %v", objID, err)
+		if err := writeCreature("monster", mob, &m, objID); err != nil {
+			return nil, meta, err
 		}
 	}
 
-	// TODO: refactor this to a single creature import function
 	for objID, mob := range rawPlayers {
 		m := CreatureToken{
 			BaseMapObject: BaseMapObject{
@@ -1518,81 +1554,9 @@ func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta stri
 			},
 			CreatureType: CreatureTypePlayer,
 		}
-
-		if t, ok := mob["TYPE"]; !ok || len(t) < 1 || t[0] != "player" {
-			return nil, meta, fmt.Errorf("legacy file player %s has missing or invalid TYPE", objID)
+		if err := writeCreature("player", mob, &m, objID); err != nil {
+			return nil, meta, err
 		}
-		m.Name, err = objString(mob, 0, "NAME", true, err)
-		if _, ok := mob["HEALTH"]; ok {
-			maxhp, err := objInt(mob, 0, "HEALTH", true, err)
-			lethal, err := objInt(mob, 1, "HEALTH", true, err)
-			subdual, err := objInt(mob, 2, "HEALTH", true, err)
-			con, err := objInt(mob, 3, "HEALTH", true, err)
-			flat, err := objBool(mob, 4, "HEALTH", true, err)
-			stab, err := objBool(mob, 5, "HEALTH", true, err)
-			cond, err := objString(mob, 6, "HEALTH", false, err)
-			blur, err := objInt(mob, 7, "HEALTH", false, err)
-
-			m.Health = &CreatureHealth{
-				MaxHP:           maxhp,
-				LethalDamage:    lethal,
-				NonLethalDamage: subdual,
-				Con:             con,
-				IsFlatFooted:    flat,
-				IsStable:        stab,
-				Condition:       cond,
-				HPBlur:          blur,
-			}
-		}
-		m.Gx, err = objFloat(mob, 0, "GX", false, err)
-		m.Gy, err = objFloat(mob, 0, "GY", false, err)
-		m.Skin, err = objInt(mob, 0, "SKIN", false, err)
-		m.SkinSize, err = objStrings(mob, 0, "SKINSIZE", false, err)
-		m.Elev, err = objInt(mob, 0, "ELEV", false, err)
-		m.Color, err = objString(mob, 0, "COLOR", false, err)
-		m.Note, err = objString(mob, 0, "NOTE", false, err)
-		m.Size, err = objString(mob, 0, "SIZE", false, err)
-		m.Area, err = objString(mob, 0, "AREA", false, err)
-		m.StatusList, err = objStrings(mob, 0, "STATUSLIST", false, err)
-		if _, ok := mob["AOE"]; ok {
-			atype, err := objString(mob, 0, "AOE", true, err)
-			if atype != "radius" {
-				err = fmt.Errorf("invalid AOE type \"%s\"", atype)
-			}
-			radius, err := objFloat(mob, 1, "AOE", true, err)
-			color, err := objString(mob, 2, "AOE", true, err)
-
-			m.AoE = &RadiusAoE{
-				Radius: radius,
-				Color:  color,
-			}
-		}
-		if s, ok := mob["MOVEMODE"]; ok {
-			if len(s) > 0 {
-				switch s[0] {
-				case "fly":
-					m.MoveMode = MoveModeFly
-				case "climb":
-					m.MoveMode = MoveModeClimb
-				case "swim":
-					m.MoveMode = MoveModeSwim
-				case "burrow":
-					m.MoveMode = MoveModeBurrow
-				case "land", "":
-					m.MoveMode = MoveModeLand
-				default:
-					return nil, meta, fmt.Errorf("legacy file player %s has invalid MOVEMODE: unsupported mode \"%s\"", objID, s)
-				}
-			}
-		}
-		m.Reach, err = objBool(mob, 0, "REACH", false, err)
-		m.Killed, err = objBool(mob, 0, "KILLED", false, err)
-		m.Dim, err = objBool(mob, 0, "DIM", false, err)
-		if err != nil {
-			return nil, meta, fmt.Errorf("legacy file player %s: %v", objID, err)
-		}
-
-		objList = append(objList, m)
 	}
 
 	for objID, obj := range rawData {
@@ -1859,7 +1823,7 @@ func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta stri
 // LoadMapFile reads a mapper file with file format >= 20, returning
 // a slice of map elements.
 //
-func LoadMapFile(input *os.File) ([]interface{}, MapMetaData, error) {
+func LoadMapFile(input io.Reader) ([]interface{}, MapMetaData, error) {
 	//
 	// The map file format consists of an initial line of the form
 	//    __MAPPER__:<version>
@@ -1889,6 +1853,10 @@ func LoadMapFile(input *os.File) ([]interface{}, MapMetaData, error) {
 	var f []string
 	var v uint64
 	var err error
+
+	if input == nil {
+		return nil, meta, nil
+	}
 
 	startPattern := regexp.MustCompile("^__MAPPER__:(\\d+)\\s*(.*)$")
 	recordPattern := regexp.MustCompile("^__(.*?)__ (.+)$")

@@ -736,21 +736,12 @@ type AddImageMessagePayload struct {
 
 	// The image definition received from the server.
 	ImageDefinition
-
-	// If non-nil, this holds the image data received directly
-	// from the server. This usage is not recommended but still
-	// supported. In this case the "File" member of the ImageDefinition
-	// will be empty.
-	ImageData []byte `json:",omitempty"`
 }
 
 //
 // AddImage informs the server and peers about an image they can use.
 //
 func (c *Connection) AddImage(idef ImageDefinition) error {
-	if idef.IsLocalFile {
-		return fmt.Errorf("sending local files is not supported. Upload image to server first")
-	}
 	return c.serverConn.send(AddImage, idef)
 }
 
@@ -762,6 +753,7 @@ func (c *Connection) AddImage(idef ImageDefinition) error {
 // that will be more efficient than sending it through the mapper
 // protocol.
 //
+/*
 func (c *Connection) AddImageData(idef ImageDefinition, data []byte) error {
 	return c.serverConn.send(AddImage, AddImageMessagePayload{
 		ImageDefinition: ImageDefinition{
@@ -773,6 +765,7 @@ func (c *Connection) AddImageData(idef ImageDefinition, data []byte) error {
 		ImageData: data,
 	})
 }
+*/
 
 //     _       _     _  ___  _     _    _   _   _        _ _           _
 //    / \   __| | __| |/ _ \| |__ (_)  / \ | |_| |_ _ __(_) |__  _   _| |_ ___  ___
