@@ -242,7 +242,7 @@ func describeBaseMapObject(mono bool, o mapper.MapElement) string {
 		fieldDesc{"layer", o.Layer},
 		fieldDesc{"level", o.Level},
 		fieldDesc{"group", o.Group},
-		fieldDesc{"dash", mapper.DashTypeString(o.Dash)},
+		fieldDesc{"dash", o.Dash},
 		fieldDesc{"hidden", o.Hidden},
 		fieldDesc{"locked", o.Locked},
 	)
@@ -305,7 +305,7 @@ func describeObject(mono bool, obj interface{}) string {
 		fmt.Fprint(&desc, colorize("arc{", "magenta", mono))
 		fmt.Fprint(&desc, describeBaseMapObject(mono, o.MapElement))
 		fmt.Fprint(&desc, descFields(mono,
-			fieldDesc{"mode", mapper.ArcModeString(o.ArcMode)},
+			fieldDesc{"mode", o.ArcMode},
 			fieldDesc{"start", o.Start},
 			fieldDesc{"extent", o.Extent},
 		))
@@ -318,7 +318,7 @@ func describeObject(mono bool, obj interface{}) string {
 		fmt.Fprint(&desc, colorize("line{", "magenta", mono))
 		fmt.Fprint(&desc, describeBaseMapObject(mono, o.MapElement))
 		fmt.Fprint(&desc, descFields(mono,
-			fieldDesc{"arrow", mapper.ArrowTypeString(o.Arrow)},
+			fieldDesc{"arrow", o.Arrow},
 		))
 
 	case mapper.PolygonElement:
@@ -326,7 +326,7 @@ func describeObject(mono bool, obj interface{}) string {
 		fmt.Fprint(&desc, describeBaseMapObject(mono, o.MapElement))
 		fmt.Fprint(&desc, descFields(mono,
 			fieldDesc{"spline", o.Spline},
-			fieldDesc{"join", mapper.JoinStyleString(o.Join)},
+			fieldDesc{"join", o.Join},
 		))
 
 	case mapper.RectangleElement:
@@ -337,7 +337,7 @@ func describeObject(mono bool, obj interface{}) string {
 		fmt.Fprint(&desc, colorize("aoe{", "magenta", mono))
 		fmt.Fprint(&desc, describeBaseMapObject(mono, o.MapElement))
 		fmt.Fprint(&desc, descFields(mono,
-			fieldDesc{"shape", mapper.AoETypeString(o.AoEShape)},
+			fieldDesc{"shape", o.AoEShape},
 		))
 
 	case mapper.TextElement:
@@ -347,9 +347,9 @@ func describeObject(mono bool, obj interface{}) string {
 			fieldDesc{"text", o.Text},
 			fieldDesc{"family", o.Font.Family},
 			fieldDesc{"size", o.Font.Size},
-			fieldDesc{"weight", mapper.FontWeightString(o.Font.Weight)},
-			fieldDesc{"slant", mapper.FontSlantString(o.Font.Slant)},
-			fieldDesc{"anchor", mapper.AnchorDirectionString(o.Anchor)},
+			fieldDesc{"weight", o.Font.Weight},
+			fieldDesc{"slant", o.Font.Slant},
+			fieldDesc{"anchor", o.Anchor},
 		))
 
 	case mapper.TileElement:
@@ -378,11 +378,11 @@ func describeObject(mono bool, obj interface{}) string {
 			fieldDesc{"area", o.Area},
 			fieldDesc{"statuslist", o.StatusList},
 			fieldDesc{"aoe", describeObject(mono, o.AoE)},
-			fieldDesc{"movemode", mapper.MoveModeString(o.MoveMode)},
+			fieldDesc{"movemode", o.MoveMode},
 			fieldDesc{"reach", o.Reach},
 			fieldDesc{"killed", o.Killed},
 			fieldDesc{"dim", o.Dim},
-			fieldDesc{"type", mapper.CreatureTypeString(o.CreatureType)},
+			fieldDesc{"type", o.CreatureType},
 		))
 
 	case mapper.MapElement:
@@ -1133,70 +1133,73 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 
 			case "LS":
 				// LS
-				if len(fields) != 2 {
-					fmt.Println(colorize("usage ERROR: wrong number of fields: LS <file>", "Red", mono))
-					break
-				}
-				data, err := readLines(fields[1])
-				if err != nil {
-					fmt.Println(colorize(fmt.Sprintf("I/O ERROR: %v", err), "Red", mono))
-					break
-				}
-				log.Printf("Reading objects from local mapper file %s", fields[1])
-				objects, images, files, err := mapper.ParseObjects(data)
-				if err != nil {
-					fmt.Println(colorize(fmt.Sprintf("parser ERROR: %v", err), "Red", mono))
-					break
-				}
-				log.Printf("Found %d object%s, %d image%s, and %d file%s in %s",
-					len(objects), plural(len(objects)),
-					len(images), plural(len(images)),
-					len(files), plural(len(files)),
-					fields[1],
-				)
-				if len(objects) > 0 {
-					fmt.Print("Sending objects...")
-					for i, o := range objects {
-						if i%10 == 9 {
-							fmt.Print(".")
-						}
-						if err := server.LoadObject(o); err != nil {
-							fmt.Println(colorize(fmt.Sprintf("server ERROR sending object #%d (%s): %v",
-								i+1, o.ObjID(), err), "Red", mono))
-							break handle_input
-						}
+				fmt.Println(colorize("LS not supported", "Red", mono))
+				/*
+					if len(fields) != 2 {
+						fmt.Println(colorize("usage ERROR: wrong number of fields: LS <file>", "Red", mono))
+						break
 					}
-					fmt.Println("done")
-				}
-				if len(images) > 0 {
-					fmt.Print("Sending images...")
-					for id, image := range images {
-						if err := server.AddImage(image); err != nil {
-							fmt.Println(colorize(fmt.Sprintf("server ERROR sending image %s: %v",
-								id, err), "Red", mono))
-							break handle_input
-						}
+					data, err := readLines(fields[1])
+					if err != nil {
+						fmt.Println(colorize(fmt.Sprintf("I/O ERROR: %v", err), "Red", mono))
+						break
 					}
-					fmt.Println("done")
-				}
-				if len(files) > 0 {
-					fmt.Print("Sending files...")
-					for i, f := range files {
-						if i%10 == 9 {
-							fmt.Print(".")
-						}
-						if f.IsLocalFile {
-							log.Printf("%s include local file definition %s which doesn't make sense. Ignoring this.", fields[1], f.File)
-						} else {
-							if err := server.CacheFile(f.File); err != nil {
-								fmt.Println(colorize(fmt.Sprintf("server ERROR sending file #%d: %v",
-									i+1, err), "Red", mono))
+					log.Printf("Reading objects from local mapper file %s", fields[1])
+					objects, images, files, err := mapper.ParseObjects(data)
+					if err != nil {
+						fmt.Println(colorize(fmt.Sprintf("parser ERROR: %v", err), "Red", mono))
+						break
+					}
+					log.Printf("Found %d object%s, %d image%s, and %d file%s in %s",
+						len(objects), plural(len(objects)),
+						len(images), plural(len(images)),
+						len(files), plural(len(files)),
+						fields[1],
+					)
+					if len(objects) > 0 {
+						fmt.Print("Sending objects...")
+						for i, o := range objects {
+							if i%10 == 9 {
+								fmt.Print(".")
+							}
+							if err := server.LoadObject(o); err != nil {
+								fmt.Println(colorize(fmt.Sprintf("server ERROR sending object #%d (%s): %v",
+									i+1, o.ObjID(), err), "Red", mono))
 								break handle_input
 							}
 						}
+						fmt.Println("done")
 					}
-					fmt.Println("done")
-				}
+					if len(images) > 0 {
+						fmt.Print("Sending images...")
+						for id, image := range images {
+							if err := server.AddImage(image); err != nil {
+								fmt.Println(colorize(fmt.Sprintf("server ERROR sending image %s: %v",
+									id, err), "Red", mono))
+								break handle_input
+							}
+						}
+						fmt.Println("done")
+					}
+					if len(files) > 0 {
+						fmt.Print("Sending files...")
+						for i, f := range files {
+							if i%10 == 9 {
+								fmt.Print(".")
+							}
+							if f.IsLocalFile {
+								log.Printf("%s include local file definition %s which doesn't make sense. Ignoring this.", fields[1], f.File)
+							} else {
+								if err := server.CacheFile(f.File); err != nil {
+									fmt.Println(colorize(fmt.Sprintf("server ERROR sending file #%d: %v",
+										i+1, err), "Red", mono))
+									break handle_input
+								}
+							}
+						}
+						fmt.Println("done")
+					}
+				*/
 
 			case "M":
 				// M filenames
