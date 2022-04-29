@@ -39,26 +39,38 @@ const GMAVersionNumber = "4.3.7"     //@@##@@
 const GMADieRollPresetFileFormat = 2 //@@##@@
 
 func main() {
-	fmt.Printf("GMA map-update tool %s for die-roll preset file format %d\n", GMAVersionNumber, GMADieRollPresetFileFormat)
-
-	for _, filename := range os.Args[1:] {
-		fmt.Printf("Converting %s ", filename)
-		presets, meta, err := dice.ReadDieRollPresetFile(filename)
+	if len(os.Args) < 2 {
+		// no files named; filter stdin to stdout
+		presets, meta, err := dice.LoadDieRollPresetFile(os.Stdin)
 		if err != nil {
-			fmt.Printf("FAILED: %v\n", err)
-			continue
+			panic(err)
 		}
-		fmt.Printf("format %d -> %d ", meta.FileVersion, GMADieRollPresetFileFormat)
-		fmt.Printf("(%d %s) ", len(presets), util.PluralizeString("preset", len(presets)))
-		if err := os.Rename(filename, filename+".bak"); err != nil {
-			fmt.Printf("FAILED: %v\n", err)
-			continue
+		err = dice.SaveDieRollPresetFile(os.Stdout, presets, meta)
+		if err != nil {
+			panic(err)
 		}
-		if err := dice.WriteDieRollPresetFile(filename, presets, meta); err != nil {
-			fmt.Printf("FAILED: %v\n", err)
-			continue
+	} else {
+		fmt.Printf("GMA map-update tool %s for die-roll preset file format %d\n", GMAVersionNumber, GMADieRollPresetFileFormat)
+
+		for _, filename := range os.Args[1:] {
+			fmt.Printf("Converting %s ", filename)
+			presets, meta, err := dice.ReadDieRollPresetFile(filename)
+			if err != nil {
+				fmt.Printf("FAILED: %v\n", err)
+				continue
+			}
+			fmt.Printf("format %d -> %d ", meta.FileVersion, GMADieRollPresetFileFormat)
+			fmt.Printf("(%d %s) ", len(presets), util.PluralizeString("preset", len(presets)))
+			if err := os.Rename(filename, filename+".bak"); err != nil {
+				fmt.Printf("FAILED: %v\n", err)
+				continue
+			}
+			if err := dice.WriteDieRollPresetFile(filename, presets, meta); err != nil {
+				fmt.Printf("FAILED: %v\n", err)
+				continue
+			}
+			fmt.Printf("OK\n")
 		}
-		fmt.Printf("OK\n")
 	}
 }
 

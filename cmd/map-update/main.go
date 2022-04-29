@@ -39,26 +39,37 @@ const GMAVersionNumber = "4.3.7" //@@##@@
 const GMAMapperFileFormat = 20   //@@##@@
 
 func main() {
-	fmt.Printf("GMA map-update tool %s for map file format %d\n", GMAVersionNumber, GMAMapperFileFormat)
-
-	for _, filename := range os.Args[1:] {
-		fmt.Printf("Converting %s ", filename)
-		objects, meta, err := mapper.ReadMapFile(filename)
+	if len(os.Args) < 2 {
+		// filter stdin->stdout
+		objects, meta, err := mapper.LoadMapFile(os.Stdin)
 		if err != nil {
-			fmt.Printf("FAILED: %v\n", err)
-			continue
+			panic(err)
 		}
-		fmt.Printf("format %d -> %d ", meta.FileVersion, GMAMapperFileFormat)
-		fmt.Printf("(%d %s) ", len(objects), util.PluralizeString("object", len(objects)))
-		if err := os.Rename(filename, filename+".bak"); err != nil {
-			fmt.Printf("FAILED: %v\n", err)
-			continue
+		if err = mapper.SaveMapFile(os.Stdout, objects, meta); err != nil {
+			panic(err)
 		}
-		if err := mapper.WriteMapFile(filename, objects, meta); err != nil {
-			fmt.Printf("FAILED: %v\n", err)
-			continue
+	} else {
+		fmt.Printf("GMA map-update tool %s for map file format %d\n", GMAVersionNumber, GMAMapperFileFormat)
+
+		for _, filename := range os.Args[1:] {
+			fmt.Printf("Converting %s ", filename)
+			objects, meta, err := mapper.ReadMapFile(filename)
+			if err != nil {
+				fmt.Printf("FAILED: %v\n", err)
+				continue
+			}
+			fmt.Printf("format %d -> %d ", meta.FileVersion, GMAMapperFileFormat)
+			fmt.Printf("(%d %s) ", len(objects), util.PluralizeString("object", len(objects)))
+			if err := os.Rename(filename, filename+".bak"); err != nil {
+				fmt.Printf("FAILED: %v\n", err)
+				continue
+			}
+			if err := mapper.WriteMapFile(filename, objects, meta); err != nil {
+				fmt.Printf("FAILED: %v\n", err)
+				continue
+			}
+			fmt.Printf("OK\n")
 		}
-		fmt.Printf("OK\n")
 	}
 }
 
