@@ -1683,7 +1683,7 @@ type RollResultMessagePayload struct {
 // DefineDicePresets replaces any existing die-roll presets you have
 // stored on the server with the new set passed as the presets parameter.
 //
-func (c *Connection) DefineDicePresets(presets []DieRollPreset) error {
+func (c *Connection) DefineDicePresets(presets []dice.DieRollPreset) error {
 	return c.serverConn.send(DefineDicePresets, DefineDicePresetsMessagePayload{
 		Presets: presets,
 	})
@@ -1691,14 +1691,14 @@ func (c *Connection) DefineDicePresets(presets []DieRollPreset) error {
 
 type DefineDicePresetsMessagePayload struct {
 	BaseMessagePayload
-	Presets []DieRollPreset
+	Presets []dice.DieRollPreset
 }
 
 //
 // AddDicePresets is like DefineDicePresets except that it adds the presets
 // passed in to the existing set rather than replacing them.
 //
-func (c *Connection) AddDicePresets(presets []DieRollPreset) error {
+func (c *Connection) AddDicePresets(presets []dice.DieRollPreset) error {
 	return c.serverConn.send(AddDicePresets, AddDicePresetsMessagePayload{
 		Presets: presets,
 	})
@@ -1706,7 +1706,7 @@ func (c *Connection) AddDicePresets(presets []DieRollPreset) error {
 
 type AddDicePresetsMessagePayload struct {
 	BaseMessagePayload
-	Presets []DieRollPreset
+	Presets []dice.DieRollPreset
 }
 
 //
@@ -1748,34 +1748,7 @@ type UpdateClockMessagePayload struct {
 //
 type UpdateDicePresetsMessagePayload struct {
 	BaseMessagePayload
-	Presets []DieRollPreset
-}
-
-//
-// DieRollPreset describes each die-roll specification the user
-// has stored on the server as a ready-to-go preset value which will
-// be used often, and needs to be persistent across gaming sessions.
-//
-type DieRollPreset struct {
-	// The name by which this die-roll preset is identified to the user.
-	// This must be unique among that user's presets.
-	//
-	// Clients typically
-	// sort these names before displaying them.
-	// Note that if a vertical bar ("|") appears in the name, all text
-	// up to and including the bar are suppressed from display. This allows
-	// for the displayed names to be forced into a particular order on-screen,
-	// and allow a set of presets to appear to have the same name from the user's
-	// point of view.
-	Name string
-
-	// A text description of the purpose for this die-roll specification.
-	Description string `json:",omitempty"`
-
-	// The die-roll specification to send to the server. This must be in a
-	// form acceptable to the dice.Roll function. For details, see
-	// https://pkg.go.dev/github.com/MadScienceZone/go-gma/v4/dice#DieRoller.DoRoll
-	DieRollSpec string
+	Presets []dice.DieRollPreset
 }
 
 //

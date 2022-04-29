@@ -48,14 +48,20 @@
 package dice
 
 import (
+	"bufio"
 	cryptorand "crypto/rand"
+	"encoding/json"
 	"fmt"
+	"io"
 	"math/big"
 	"math/rand"
+	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/MadScienceZone/go-gma/v4/tcllist"
 	"github.com/schwarmco/go-cartesian-product"
 )
 
@@ -2303,6 +2309,239 @@ func (sr StructuredDescriptionSet) Text() (string, error) {
 		}
 	}
 	return t.String(), nil
+}
+
+//  ____  ____  _____ ____  _____ _____ ____
+// |  _ \|  _ \| ____/ ___|| ____|_   _/ ___|
+// | |_) | |_) |  _| \___ \|  _|   | | \___ \
+// |  __/|  _ <| |___ ___) | |___  | |  ___) |
+// |_|   |_| \_\_____|____/|_____| |_| |____/
+//
+
+//
+// DieRollPreset describes each die-roll specification the user
+// has stored on the server or in a file as a ready-to-go preset value which will
+// be used often, and needs to be persistent across gaming sessions.
+//
+type DieRollPreset struct {
+	// The name by which this die-roll preset is identified to the user.
+	// This must be unique among that user's presets.
+	//
+	// Clients typically
+	// sort these names before displaying them.
+	// Note that if a vertical bar ("|") appears in the name, all text
+	// up to and including the bar are suppressed from display. This allows
+	// for the displayed names to be forced into a particular order on-screen,
+	// and allow a set of presets to appear to have the same name from the user's
+	// point of view.
+	Name string
+
+	// A text description of the purpose for this die-roll specification.
+	Description string `json:",omitempty"`
+
+	// The die-roll specification to send to the server. This must be in a
+	// form acceptable to the dice.Roll function.
+	DieRollSpec string
+}
+
+type DieRollPresetMetaData struct {
+	Timestamp   int64  `json:",omitempty"`
+	DateTime    string `json:",omitempty"`
+	Comment     string `json:",omitempty"`
+	FileVersion uint   `json:"-"`
+}
+
+//
+// WriteDieRollPresetFile writes a slice of presets to the named file.
+//
+func WriteDieRollPresetFile(path string, presets []DieRollPreset, meta DieRollPresetMetaData) error {
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Printf("WARNING: WriteDieRollPresetFile was unable to close the output file: %v\n", err)
+		}
+	}()
+
+	return SaveDieRollPresetFile(file, presets, meta)
+}
+
+//
+// SaveDieRollPresetFile writes a slice of presets to an open stream.
+//
+func SaveDieRollPresetFile(output io.Writer, presets []DieRollPreset, meta DieRollPresetMetaData) error {
+	writer := bufio.NewWriter(output)
+	writer.WriteString("__DICE__:2\n")
+	if meta.Timestamp == 0 {
+		now := time.now()
+		meta.Timestamp = now.Unix()
+		meta.DateTime = now.String()
+	}
+	data, err := json.MarshalIndent(meta, "", "    ")
+	if err != nil {
+		return err
+	}
+
+	sort.Slice(presets, func(i, j int) bool {
+		return presets[i].Name < presets[j].Name
+	})
+
+	for _, preset := range presets {
+		data, err := json.MarshalIndent(preset, "", "    ")
+		if err != nil {
+			return fmt.Errorf("unable to serialize preset \"%s\": %v", preset.Name, err)
+		}
+
+		writer.WriteString("__PRESET__ ")
+		writer.WriteString(string(data))
+		writer.WriteString("\n")
+	}
+	writer.WriteString("__EOF__\n")
+	writer.Flush()
+	return nil
+}
+
+//
+// ReadDieRollPresetFile reads in and returns a slice of die-roll presets from
+// the named file.
+//
+func ReadDieRollPresetFile(path string) ([]DieRollPreset, DieRollPresetMetaData, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, DieRollPresetMetaData{}, err
+	}
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Printf("WARNING: ReadDieRollPresetFile was unable to close the file: %v", err)
+		}
+	}()
+	return LoadDieRollPresetFile(file)
+}
+
+func loadLegacyDieRollPresetFile(scanner *bufio.Scanner, meta DieRollPresetMetaData, legacyMeta string) ([]DieRollPreset, DieRollPresetMetaData, error) {
+	//
+	// The older format had a first line of:
+	//   __DICE__:1 [<timestamp> <date-string>]
+	// Followed by a series of lines of:
+	//   <name> <desc> <spec>
+	//  Each line is a properly-formatted TCL list.
+	//
+	var presets []DieRollPreset
+
+	metaList, err := tcllist.ParseTclList(legacyMeta)
+	if err != nil {
+		return nil, meta, fmt.Errorf("legacy die-roll preset file has invalid metadata: %v", err)
+	}
+	if len(metaList) > 0 {
+		meta.Timestamp, _ = strconv.ParseInt(metaList[0], 10, 64)
+		if len(metaList) > 1 {
+			meta.DateTime = metaListe[1]
+		}
+	}
+
+	for scanner.Scan() {
+		f, err := tcllist.ParseTclList(scanner.Text())
+		if err != nil {
+			return nil, meta, fmt.Errorf("legacy die-roll preset file has invalid record: %v", err)
+		}
+		if len(f) != 3 {
+			return nil, meta, fmt.Errorf("legacy die-roll preset file has invalid record: field count %d", len(f))
+		}
+		presets = append(presets, DieRollPreset{
+			Name:        f[0],
+			Description: f[1],
+			DieRollSpec: f[2],
+		})
+	}
+
+	return presets, meta, nil
+}
+
+//
+// LoadDieRollPresetFile reads in and returns a slice of die-roll presets from
+// an open stream.
+//
+func LoadDieRollPresetFile(input io.Reader) ([]DieRollPreset, DieRollPresetMetaData, error) {
+	var meta DieRollPresetMetaData
+	var presets []DieRollPreset
+	var err error
+
+	if input == nil {
+		return nil, meta, nil
+	}
+
+	startPattern := regexp.MustCompile("^__DICE__:(\\d+)\\s*(.*)$")
+	recordPattern := regexp.MustCompile("^__(.*?)__ (.+)$")
+	eofPattern := regexp.MustCompile("^__EOF__$")
+	scanner := bufio.NewScanner(input)
+
+	if !scanner.Scan() {
+		return nil, meta, nil
+	}
+
+	if f = startPattern.FindStringSubmatch(scanner.Text()); f == nil {
+		return nil, meta, fmt.Errorf("invalid die-roll preset file format in initial header")
+	}
+	if v, err = strconv.ParseUint(f[1], 10, 64); err != nil {
+		return nil, meta, fmt.Errorf("invalid die-roll preset file format: can't parse version \"%v\": %v", f[1], err)
+	}
+	meta.FileVersion = uint(v)
+	if v < MinimumSupportedDieRollPresetFileFormat || v > MaximumSupportedDieRollPresetFileFormat {
+		if MinimumSupportedDieRollPresetFileFormat == MaximumSupportedDieRollPresetFileFormat {
+			return nil, meta, fmt.Errorf("cannot read die-roll preset file format version %d (only version %d is supported)", v, MinimumSupportedDieRollPresetFileFormat)
+		}
+		return nil, meta, fmt.Errorf("cannot read die-roll preset file format version %d (only versions %d-%d are supported)", v, MinimumSupportedDieRollPresetFileFormat, MaximumSupportedDieRollPresetFileFormat)
+	}
+	if v < 2 {
+		return loadLegacyDieRollPresetFile(scanner, meta, f[2])
+	}
+
+	for scanner.Scan() {
+	rescan:
+		if strings.TrimSpace(scanner.Text()) == "" {
+			continue
+		}
+		if eofPattern.MatchString(scanner.Text()) {
+			return presets, meta, nil
+		}
+		if f = recordPattern.FindStringSubmatch(scanner.Text()); f == nil {
+			return nil, meta, fmt.Errorf("invalid die-roll preset file format: unexpected data \"%v\"", scanner.Text())
+		}
+
+		// Start of record type f[1] with start of JSON string f[2]
+		// collect more lines of JSON data...
+		var dataPacket strings.Builder
+		dataPacket.WriteString(f[2])
+
+		for scanner.Scan() {
+			if strings.HasPrefix(scanner.Text(), "__") {
+				var err error
+
+				switch f[1] {
+				case "META":
+					err = json.Unmarshal([]byte(dataPacket.String()), &meta)
+
+				case "PRESET":
+					var preset DieRollPreset
+					if err = json.Unmarshal([]byte(dataPacket.String()), &preset); err == nil {
+						presets = append(presets, preset)
+					}
+
+				default:
+					return nil, meta, fmt.Errorf("invalid die-roll preset file format: unexpected record type \"%s\"", f[1])
+				}
+				if err != nil {
+					return nil, meta, fmt.Errorf("invalid die-roll preset file format: %v", err)
+				}
+				goto rescan
+			}
+			dataPacket.WriteString(scanner.Text())
+		}
+	}
+	return nil, meta, fmt.Errorf("invalid die-roll preset file format: unexpected end of file")
 }
 
 // @[00]@| GMA 4.3.10
