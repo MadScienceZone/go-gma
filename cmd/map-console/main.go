@@ -42,6 +42,7 @@ import (
 	"time"
 
 	"github.com/MadScienceZone/go-gma/v4/auth"
+	"github.com/MadScienceZone/go-gma/v4/dice"
 	"github.com/MadScienceZone/go-gma/v4/gma"
 	"github.com/MadScienceZone/go-gma/v4/mapper"
 	"github.com/MadScienceZone/go-gma/v4/tcllist"
@@ -1065,14 +1066,14 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 					fmt.Println(colorize(fmt.Sprintf("ERROR in preset list: %v", err), "Red", mono))
 					break
 				}
-				var presetList []mapper.DieRollPreset
+				var presetList []dice.DieRollPreset
 				for i, ps := range p {
 					pl, err := tcllist.Parse(ps, "sss")
 					if err != nil {
 						fmt.Println(colorize(fmt.Sprintf("ERROR in preset list, #%d: %v", i+1, err), "Red", mono))
 						break handle_input
 					}
-					presetList = append(presetList, mapper.DieRollPreset{
+					presetList = append(presetList, dice.DieRollPreset{
 						Name:        pl[0].(string),
 						Description: pl[1].(string),
 						DieRollSpec: pl[2].(string),

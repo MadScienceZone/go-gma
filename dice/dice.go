@@ -60,10 +60,14 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/MadScienceZone/go-gma/v4/tcllist"
 	"github.com/schwarmco/go-cartesian-product"
 )
+
+const MinimumSupportedDieRollPresetFileFormat = 1
+const MaximumSupportedDieRollPresetFileFormat = 2
 
 //
 // Seed the random number generator with a very random seed.
@@ -2376,7 +2380,7 @@ func SaveDieRollPresetFile(output io.Writer, presets []DieRollPreset, meta DieRo
 	writer := bufio.NewWriter(output)
 	writer.WriteString("__DICE__:2\n")
 	if meta.Timestamp == 0 {
-		now := time.now()
+		now := time.Now()
 		meta.Timestamp = now.Unix()
 		meta.DateTime = now.String()
 	}
@@ -2384,6 +2388,9 @@ func SaveDieRollPresetFile(output io.Writer, presets []DieRollPreset, meta DieRo
 	if err != nil {
 		return err
 	}
+	writer.WriteString("__META__ ")
+	writer.WriteString(string(data))
+	writer.WriteString("\n")
 
 	sort.Slice(presets, func(i, j int) bool {
 		return presets[i].Name < presets[j].Name
@@ -2438,7 +2445,7 @@ func loadLegacyDieRollPresetFile(scanner *bufio.Scanner, meta DieRollPresetMetaD
 	if len(metaList) > 0 {
 		meta.Timestamp, _ = strconv.ParseInt(metaList[0], 10, 64)
 		if len(metaList) > 1 {
-			meta.DateTime = metaListe[1]
+			meta.DateTime = metaList[1]
 		}
 	}
 
@@ -2468,6 +2475,8 @@ func LoadDieRollPresetFile(input io.Reader) ([]DieRollPreset, DieRollPresetMetaD
 	var meta DieRollPresetMetaData
 	var presets []DieRollPreset
 	var err error
+	var f []string
+	var v uint64
 
 	if input == nil {
 		return nil, meta, nil
