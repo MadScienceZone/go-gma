@@ -1,13 +1,13 @@
 /*
 ########################################################################################
 #  _______  _______  _______                ___       ______       __    _______       #
-# (  ____ \(       )(  ___  )              /   )     / ___  \     /  \  (  __   )      #
-# | (    \/| () () || (   ) |             / /) |     \/   \  \    \/) ) | (  )  |      #
-# | |      | || || || (___) |            / (_) (_       ___) /      | | | | /   |      #
-# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (       | | | (/ /) |      #
-# | | \_  )| |   | || (   ) | Game           ) (           ) \      | | |   / | |      #
-# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _  __) (_|  (__) |      #
-# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \____/(_______)      #
+# (  ____ \(       )(  ___  )              /   )     / ___  \     /  \  / ___   )      #
+# | (    \/| () () || (   ) |             / /) |     \/   \  \    \/) ) \/   )  |      #
+# | |      | || || || (___) |            / (_) (_       ___) /      | |     /   )      #
+# | | ____ | |(_)| ||  ___  |           (____   _)     (___ (       | |   _/   /       #
+# | | \_  )| |   | || (   ) | Game           ) (           ) \      | |  /   _/        #
+# | (___) || )   ( || )   ( | Master's       | |   _ /\___/  / _  __) (_(   (__/\      #
+# (_______)|/     \||/     \| Assistant      (_)  (_)\______/ (_) \____/\_______/      #
 #                                                                                      #
 ########################################################################################
 */
@@ -2553,14 +2553,15 @@ func LoadDieRollPresetFile(input io.Reader) ([]DieRollPreset, DieRollPresetMetaD
 	return nil, meta, fmt.Errorf("invalid die-roll preset file format: unexpected end of file")
 }
 
-// @[00]@| GMA 4.3.10
+// @[00]@| GMA 4.3.12
 // @[01]@|
-// @[10]@| Copyright © 1992–2021 by Steven L. Willoughby
-// @[11]@| (AKA Software Alchemy), Aloha, Oregon, USA. All Rights Reserved.
-// @[12]@| Distributed under the terms and conditions of the BSD-3-Clause
-// @[13]@| License as described in the accompanying LICENSE file distributed
-// @[14]@| with GMA.
-// @[15]@|
+// @[10]@| Copyright © 1992–2022 by Steven L. Willoughby (AKA MadScienceZone)
+// @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
+// @[12]@| Aloha, Oregon, USA. All Rights Reserved.
+// @[13]@| Distributed under the terms and conditions of the BSD-3-Clause
+// @[14]@| License as described in the accompanying LICENSE file distributed
+// @[15]@| with GMA.
+// @[16]@|
 // @[20]@| Redistribution and use in source and binary forms, with or without
 // @[21]@| modification, are permitted provided that the following conditions
 // @[22]@| are met:

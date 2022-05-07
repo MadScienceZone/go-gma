@@ -1,10 +1,10 @@
 # Changelog
 ## Current Version Information
- * GMA Core API Library Version: 4.3.10		<!-- @@##@@ -->
- * Supported GMA Mapper Version: 3.40.10		<!-- @@##@@ -->
- * Supported GMA Mapper Protocol: 332		<!-- @@##@@ -->
- * Supported GMA Mapper File Format: 17		<!-- @@##@@ -->
- * Effective Date: 23-Jul-2021			<!-- @@##@@ -->
+ * GMA Core API Library Version: 4.3.12		<!-- @@##@@ -->
+ * Supported GMA Mapper Version: 4.0.0		<!-- @@##@@ -->
+ * Supported GMA Mapper Protocol: 400		<!-- @@##@@ -->
+ * Supported GMA Mapper File Format: 20		<!-- @@##@@ -->
+ * Effective Date: 07-May-2022			<!-- @@##@@ -->
 
 ## v4.3.10 (alpha)
 Added note pointing to paizo's Community Use Policy and GMA's usage of Pathfinder
