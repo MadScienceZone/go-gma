@@ -67,8 +67,8 @@ import (
 // and protocol versions supported by this code.
 //
 const (
-	GMAMapperProtocol=400      // @@##@@ auto-configured
-	GMAVersionNumber="4.3.12" // @@##@@ auto-configured
+	GMAMapperProtocol           = 400      // @@##@@ auto-configured
+	GMAVersionNumber            = "4.3.12" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
 	MaximumSupportedMapProtocol = 400
 )
@@ -1963,13 +1963,17 @@ type StatusMarkerDefinition struct {
 	// The special color "*" may be used to indicate that the marker
 	// should be drawn in the same color as the creature's threat zone.
 	Color string
+
+	// A player-readable description of the effect the condition has on
+	// the affected creature.
+	Description string
 }
 
 //
 // Text produces a simple text description of a StatusMarkerDefinition structure.
 //
 func (c StatusMarkerDefinition) Text() string {
-	return fmt.Sprintf("Condition %q: Shape=%q, Color=%q", c.Condition, c.Shape, c.Color)
+	return fmt.Sprintf("Condition %q: Shape=%q, Color=%q, Description=%q", c.Condition, c.Shape, c.Color, c.Description)
 }
 
 //
@@ -2394,9 +2398,10 @@ waitForReady:
 
 func (c *Connection) receiveDSM(d UpdateStatusMarkerMessagePayload) {
 	c.Conditions[d.Condition] = StatusMarkerDefinition{
-		Condition: d.Condition,
-		Shape:     d.Shape,
-		Color:     d.Color,
+		Condition:   d.Condition,
+		Shape:       d.Shape,
+		Color:       d.Color,
+		Description: d.Description,
 	}
 }
 
