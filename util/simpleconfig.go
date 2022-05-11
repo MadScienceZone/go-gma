@@ -50,6 +50,16 @@ func NewSimpleConfigurationData() SimpleConfigurationData {
 //
 func ParseSimpleConfig(inputFile io.Reader) (SimpleConfigurationData, error) {
 	data := make(SimpleConfigurationData)
+	err := UpdateSimpleConfig(inputFile, data)
+	return data, err
+}
+
+//
+// UpdateSimpleConfig reads a configuration file as described for ParseSimpleConfig,
+// but instead of creating a new set of config data, it updates an existing data set.
+//
+func UpdateSimpleConfig(inputFile io.Reader, data SimpleConfigurationData) error {
+	foundAlready := make(map[string]bool)
 	commentPattern := regexp.MustCompile(`^\s*#`)
 	kvPattern := regexp.MustCompile(`^\s*([a-zA-Z0-9_-]+)\s*(=(.*))?$`)
 	lines := bufio.NewScanner(inputFile)
@@ -64,22 +74,24 @@ func ParseSimpleConfig(inputFile io.Reader) (SimpleConfigurationData, error) {
 		kv := kvPattern.FindStringSubmatch(line)
 		if kv != nil {
 			_, exists := data[kv[1]]
-			if exists {
-				return nil, fmt.Errorf("duplicate configuration \"%v\"", line)
+			found, already := foundAlready[kv[1]]
+			if exists && already && found {
+				return fmt.Errorf("duplicate configuration \"%v\"", line)
 			}
+			foundAlready[kv[1]] = true
 			if kv[2] != "" {
 				data[kv[1]] = strings.TrimSpace(kv[3])
 			} else {
 				data[kv[1]] = "1"
 			}
 		} else {
-			return nil, fmt.Errorf("unable to parse configuration line \"%v\"", line)
+			return fmt.Errorf("unable to parse configuration line \"%v\"", line)
 		}
 	}
 	if err := lines.Err(); err != nil {
-		return nil, fmt.Errorf("error reading configuration file: %v", err)
+		return fmt.Errorf("error reading configuration file: %v", err)
 	}
-	return data, nil
+	return nil
 }
 
 // Get retrieves a string value from the configuration data.
@@ -163,6 +175,14 @@ func (c SimpleConfigurationData) GetBool(key string) (bool, error) {
 	}
 }
 
+func (c SimpleConfigurationData) GetBoolDefault(key string, def bool) bool {
+	v, err := c.GetBool(key)
+	if err != nil {
+		return def
+	}
+	return v
+}
+
 // Set adds a key/value pair to the SimpleConfigurationData receiver.
 // If key already exists, it will be replaced with this new value.
 func (c SimpleConfigurationData) Set(key, value string) {
@@ -171,6 +191,61 @@ func (c SimpleConfigurationData) Set(key, value string) {
 
 func (c SimpleConfigurationData) SetInt(key string, value int) {
 	c[key] = strconv.Itoa(value)
+}
+
+func (c SimpleConfigurationData) Override(opts ...func(SimpleConfigurationData) error) error {
+	for _, o := range opts {
+		if err := o(c); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// if the supplied value is true, update the config data to be true.
+func OverrideBool(key string, value bool) func(SimpleConfigurationData) error {
+	return func(c SimpleConfigurationData) error {
+		if value {
+			c.Set(key, "1")
+		}
+		return nil
+	}
+}
+
+// if the supplied value is nonzero, update the config data to match.
+func OverrideInt(key string, value int) func(SimpleConfigurationData) error {
+	return func(c SimpleConfigurationData) error {
+		if value != 0 {
+			c.SetInt(key, value)
+		}
+		return nil
+	}
+}
+
+// if the supplied value is nonempty, update the config data to match.
+func OverrideString(key string, value string) func(SimpleConfigurationData) error {
+	return func(c SimpleConfigurationData) error {
+		if value != "" {
+			c.Set(key, value)
+		}
+		return nil
+	}
+}
+
+// if the supplied value is true, update the config data to be true.
+// if the supplied negation value is true, update the config data to be false.
+func OverrideBoolWithNegation(key string, value bool, neg bool) func(SimpleConfigurationData) error {
+	return func(c SimpleConfigurationData) error {
+		if value {
+			if neg {
+				return fmt.Errorf("error setting \"%s\" option: can't specify both true and false at the same time", key)
+			}
+			c.Set(key, "1")
+		} else if neg {
+			c.Set(key, "0")
+		}
+		return nil
+	}
 }
 
 // @[00]@| GMA 4.3.12

@@ -49,10 +49,11 @@ import (
 	"github.com/MadScienceZone/go-gma/v4/util"
 )
 
-const GMAVersionNumber="4.3.12" //@@##@@
+const GMAVersionNumber = "4.3.12" //@@##@@
 
 func main() {
 	fmt.Printf("GMA mapper console %s\n", GMAVersionNumber)
+	log.SetPrefix("map-console: ")
 
 	conf, err := configureApp()
 	if err != nil {

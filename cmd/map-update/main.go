@@ -15,7 +15,7 @@
 # (and this software is primarily for our own use in our play group,
 # anyway, but could be generalized later as a stand-alone product).
 #
-# Copyright (c) 2021 by Steven L. Willoughby, Aloha, Oregon, USA.
+# Copyright (c) 2022 by Steven L. Willoughby, Aloha, Oregon, USA.
 # All Rights Reserved.
 # Licensed under the terms and conditions of the BSD 3-Clause license.
 #
@@ -35,8 +35,8 @@ import (
 	"github.com/MadScienceZone/go-gma/v4/util"
 )
 
-const GMAVersionNumber="4.3.12" //@@##@@
-const GMAMapperFileFormat = 20   //@@##@@
+const GMAVersionNumber = "4.3.12" //@@##@@
+const GMAMapperFileFormat = 20    //@@##@@
 
 func main() {
 	if len(os.Args) < 2 {

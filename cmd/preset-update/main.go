@@ -35,7 +35,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v4/util"
 )
 
-const GMAVersionNumber="4.3.12"     //@@##@@
+const GMAVersionNumber = "4.3.12"    //@@##@@
 const GMADieRollPresetFileFormat = 2 //@@##@@
 
 func main() {

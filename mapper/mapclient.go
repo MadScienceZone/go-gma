@@ -1966,7 +1966,7 @@ type StatusMarkerDefinition struct {
 
 	// A player-readable description of the effect the condition has on
 	// the affected creature.
-	Description string
+	Description string `json:",omitempty"`
 }
 
 //
