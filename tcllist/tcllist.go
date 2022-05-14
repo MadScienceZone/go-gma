@@ -676,6 +676,17 @@ func ToDeepTclString(values ...interface{}) (string, error) {
 	return ToTclString(list)
 }
 
+//
+// StripLevel strips away the outermost level of {} characters from a string.
+// The string must begin and end with { and } characters respectively.
+//
+func StripLevel(s string) string {
+	if len(s) > 1 && s[0] == '{' && s[len(s)-1] == '}' {
+		return s[1 : len(s)-1]
+	}
+	return s
+}
+
 // @[00]@| GMA 4.3.12
 // @[01]@|
 // @[10]@| Copyright © 1992–2022 by Steven L. Willoughby (AKA MadScienceZone)

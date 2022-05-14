@@ -1232,7 +1232,7 @@ type MapMetaData struct {
 //
 // WriteMapFile writes mapper data to a named file.
 //
-func WriteMapFile(path string, objList []interface{}, meta MapMetaData) error {
+func WriteMapFile(path string, objList []any, meta MapMetaData) error {
 	file, err := os.Create(path)
 	if err != nil {
 		return err
@@ -1248,7 +1248,7 @@ func WriteMapFile(path string, objList []interface{}, meta MapMetaData) error {
 //
 // SaveMapFile writes a mapper file.
 //
-func SaveMapFile(output io.Writer, objList []interface{}, meta MapMetaData) error {
+func SaveMapFile(output io.Writer, objList []any, meta MapMetaData) error {
 	writer := bufio.NewWriter(output)
 	writer.WriteString("__MAPPER__:20\n")
 	if meta.Timestamp == 0 {
@@ -1332,7 +1332,7 @@ func SaveMapFile(output io.Writer, objList []interface{}, meta MapMetaData) erro
 	return nil
 }
 
-func ReadMapFile(path string) ([]interface{}, MapMetaData, error) {
+func ReadMapFile(path string) ([]any, MapMetaData, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, MapMetaData{}, err
@@ -1345,12 +1345,25 @@ func ReadMapFile(path string) ([]interface{}, MapMetaData, error) {
 	return LoadMapFile(file)
 }
 
+func ReadMapMetaData(path string) (MapMetaData, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, MapMetaData{}, err
+	}
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Printf("WARNING: mapobject ReadMapMetaData was unable to close the file: %v", err)
+		}
+	}()
+	return LoadMapMetaData(file)
+}
+
 //
 // loadLegacyMapFile(scanner
 // reads a mapper file with format < 20, returning a slice
 // of map elements.
 //
-func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta string) ([]interface{}, MapMetaData, error) {
+func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta string, metaDatOnly bool) ([]any, MapMetaData, error) {
 	//
 	// The map file formats prior to version 20 used a very different
 	// format. This function is called *after* we have read the initial
@@ -1373,7 +1386,7 @@ func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta stri
 	// lines in the file and then assemble them into objects.
 	//
 	var rawFiles []string
-	var objList []interface{}
+	var objList []any
 	var err error
 
 	// rawData holds the file's data strings as a map of <id> to map of <attr> to <value-list>
@@ -1403,6 +1416,10 @@ func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta stri
 			}
 		}
 	}
+	if metaDataOnly {
+		return nil, meta, nil
+	}
+
 	for scanner.Scan() {
 		f, err := tcllist.ParseTclList(scanner.Text())
 		if err != nil {
@@ -1859,10 +1876,23 @@ func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta stri
 }
 
 //
+// LoadMapMetaData is just like LoadMapFile but only reads enough of the
+// file to get the meta data, which is returned.
+//
+func LoadMapMetaData(input io.Reader) (MapMetaData, error) {
+	_, meta, err := loadMapFile(input, true)
+	return meta, err
+}
+
+//
 // LoadMapFile reads a mapper file with file format >= 20, returning
 // a slice of map elements.
 //
-func LoadMapFile(input io.Reader) ([]interface{}, MapMetaData, error) {
+func LoadMapFile(input io.Reader) ([]any, MapMetaData, error) {
+	return loadMapFile(input, false)
+}
+
+func loadMapFile(input io.Reader, metaDataOnly bool) ([]any, MapMetaData, error) {
 	//
 	// The map file format consists of an initial line of the form
 	//    __MAPPER__:<version>
@@ -1888,7 +1918,7 @@ func LoadMapFile(input io.Reader) ([]interface{}, MapMetaData, error) {
 	// each of these.
 	//
 	var meta MapMetaData
-	var objList []interface{}
+	var objList []any
 	var f []string
 	var v uint64
 	var err error
@@ -1920,7 +1950,7 @@ func LoadMapFile(input io.Reader) ([]interface{}, MapMetaData, error) {
 		return nil, meta, fmt.Errorf("cannot read map file format version %d (only versions %d-%d are supported)", v, MinimumSupportedMapFileFormat, MaximumSupportedMapFileFormat)
 	}
 	if v < 20 {
-		return loadLegacyMapFile(scanner, meta, f[2])
+		return loadLegacyMapFile(scanner, meta, f[2], metaDataOnly)
 	}
 
 	for scanner.Scan() {
@@ -1946,6 +1976,9 @@ func LoadMapFile(input io.Reader) ([]interface{}, MapMetaData, error) {
 				switch f[1] {
 				case "META":
 					err = json.Unmarshal([]byte(dataPacket.String()), &meta)
+					if metaDataOnly {
+						return nil, meta, nil
+					}
 
 				case "ARC":
 					var arc ArcElement
