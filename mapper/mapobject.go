@@ -347,20 +347,6 @@ type MapObject interface {
 }
 
 //
-// In the following sections, each MapObject type is described,
-// including the type declaration, and the standard methods
-//   obj<T>(objID, objDef) (<T>, error)
-//      -- create a new <T> value with the given ID, based on data parsed
-//         from an input source in objDef, which is a map of attribute name
-//         to a slice of strings broken out into fields.
-//
-//   <T>.saveData(data, prefix, id) ([]string, error)
-//      -- generate the save file data for this object. These are appended
-//         as individual strings (one per line) to the end of the strings
-//         in data. The new combined string slice is returned.
-//
-
-//
 // Coordinates give an (x, y) coordinate pair to locate something on the map.
 // Coordinates are in standard map pixel units (10 pixels = 1 foot).
 //
@@ -1348,7 +1334,7 @@ func ReadMapFile(path string) ([]any, MapMetaData, error) {
 func ReadMapMetaData(path string) (MapMetaData, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return nil, MapMetaData{}, err
+		return MapMetaData{}, err
 	}
 	defer func() {
 		if err := file.Close(); err != nil {
@@ -1363,7 +1349,7 @@ func ReadMapMetaData(path string) (MapMetaData, error) {
 // reads a mapper file with format < 20, returning a slice
 // of map elements.
 //
-func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta string, metaDatOnly bool) ([]any, MapMetaData, error) {
+func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta string, metaDataOnly bool) ([]any, MapMetaData, error) {
 	//
 	// The map file formats prior to version 20 used a very different
 	// format. This function is called *after* we have read the initial

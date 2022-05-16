@@ -295,7 +295,7 @@ func TestTclList_ConvertTypes(t *testing.T) {
 }
 
 func TestTclList_Deep(t *testing.T) {
-	s, err := ToDeepTclString("hello", "world", 123, 45.67, []interface{}{"a", "", "b", []string{"xyz", "333"}, 1, true}, false)
+	s, err := ToDeepTclString("hello", "world", 123, 45.67, []any{"a", "", "b", []string{"xyz", "333"}, 1, true}, false)
 
 	if err != nil {
 		t.Errorf("%v", err)

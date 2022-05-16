@@ -1189,9 +1189,9 @@ func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 	newListBullet := regexp.MustCompile(`^[*#]+`)
 	formatReqs := regexp.MustCompile(`//|\*\*|\[\[|\]\]|\\\.`)
 
-	paragraphs := make([][][]interface{}, 0, 10)
-	thisParagraph := make([][]interface{}, 0, 10)
-	thisLine := make([]interface{}, 0, 10)
+	paragraphs := make([][][]any, 0, 10)
+	thisParagraph := make([][]any, 0, 10)
+	thisLine := make([]any, 0, 10)
 
 	for _, sourceLine := range strings.Split(text, "\n") {
 		sourceLine = collapseSpaces.ReplaceAllLiteralString(sourceLine, " ")
@@ -1204,10 +1204,10 @@ func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 		if trimmedSourceLine == "" {
 			if len(thisLine) > 0 {
 				thisParagraph = append(thisParagraph, thisLine)
-				thisLine = make([]interface{}, 0, 10)
+				thisLine = make([]any, 0, 10)
 
 				paragraphs = append(paragraphs, thisParagraph)
-				thisParagraph = make([][]interface{}, 0, 10)
+				thisParagraph = make([][]any, 0, 10)
 			}
 			continue
 		}
@@ -1243,7 +1243,7 @@ func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 			parts := strings.SplitN(sourceLine, "\\\\", 2)
 			thisLine = append(thisLine, parts[0])
 			thisParagraph = append(thisParagraph, thisLine)
-			thisLine = make([]interface{}, 0, 10)
+			thisLine = make([]any, 0, 10)
 			sourceLine = parts[1]
 		}
 		thisLine = append(thisLine, sourceLine)

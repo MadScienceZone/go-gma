@@ -250,7 +250,7 @@ func describeBaseMapObject(mono bool, o mapper.MapElement) string {
 	)
 }
 
-func describeObject(mono bool, obj interface{}) string {
+func describeObject(mono bool, obj any) string {
 	var desc strings.Builder
 
 	switch o := obj.(type) {
@@ -282,7 +282,7 @@ func describeObject(mono bool, obj interface{}) string {
 			))
 		}
 
-	case map[string]interface{}:
+	case map[string]any:
 		var m []fieldDesc
 
 		for k, v := range o {
@@ -415,7 +415,7 @@ func describeObject(mono bool, obj interface{}) string {
 //
 type fieldDesc struct {
 	name  string
-	value interface{}
+	value any
 }
 
 func printFields(mono bool, cmd string, fields ...fieldDesc) {
@@ -1283,7 +1283,7 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 					fmt.Println(colorize("usage ERROR: kv list must have an even number of elements", "Red", mono))
 					break
 				}
-				attrs := make(map[string]interface{})
+				attrs := make(map[string]any)
 				for i := 0; i < len(alist); i += 2 {
 					attrs[alist[i]] = alist[i+1]
 				}

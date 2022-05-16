@@ -1357,7 +1357,7 @@ type DieRoller struct {
 	Template string
 
 	// Values to be substituted into the Template
-	Permutations [][]interface{}
+	Permutations [][]any
 
 	// If PctChance ≥ 0 then our target to be "successful" is a score
 	// or at least PctChance on a percentile die roll. In that case
@@ -1627,7 +1627,7 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 			if len(valueset) < 2 {
 				return fmt.Errorf("invalid die-roll specification \"%s\": Values in braces must have more than one value separated by slashes", perm[0])
 			}
-			plist := make([]interface{}, len(valueset))
+			plist := make([]any, len(valueset))
 			for i, p := range valueset {
 				plist[i] = p
 			}
@@ -1879,7 +1879,7 @@ func (d *DieRoller) DoRoll(spec string) (string, []StructuredResult, error) {
 // with corresponding values taken from a list of substitution values, returning
 // the resulting string.
 //
-func substituteTemplateValues(template string, values []interface{}) string {
+func substituteTemplateValues(template string, values []any) string {
 	result := template
 	for place, value := range values {
 		result = strings.Replace(result, fmt.Sprintf("{%d}", place), value.(string), 1)

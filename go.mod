@@ -1,6 +1,6 @@
 module github.com/MadScienceZone/go-gma/v4
 
-go 1.16
+go 1.18
 
 require (
 	//	github.com/mattn/goveralls v0.0.9 // indirect

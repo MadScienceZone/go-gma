@@ -1457,7 +1457,7 @@ type PlaceSomeoneMessagePayload struct {
 // way to do that would be to use UpdateObjAttributes to change those
 // specific attributes of the creature directly.
 //
-func (c *Connection) PlaceSomeone(someone interface{}) error {
+func (c *Connection) PlaceSomeone(someone any) error {
 	return c.serverConn.send(PlaceSomeone, someone)
 }
 
@@ -1800,7 +1800,7 @@ type UpdateObjAttributesMessagePayload struct {
 	ObjID string
 
 	// A map of attribute name to its new value.
-	NewAttrs map[string]interface{}
+	NewAttrs map[string]any
 }
 
 //
@@ -1808,7 +1808,7 @@ type UpdateObjAttributesMessagePayload struct {
 // specified object's attributes which are mentioned in the newAttrs
 // map. This maps attribute names to their new values.
 //
-func (c *Connection) UpdateObjAttributes(objID string, newAttrs map[string]interface{}) error {
+func (c *Connection) UpdateObjAttributes(objID string, newAttrs map[string]any) error {
 	return c.serverConn.send(UpdateObjAttributes, UpdateObjAttributesMessagePayload{
 		ObjID:    objID,
 		NewAttrs: newAttrs,

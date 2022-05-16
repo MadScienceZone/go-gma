@@ -44,7 +44,7 @@ I #SimonKazar 0.25 @OoSmGY0XERJRrA8ZiK_igg_Firefly@12
 	if err != nil {
 		t.Errorf("error %v", err)
 	}
-	if !reflect.DeepEqual(objs, []interface{}{
+	if !reflect.DeepEqual(objs, []any{
 		ImageDefinition{
 			Name: "#SimonKazar",
 			Sizes: []ImageInstance{
@@ -106,7 +106,7 @@ __EOF__
 	if meta.Comment != "test" || meta.Location != "somewhere" || meta.Timestamp != 0 || meta.DateTime != "" {
 		t.Errorf("meta %q", meta)
 	}
-	if !reflect.DeepEqual(objs, []interface{}{
+	if !reflect.DeepEqual(objs, []any{
 		ImageDefinition{
 			Name: "#SimonKazar",
 			Sizes: []ImageInstance{

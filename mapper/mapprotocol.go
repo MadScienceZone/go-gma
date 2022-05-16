@@ -49,7 +49,7 @@ func (c *MapConnection) Close() {
 //
 // send sends a message to the peer using the mapper protocol.
 //
-func (c *MapConnection) send(command ServerMessage, data interface{}) error {
+func (c *MapConnection) send(command ServerMessage, data any) error {
 	switch command {
 	case Accept:
 		if msgs, ok := data.(AcceptMessagePayload); ok {
@@ -299,7 +299,7 @@ func (c *MapConnection) send(command ServerMessage, data interface{}) error {
 	return fmt.Errorf("send: invalid command or data type")
 }
 
-func (c *MapConnection) sendJSON(commandWord string, data interface{}) error {
+func (c *MapConnection) sendJSON(commandWord string, data any) error {
 	var err error
 	if data == nil {
 		return c.sendln(commandWord, "")
