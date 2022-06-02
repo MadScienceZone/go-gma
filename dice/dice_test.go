@@ -64,6 +64,19 @@ func _probtester(t *testing.T, description string, f func() (int, error), minval
 	}
 }
 
+func TestLoadDieRollPresets(t *testing.T) {
+	input := strings.NewReader(`__DICE__:2
+__EOF__
+`)
+	
+	presets, meta, err := LoadDieRollPresetFile(i)
+	if err != nil {
+		t.Fatalf("LoadDieRollPresetFile: %v", err)
+	}
+	if meta.FileVersion != 2
+
+}
+
 func TestDiceProbabilities(t *testing.T) {
 	d4, err1 := New(ByDieType(1, 4, 0))
 	d6, err2 := New(ByDieType(1, 6, 0))
