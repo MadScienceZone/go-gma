@@ -28,6 +28,27 @@ import (
 	"strings"
 )
 
+//
+// The GMA Mapper Protocol version number current as of this build,
+// and protocol versions supported by this code.
+//
+const (
+	GMAMapperProtocol           = 400      // @@##@@ auto-configured
+	GMAVersionNumber            = "4.3.12" // @@##@@ auto-configured
+	MinimumSupportedMapProtocol = 400
+	MaximumSupportedMapProtocol = 400
+)
+
+func init() {
+	if MinimumSupportedMapProtocol > GMAMapperProtocol || MaximumSupportedMapProtocol < GMAMapperProtocol {
+		if MinimumSupportedMapProtocol == MaximumSupportedMapProtocol {
+			panic(fmt.Sprintf("BUILD ERROR: This version of mapclient only supports mapper protocol %v, but version %v was the official one when this package was released!", MinimumSupportedMapProtocol, GMAMapperProtocol))
+		} else {
+			panic(fmt.Sprintf("BUILD ERROR: This version of mapclient only supports mapper protocols %v-%v, but version %v was the official one when this package was released!", MinimumSupportedMapProtocol, MaximumSupportedMapProtocol, GMAMapperProtocol))
+		}
+	}
+}
+
 // ErrProtocol is the error returned when there is a protocol-level issue.
 // This generally indicates a bug in the code, not a communications issue.
 var ErrProtocol = errors.New("internal protocol error")
@@ -40,16 +61,33 @@ type MapConnection struct {
 	sendChan chan string    // outgoing packets go through this channel
 }
 
+func (m *MapConnection) IsReady() bool {
+	return m != nil && m.reader != nil && m.writer != nil
+}
+
+func NewMapConnection(c net.Conn) MapConnection {
+	return MapConnection{
+		conn:     c,
+		reader:   bufio.NewScanner(c),
+		writer:   bufio.NewWriter(c),
+		sendChan: make(chan string, 16),
+	}
+}
+
 func (c *MapConnection) Close() {
-	if c.conn != nil {
+	if c != nil && c.conn != nil {
 		c.conn.Close()
 	}
 }
 
 //
-// send sends a message to the peer using the mapper protocol.
+// Send sends a message to the peer using the mapper protocol.
 //
-func (c *MapConnection) send(command ServerMessage, data any) error {
+func (c *MapConnection) Send(command ServerMessage, data any) error {
+	if c == nil {
+		return fmt.Errorf("nil MapConnection")
+	}
+
 	switch command {
 	case Accept:
 		if msgs, ok := data.(AcceptMessagePayload); ok {
@@ -301,6 +339,9 @@ func (c *MapConnection) send(command ServerMessage, data any) error {
 
 func (c *MapConnection) sendJSON(commandWord string, data any) error {
 	var err error
+	if c == nil {
+		return fmt.Errorf("nil MapConnection")
+	}
 	if data == nil {
 		return c.sendln(commandWord, "")
 	}
@@ -311,6 +352,9 @@ func (c *MapConnection) sendJSON(commandWord string, data any) error {
 }
 
 func (c *MapConnection) sendln(commandWord, data string) error {
+	if c == nil {
+		return fmt.Errorf("nil MapConnection")
+	}
 	if strings.ContainsAny(data, "\n\r") {
 		return fmt.Errorf("protocol error: outgoing data packet may not contain newlines")
 	}
@@ -332,10 +376,14 @@ func (c *MapConnection) sendln(commandWord, data string) error {
 }
 
 //
-// receive waits for a message to arrive on its input then returns it.
+// Receive waits for a message to arrive on the MapConnection's input then returns it.
 //
-func (c *MapConnection) receive(done chan error) MessagePayload {
+func (c *MapConnection) Receive(done chan error) MessagePayload {
 	var err error
+	if c == nil {
+		done <- fmt.Errorf("Receive called on nil MapConnection")
+		return nil
+	}
 	if !c.reader.Scan() {
 		if err = c.reader.Err(); err != nil {
 			done <- err

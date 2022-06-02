@@ -2483,7 +2483,9 @@ func LoadDieRollPresetFile(input io.Reader) ([]DieRollPreset, DieRollPresetMetaD
 	}
 
 	startPattern := regexp.MustCompile("^__DICE__:(\\d+)\\s*(.*)$")
-	recordPattern := regexp.MustCompile("^__(.*?)__ (.+)$")
+	recordPattern := regexp.MustCompile("^PRESET\\s(.+)$")
+	endRecordPattern := regexp.MustCompile("^\\}$")
+	continueRecordPattern := regexp.MustCompile("^\\s+")
 	eofPattern := regexp.MustCompile("^__EOF__$")
 	scanner := bufio.NewScanner(input)
 
@@ -2523,31 +2525,48 @@ func LoadDieRollPresetFile(input io.Reader) ([]DieRollPreset, DieRollPresetMetaD
 		// Start of record type f[1] with start of JSON string f[2]
 		// collect more lines of JSON data...
 		var dataPacket strings.Builder
+		overscan := false
 		dataPacket.WriteString(f[2])
 
 		for scanner.Scan() {
-			if strings.HasPrefix(scanner.Text(), "__") {
-				var err error
-
-				switch f[1] {
-				case "META":
-					err = json.Unmarshal([]byte(dataPacket.String()), &meta)
-
-				case "PRESET":
-					var preset DieRollPreset
-					if err = json.Unmarshal([]byte(dataPacket.String()), &preset); err == nil {
-						presets = append(presets, preset)
-					}
-
-				default:
-					return nil, meta, fmt.Errorf("invalid die-roll preset file format: unexpected record type \"%s\"", f[1])
-				}
-				if err != nil {
-					return nil, meta, fmt.Errorf("invalid die-roll preset file format: %v", err)
-				}
-				goto rescan
+			// Collect lines from the input file until we have a whole JSON object.
+			// If we find an indented line, add it to the one we already started.
+			// Otherwise we should find the closing brace here.
+			if continueRecordPattern.MatchString(scanner.Text()) {
+				dataPacket.WriteString(scanner.Text())
+			} else if endRecordPattern.MatchString(scanner.Text()) {
+				dataPacket.WriteString(scanner.Text())
+				break
+			} else {
+				// If neither of those were found, we are at the start of the next
+				// record already.
+				overscan = true
+				break
 			}
-			dataPacket.WriteString(scanner.Text())
+		}
+		// dataPacket should now be a complete JSON object. Our next read should be the start
+		// of the next record.
+		var err error
+
+		switch f[1] {
+		case "__META__":
+			err = json.Unmarshal([]byte(dataPacket.String()), &meta)
+
+		case "PRESET":
+			var preset DieRollPreset
+			if err = json.Unmarshal([]byte(dataPacket.String()), &preset); err == nil {
+				presets = append(presets, preset)
+			}
+
+		default:
+			return nil, meta, fmt.Errorf("invalid die-roll preset file format: unexpected record type \"%s\"", f[1])
+		}
+
+		if err != nil {
+			return nil, meta, fmt.Errorf("invalid die-roll preset file format: %v", err)
+		}
+		if overscan {
+			goto rescan
 		}
 	}
 	return nil, meta, fmt.Errorf("invalid die-roll preset file format: unexpected end of file")

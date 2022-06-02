@@ -62,27 +62,6 @@ import (
 	"github.com/MadScienceZone/go-gma/v4/util"
 )
 
-//
-// The GMA Mapper Protocol version number current as of this build,
-// and protocol versions supported by this code.
-//
-const (
-	GMAMapperProtocol           = 400      // @@##@@ auto-configured
-	GMAVersionNumber            = "4.3.12" // @@##@@ auto-configured
-	MinimumSupportedMapProtocol = 400
-	MaximumSupportedMapProtocol = 400
-)
-
-func init() {
-	if MinimumSupportedMapProtocol > GMAMapperProtocol || MaximumSupportedMapProtocol < GMAMapperProtocol {
-		if MinimumSupportedMapProtocol == MaximumSupportedMapProtocol {
-			panic(fmt.Sprintf("BUILD ERROR: This version of mapclient only supports mapper protocol %v, but version %v was the official one when this package was released!", MinimumSupportedMapProtocol, GMAMapperProtocol))
-		} else {
-			panic(fmt.Sprintf("BUILD ERROR: This version of mapclient only supports mapper protocols %v-%v, but version %v was the official one when this package was released!", MinimumSupportedMapProtocol, MaximumSupportedMapProtocol, GMAMapperProtocol))
-		}
-	}
-}
-
 // ErrAuthenticationRequired is the error returned when the server requires authentication but we didn't provide any.
 var ErrAuthenticationRequired = errors.New("authenticator required for connection")
 
@@ -163,12 +142,31 @@ type Connection struct {
 }
 
 //
+// Log writes data to our log destination.
+//
+func (c *Connection) Log(message ...any) {
+	if c != nil && c.Logger != nil {
+		message = append([]any{"[client]"}, message...)
+		c.Logger.Print(message...)
+	}
+}
+
+//
+// Logf writes data to our log destination.
+//
+func (c *Connection) Logf(format string, data ...any) {
+	if c != nil && c.Logger != nil {
+		c.Logger.Printf("[client] "+format, data...)
+	}
+}
+
+//
 // IsReady returns true if the connection to the server
 // has completed and authentication was successful, so
 // the connection is ready for interactive use.
 //
 func (c *Connection) IsReady() bool {
-	return c.serverConn.reader != nil && c.serverConn.writer != nil && c.signedOn
+	return c != nil && c.serverConn.IsReady() && c.signedOn
 }
 
 //
@@ -430,10 +428,10 @@ func NewConnection(endpoint string, opts ...ConnectionOption) (Connection, error
 // Log debugging info at the given level.
 //
 func (c *Connection) debug(level uint, msg string) {
-	if c.DebuggingLevel >= level {
+	if c != nil && c.DebuggingLevel >= level {
 		for i, line := range strings.Split(msg, "\n") {
 			if line != "" {
-				c.Logger.Printf("DEBUG%d.%02d: %s", level, i, line)
+				c.Logf("DEBUG%d.%02d: %s", level, i, line)
 			}
 		}
 	}
@@ -450,8 +448,10 @@ func (c *Connection) debug(level uint, msg string) {
 // the context being watched by Dial instead.
 //
 func (c *Connection) Close() {
-	c.debug(1, "Close()")
-	c.serverConn.Close()
+	if c != nil {
+		c.debug(1, "Close()")
+		c.serverConn.Close()
+	}
 }
 
 //
@@ -498,6 +498,10 @@ func (c *Connection) Close() {
 //   err = service.Subscribe(cm, ChatMessage)
 //
 func (c *Connection) Subscribe(ch chan MessagePayload, messages ...ServerMessage) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+
 	for _, m := range messages {
 		if m >= maximumServerMessage {
 			return fmt.Errorf("server message ID %v not defined (illegal Subscribe call)", m)
@@ -742,7 +746,7 @@ type AddImageMessagePayload struct {
 // AddImage informs the server and peers about an image they can use.
 //
 func (c *Connection) AddImage(idef ImageDefinition) error {
-	return c.serverConn.send(AddImage, idef)
+	return c.serverConn.Send(AddImage, idef)
 }
 
 //
@@ -755,7 +759,7 @@ func (c *Connection) AddImage(idef ImageDefinition) error {
 //
 /*
 func (c *Connection) AddImageData(idef ImageDefinition, data []byte) error {
-	return c.serverConn.send(AddImage, AddImageMessagePayload{
+	return c.serverConn.Send(AddImage, AddImageMessagePayload{
 		ImageDefinition: ImageDefinition{
 			File:        idef.File,
 			IsLocalFile: false,
@@ -794,7 +798,10 @@ type AddObjAttributesMessagePayload struct {
 // of strings, such as STATUSLIST.
 //
 func (c *Connection) AddObjAttributes(objID, attrName string, values []string) error {
-	return c.serverConn.send(AddObjAttributes, AddObjAttributesMessagePayload{
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(AddObjAttributes, AddObjAttributesMessagePayload{
 		ObjID:    objID,
 		AttrName: attrName,
 		Values:   values,
@@ -828,7 +835,10 @@ type AdjustViewMessagePayload struct {
 // each direction.
 //
 func (c *Connection) AdjustView(xview, yview float64) error {
-	return c.serverConn.send(AdjustView, AdjustViewMessagePayload{
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(AdjustView, AdjustViewMessagePayload{
 		XView: xview,
 		YView: yview,
 	})
@@ -871,7 +881,10 @@ type AuthMessagePayload struct {
 // and cache the map file with the given server ID.
 //
 func (c *Connection) CacheFile(serverID string) error {
-	return c.serverConn.send(LoadFrom, LoadFromMessagePayload{
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(LoadFrom, LoadFromMessagePayload{
 		FileDefinition: FileDefinition{
 			File:        serverID,
 			IsLocalFile: false,
@@ -942,7 +955,10 @@ type ChatMessageMessagePayload struct {
 // who should receive this message.
 //
 func (c *Connection) ChatMessage(to []string, message string) error {
-	return c.serverConn.send(ChatMessage, ChatMessageMessagePayload{
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(ChatMessage, ChatMessageMessagePayload{
 		ChatCommon: ChatCommon{
 			Recipients: to,
 		},
@@ -954,7 +970,10 @@ func (c *Connection) ChatMessage(to []string, message string) error {
 // ChatMessageToAll is equivalent to ChatMessage, but is addressed to all users.
 //
 func (c *Connection) ChatMessageToAll(message string) error {
-	return c.serverConn.send(ChatMessage, ChatMessageMessagePayload{
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(ChatMessage, ChatMessageMessagePayload{
 		ChatCommon: ChatCommon{
 			ToAll: true,
 		},
@@ -966,7 +985,10 @@ func (c *Connection) ChatMessageToAll(message string) error {
 // ChatMessageToGM is equivalent to ChatMessage, but is addressed only to the GM.
 //
 func (c *Connection) ChatMessageToGM(message string) error {
-	return c.serverConn.send(ChatMessage, ChatMessageMessagePayload{
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(ChatMessage, ChatMessageMessagePayload{
 		ChatCommon: ChatCommon{
 			ToGM: true,
 		},
@@ -1012,7 +1034,10 @@ type ClearMessagePayload struct {
 //   <id>                 Remove object with given <id>
 //
 func (c *Connection) Clear(objID string) error {
-	return c.serverConn.send(Clear, ClearMessagePayload{
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(Clear, ClearMessagePayload{
 		ObjID: objID,
 	})
 }
@@ -1056,7 +1081,10 @@ type ClearChatMessagePayload struct {
 // messages are kept.
 //
 func (c *Connection) ClearChat(target int, silently bool) error {
-	return c.serverConn.send(ClearChat, ClearChatMessagePayload{
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(ClearChat, ClearChatMessagePayload{
 		DoSilently: silently,
 		Target:     target,
 	})
@@ -1087,7 +1115,10 @@ type ClearFromMessagePayload struct {
 // objects described in the file rather than loading them on.
 //
 func (c *Connection) ClearFrom(serverID string) error {
-	return c.serverConn.send(ClearFrom, ClearFromMessagePayload{
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(ClearFrom, ClearFromMessagePayload{
 		FileDefinition: FileDefinition{
 			File:        serverID,
 			IsLocalFile: false,
@@ -1119,7 +1150,10 @@ type CombatModeMessagePayload struct {
 // CombatMode tells all peers to enable or disable combat mode.
 //
 func (c *Connection) CombatMode(enabled bool) error {
-	return c.serverConn.send(CombatMode, CombatModeMessagePayload{
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(CombatMode, CombatModeMessagePayload{
 		Enabled: enabled,
 	})
 }
@@ -1182,7 +1216,10 @@ type DeniedMessagePayload struct {
 // expression.
 //
 func (c *Connection) FilterDicePresets(re string) error {
-	return c.serverConn.send(FilterDicePresets, FilterDicePresetsMessagePayload{
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(FilterDicePresets, FilterDicePresetsMessagePayload{
 		Filter: re,
 	})
 }
@@ -1257,7 +1294,10 @@ type LoadFromMessagePayload struct {
 // on the map.
 //
 func (c *Connection) LoadFrom(path string, local bool, merge bool) error {
-	return c.serverConn.send(LoadFrom, LoadFromMessagePayload{
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(LoadFrom, LoadFromMessagePayload{
 		FileDefinition: FileDefinition{
 			File:        path,
 			IsLocalFile: local,
@@ -1348,23 +1388,26 @@ type LoadTileObjectMessagePayload struct {
 // Rectangle, SpellAreaOfEffect, Text, or Tile).
 //
 func (c *Connection) LoadObject(mo MapObject) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
 	switch element := mo.(type) {
 	case ArcElement:
-		return c.serverConn.send(LoadArcObject, element)
+		return c.serverConn.Send(LoadArcObject, element)
 	case CircleElement:
-		return c.serverConn.send(LoadCircleObject, element)
+		return c.serverConn.Send(LoadCircleObject, element)
 	case LineElement:
-		return c.serverConn.send(LoadLineObject, element)
+		return c.serverConn.Send(LoadLineObject, element)
 	case PolygonElement:
-		return c.serverConn.send(LoadPolygonObject, element)
+		return c.serverConn.Send(LoadPolygonObject, element)
 	case RectangleElement:
-		return c.serverConn.send(LoadRectangleObject, element)
+		return c.serverConn.Send(LoadRectangleObject, element)
 	case SpellAreaOfEffectElement:
-		return c.serverConn.send(LoadSpellAreaOfEffectObject, element)
+		return c.serverConn.Send(LoadSpellAreaOfEffectObject, element)
 	case TextElement:
-		return c.serverConn.send(LoadTextObject, element)
+		return c.serverConn.Send(LoadTextObject, element)
 	case TileElement:
-		return c.serverConn.send(LoadTileObject, element)
+		return c.serverConn.Send(LoadTileObject, element)
 	default:
 		return fmt.Errorf("unsupported type passed to LoadObject")
 	}
@@ -1414,7 +1457,10 @@ type MarkMessagePayload struct {
 // on the given (x, y) coordinates.
 //
 func (c *Connection) Mark(x, y float64) error {
-	return c.serverConn.send(Mark, MarkMessagePayload{
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(Mark, MarkMessagePayload{
 		Coordinates: Coordinates{
 			X: x,
 			Y: y,
@@ -1458,7 +1504,10 @@ type PlaceSomeoneMessagePayload struct {
 // specific attributes of the creature directly.
 //
 func (c *Connection) PlaceSomeone(someone any) error {
-	return c.serverConn.send(PlaceSomeone, someone)
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(PlaceSomeone, someone)
 }
 
 //  ____       _
@@ -1472,7 +1521,10 @@ func (c *Connection) PlaceSomeone(someone any) error {
 // Polo send the client's response to the server's MARCO ping message.
 //
 func (c *Connection) Polo() error {
-	return c.serverConn.send(Polo, nil)
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(Polo, nil)
 }
 
 type PoloMessagePayload struct {
@@ -1519,7 +1571,10 @@ type QueryImageMessagePayload struct {
 // If someone does, you'll receive an AddImage message.
 //
 func (c *Connection) QueryImage(idef ImageDefinition) error {
-	return c.serverConn.send(QueryImage, idef)
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(QueryImage, idef)
 }
 
 //  ____                _
@@ -1580,7 +1635,10 @@ type RemoveObjAttributesMessagePayload struct {
 // of strings, such as STATUSLIST.
 //
 func (c *Connection) RemoveObjAttributes(objID, attrName string, values []string) error {
-	return c.serverConn.send(RemoveObjAttributes, RemoveObjAttributesMessagePayload{
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(RemoveObjAttributes, RemoveObjAttributesMessagePayload{
 		ObjID:    objID,
 		AttrName: attrName,
 		Values:   values,
@@ -1613,7 +1671,10 @@ func (c *Connection) RemoveObjAttributes(objID, attrName string, values []string
 // https://pkg.go.dev/github.com/MadScienceZone/go-gma/v4/dice#DieRoller.DoRoll
 //
 func (c *Connection) RollDice(to []string, rollspec string) error {
-	return c.serverConn.send(RollDice, RollDiceMessagePayload{
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(RollDice, RollDiceMessagePayload{
 		ChatCommon: ChatCommon{
 			Recipients: to,
 		},
@@ -1637,7 +1698,10 @@ type RollDiceMessagePayload struct {
 // RollDiceToAll is equivalent to RollDice, sending the results to all users.
 //
 func (c *Connection) RollDiceToAll(rollspec string) error {
-	return c.serverConn.send(RollDice, RollDiceMessagePayload{
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(RollDice, RollDiceMessagePayload{
 		ChatCommon: ChatCommon{
 			ToAll: true,
 		},
@@ -1649,7 +1713,10 @@ func (c *Connection) RollDiceToAll(rollspec string) error {
 // RollDiceToGM is equivalent to RollDice, sending the results only to the GM.
 //
 func (c *Connection) RollDiceToGM(rollspec string) error {
-	return c.serverConn.send(RollDice, RollDiceMessagePayload{
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(RollDice, RollDiceMessagePayload{
 		ChatCommon: ChatCommon{
 			ToGM: true,
 		},
@@ -1684,7 +1751,10 @@ type RollResultMessagePayload struct {
 // stored on the server with the new set passed as the presets parameter.
 //
 func (c *Connection) DefineDicePresets(presets []dice.DieRollPreset) error {
-	return c.serverConn.send(DefineDicePresets, DefineDicePresetsMessagePayload{
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(DefineDicePresets, DefineDicePresetsMessagePayload{
 		Presets: presets,
 	})
 }
@@ -1699,7 +1769,10 @@ type DefineDicePresetsMessagePayload struct {
 // passed in to the existing set rather than replacing them.
 //
 func (c *Connection) AddDicePresets(presets []dice.DieRollPreset) error {
-	return c.serverConn.send(AddDicePresets, AddDicePresetsMessagePayload{
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(AddDicePresets, AddDicePresetsMessagePayload{
 		Presets: presets,
 	})
 }
@@ -1715,7 +1788,10 @@ type AddDicePresetsMessagePayload struct {
 // message.
 //
 func (c *Connection) QueryDicePresets() error {
-	return c.serverConn.send(QueryDicePresets, nil)
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(QueryDicePresets, nil)
 }
 
 type QueryDicePresetsMessagePayload struct {
@@ -1809,7 +1885,10 @@ type UpdateObjAttributesMessagePayload struct {
 // map. This maps attribute names to their new values.
 //
 func (c *Connection) UpdateObjAttributes(objID string, newAttrs map[string]any) error {
-	return c.serverConn.send(UpdateObjAttributes, UpdateObjAttributesMessagePayload{
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(UpdateObjAttributes, UpdateObjAttributesMessagePayload{
 		ObjID:    objID,
 		NewAttrs: newAttrs,
 	})
@@ -1861,7 +1940,10 @@ type Peer struct {
 // to the server.
 //
 func (c *Connection) QueryPeers() error {
-	return c.serverConn.send(QueryPeers, nil)
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(QueryPeers, nil)
 }
 
 type QueryPeersMessagePayload struct {
@@ -1920,7 +2002,10 @@ type UpdateStatusMarkerMessagePayload struct {
 // a creature marker.
 //
 func (c *Connection) UpdateStatusMarker(smd StatusMarkerDefinition) error {
-	return c.serverConn.send(UpdateStatusMarker, smd)
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(UpdateStatusMarker, smd)
 }
 
 //
@@ -2023,7 +2108,10 @@ type UpdateTurnMessagePayload struct {
 // request.
 //
 func (c *Connection) WriteOnly() error {
-	return c.serverConn.send(WriteOnly, nil)
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(WriteOnly, nil)
 }
 
 //
@@ -2031,7 +2119,10 @@ func (c *Connection) WriteOnly() error {
 // to it.
 //
 func (c *Connection) Sync() error {
-	return c.serverConn.send(Sync, nil)
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(Sync, nil)
 }
 
 type SyncMessagePayload struct {
@@ -2044,7 +2135,10 @@ type SyncMessagePayload struct {
 // recent |target| messages (target<0).
 //
 func (c *Connection) SyncChat(target int) error {
-	return c.serverConn.send(SyncChat, SyncChatMessagePayload{
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(SyncChat, SyncChatMessagePayload{
 		Target: target,
 	})
 }
@@ -2134,6 +2228,9 @@ type WorldMessagePayload struct {
 //   go server.Dial()
 //
 func (c *Connection) Dial() {
+	if c == nil {
+		return
+	}
 	var err error
 	defer c.Close()
 
@@ -2143,7 +2240,7 @@ func (c *Connection) Dial() {
 		if err == nil {
 			// interact will set c.signedOn = true when ready
 			if err = c.interact(); err != nil {
-				c.Logger.Printf("mapper: INTERACT FAILURE: %v", err)
+				c.Logf("mapper interact failure: %v", err)
 			}
 			c.signedOn = false
 		}
@@ -2155,6 +2252,9 @@ func (c *Connection) Dial() {
 }
 
 func (c *Connection) tryConnect() error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
 	var err error
 	var conn net.Conn
 	var i uint
@@ -2172,14 +2272,14 @@ func (c *Connection) tryConnect() error {
 
 		if err != nil {
 			if c.Retries == 0 {
-				c.Logger.Printf("mapper: Attempting connection (try %d): %v", i+1, err)
+				c.Logf("attempting connection (try %d): %v", i+1, err)
 			} else {
-				c.Logger.Printf("mapper: Attempting connection (try %d of %d): %v", i+1, c.Retries, err)
+				c.Logf("attempting connection (try %d of %d): %v", i+1, c.Retries, err)
 			}
 		}
 	}
 	if err != nil {
-		c.Logger.Printf("mapper: No more attempts allowed; giving up!")
+		c.Logf("no more attempts allowed; giving up!")
 		c.LastError = err
 		return err
 	}
@@ -2196,7 +2296,7 @@ syncloop:
 		select {
 		case err = <-loginDone:
 			if err != nil {
-				c.Logger.Printf("mapper: login process failed: %v", err)
+				c.Logf("login process failed: %v", err)
 				c.Close()
 				c.LastError = err
 				return err
@@ -2204,7 +2304,7 @@ syncloop:
 			break syncloop
 
 		case <-c.Context.Done():
-			c.Logger.Printf("mapper: context cancelled; closing connections and aborting login...")
+			c.Logf("context cancelled; closing connections and aborting login...")
 			c.Close() // this will abort the scanner in login
 			return fmt.Errorf("mapper: connection aborted by termination of context")
 		}
@@ -2215,17 +2315,21 @@ syncloop:
 
 func (c *Connection) login(done chan error) {
 	defer close(done)
+	if c == nil {
+		done <- fmt.Errorf("login called on nil Connection")
+		return
+	}
 
 	c.debug(2, "login() started")
 	defer c.debug(2, "login() ended")
 
-	c.Logger.Printf("mapper: Initial server negotiation...")
+	c.Log("initial server negotiation...")
 	syncDone := false
 	authPending := false
 	c.Preamble = nil
 
 	for !syncDone {
-		incomingPacket := c.serverConn.receive(done)
+		incomingPacket := c.serverConn.Receive(done)
 		if incomingPacket == nil {
 			break
 		}
@@ -2239,41 +2343,41 @@ func (c *Connection) login(done chan error) {
 			c.Protocol = response.Protocol
 
 			if c.Protocol < MinimumSupportedMapProtocol {
-				c.Logger.Printf("mapper: Unable to connect to mapper with protocol older than %d (server offers %d)", MinimumSupportedMapProtocol, c.Protocol)
+				c.Logf("unable to connect to mapper with protocol older than %d (server offers %d)", MinimumSupportedMapProtocol, c.Protocol)
 				done <- fmt.Errorf("server version %d too old (must be at least %d)", c.Protocol, MinimumSupportedMapProtocol)
 				return
 			}
 			if c.Protocol > MaximumSupportedMapProtocol {
-				c.Logger.Printf("mapper: Unable to connect to mapper with protocol newer than %d (server offers %d)", MaximumSupportedMapProtocol, c.Protocol)
-				c.Logger.Printf("mapper: ** UPGRADE GMA **")
+				c.Logf("unable to connect to mapper with protocol newer than %d (server offers %d)", MaximumSupportedMapProtocol, c.Protocol)
+				c.Log("** UPGRADE GMA **")
 				done <- fmt.Errorf("server version %d too new (must be at most %d)", c.Protocol, MaximumSupportedMapProtocol)
 				return
 			}
 
 			if response.Challenge != nil {
 				if c.Authenticator == nil {
-					c.Logger.Printf("mapper: Server requires authentication but no authenticator was provided for the client.")
+					c.Log("Server requires authentication but no authenticator was provided for the client.")
 					done <- ErrAuthenticationRequired
 					return
 				}
-				c.Logger.Printf("mapper: authenticating to server")
+				c.Log("authenticating to server")
 				c.Authenticator.Reset()
 				authResponse, err := c.Authenticator.AcceptChallengeBytes(response.Challenge)
 				if err != nil {
-					c.Logger.Printf("mapper: Error accepting server's challenge: %v", err)
+					c.Logf("error accepting server's challenge: %v", err)
 					done <- err
 					return
 				}
-				c.serverConn.send(Auth, AuthMessagePayload{
+				c.serverConn.Send(Auth, AuthMessagePayload{
 					Response: authResponse,
 					Client:   c.Authenticator.Client,
 					User:     c.Authenticator.Username,
 				})
-				c.Logger.Printf("mapper: authentication sent. Awaiting validation.")
+				c.Log("authentication sent, awaiting validation.")
 				authPending = true
 			} else {
-				c.Logger.Printf("mapper: using protocol %d.", c.Protocol)
-				c.Logger.Printf("mapper: server sync complete. No authentication requested by server.")
+				c.Logf("using protocol %d.", c.Protocol)
+				c.Log("server sync complete. No authentication requested by server.")
 			}
 			syncDone = true
 
@@ -2293,7 +2397,7 @@ func (c *Connection) login(done chan error) {
 			c.Preamble = append(c.Preamble, response.Text)
 
 		default:
-			c.Logger.Printf("mapper: ignoring unexpected data before server challenge")
+			c.Log("ignoring unexpected data before server challenge")
 		}
 	}
 
@@ -2306,7 +2410,7 @@ func (c *Connection) login(done chan error) {
 	// If we're still waiting for authentication results, do that...
 	c.debug(2, "Switched to authentication result scanner")
 	for authPending {
-		incomingPacket := c.serverConn.receive(done)
+		incomingPacket := c.serverConn.Receive(done)
 		if incomingPacket == nil {
 			break
 		}
@@ -2315,12 +2419,12 @@ func (c *Connection) login(done chan error) {
 		}
 		switch response := incomingPacket.(type) {
 		case DeniedMessagePayload:
-			c.Logger.Printf("mapper: access denied by server: %v", response.Reason)
+			c.Logf("access denied by server: %v", response.Reason)
 			done <- ErrAuthenticationFailed
 			return
 
 		case GrantedMessagePayload:
-			c.Logger.Printf("mapper: access granted for %s", response.User)
+			c.Logf("access granted for %s", response.User)
 			authPending = false
 			if c.Authenticator != nil {
 				c.Authenticator.Username = response.User
@@ -2330,7 +2434,7 @@ func (c *Connection) login(done chan error) {
 			// Ignore
 
 		default:
-			c.Logger.Printf("mapper: unexpected server message %v while waiting for authentication to complete", incomingPacket.MessageType())
+			c.Logf("unexpected server message %v while waiting for authentication to complete", incomingPacket.MessageType())
 		}
 	}
 	if authPending {
@@ -2341,7 +2445,7 @@ func (c *Connection) login(done chan error) {
 	// wait for server READY signal, accept incoming preliminary data
 waitForReady:
 	for {
-		incomingPacket := c.serverConn.receive(done)
+		incomingPacket := c.serverConn.Receive(done)
 		if incomingPacket == nil {
 			break
 		}
@@ -2370,7 +2474,7 @@ waitForReady:
 			break waitForReady
 
 		default:
-			c.Logger.Printf("mapper: ignoring unexpected data before server ready signal")
+			c.Log("ignoring unexpected data before server ready signal")
 		}
 	}
 
@@ -2397,27 +2501,33 @@ waitForReady:
 }
 
 func (c *Connection) receiveDSM(d UpdateStatusMarkerMessagePayload) {
-	c.Conditions[d.Condition] = StatusMarkerDefinition{
-		Condition:   d.Condition,
-		Shape:       d.Shape,
-		Color:       d.Color,
-		Description: d.Description,
+	if c != nil {
+		c.Conditions[d.Condition] = StatusMarkerDefinition{
+			Condition:   d.Condition,
+			Shape:       d.Shape,
+			Color:       d.Color,
+			Description: d.Description,
+		}
 	}
 }
 
 func (c *Connection) receiveAddCharacter(d AddCharacterMessagePayload) {
-	c.Characters[d.Name] = CharacterDefinition{
-		Name:  d.Name,
-		ObjID: d.ObjID,
-		Color: d.Color,
-		Area:  d.Area,
-		Size:  d.Size,
+	if c != nil {
+		c.Characters[d.Name] = CharacterDefinition{
+			Name:  d.Name,
+			ObjID: d.ObjID,
+			Color: d.Color,
+			Area:  d.Area,
+			Size:  d.Size,
+		}
 	}
 }
 
 func (c *Connection) receiveUpdateVersions(d UpdateVersionsMessagePayload) {
-	for _, pkg := range d.Packages {
-		c.PackageUpdatesAvailable[pkg.Name] = append(c.PackageUpdatesAvailable[pkg.Name], pkg.Instances...)
+	if c != nil {
+		for _, pkg := range d.Packages {
+			c.PackageUpdatesAvailable[pkg.Name] = append(c.PackageUpdatesAvailable[pkg.Name], pkg.Instances...)
+		}
 	}
 }
 
@@ -2425,16 +2535,21 @@ func (c *Connection) receiveUpdateVersions(d UpdateVersionsMessagePayload) {
 // listen for, and dispatch, incoming server messages
 //
 func (c *Connection) listen(done chan error) {
+	if c == nil {
+		done <- fmt.Errorf("listen called on nil Connection")
+		close(done)
+		return
+	}
 	defer func() {
 		close(done)
-		c.Logger.Printf("mapper: stopped listening to server")
+		c.Log("stopped listening to server")
 		c.debug(2, "listen() ended")
 	}()
 	c.debug(2, "listen() started")
 
-	c.Logger.Printf("mapper: listening for server messages to dispatch...")
+	c.Log("listening for server messages to dispatch...")
 	for {
-		incomingPacket := c.serverConn.receive(done)
+		incomingPacket := c.serverConn.Receive(done)
 		if incomingPacket == nil {
 			break
 		}
@@ -2570,7 +2685,7 @@ func (c *Connection) listen(done chan error) {
 			if ch, ok := c.Subscriptions[Marco]; ok {
 				ch <- cmd
 			} else {
-				c.serverConn.send(Polo, nil)
+				c.serverConn.Send(Polo, nil)
 			}
 
 		case MarkMessagePayload:
@@ -2656,7 +2771,7 @@ func (c *Connection) listen(done chan error) {
 					},
 				}
 			} else {
-				c.Logger.Printf("received unknown server message type: \"%v\"", cmd.MessageType())
+				c.Logf("received unknown server message type: \"%v\"", cmd.MessageType())
 			}
 		}
 	}
@@ -2666,6 +2781,9 @@ func (c *Connection) listen(done chan error) {
 // report any sort of error to the client
 //
 func (c *Connection) reportError(e error) {
+	if c == nil {
+		return
+	}
 	c.LastError = e
 	if ch, ok := c.Subscriptions[ERROR]; ok {
 		ch <- ErrorMessagePayload{
@@ -2676,7 +2794,7 @@ func (c *Connection) reportError(e error) {
 			Error: e,
 		}
 	} else {
-		c.Logger.Printf("mapper error: %v", e)
+		c.Logf("mapper error: %v", e)
 	}
 }
 
@@ -2685,6 +2803,9 @@ func (c *Connection) reportError(e error) {
 // then close our connection to it
 //
 func (c *Connection) interact() error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
 	defer func() {
 		c.signedOn = false
 		c.Close()
@@ -2704,10 +2825,10 @@ func (c *Connection) interact() error {
 		//
 		select {
 		case <-c.Context.Done():
-			c.Logger.Printf("interact: context done, stopping")
+			c.Log("interact: context done, stopping")
 			return nil
 		case err := <-listenerDone:
-			c.Logger.Printf("interact: listener done (%v), stopping", err)
+			c.Logf("interact: listener done (%v), stopping", err)
 			return err
 		case packet := <-c.serverConn.sendChan:
 			c.serverConn.sendBuf = append(c.serverConn.sendBuf, packet)
@@ -2727,7 +2848,7 @@ func (c *Connection) interact() error {
 				return fmt.Errorf("only wrote %d of %d bytes: %v", written, len(c.serverConn.sendBuf[0]), err)
 			}
 			if err := c.serverConn.writer.Flush(); err != nil {
-				c.Logger.Printf("interact: unable to flush: %v", err)
+				c.Logf("interact: unable to flush: %v", err)
 				return err
 			}
 			c.serverConn.sendBuf = c.serverConn.sendBuf[1:]
@@ -2741,6 +2862,9 @@ func (c *Connection) interact() error {
 // messages the client wants to see.
 //
 func (c *Connection) filterSubscriptions() error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
 	if !c.IsReady() {
 		return nil
 	}
@@ -2836,7 +2960,7 @@ func (c *Connection) filterSubscriptions() error {
 		}
 	}
 
-	return c.serverConn.send(Accept, AcceptMessagePayload{
+	return c.serverConn.Send(Accept, AcceptMessagePayload{
 		Messages: subList,
 	})
 }
@@ -2845,7 +2969,10 @@ func (c *Connection) filterSubscriptions() error {
 // Tell the server to send us all possible messages.
 //
 func (c *Connection) unfilterSubscriptions() error {
-	return c.serverConn.send(Accept, AcceptMessagePayload{
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(Accept, AcceptMessagePayload{
 		Messages: nil,
 	})
 }
@@ -2856,6 +2983,9 @@ func (c *Connection) unfilterSubscriptions() error {
 // If so, it returns the information for that update.
 //
 func (c *Connection) CheckVersionOf(program, currentVersion string) (*PackageVersion, error) {
+	if c == nil {
+		return nil, fmt.Errorf("nil Connection")
+	}
 	availableVersions, ok := c.PackageUpdatesAvailable[program]
 	if !ok {
 		return nil, nil // the requested program isn't advertised at all

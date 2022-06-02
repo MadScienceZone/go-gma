@@ -35,6 +35,20 @@ func TestObjLoadNil(t *testing.T) {
 	}
 }
 
+func sortImageDefinitions(d []any) {
+	for _, imAny := range d {
+		im := imAny.(ImageDefinition)
+		sort.Slice(im.Sizes, func(i, j int) bool {
+			return im.Sizes[i].Zoom < im.Sizes[j].Zoom
+		})
+	}
+	sort.Slice(d, func(i, j int) bool {
+		a := d[i].(ImageDefinition)
+		b := d[j].(ImageDefinition)
+		return a.Name < b.Name
+	})
+}
+
 func TestLegacyObjLoadImages(t *testing.T) {
 	objs, meta, err := LoadMapFile(strings.NewReader(`__MAPPER__:17 {test {0 nil}}
 I #SimonKazar 1.0 #SimonKazar@50.gif
@@ -44,18 +58,20 @@ I #SimonKazar 0.25 @OoSmGY0XERJRrA8ZiK_igg_Firefly@12
 	if err != nil {
 		t.Errorf("error %v", err)
 	}
+
+	sortImageDefinitions(objs)
 	if !reflect.DeepEqual(objs, []any{
-		ImageDefinition{
-			Name: "#SimonKazar",
-			Sizes: []ImageInstance{
-				{Zoom: 1.0, File: "#SimonKazar@50.gif", IsLocalFile: true},
-				{Zoom: 0.25, File: "OoSmGY0XERJRrA8ZiK_igg_Firefly@12", IsLocalFile: false},
-			},
-		},
 		ImageDefinition{
 			Name: "#Firefly",
 			Sizes: []ImageInstance{
 				{Zoom: 2.0, File: "OoSmGY0XERJRrA8ZiK_igg_Firefly@100", IsLocalFile: false},
+			},
+		},
+		ImageDefinition{
+			Name: "#SimonKazar",
+			Sizes: []ImageInstance{
+				{Zoom: 0.25, File: "OoSmGY0XERJRrA8ZiK_igg_Firefly@12", IsLocalFile: false},
+				{Zoom: 1.0, File: "#SimonKazar@50.gif", IsLocalFile: true},
 			},
 		},
 	}) {

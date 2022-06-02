@@ -63,7 +63,7 @@ import (
 //    %N   username
 //    %n   module name
 //
-func FancyFileName(path string, extras map[rune]string) (string, error) {
+func FancyFileName(path string, extras map[byte]string) (string, error) {
 	ss := strftime.NewSpecificationSet()
 
 	if err := ss.Delete('n'); err != nil {
