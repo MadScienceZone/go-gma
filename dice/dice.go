@@ -2483,7 +2483,7 @@ func LoadDieRollPresetFile(input io.Reader) ([]DieRollPreset, DieRollPresetMetaD
 	}
 
 	startPattern := regexp.MustCompile("^__DICE__:(\\d+)\\s*(.*)$")
-	recordPattern := regexp.MustCompile("^PRESET\\s(.+)$")
+	recordPattern := regexp.MustCompile("^(PRESET|__META__)\\s(.+)$")
 	endRecordPattern := regexp.MustCompile("^\\}$")
 	continueRecordPattern := regexp.MustCompile("^\\s+")
 	eofPattern := regexp.MustCompile("^__EOF__$")
