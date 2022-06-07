@@ -1,10 +1,15 @@
 # Changelog
 ## Current Version Information
- * GMA Core API Library Version: 4.3.12		<!-- @@##@@ -->
+ * GMA Core API Library Version: 4.3.13		<!-- @@##@@ -->
  * Supported GMA Mapper Version: 3.41.0		<!-- @@##@@ -->
  * Supported GMA Mapper Protocol: 332		<!-- @@##@@ -->
  * Supported GMA Mapper File Format: 17		<!-- @@##@@ -->
- * Effective Date: 07-May-2022			<!-- @@##@@ -->
+ * Effective Date: 07-Jun-2022			<!-- @@##@@ -->
+
+## v4.3.13 (alpha)
+Added subtotals to die roll results.
+
+**Warning: a future release of this code will require Go 1.18.**
 
 ## v4.3.12 (alpha)
 Added additional core GMA functions and the map-console tool, which gives an
