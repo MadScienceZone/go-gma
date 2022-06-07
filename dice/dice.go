@@ -752,6 +752,10 @@ func (d *dieSpec) structuredDescribeRoll() []StructuredDescription {
 		desc = append(desc, StructuredDescription{Type: "diebonus", Value: fmt.Sprintf("%+d", d.DieBonus)})
 	}
 
+	if len(d.History[0]) > 1 {
+		desc = append(desc, StructuredDescription{Type: "subtotal", Value: strconv.Itoa(d.Value)})
+	}
+
 	if d.Rerolls > 0 {
 		if d.BestReroll {
 			desc = append(desc, StructuredDescription{Type: "best", Value: strconv.Itoa(d.Rerolls + 1)})
@@ -2291,6 +2295,9 @@ func (sr StructuredDescriptionSet) Text() (string, error) {
 
 		case "short":
 			fmt.Fprintf(&t, "(MISSED DC by %s) ", r.Value)
+
+		case "subtotal":
+			fmt.Fprintf(&t, "(%s)", r.Value)
 
 		case "until":
 			fmt.Fprintf(&t, " (until %s) ", r.Value)
