@@ -2296,6 +2296,9 @@ func (sr StructuredDescriptionSet) Text() (string, error) {
 		case "short":
 			fmt.Fprintf(&t, "(MISSED DC by %s) ", r.Value)
 
+		case "subtotal":
+			fmt.Fprintf(&t, "(%s)", r.Value)
+
 		case "until":
 			fmt.Fprintf(&t, " (until %s) ", r.Value)
 
