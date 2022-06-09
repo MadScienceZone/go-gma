@@ -1699,6 +1699,14 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 // equals sign (“=”)) is optional and will be included as a comment in the result
 // list to indicate what the purpose of the die roll was for.
 //
+// Note that this module does not interpret the <title> value further, but by
+// convention two special characters are significant to some clients:
+//   ‖ (U+2016) separates multiple titles in the <title> string
+//   ≡ (U+2261) separates the title text on the left with a color on the right.
+// This means that a <title> string of "monster≡blue‖damage≡red" will display
+// a title for the die roll as two separate title values, "monster" in blue
+// and "damage" in red.
+//
 // <expression> can be anything that can be given as the description string
 // to the New constructor (q.v.). At the end of the spec string there
 // may be zero or more options, each beginning with a vertical bar (“|”).
