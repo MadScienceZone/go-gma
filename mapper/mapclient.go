@@ -73,7 +73,7 @@ const (
 	GMAMapperProtocol=332      // @@##@@ auto-configured
 	GMAVersionNumber="4.3.13" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 332
-	MaximumSupportedMapProtocol = 332
+	MaximumSupportedMapProtocol = 333
 )
 
 func init() {
@@ -1760,13 +1760,17 @@ type StatusMarkerDefinition struct {
 	// The special color "*" may be used to indicate that the marker
 	// should be drawn in the same color as the creature's threat zone.
 	Color string
+
+	// The description of the condition, including what effects it has
+	// on the affected creature.
+	Description string 
 }
 
 //
 // Text produces a simple text description of a StatusMarkerDefinition structure.
 //
 func (c StatusMarkerDefinition) Text() string {
-	return fmt.Sprintf("Condition %q: Shape=%q, Color=%q", c.Condition, c.Shape, c.Color)
+	return fmt.Sprintf("Condition %q: Shape=%q, Color=%q, Description=%q", c.Condition, c.Shape, c.Color, c.Description)
 }
 
 //
@@ -2188,7 +2192,10 @@ func (c *Connection) login(done chan error) {
 }
 
 func (c *Connection) receiveDSM(f []string) error {
-	_, err := tcllist.ConvertTypes(f, "ssss")
+	if len(f) == 4 {
+		f = append(f, "")
+	}
+	_, err := tcllist.ConvertTypes(f, "sssss")
 	if err != nil {
 		return fmt.Errorf("%v: %v", f, err)
 	}
@@ -2197,6 +2204,7 @@ func (c *Connection) receiveDSM(f []string) error {
 		Condition: f[1],
 		Shape:     f[2],
 		Color:     f[3],
+		Description: f[4],
 	}
 	return nil
 }
@@ -2941,15 +2949,21 @@ func (c *Connection) listen(done chan error) {
 			// | |) \__ \ |\/| |
 			// |___/|___/_|  |_|
 			//
-			// DSM <cond> <shape> <color>
+			// DSM <cond> <shape> <color> [<description>]
 			//
+
+			// Protocols <333 only supported 3 fields. If we don't see a fourth,
+			// assume it's empty and continue with that.
+			if len(f) == 4 {
+				f = append(f, "")
+			}
 			if err := c.receiveDSM(f); err != nil {
 				c.reportError(fmt.Errorf("error in UpdateStatusMarker: %v", err))
 				break
 			}
 			ch, ok := c.Subscriptions[UpdateStatusMarker]
 			if ok {
-				if len(f) != 4 {
+				if len(f) != 5 {
 					// This should have been caught by receiveDSM.
 					c.reportError(fmt.Errorf("error in UpdateStatusMarker: field count %d", len(f)))
 					break
@@ -2961,6 +2975,7 @@ func (c *Connection) listen(done chan error) {
 						Condition: f[1],
 						Shape:     f[2],
 						Color:     f[3],
+						Description: f[4],
 					},
 				}
 			}
