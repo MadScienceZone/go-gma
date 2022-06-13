@@ -48,7 +48,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v4/util"
 )
 
-const GMAVersionNumber="4.3.13" //@@##@@
+const GMAVersionNumber = "4.3.13" //@@##@@
 
 func main() {
 	fmt.Printf("GMA mapper console %s\n", GMAVersionNumber)
@@ -137,6 +137,9 @@ func main() {
 		time.Sleep(100 * time.Millisecond)
 	}
 	fmt.Println(colorize("Connected to server.", "Green", mono))
+	if err = server.Allow(mapper.DiceColorBoxes); err != nil {
+		fmt.Println(colorize(fmt.Sprintf("Error asking for optional features: %v", err), "red", mono))
+	}
 	fmt.Printf("Server protocol %d; using %s calendar.\n", server.Protocol, server.CalendarSystem)
 	fmt.Println("Characters Defined:")
 	fmt.Println(colorize("NAME----------- ID-------- COLOR----- AREA SIZE", "Blue", mono))

@@ -70,8 +70,8 @@ import (
 // and protocol versions supported by this code.
 //
 const (
-	GMAMapperProtocol=332      // @@##@@ auto-configured
-	GMAVersionNumber="4.3.13" // @@##@@ auto-configured
+	GMAMapperProtocol           = 332      // @@##@@ auto-configured
+	GMAVersionNumber            = "4.3.13" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 332
 	MaximumSupportedMapProtocol = 333
 )
@@ -795,6 +795,40 @@ type AdjustViewMessagePayload struct {
 //
 func (c *Connection) AdjustView(xview, yview float64) error {
 	return c.send("AV", xview, yview)
+}
+
+//     _    _ _
+//    / \  | | | _____      __
+//   / _ \ | | |/ _ \ \ /\ / /
+//  / ___ \| | | (_) \ V  V /
+// /_/   \_\_|_|\___/ \_/\_/
+//
+
+type OptionalFeature byte
+
+const (
+	DiceColorBoxes OptionalFeature = iota
+)
+
+//
+// Allow tells the server which optional features this client is
+// prepared to accept.
+//
+func (c *Connection) Allow(features ...OptionalFeature) error {
+	var featureList []string
+	if c.Protocol < 333 {
+		return nil
+	}
+	for _, feature := range features {
+		switch feature {
+		case DiceColorBoxes:
+			featureList = append(featureList, "DICE-COLOR-BOXES")
+		default:
+			return fmt.Errorf("unknown OptionalFeature code %v", feature)
+		}
+	}
+	return c.send("ALLOW", featureList)
+
 }
 
 //   ____           _          _____ _ _
@@ -1763,7 +1797,7 @@ type StatusMarkerDefinition struct {
 
 	// The description of the condition, including what effects it has
 	// on the affected creature.
-	Description string 
+	Description string
 }
 
 //
@@ -2192,6 +2226,7 @@ func (c *Connection) login(done chan error) {
 }
 
 func (c *Connection) receiveDSM(f []string) error {
+	// the last field is technically optional and defaults to an empty string.
 	if len(f) == 4 {
 		f = append(f, "")
 	}
@@ -2201,9 +2236,9 @@ func (c *Connection) receiveDSM(f []string) error {
 	}
 	// add to status list
 	c.Conditions[f[1]] = StatusMarkerDefinition{
-		Condition: f[1],
-		Shape:     f[2],
-		Color:     f[3],
+		Condition:   f[1],
+		Shape:       f[2],
+		Color:       f[3],
 		Description: f[4],
 	}
 	return nil
@@ -2972,9 +3007,9 @@ func (c *Connection) listen(done chan error) {
 				ch <- UpdateStatusMarkerMessagePayload{
 					BaseMessagePayload: payload,
 					StatusMarkerDefinition: StatusMarkerDefinition{
-						Condition: f[1],
-						Shape:     f[2],
-						Color:     f[3],
+						Condition:   f[1],
+						Shape:       f[2],
+						Color:       f[3],
 						Description: f[4],
 					},
 				}

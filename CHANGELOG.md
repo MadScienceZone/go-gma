@@ -6,6 +6,15 @@
  * Supported GMA Mapper File Format: 17		<!-- @@##@@ -->
  * Effective Date: 07-Jun-2022			<!-- @@##@@ -->
 
+## v4.4.1 (alpha)
+### Enhancements
+ * Updated for protocol version 333.
+ * Added support for Allow server command.
+ * Now supports extended status marker definitions (with description of effects).
+
+### Housekeeping
+Synced version number with GMA core.
+
 ## v4.3.13 (alpha)
 Added subtotals to die roll results.
 
