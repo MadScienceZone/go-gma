@@ -48,7 +48,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v4/util"
 )
 
-const GMAVersionNumber="4.4.1" //@@##@@
+const GMAVersionNumber = "4.4.1" //@@##@@
 
 func main() {
 	fmt.Printf("GMA mapper console %s\n", GMAVersionNumber)
@@ -148,9 +148,9 @@ func main() {
 	}
 
 	fmt.Println("Condition Codes from Server:")
-	fmt.Println(colorize("CONDITION------ SHAPE COLOR-----", "Blue", mono))
+	fmt.Println(colorize("CONDITION------ SHAPE COLOR----- DESCRIPTION-----------------------------------", "Blue", mono))
 	for _, def := range server.Conditions {
-		fmt.Println(colorize(fmt.Sprintf("%-15s %-5s %-10s", def.Condition, def.Shape, def.Color), "Yellow", mono))
+		fmt.Println(colorize(fmt.Sprintf("%-15s %-5s %-10s %.46s", def.Condition, def.Shape, def.Color, def.Description), "Yellow", mono))
 	}
 	go readUserInput(mono, cancel, server)
 
