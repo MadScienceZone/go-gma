@@ -88,39 +88,40 @@ func init() {
 // See the DieRoller type for a higher-level abstraction which is the
 // recommended type to use instead of this one, for most purposes.
 type Dice struct {
+	// Have we actually rolled the dice yet to get a result?
+	Rolled bool
+
 	// Constrained minimum and maximum values for the roll.
 	// Specify 0 if there should be no minimum and/or maximum.
 	MinValue int
 	MaxValue int
 
-	// The individual components that make up the overall die-roll
-	// operation to be performed.
-	multiDice []dieComponent
-
 	// The result of the last roll of this die. LastValue has a value
 	// that can be used if Rolled is true.
 	LastValue int
 
-	_natural   int      // interim value while confirming critical rolls
-	_defthreat int      // default threat for confirming critical rolls
-	_onlydie   *dieSpec // for single-die rolls, this is the lone die
-
-	// Have we actually rolled the dice yet to get a result?
-	Rolled bool
-
-	// The random number generator to be used with this Dice
-	generator *rand.Rand
+	_natural   int // interim value while confirming critical rolls
+	_defthreat int // default threat for confirming critical rolls
 
 	//
 	// The parameters from which we construct a Dice
 	//
-	desc     string
 	qty      int
 	sides    int
 	bonus    int
 	diebonus int
 	div      int
 	factor   int
+	desc     string
+
+	// The individual components that make up the overall die-roll
+	// operation to be performed.
+	multiDice []dieComponent
+
+	// The random number generator to be used with this Dice
+	generator *rand.Rand
+
+	_onlydie *dieSpec // for single-die rolls, this is the lone die
 }
 
 //
@@ -390,11 +391,11 @@ type dieComponent interface {
 // For example, if the die roll includes a +2 bonus due to intelligence,
 // this would be represented by the value dieConstant{"+", 3, "INT"}.
 type dieConstant struct {
-	// The operator with which this constant is integrated into the result.
-	Operator string
-
 	// The constant value itself.
 	Value int
+
+	// The operator with which this constant is integrated into the result.
+	Operator string
 
 	// An optional label to indicate what the constant actually represents.
 	Label string
@@ -484,10 +485,10 @@ func _applyOp(operator string, x, y int) (int, error) {
 // roll (NdS+B, etc) in a chain of other components.
 //
 type dieSpec struct {
-	// The operator with which this component is integrated into the overall result.
-	// (Yes, these should be something more sophisticated than a string; this will
-	// quite probably change in the future).
-	Operator string
+	// Various boolean flags
+	BestReroll   bool // if making multiple rolls, are we taking the best (vs worst)?
+	WasMaximized bool // A boolean that indicates if the result was generated at maximum value.
+	InitialMax   bool // Should we maximize the first die (e.g. for ">5d6", the first d6 will be "6").
 
 	// The value of the die after it was rolled.
 	Value int
@@ -498,17 +499,11 @@ type dieSpec struct {
 	Sides       int
 
 	// If making multiple rolls, we keep track of them here.
-	BestReroll bool
-	Rerolls    int
+	Rerolls int
 
 	// A bonus applied to the die every time (deprecated now that we have actual
 	// die-roll expressions where we can add or subtract constants).
 	DieBonus int
-
-	// Should the first die be assumed to be maximal? For example, if this is true,
-	// then rolling, say, 5d10 would force the first die to the value 10 and add four more
-	// random d10s to it.
-	InitialMax bool
 
 	// Label string for this component, if any
 	Label string
@@ -516,11 +511,13 @@ type dieSpec struct {
 	// A record of the actual die rolls performed, per re-roll attempt.
 	History [][]int
 
-	// A boolean that indicates if the result was generated at maximum value.
-	WasMaximized bool
-
 	_natural  int
 	generator *rand.Rand
+
+	// The operator with which this component is integrated into the overall result.
+	// (Yes, these should be something more sophisticated than a string; this will
+	// quite probably change in the future).
+	Operator string
 }
 
 //
@@ -1211,9 +1208,9 @@ func (d *Dice) Description() (desc string) {
 
 type sdrOptions struct {
 	autoSF         bool
+	rollBonus      int
 	successMessage string
 	failureMessage string
-	rollBonus      int
 }
 
 //
@@ -1327,7 +1324,8 @@ func (d *Dice) StructuredDescribeRoll(options ...func(*sdrOptions)) ([]Structure
 // Note that it is not expected for the user to set or query these structures
 // directly. Use the provided functions instead.
 type DieRoller struct {
-	d *Dice // underlying Dice object
+	Confirm bool // Are we supposed to confirm potential critical rolls?
+	DoMax   bool // Maximize all die rolls?
 
 	// If we need to repeatedly roll dice, we will either do so RepeatFor
 	// times (if > 0), or until the result meets or exceeds RepeatUntil
@@ -1335,9 +1333,17 @@ type DieRoller struct {
 	RepeatUntil int
 	RepeatFor   int
 
+	// If PctChance ≥ 0 then our target to be "successful" is a score
+	// or at least PctChance on a percentile die roll. In that case
+	// we can also set a label in PctLabel for that roll.
+	PctChance int
+
 	// If DC > 0 we're trying to meet a difficulty class for the
 	// roll to be "successful".
 	DC int
+
+	critThreat int // --threat threshold (0=default for die type)
+	critBonus  int // --added to confirmation rolls
 
 	// User-defined label for this entire die-roll specification, such as
 	// "Knowledge Skill Check".
@@ -1350,27 +1356,16 @@ type DieRoller struct {
 	// Template for permuted roll pattern substitution.
 	Template string
 
+	// Label to use if PctChance is in effect.
+	PctLabel string
+
+	sfOpt string // sf option part of source die-roll spec string or ""
+
 	// Values to be substituted into the Template
 	Permutations [][]interface{}
 
-	// If PctChance ≥ 0 then our target to be "successful" is a score
-	// or at least PctChance on a percentile die roll. In that case
-	// we can also set a label in PctLabel for that roll.
-	PctChance int
-	PctLabel  string
-
-	critThreat int    // --threat threshold (0=default for die type)
-	critBonus  int    // --added to confirmation rolls
-	sfOpt      string // sf option part of source die-roll spec string or ""
-
-	// Are we supposed to confirm potential critical rolls?
-	Confirm bool
-
-	// DoMax is true if we are supposed to maximize all die rolls rather than
-	// using random numbers.
-	DoMax bool
-
 	generator *rand.Rand
+	d         *Dice // underlying Dice object
 }
 
 //

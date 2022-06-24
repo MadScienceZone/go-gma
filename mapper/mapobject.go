@@ -482,25 +482,21 @@ type MapElement struct {
 	BaseMapObject
 	Coordinates
 
-	// Objects which need additional coordinate pairs to describe their
-	// geometry (beyond the standard reference point) store them here.
-	Points []Coordinates
+	// Is this element currently concealed from view?
+	Hidden bool
+
+	// Is the object locked from editing by the user?
+	Locked bool
+
+	// The element's line(s) are to be drawn with this dash pattern.
+	Dash DashType
 
 	// The z "coordinate" is the vertical stacking order relative to the other
 	// displayed on-screen objects.
 	Z int
 
-	// The colors used to draw the element's outline and/or to fill it's interior.
-	// These may be standard color names such as "blue" or an RGB string such as
-	// "#336699". A fill color that is the empty string means not to fill that element.
-	Line string
-	Fill string
-
 	// The width in pixel units to draw the element's outline.
 	Width int
-
-	// The map layer this element belongs to.
-	Layer string
 
 	// The dungeon level where this element appears. Typically, level 0
 	// is the default (ground) level, with level numbers increasing as
@@ -508,19 +504,23 @@ type MapElement struct {
 	// counting down as -1, -2, -3, etc.
 	Level int
 
+	// Objects which need additional coordinate pairs to describe their
+	// geometry (beyond the standard reference point) store them here.
+	Points []Coordinates
+
+	// The colors used to draw the element's outline and/or to fill it's interior.
+	// These may be standard color names such as "blue" or an RGB string such as
+	// "#336699". A fill color that is the empty string means not to fill that element.
+	Line string
+	Fill string
+
+	// The map layer this element belongs to.
+	Layer string
+
 	// Elements may be arranged into logical groups to be manipulated
 	// together. This is the ID of the group to which this belongs, or
 	// is empty if this element is not grouped.
 	Group string
-
-	// The element's line(s) are to be drawn with this dash pattern.
-	Dash DashType
-
-	// Is this element currently concealed from view?
-	Hidden bool
-
-	// Is the object locked from editing by the user?
-	Locked bool
 }
 
 //

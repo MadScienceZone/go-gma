@@ -70,8 +70,8 @@ import (
 // and protocol versions supported by this code.
 //
 const (
-	GMAMapperProtocol=333      // @@##@@ auto-configured
-	GMAVersionNumber="4.4.1" // @@##@@ auto-configured
+	GMAMapperProtocol           = 333     // @@##@@ auto-configured
+	GMAVersionNumber            = "4.4.1" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 332
 	MaximumSupportedMapProtocol = 333
 )
@@ -98,35 +98,31 @@ var ErrAuthenticationFailed = errors.New("access denied to server")
 // Subscribe and Dial.
 //
 type Connection struct {
-	// The context for our session, either one we created in the
-	// NewConnection function or one we received from the caller.
-	Context context.Context
+	// If true, we will always try to reconnect to the server if we
+	// lose our connection.
+	StayConnected bool
 
-	// The server endpoint, in any form acceptable to the net.Dial
-	// function.
-	Endpoint string
-
-	// If this is non-nil, we will use this to identify the user
-	// to the server.
-	Authenticator *auth.Authenticator
-
-	// Server message subscriptions currently in effect.
-	Subscriptions map[ServerMessage]chan MessagePayload
+	// Do we have an active session now?
+	signedOn bool
 
 	// If nonzero, we will re-try a failing connection this many
 	// times before giving up on the server. Otherwise we will keep
 	// trying forever.
 	Retries uint
 
+	// The server's protocol version number.
+	Protocol int
+
+	// The verbosity level of debugging log messages.
+	DebuggingLevel uint
+
 	// If nonzero, our connection attempts will timeout after the
 	// specified time interval. Otherwise they will wait indefinitely.
 	Timeout time.Duration
 
-	// We will log informational messages here as we work.
-	Logger *log.Logger
-
-	// The server's protocol version number.
-	Protocol int
+	// The server endpoint, in any form acceptable to the net.Dial
+	// function.
+	Endpoint string
 
 	// Characters received from the server.
 	Characters map[string]CharacterDefinition
@@ -148,22 +144,28 @@ type Connection struct {
 	// The last error encountered while communicating with the server.
 	LastError error
 
-	// The verbosity level of debugging log messages.
-	DebuggingLevel uint
-
 	server   net.Conn       // network socket to the server
 	reader   *bufio.Scanner // read interface to server
 	writer   *bufio.Writer  // write interface to server
 	sendChan chan string    // outgoing packets go through this channel
 	sendBuf  []string       // internal buffer of outgoing packets
-	signedOn bool           // do we have an active session now?
 
 	// The calendar system the server indicated as preferred, if any
 	CalendarSystem string
 
-	// If true, we will always try to reconnect to the server if we
-	// lose our connection.
-	StayConnected bool
+	// The context for our session, either one we created in the
+	// NewConnection function or one we received from the caller.
+	Context context.Context
+
+	// If this is non-nil, we will use this to identify the user
+	// to the server.
+	Authenticator *auth.Authenticator
+
+	// We will log informational messages here as we work.
+	Logger *log.Logger
+
+	// Server message subscriptions currently in effect.
+	Subscriptions map[ServerMessage]chan MessagePayload
 }
 
 //
