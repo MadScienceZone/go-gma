@@ -549,6 +549,7 @@ const (
 	AddImage
 	AddObjAttributes
 	AdjustView
+	Allow
 	Auth
 	Challenge
 	ChatMessage
@@ -842,6 +843,24 @@ func (c *Connection) AdjustView(xview, yview float64) error {
 		XView: xview,
 		YView: yview,
 	})
+}
+
+//     _    _ _
+//    / \  | | | _____      __
+//   / _ \ | | |/ _ \ \ /\ / /
+//  / ___ \| | | (_) \ V  V /
+// /_/   \_\_|_|\___/ \_/\_/
+//
+
+//
+// AllowMessagePayload holds the data sent by a client when indicating
+// which optional features it supports.
+//
+type AllowMessagePayload struct {
+	BaseMessagePayload
+
+	// List of supported optional feature names
+	Features []string `json:",omitempty"`
 }
 
 //
@@ -1230,7 +1249,8 @@ func (c *Connection) FilterDicePresets(re string) error {
 //
 type FilterDicePresetsMessagePayload struct {
 	BaseMessagePayload
-	Filter string
+	Filter string `json:",omitempty"`
+	For    string `json:",omitempty"`
 }
 
 //
@@ -1761,7 +1781,8 @@ func (c *Connection) DefineDicePresets(presets []dice.DieRollPreset) error {
 
 type DefineDicePresetsMessagePayload struct {
 	BaseMessagePayload
-	Presets []dice.DieRollPreset
+	For     string               `json:",omitempty"`
+	Presets []dice.DieRollPreset `json:",omitempty"`
 }
 
 //
@@ -1779,7 +1800,8 @@ func (c *Connection) AddDicePresets(presets []dice.DieRollPreset) error {
 
 type AddDicePresetsMessagePayload struct {
 	BaseMessagePayload
-	Presets []dice.DieRollPreset
+	For     string               `json:",omitempty"`
+	Presets []dice.DieRollPreset `json:",omitempty"`
 }
 
 //
@@ -1796,6 +1818,7 @@ func (c *Connection) QueryDicePresets() error {
 
 type QueryDicePresetsMessagePayload struct {
 	BaseMessagePayload
+	For string `json:",omitempty"`
 }
 
 //

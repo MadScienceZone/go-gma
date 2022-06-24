@@ -116,6 +116,10 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 		if av, ok := data.(AdjustViewMessagePayload); ok {
 			return c.sendJSON("AV", av)
 		}
+	case Allow:
+		if al, ok := data.(AllowMessagepayload); ok {
+			return c.sendJSON("ALLOW", al)
+		}
 	case Auth:
 		if au, ok := data.(AuthMessagePayload); ok {
 			return c.sendJSON("AUTH", au)
@@ -444,6 +448,16 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = QueryImage
+		return p
+
+	case "ALLOW":
+		p := AllowMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
+		p.messageType = Allow
 		return p
 
 	case "AUTH":
