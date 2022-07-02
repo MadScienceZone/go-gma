@@ -592,12 +592,12 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 	case mapper.UpdatePeerListMessagePayload:
 		printFields(mono, "UpdatePeerList")
 		printFields(mono, "",
-			fieldDesc{"       USERNAME-- ADDRESS------------- CLIENT-------------- AU ME MN WO PING--", nil})
+			fieldDesc{"       USERNAME------------ ADDRESS-------------- CLIENT------------------- AU ME MN WO PING--", nil})
 		for i, peer := range m.PeerList {
 			// --------------------------------------------------------------------------------
-			// ...[##] user------15--- addr----20----- client--20----- Auth Me Main W/O ping
+			// ...[##] user------20--- addr----21----- client--25----- Auth Me Main W/O ping
 			printFields(mono, "",
-				fieldDesc{fmt.Sprintf("  [%02d]", i), fmt.Sprintf("%-10s %-20s %-20s %s %s %s %s %s",
+				fieldDesc{fmt.Sprintf("  [%02d]", i), fmt.Sprintf("%-20s %-21s %-25s %s %s %s %s %s",
 					peer.User, peer.Addr, peer.Client,
 					func(b bool) string {
 						if b {
