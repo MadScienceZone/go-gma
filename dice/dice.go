@@ -218,8 +218,8 @@ func WithDieBonus(n int) func(*Dice) error {
 // WithDiv causes the total die-roll to be divided by n
 // (as an integer division, truncated toward zero).
 //
-// DEPRECATED in favor of using WithDescription("... // n")
-// or WithDescription("... ÷ n")
+// Deprecated: use WithDescription("... // n")
+// or WithDescription("... ÷ n") instead.
 //
 func WithDiv(n int) func(*Dice) error {
 	return func(o *Dice) error {
@@ -232,8 +232,8 @@ func WithDiv(n int) func(*Dice) error {
 // WithFactor causes the total die-roll to be multiplied by
 // n.
 //
-// DEPRECATED in favor of using WithDescription("... * n")
-// or WithDescription("... × n")
+// Deprecated: use WithDescription("... * n")
+// or WithDescription("... × n") instead.
 //
 func WithFactor(n int) func(*Dice) error {
 	return func(o *Dice) error {
@@ -501,8 +501,9 @@ type dieSpec struct {
 	// If making multiple rolls, we keep track of them here.
 	Rerolls int
 
-	// A bonus applied to the die every time (deprecated now that we have actual
-	// die-roll expressions where we can add or subtract constants).
+	// A bonus applied to the die every time.
+	//
+	// Deprecated: use die-roll expression strings instead.
 	DieBonus int
 
 	// Label string for this component, if any

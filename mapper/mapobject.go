@@ -1262,7 +1262,7 @@ type CreatureToken struct {
 	// etc). Lower-case letters indicate the "wide" version of the
 	// category while upper-case indicates "tall" versions.
 	//
-	// May also be the size in feet (DEPRECATED).
+	// May also be the size in feet (DEPRECATED USAGE).
 	Size string
 
 	// The tactical threat zone size of the creature, specified just
