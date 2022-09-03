@@ -1246,7 +1246,7 @@ func SaveMapFile(output io.Writer, objList []any, meta MapMetaData) error {
 	if err != nil {
 		return err
 	}
-	writer.WriteString("__META__ ")
+	writer.WriteString("«__META__» ")
 	writer.WriteString(string(data))
 	writer.WriteString("\n")
 
@@ -1286,34 +1286,34 @@ func SaveMapFile(output io.Writer, objList []any, meta MapMetaData) error {
 
 		switch obj.(type) {
 		case ArcElement:
-			writer.WriteString("__ARC__ ")
+			writer.WriteString("«ARC» ")
 		case CircleElement:
-			writer.WriteString("__CIRC__ ")
+			writer.WriteString("«CIRC» ")
 		case LineElement:
-			writer.WriteString("__LINE__ ")
+			writer.WriteString("«LINE» ")
 		case PolygonElement:
-			writer.WriteString("__POLY__ ")
+			writer.WriteString("«POLY» ")
 		case RectangleElement:
-			writer.WriteString("__RECT__ ")
+			writer.WriteString("«RECT» ")
 		case SpellAreaOfEffectElement:
-			writer.WriteString("__SAOE__ ")
+			writer.WriteString("«SAOE» ")
 		case TextElement:
-			writer.WriteString("__TEXT__ ")
+			writer.WriteString("«TEXT» ")
 		case TileElement:
-			writer.WriteString("__TILE__ ")
+			writer.WriteString("«TILE» ")
 		case ImageDefinition:
-			writer.WriteString("__IMG__ ")
+			writer.WriteString("«IMG» ")
 		case FileDefinition:
-			writer.WriteString("__MAP__ ")
+			writer.WriteString("«MAP» ")
 		case CreatureToken:
-			writer.WriteString("__CREATURE__ ")
+			writer.WriteString("«CREATURE» ")
 		default:
 			return fmt.Errorf("unable to serialize map object: unsupported type")
 		}
 		writer.WriteString(string(data))
 		writer.WriteString("\n")
 	}
-	writer.WriteString("__EOF__\n")
+	writer.WriteString("«__EOF__»\n")
 	writer.Flush()
 	return nil
 }
@@ -1885,22 +1885,22 @@ func loadMapFile(input io.Reader, metaDataOnly bool) ([]any, MapMetaData, error)
 	//
 	// This is followed by zero or more object definitions which are
 	// of the form
-	//    __<type>__ <json>
+	//    «<type>» <json>
 	// where <json> may be a multi-line structure. The start of each
-	// new object is marked with the __<type>__ string, so the breaking
+	// new object is marked with the «<type>» string, so the breaking
 	// up of <json> must not result in an accidental line starting with
 	// that pattern. Disallowing a newline in the middle of a string should
 	// accomplish that.
 	// OR
 	//    __META__ <json>		for file metadata
-	//    __IMG__ <json>        for an image file definition
-	//    __MAP__ <json>        for a map file definition
-	//    __CREATURE__ <json>   for a general creature definition
+	//    IMG <json>        for an image file definition
+	//    MAP <json>        for a map file definition
+	//    CREATURE <json>   for a general creature definition
 	//
 	// The final line is of the form
-	//    __EOF__
+	//    «__EOF__»
 	//
-	// Despite the indentation above, the line MUST begin with __ to signal
+	// Despite the indentation above, the line MUST begin with « to signal
 	// each of these.
 	//
 	var meta MapMetaData
@@ -1914,8 +1914,8 @@ func loadMapFile(input io.Reader, metaDataOnly bool) ([]any, MapMetaData, error)
 	}
 
 	startPattern := regexp.MustCompile("^__MAPPER__:(\\d+)\\s*(.*)$")
-	recordPattern := regexp.MustCompile("^__(.*?)__ (.+)$")
-	eofPattern := regexp.MustCompile("^__EOF__$")
+	recordPattern := regexp.MustCompile("^«(.*?)» (.+)$")
+	eofPattern := regexp.MustCompile("^«__EOF__»$")
 	scanner := bufio.NewScanner(input)
 	if !scanner.Scan() {
 		// no data
@@ -1956,7 +1956,7 @@ func loadMapFile(input io.Reader, metaDataOnly bool) ([]any, MapMetaData, error)
 		dataPacket.WriteString(f[2])
 
 		for scanner.Scan() {
-			if strings.HasPrefix(scanner.Text(), "__") {
+			if strings.HasPrefix(scanner.Text(), "«") {
 				var err error
 
 				switch f[1] {
