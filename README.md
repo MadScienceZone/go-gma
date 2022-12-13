@@ -36,7 +36,8 @@ API docs may be viewed at [pkg.go.dev](https://pkg.go.dev/github.com/MadScienceZ
 ## Versioning
 We are keeping the version numbers for this project in sync with
 the main GMA project, so version _x_._y_._z_ of `go-gma` will always
-be compatible with version _x_._y_._z_ of `gma`.
+be compatible with version _x_._y_._z_ of `gma`. (This is why `go-gma` is already
+at v4.)
 
 ## Legal Notice
 GMA uses trademarks and/or copyrights owned by Paizo Inc., used under Paizo's 

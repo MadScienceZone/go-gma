@@ -1,10 +1,16 @@
 # Changelog
 ## Current Version Information
- * GMA Core API Library Version: 4.4.1		<!-- @@##@@ -->
- * Supported GMA Mapper Version: 3.42.5		<!-- @@##@@ -->
- * Supported GMA Mapper Protocol: 333		<!-- @@##@@ -->
- * Supported GMA Mapper File Format: 17		<!-- @@##@@ -->
- * Effective Date: 13-Jun-2022			<!-- @@##@@ -->
+ * GMA Core API Library Version: 4.7.0		<!-- @@##@@ -->
+ * Supported GMA Mapper Version: 4.0.3		<!-- @@##@@ -->
+ * Supported GMA Mapper Protocol: 400		<!-- @@##@@ -->
+ * Supported GMA Mapper File Format: 20		<!-- @@##@@ -->
+ * Effective Date: 12-Dec-2022			<!-- @@##@@ -->
+
+## v4.7.0
+ * Moved to server protocol version 400.
+ * Updated file format versions to JSON-based (mapper file format 20, die-roll file format 2).
+
+**Warning: requires Go 1.18 or later**
 
 ## v4.4.1 (alpha)
 ### Enhancements

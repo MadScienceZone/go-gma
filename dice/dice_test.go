@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___          ___        __                 #
-# (  ____ \(       )(  ___  )              /   )        /   )      /  \                #
-# | (    \/| () () || (   ) |             / /) |       / /) |      \/) )               #
-# | |      | || || || (___) |            / (_) (_     / (_) (_       | |               #
-# | | ____ | |(_)| ||  ___  |           (____   _)   (____   _)      | |               #
-# | | \_  )| |   | || (   ) | Game           ) (          ) (        | |               #
-# | (___) || )   ( || )   ( | Master's       | |   _      | |   _  __) (_              #
-# (_______)|/     \||/     \| Assistant      (_)  (_)     (_)  (_) \____/              #
+#  _______  _______  _______                ___       ______      _______              #
+# (  ____ \(       )(  ___  )              /   )     / ___  \    (  __   )             #
+# | (    \/| () () || (   ) |             / /) |     \/   )  )   | (  )  |             #
+# | |      | || || || (___) |            / (_) (_        /  /    | | /   |             #
+# | | ____ | |(_)| ||  ___  |           (____   _)      /  /     | (/ /) |             #
+# | | \_  )| |   | || (   ) | Game           ) (       /  /      |   / | |             #
+# | (___) || )   ( || )   ( | Master's       | |   _  /  /     _ |  (__) |             #
+# (_______)|/     \||/     \| Assistant      (_)  (_) \_/     (_)(_______)             #
 #                                                                                      #
 ########################################################################################
 */
@@ -60,6 +60,142 @@ func _probtester(t *testing.T, description string, f func() (int, error), minval
 		sort.Ints(keys)
 		for _, k := range keys {
 			log.Printf("%3d x%5d %s", k, hist[k], strings.Repeat("*", int((60.0*float64(hist[k]))/float64(maxvalue))))
+		}
+	}
+}
+
+func TestLoadDieRollPresets(t *testing.T) {
+	for i, tcase := range []struct {
+		inputData       string
+		expectedVersion uint
+		expectedOutput  []DieRollPreset
+		expectedMeta    DieRollPresetMetaData
+		expectError     bool
+	}{
+		// 0
+		{`__DICE__:2
+__EOF__`, 2, nil, DieRollPresetMetaData{
+			FileVersion: 2,
+		}, false},
+
+		// 1
+		{`__DICE__:2
+`, 2, nil, DieRollPresetMetaData{
+			FileVersion: 2,
+		}, true},
+
+		// 2
+		{`__DICE__:1
+`, 1, nil, DieRollPresetMetaData{
+			FileVersion: 1,
+		}, false},
+
+		// 3
+		{`__DICE__:1
+a b c
+`, 1, []DieRollPreset{
+			{Name: "a", Description: "b", DieRollSpec: "c"},
+		}, DieRollPresetMetaData{
+			FileVersion: 1,
+		}, false},
+
+		// 4
+		{`__DICE__:1 1570643001 {Wed Oct 09 10:43:21 PDT 2019}
+abc123 {An example roll} {d20+12+3 fire}
+abc456 {} d12
+`, 1, []DieRollPreset{
+			{Name: "abc123", Description: "An example roll", DieRollSpec: "d20+12+3 fire"},
+			{Name: "abc456", DieRollSpec: "d12"},
+		}, DieRollPresetMetaData{
+			Timestamp:   1570643001,
+			DateTime:    "Wed Oct 09 10:43:21 PDT 2019",
+			FileVersion: 1,
+			Comment:     "",
+		}, false},
+
+		// 5
+		{`__DICE__:2
+__META__ {
+	"Timestamp": 123456,
+	"DateTime": "some time or other",
+	"Comment": "a test file"
+}
+PRESET {
+	"Name": "01|a", "Description": "xyz", "DieRollSpec": "d20+d10+d8"
+}
+PRESET {"Name":"02|a", "DieRollSpec":"concealment=50% miss"}
+__EOF__
+`, 2, []DieRollPreset{
+			{Name: "01|a", Description: "xyz", DieRollSpec: "d20+d10+d8"},
+			{Name: "02|a", Description: "", DieRollSpec: "concealment=50% miss"},
+		}, DieRollPresetMetaData{
+			Timestamp:   123456,
+			DateTime:    "some time or other",
+			Comment:     "a test file",
+			FileVersion: 2,
+		}, false},
+
+		// 6
+		{`__DICE__:2
+__META__ {
+	"Timestamp": 123456,
+	"DateTime": "some time or other",
+	"Comment": "a test file" }
+PRESET {
+	"Name": "01|a", "Description": "xyz", "DieRollSpec": "d20+d10+d8"
+	}
+PRESET {"Name":"02|a", "DieRollSpec":"concealment=50% miss",}
+__EOF__
+`, 2, nil, DieRollPresetMetaData{
+			Timestamp:   123456,
+			DateTime:    "some time or other",
+			Comment:     "a test file",
+			FileVersion: 2,
+		}, true},
+
+		// 7
+		{`__DICE__:2
+__META__ {
+	"Timestamp": 123456,
+	"DateTime": "some time or other",
+	"Comment": "a test file" 
+}
+PRESET {
+	"Name": "01|a", "Description": "xyz", "DieRollSpec": "d20+d10+d8"
+}
+PRESET {
+	"Name":"02|a", "DieRollSpec":"concealment=50% miss"}
+__EOF__
+`, 2, []DieRollPreset{
+			{Name: "01|a", Description: "xyz", DieRollSpec: "d20+d10+d8"},
+			{Name: "02|a", Description: "", DieRollSpec: "concealment=50% miss"},
+		}, DieRollPresetMetaData{
+			Timestamp:   123456,
+			DateTime:    "some time or other",
+			Comment:     "a test file",
+			FileVersion: 2,
+		}, false},
+	} {
+		input := strings.NewReader(tcase.inputData)
+		presets, meta, err := LoadDieRollPresetFile(input)
+		if err != nil && !tcase.expectError {
+			t.Fatalf("test case %d: %v", i, err)
+		} else if err == nil && tcase.expectError {
+			t.Fatalf("test case %d, expected an error but didn't get one", i)
+		}
+		if meta.FileVersion != tcase.expectedVersion {
+			t.Fatalf("test case %d, version was %d, expected %d", i, meta.FileVersion, tcase.expectedVersion)
+		}
+		if len(tcase.expectedOutput) != len(presets) {
+			t.Fatalf("test case %d, output %d record(s), expected %d", i, len(presets), len(tcase.expectedOutput))
+		}
+		for j, p := range presets {
+			if p.Name != tcase.expectedOutput[j].Name || p.Description != tcase.expectedOutput[j].Description || p.DieRollSpec != tcase.expectedOutput[j].DieRollSpec {
+				t.Errorf("test case %d, output record %d, was %q but expected %q", i, j, p, tcase.expectedOutput[j])
+			}
+		}
+		if tcase.expectedMeta != meta {
+			t.Errorf("test case %d, expected metadata %q but got %q", i, tcase.expectedMeta, meta)
 		}
 	}
 }
@@ -1701,7 +1837,7 @@ func TestDiceStructured(t *testing.T) {
 	}
 }
 
-// @[00]@| GMA 4.4.1
+// @[00]@| GMA 4.7.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2022 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

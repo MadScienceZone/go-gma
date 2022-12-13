@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___          ___        __                 #
-# (  ____ \(       )(  ___  )              /   )        /   )      /  \                #
-# | (    \/| () () || (   ) |             / /) |       / /) |      \/) )               #
-# | |      | || || || (___) |            / (_) (_     / (_) (_       | |               #
-# | | ____ | |(_)| ||  ___  |           (____   _)   (____   _)      | |               #
-# | | \_  )| |   | || (   ) | Game           ) (          ) (        | |               #
-# | (___) || )   ( || )   ( | Master's       | |   _      | |   _  __) (_              #
-# (_______)|/     \||/     \| Assistant      (_)  (_)     (_)  (_) \____/              #
+#  _______  _______  _______                ___       ______      _______              #
+# (  ____ \(       )(  ___  )              /   )     / ___  \    (  __   )             #
+# | (    \/| () () || (   ) |             / /) |     \/   )  )   | (  )  |             #
+# | |      | || || || (___) |            / (_) (_        /  /    | | /   |             #
+# | | ____ | |(_)| ||  ___  |           (____   _)      /  /     | (/ /) |             #
+# | | \_  )| |   | || (   ) | Game           ) (       /  /      |   / | |             #
+# | (___) || )   ( || )   ( | Master's       | |   _  /  /     _ |  (__) |             #
+# (_______)|/     \||/     \| Assistant      (_)  (_) \_/     (_)(_______)             #
 #                                                                                      #
 ########################################################################################
 */
@@ -539,8 +539,8 @@ func ParseTclList(tclString string) ([]string, error) {
 // in the type string unless the * character is used in types, so this
 // function also enforces that the expected number of data elements is present.
 //
-func ConvertTypes(list []string, types string) ([]interface{}, error) {
-	converted := make([]interface{}, len(list))
+func ConvertTypes(list []string, types string) ([]any, error) {
+	converted := make([]any, len(list))
 	var err error
 
 	if len(types) > len(list) && types[len(list)] != '*' {
@@ -588,7 +588,7 @@ func ConvertTypes(list []string, types string) ([]interface{}, error) {
 
 // Parse is a convenience function which combines the operation of the
 // ParseTclList and ConvertTypes functions in a single step.
-func Parse(tclString, types string) ([]interface{}, error) {
+func Parse(tclString, types string) ([]any, error) {
 	f, err := ParseTclList(tclString)
 	if err != nil {
 		return nil, err
@@ -617,7 +617,7 @@ func Parse(tclString, types string) ([]interface{}, error) {
 // For example, ToDeepTclString("a", 12, 13.42, []string{"b", "c"})
 // returns the string "a 12 13.42 {b c}".
 //
-func ToDeepTclString(values ...interface{}) (string, error) {
+func ToDeepTclString(values ...any) (string, error) {
 	var list []string
 
 	for _, value := range values {
@@ -659,7 +659,7 @@ func ToDeepTclString(values ...interface{}) (string, error) {
 		default:
 			vof := reflect.ValueOf(value)
 			if vof.Kind() == reflect.Slice {
-				subslice := make([]interface{}, vof.Len())
+				subslice := make([]any, vof.Len())
 				for i := 0; i < vof.Len(); i++ {
 					subslice[i] = vof.Index(i).Interface()
 				}
@@ -676,7 +676,18 @@ func ToDeepTclString(values ...interface{}) (string, error) {
 	return ToTclString(list)
 }
 
-// @[00]@| GMA 4.4.1
+//
+// StripLevel strips away the outermost level of {} characters from a string.
+// The string must begin and end with { and } characters respectively.
+//
+func StripLevel(s string) string {
+	if len(s) > 1 && s[0] == '{' && s[len(s)-1] == '}' {
+		return s[1 : len(s)-1]
+	}
+	return s
+}
+
+// @[00]@| GMA 4.7.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2022 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

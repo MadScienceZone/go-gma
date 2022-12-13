@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___          ___        __                 #
-# (  ____ \(       )(  ___  )              /   )        /   )      /  \                #
-# | (    \/| () () || (   ) |             / /) |       / /) |      \/) )               #
-# | |      | || || || (___) |            / (_) (_     / (_) (_       | |               #
-# | | ____ | |(_)| ||  ___  |           (____   _)   (____   _)      | |               #
-# | | \_  )| |   | || (   ) | Game           ) (          ) (        | |               #
-# | (___) || )   ( || )   ( | Master's       | |   _      | |   _  __) (_              #
-# (_______)|/     \||/     \| Assistant      (_)  (_)     (_)  (_) \____/              #
+#  _______  _______  _______                ___       ______      _______              #
+# (  ____ \(       )(  ___  )              /   )     / ___  \    (  __   )             #
+# | (    \/| () () || (   ) |             / /) |     \/   )  )   | (  )  |             #
+# | |      | || || || (___) |            / (_) (_        /  /    | | /   |             #
+# | | ____ | |(_)| ||  ___  |           (____   _)      /  /     | (/ /) |             #
+# | | \_  )| |   | || (   ) | Game           ) (       /  /      |   / | |             #
+# | (___) || )   ( || )   ( | Master's       | |   _  /  /     _ |  (__) |             #
+# (_______)|/     \||/     \| Assistant      (_)  (_) \_/     (_)(_______)             #
 #                                                                                      #
 ########################################################################################
 */
@@ -27,7 +27,13 @@
 package mapper
 
 import (
+	"bufio"
+	"encoding/json"
 	"fmt"
+	"io"
+	"os"
+	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -40,7 +46,7 @@ import (
 // the GMA File Format version number current as of this build.
 // This is the format which will be used for saving map data.
 //
-const GMAMapperFileFormat = 17 // @@##@@ auto-configured
+const GMAMapperFileFormat = 20 // @@##@@ auto-configured
 //
 // MinimumSupportedMapFileFormat gives the lowest file format this package can
 // understand.
@@ -51,7 +57,7 @@ const MinimumSupportedMapFileFormat = 14
 // MaximumSupportedMapFileFormat gives the highest file format this package
 // can understand. Saved data will be in this format.
 //
-const MaximumSupportedMapFileFormat = 17
+const MaximumSupportedMapFileFormat = 20
 
 func init() {
 	if MinimumSupportedMapFileFormat > GMAMapperFileFormat || MaximumSupportedMapFileFormat < GMAMapperFileFormat {
@@ -88,6 +94,7 @@ const (
 	DashLong2Short
 )
 
+/*
 var enumDashes = enumChoices{
 	"":    byte(DashSolid),
 	"-":   byte(DashLong),
@@ -96,6 +103,7 @@ var enumDashes = enumChoices{
 	"-.":  byte(DashLongShort),
 	"-..": byte(DashLong2Short),
 }
+*/
 
 //
 // These are the allowed values for the ArcMode attribute of an ArcElement.
@@ -108,11 +116,13 @@ const (
 	ArcModeChord
 )
 
+/*
 var enumArcs = enumChoices{
 	"pieslice": byte(ArcModePieSlice),
 	"arc":      byte(ArcModeArc),
 	"chord":    byte(ArcModeChord),
 }
+*/
 
 //
 // Valid values for a line's Arrow attribute.
@@ -126,12 +136,14 @@ const (
 	ArrowBoth
 )
 
+/*
 var enumArrows = enumChoices{
 	"none":  byte(ArrowNone),
 	"first": byte(ArrowFirst),
 	"last":  byte(ArrowLast),
 	"both":  byte(ArrowBoth),
 }
+*/
 
 //
 // These are the allowed values for the Join attribute of a PolygonElement.
@@ -144,11 +156,13 @@ const (
 	JoinRound
 )
 
+/*
 var enumJoins = enumChoices{
 	"bevel": byte(JoinBevel),
 	"miter": byte(JoinMiter),
 	"round": byte(JoinRound),
 }
+*/
 
 //
 // These are the valid values for the AoEShape attribute.
@@ -161,11 +175,13 @@ const (
 	AoEShapeRay
 )
 
+/*
 var enumAoeShapes = enumChoices{
 	"cone":   byte(AoEShapeCone),
 	"radius": byte(AoEShapeRadius),
 	"ray":    byte(AoEShapeRay),
 }
+*/
 
 //
 // The valid font weights.
@@ -177,10 +193,12 @@ const (
 	FontWeightBold
 )
 
+/*
 var enumFontWeights = enumChoices{
 	"normal": byte(FontWeightNormal),
 	"bold":   byte(FontWeightBold),
 }
+*/
 
 //
 // The valid font slants.
@@ -191,11 +209,6 @@ const (
 	FontSlantRoman FontSlantType = iota
 	FontSlantItalic
 )
-
-var enumFontSlants = enumChoices{
-	"roman":  byte(FontSlantRoman),
-	"italic": byte(FontSlantItalic),
-}
 
 //
 // The valid values for the Anchor attribute of a TextElement.
@@ -214,6 +227,7 @@ const (
 	AnchorSE
 )
 
+/*
 var enumAnchors = enumChoices{
 	"center": byte(AnchorCenter),
 	"n":      byte(AnchorNorth),
@@ -225,6 +239,7 @@ var enumAnchors = enumChoices{
 	"nw":     byte(AnchorNW),
 	"sw":     byte(AnchorSW),
 }
+*/
 
 //
 // The valid values for a creature's MoveMode attribute.
@@ -239,6 +254,7 @@ const (
 	MoveModeSwim
 )
 
+/*
 var enumMoveModes = enumChoices{
 	"fly":    byte(MoveModeFly),
 	"climb":  byte(MoveModeClimb),
@@ -246,7 +262,9 @@ var enumMoveModes = enumChoices{
 	"burrow": byte(MoveModeBurrow),
 	"land":   byte(MoveModeLand),
 }
+*/
 
+/*
 //
 // This returns the underlying Go data type
 // for attribute values as a string. If the boolean
@@ -275,7 +293,9 @@ func enumToByte(attrName, value string) (evalue byte, ok bool) {
 	}
 	return
 }
+*/
 
+/*
 //
 // This returns a string describing the expected data type
 // of a MapObject's attribute.
@@ -306,6 +326,7 @@ func attributeType(attrName string) (string, bool) {
 	}
 	return "string", false
 }
+*/
 
 //________________________________________________________________________________
 //  __  __              ___  _     _           _
@@ -322,22 +343,8 @@ func attributeType(attrName string) (string, bool) {
 //
 type MapObject interface {
 	ObjID() string
-	saveData([]string, string, string) ([]string, error)
+	//	saveData([]string, string, string) ([]string, error)
 }
-
-//
-// In the following sections, each MapObject type is described,
-// including the type declaration, and the standard methods
-//   obj<T>(objID, objDef) (<T>, error)
-//      -- create a new <T> value with the given ID, based on data parsed
-//         from an input source in objDef, which is a map of attribute name
-//         to a slice of strings broken out into fields.
-//
-//   <T>.saveData(data, prefix, id) ([]string, error)
-//      -- generate the save file data for this object. These are appended
-//         as individual strings (one per line) to the end of the strings
-//         in data. The new combined string slice is returned.
-//
 
 //
 // Coordinates give an (x, y) coordinate pair to locate something on the map.
@@ -347,6 +354,7 @@ type Coordinates struct {
 	X, Y float64
 }
 
+/*
 //
 // saveData converts a Coordinate pair to a text representation
 // in the map file format (suitable for sending to clients or saving to a disk
@@ -361,6 +369,7 @@ func (c Coordinates) saveData(data []string, prefix, id string) ([]string, error
 		{"Y", "f", true, c.Y},
 	})
 }
+*/
 
 // Coordinates
 //  saveData
@@ -449,9 +458,11 @@ type BaseMapObject struct {
 //
 // The object's ID as recorded in the saved data list is given by the id parameter.
 //
+/*
 func (o BaseMapObject) saveData(data []string, prefix, id string) ([]string, error) {
 	return data, nil
 }
+*/
 
 //
 // ObjID returns the unique ID of a MapObject.
@@ -482,45 +493,43 @@ type MapElement struct {
 	BaseMapObject
 	Coordinates
 
-	// Is this element currently concealed from view?
-	Hidden bool
-
-	// Is the object locked from editing by the user?
-	Locked bool
-
-	// The element's line(s) are to be drawn with this dash pattern.
-	Dash DashType
+	// Objects which need additional coordinate pairs to describe their
+	// geometry (beyond the standard reference point) store them here.
+	Points []Coordinates `json:",omitempty"`
 
 	// The z "coordinate" is the vertical stacking order relative to the other
 	// displayed on-screen objects.
 	Z int
 
+	// The colors used to draw the element's outline and/or to fill it's interior.
+	// These may be standard color names such as "blue" or an RGB string such as
+	// "#336699". A fill color that is the empty string means not to fill that element.
+	Line string `json:",omitempty"`
+	Fill string `json:",omitempty"`
+
 	// The width in pixel units to draw the element's outline.
-	Width int
+	Width int `json:",omitempty"`
+
+	// The map layer this element belongs to.
+	Layer string `json:",omitempty"`
 
 	// The dungeon level where this element appears. Typically, level 0
 	// is the default (ground) level, with level numbers increasing as
 	// 1, 2, 3, etc., for floors above it, and with underground levels
-	// counting down as -1, -2, -3, etc.
-	Level int
-
-	// Objects which need additional coordinate pairs to describe their
-	// geometry (beyond the standard reference point) store them here.
-	Points []Coordinates
-
-	// The colors used to draw the element's outline and/or to fill it's interior.
-	// These may be standard color names such as "blue" or an RGB string such as
-	// "#336699". A fill color that is the empty string means not to fill that element.
-	Line string
-	Fill string
-
-	// The map layer this element belongs to.
-	Layer string
 
 	// Elements may be arranged into logical groups to be manipulated
 	// together. This is the ID of the group to which this belongs, or
 	// is empty if this element is not grouped.
 	Group string
+
+	// The element's line(s) are to be drawn with this dash pattern.
+	Dash DashType
+
+	// Is this element currently concealed from view?
+	Hidden bool
+
+	// Is the object locked from editing by the user?
+	Locked bool
 }
 
 //
@@ -600,6 +609,16 @@ func (o MapElement) saveData(data []string, prefix, id string) ([]string, error)
 		{"GROUP", "s", false, o.Group},
 		{"DASH", "s", false, da},
 	})
+	Group string `json:",omitempty"`
+
+	// The element's line(s) are to be drawn with this dash pattern.
+	Dash DashType `json:",omitempty"`
+
+	// Is this element currently concealed from view?
+	Hidden bool `json:",omitempty"`
+
+	// Is the object locked from editing by the user?
+	Locked bool `json:",omitempty"`
 }
 
 //________________________________________________________________________________
@@ -631,48 +650,6 @@ type ArcElement struct {
 	Start   float64
 }
 
-//
-// objArcElement creates a new instance from the fields in objDef.
-//
-func objArcElement(objID string, objDef map[string][]string) (ArcElement, error) {
-	me, err := objMapElement(objID, objDef)
-	arc := ArcElement{
-		MapElement: me,
-	}
-	var b byte
-	b, err = objEnum(objDef, 0, "ARCMODE", true, enumArcs, err)
-	arc.ArcMode = ArcModeType(b)
-	arc.Start, err = objFloat(objDef, 0, "START", true, err)
-	arc.Extent, err = objFloat(objDef, 0, "EXTENT", true, err)
-	return arc, err
-}
-
-//
-// saveData converts an ArcElement to a text representation
-// in the map file format (suitable for sending to clients or saving to a disk
-// file).
-//
-// This works just as described for BaseMapElement.saveData.
-//
-func (o ArcElement) saveData(data []string, prefix, id string) ([]string, error) {
-	data, err := o.MapElement.saveData(data, prefix, id)
-	if err != nil {
-		return nil, err
-	}
-
-	am, err := saveEnum(byte(o.ArcMode), enumArcs)
-	if err != nil {
-		return nil, err
-	}
-
-	return saveValues(data, prefix, id, []saveAttributes{
-		{"TYPE", "s", true, "arc"},
-		{"ARCMODE", "s", true, am},
-		{"START", "f", true, o.Start},
-		{"EXTENT", "f", true, o.Extent},
-	})
-}
-
 //________________________________________________________________________________
 //   ____ _          _      _____ _                           _
 //  / ___(_)_ __ ___| | ___| ____| | ___ _ __ ___   ___ _ __ | |_
@@ -688,33 +665,6 @@ func (o ArcElement) saveData(data []string, prefix, id string) ([]string, error)
 //
 type CircleElement struct {
 	MapElement
-}
-
-//
-// objCircleElement creates a new instance from the fields in objDef.
-//
-func objCircleElement(objID string, objDef map[string][]string) (CircleElement, error) {
-	me, err := objMapElement(objID, objDef)
-	return CircleElement{
-		MapElement: me,
-	}, err
-}
-
-//
-// saveData converts a CircleElement to a text representation
-// in the map file format (suitable for sending to clients or saving to a disk
-// file).
-//
-// This works just as described for BaseMapElement.saveData.
-//
-func (o CircleElement) saveData(data []string, prefix, id string) ([]string, error) {
-	data, err := o.MapElement.saveData(data, prefix, id)
-	if err != nil {
-		return nil, err
-	}
-	return saveValues(data, prefix, id, []saveAttributes{
-		{"TYPE", "s", true, "circ"},
-	})
 }
 
 //________________________________________________________________________________
@@ -742,45 +692,7 @@ type LineElement struct {
 	MapElement
 
 	// What arrowheads, if any, to draw on the endpoints
-	Arrow ArrowType
-}
-
-//
-// objLineElement creates a new instance from the fields in objDef.
-//
-func objLineElement(objID string, objDef map[string][]string) (LineElement, error) {
-	me, err := objMapElement(objID, objDef)
-	line := LineElement{
-		MapElement: me,
-	}
-	var b byte
-	b, err = objEnum(objDef, 0, "ARROW", false, enumArrows, err)
-	line.Arrow = ArrowType(b)
-	return line, err
-}
-
-//
-// saveData converts a LineElement to a text representation
-// in the map file format (suitable for sending to clients or saving to a disk
-// file).
-//
-// This works just as described for BaseMapElement.saveData.
-//
-func (o LineElement) saveData(data []string, prefix, id string) ([]string, error) {
-	data, err := o.MapElement.saveData(data, prefix, id)
-	if err != nil {
-		return nil, err
-	}
-
-	am, err := saveEnum(byte(o.Arrow), enumArrows)
-	if err != nil {
-		return nil, err
-	}
-
-	return saveValues(data, prefix, id, []saveAttributes{
-		{"TYPE", "s", true, "line"},
-		{"ARROW", "s", false, am},
-	})
+	Arrow ArrowType `json:",omitempty"`
 }
 
 //________________________________________________________________________________
@@ -801,50 +713,10 @@ type PolygonElement struct {
 	// Spline gives the factor to use when smoothing the sides of the polygon between
 	// its points. 0 means not to smooth them at all, resulting in a shape with straight
 	// edges between the vertices. Otherwise, larger values provide greater smoothing.
-	Spline float64
+	Spline float64 `json:",omitempty"`
 
 	// The join style to control how the intersection between line segments is drawn.
-	Join JoinStyle
-}
-
-//
-// objPolygonElement creates a new instance from the fields in objDef.
-//
-func objPolygonElement(objID string, objDef map[string][]string) (PolygonElement, error) {
-	me, err := objMapElement(objID, objDef)
-	poly := PolygonElement{
-		MapElement: me,
-	}
-	var b byte
-	b, err = objEnum(objDef, 0, "JOIN", false, enumJoins, err)
-	poly.Join = JoinStyle(b)
-	poly.Spline, err = objFloat(objDef, 0, "SPLINE", false, err)
-	return poly, err
-}
-
-//
-// saveData converts a PolygonElement to a text representation
-// in the map file format (suitable for sending to clients or saving to a disk
-// file).
-//
-// This works just as described for BaseMapElement.saveData.
-//
-func (o PolygonElement) saveData(data []string, prefix, id string) ([]string, error) {
-	data, err := o.MapElement.saveData(data, prefix, id)
-	if err != nil {
-		return nil, err
-	}
-
-	jm, err := saveEnum(byte(o.Join), enumJoins)
-	if err != nil {
-		return nil, err
-	}
-
-	return saveValues(data, prefix, id, []saveAttributes{
-		{"TYPE", "s", true, "poly"},
-		{"JOIN", "s", true, jm},
-		{"SPLINE", "f", true, o.Spline},
-	})
+	Join JoinStyle `json:",omitempty"`
 }
 
 //________________________________________________________________________________
@@ -867,33 +739,6 @@ func (o PolygonElement) saveData(data []string, prefix, id string) ([]string, er
 //
 type RectangleElement struct {
 	MapElement
-}
-
-//
-// objRectangleElement creates a new instance from the fields in objDef.
-//
-func objRectangleElement(objID string, objDef map[string][]string) (RectangleElement, error) {
-	me, err := objMapElement(objID, objDef)
-	return RectangleElement{
-		MapElement: me,
-	}, err
-}
-
-//
-// saveData converts a RectangleElement to a text representation
-// in the map file format (suitable for sending to clients or saving to a disk
-// file).
-//
-// This works just as described for BaseMapElement.saveData.
-//
-func (o RectangleElement) saveData(data []string, prefix, id string) ([]string, error) {
-	data, err := o.MapElement.saveData(data, prefix, id)
-	if err != nil {
-		return nil, err
-	}
-	return saveValues(data, prefix, id, []saveAttributes{
-		{"TYPE", "s", true, "rect"},
-	})
 }
 
 //________________________________________________________________________________
@@ -926,44 +771,6 @@ type SpellAreaOfEffectElement struct {
 	AoEShape AoEType
 }
 
-//
-// objSpellAreaOfEffectElement creates a new instance from the fields in objDef.
-//
-func objSpellAreaOfEffectElement(objID string, objDef map[string][]string) (SpellAreaOfEffectElement, error) {
-	me, err := objMapElement(objID, objDef)
-	sa := SpellAreaOfEffectElement{
-		MapElement: me,
-	}
-	var b byte
-	b, err = objEnum(objDef, 0, "AOESHAPE", true, enumAoeShapes, err)
-	sa.AoEShape = AoEType(b)
-	return sa, err
-}
-
-//
-// saveData converts a SpellAreaOfEffectElement to a text representation
-// in the map file format (suitable for sending to clients or saving to a disk
-// file).
-//
-// This works just as described for BaseMapElement.saveData.
-//
-func (o SpellAreaOfEffectElement) saveData(data []string, prefix, id string) ([]string, error) {
-	data, err := o.MapElement.saveData(data, prefix, id)
-	if err != nil {
-		return nil, err
-	}
-
-	ae, err := saveEnum(byte(o.AoEShape), enumAoeShapes)
-	if err != nil {
-		return nil, err
-	}
-
-	return saveValues(data, prefix, id, []saveAttributes{
-		{"TYPE", "s", true, "aoe"},
-		{"AOESHAPE", "s", true, ae},
-	})
-}
-
 //________________________________________________________________________________
 //  _____         _   _____ _                           _
 // |_   _|____  _| |_| ____| | ___ _ __ ___   ___ _ __ | |_
@@ -983,10 +790,10 @@ type TextFont struct {
 	Size float64
 
 	// The font weight (normal or bold).
-	Weight FontWeightType
+	Weight FontWeightType `json:",omitempty"`
 
 	// The font slant (roman or italic).
-	Slant FontSlantType
+	Slant FontSlantType `json:",omitempty"`
 }
 
 //
@@ -1006,128 +813,7 @@ type TextElement struct {
 	Font TextFont
 
 	// Where is the reference point in relation to the text?
-	Anchor AnchorDirection
-}
-
-//
-// objTextFont creates a new TextFont instance from the fields in objDef.
-//
-func objTextFont(objDef map[string][]string, i int, fldName string, required bool, err error) (TextFont, error) {
-	if err != nil {
-		return TextFont{}, err
-	}
-	val, ok := objDef[fldName]
-	if !ok {
-		if required {
-			return TextFont{}, fmt.Errorf("attribute %s required", fldName)
-		}
-		return TextFont{}, err
-	}
-	if len(val) <= i {
-		return TextFont{}, fmt.Errorf("attribute %s only has %d elements; can't get [%d]", fldName, len(val), i)
-	}
-	f, err := tcllist.ParseTclList(val[i])
-	if err != nil {
-		return TextFont{}, err
-	}
-	// oddly this is stored with an extra level of list-wrapping
-	if len(f) != 1 {
-		return TextFont{}, fmt.Errorf("attribute %s has invalid font format [%s]", fldName, val[i])
-	}
-	f, err = tcllist.ParseTclList(f[0])
-	if err != nil {
-		return TextFont{}, err
-	}
-
-	var ff []interface{}
-	switch len(f) {
-	case 2:
-		ff, err = tcllist.ConvertTypes(f, "sf")
-		ff = append(ff, "normal", "roman")
-	case 3:
-		ff, err = tcllist.ConvertTypes(f, "sfs")
-		ff = append(ff, "roman")
-	case 4:
-		ff, err = tcllist.ConvertTypes(f, "sfss")
-	default:
-		return TextFont{}, fmt.Errorf("invalid font specification %s", val)
-	}
-	if err != nil {
-		return TextFont{}, err
-	}
-
-	w, err := strEnum(ff[2].(string), true, enumFontWeights, err)
-	s, err := strEnum(ff[3].(string), true, enumFontSlants, err)
-
-	return TextFont{
-		Family: ff[0].(string),
-		Size:   ff[1].(float64),
-		Weight: FontWeightType(w),
-		Slant:  FontSlantType(s),
-	}, err
-}
-
-//
-// objTextElement creates a new instance from the fields in objDef.
-//
-func objTextElement(objID string, objDef map[string][]string) (TextElement, error) {
-	me, err := objMapElement(objID, objDef)
-	text := TextElement{
-		MapElement: me,
-	}
-
-	text.Text, err = objString(objDef, 0, "TEXT", true, err)
-	text.Font, err = objTextFont(objDef, 0, "FONT", true, err)
-	var b byte
-	b, err = objEnum(objDef, 0, "ANCHOR", false, enumAnchors, err)
-	text.Anchor = AnchorDirection(b)
-	return text, err
-}
-
-//
-// saveData converts a TextElement to a text representation
-// in the map file format (suitable for sending to clients or saving to a disk
-// file).
-//
-// This works just as described for BaseMapElement.saveData.
-//
-func (o TextElement) saveData(data []string, prefix, id string) ([]string, error) {
-	data, err := o.MapElement.saveData(data, prefix, id)
-	if err != nil {
-		return nil, err
-	}
-
-	a, err := saveEnum(byte(o.Anchor), enumAnchors)
-	if err != nil {
-		return nil, err
-	}
-	fw, err := saveEnum(byte(o.Font.Weight), enumFontWeights)
-	if err != nil {
-		return nil, err
-	}
-	fs, err := saveEnum(byte(o.Font.Slant), enumFontSlants)
-	if err != nil {
-		return nil, err
-	}
-
-	f1, err := tcllist.ToTclString([]string{
-		o.Font.Family,
-		fmt.Sprintf("%g", o.Font.Size),
-		fw, fs})
-	if err != nil {
-		return nil, err
-	}
-	f2, err := tcllist.ToTclString([]string{f1})
-	if err != nil {
-		return nil, err
-	}
-
-	return saveValues(data, prefix, id, []saveAttributes{
-		{"TYPE", "s", true, "text"},
-		{"TEXT", "s", true, o.Text},
-		{"FONT", "s", true, f2},
-		{"ANCHOR", "s", true, a},
-	})
+	Anchor AnchorDirection `json:",omitempty"`
 }
 
 //________________________________________________________________________________
@@ -1153,42 +839,7 @@ type TileElement struct {
 	// can use the bounding box to indicate where the tile should be.
 	// If the bounding box is not known, these values may both
 	// be zero.
-	BBHeight, BBWidth float64
-}
-
-//
-// objTileElement creates a new instance from the fields in objDef.
-//
-func objTileElement(objID string, objDef map[string][]string) (TileElement, error) {
-	me, err := objMapElement(objID, objDef)
-	tile := TileElement{
-		MapElement: me,
-	}
-	tile.Image, err = objString(objDef, 0, "IMAGE", true, err)
-	tile.BBHeight, err = objFloat(objDef, 0, "BBHEIGHT", false, err)
-	tile.BBWidth, err = objFloat(objDef, 0, "BBWIDTH", false, err)
-	return tile, err
-}
-
-//
-// saveData converts a TileElement to a text representation
-// in the map file format (suitable for sending to clients or saving to a disk
-// file).
-//
-// This works just as described for BaseMapElement.saveData.
-//
-func (o TileElement) saveData(data []string, prefix, id string) ([]string, error) {
-	data, err := o.MapElement.saveData(data, prefix, id)
-	if err != nil {
-		return nil, err
-	}
-
-	return saveValues(data, prefix, id, []saveAttributes{
-		{"TYPE", "s", true, "tile"},
-		{"IMAGE", "s", true, o.Image},
-		{"BBHEIGHT", "f", true, o.BBHeight},
-		{"BBWIDTH", "f", true, o.BBWidth},
-	})
+	BBHeight, BBWidth float64 `json:",omitempty"`
 }
 
 //________________________________________________________________________________
@@ -1223,7 +874,7 @@ type CreatureToken struct {
 	Name string
 
 	// If non-nil, this tracks the health status of the creature.
-	Health *CreatureHealth
+	Health *CreatureHealth `json:",omitempty"`
 
 	// Grid (x, y) coordinates for the reference point of the
 	// creature.  Unlike MapElement coordinates, these are in
@@ -1236,7 +887,7 @@ type CreatureToken struct {
 	//
 	// Skin is 0 for the default appearance of the creature, 1
 	// for the alternate image, 2 for the 2nd alternate image, etc.
-	Skin int
+	Skin int `json:",omitempty"`
 
 	// If the different "skins" are different sizes, this is a list
 	// of size codes for each of them. For example, if there are 3
@@ -1245,18 +896,18 @@ type CreatureToken struct {
 	// If this is empty or nil, all skins are assumed to be the
 	// size specified in the Size attribute. Note that SkinSize
 	// also sets the Area at the same time.
-	SkinSize []string
+	SkinSize []string `json:",omitempty"`
 
 	// Current elevation in feet relative to the "floor" of the
 	// current location.
-	Elev int
+	Elev int `json:",omitempty"`
 
 	// The color to draw the creature's threat zone when in combat.
 	Color string
 
 	// A note to attach to the creature token to indicate special
 	// conditions affecting the creature which are not otherwise shown.
-	Note string
+	Note string `json:",omitempty"`
 
 	// The tactical size category of the creature ("S", "M", "L",
 	// etc). Lower-case letters indicate the "wide" version of the
@@ -1273,7 +924,7 @@ type CreatureToken struct {
 	// are arbitrary and defined by the server according to the needs
 	// of the particular game, but may include things such
 	// as "confused", "helpless", "hasted", etc.
-	StatusList []string
+	StatusList []string `json:",omitempty"`
 
 	// If there is a spell effect radiating from the creature, its
 	// area of effect is described by this value. If there is none,
@@ -1281,60 +932,28 @@ type CreatureToken struct {
 	//
 	// Currently only radius emanations are supported. In future, the
 	// type of this attribute may change to handle other shapes.
-	AoE *RadiusAoE
+	AoE *RadiusAoE `json:",omitempty"`
 
 	// The method of locomotion currently being used by this creature.
 	// Normally this is MoveModeLand for land-based creatures which
 	// are walking/running.
-	MoveMode MoveModeType
+	MoveMode MoveModeType `json:",omitempty"`
 
 	// Is the creature currently wielding a reach weapon or otherwise
 	// using the "reach" alternate threat zone?
-	Reach bool
+	Reach bool `json:",omitempty"`
 
 	// Is the creature currently dead? (This takes precedence over the
 	// Health attribute's indication that the creature has taken a
 	// fatal amount of damage.)
-	Killed bool
+	Killed bool `json:",omitempty"`
 
 	// In combat, if this is true, the token is "dimmed" to indicate
 	// that it is not their turn to act.
-	Dim bool
+	Dim bool `json:",omitempty"`
 
 	// The creature type.
 	CreatureType CreatureTypeCode
-}
-
-//
-// objCreature creates a new CreatureToken instance from the fields in objDef.
-//
-func objCreature(objID string, objDef map[string][]string) (CreatureToken, error) {
-	var err error
-	c := CreatureToken{
-		CreatureType: CreatureTypeUnknown,
-	}
-	var b byte
-	c.ID = objID
-	c.Name, err = objString(objDef, 0, "NAME", true, err)
-	c.Gx, err = objFloat(objDef, 0, "GX", true, err)
-	c.Gy, err = objFloat(objDef, 0, "GY", true, err)
-	c.Health, err = objHealth(objDef, err)
-	c.Elev, err = objInt(objDef, 0, "ELEV", false, err)
-	b, err = objEnum(objDef, 0, "MOVEMODE", false, enumMoveModes, err)
-	c.MoveMode = MoveModeType(b)
-	c.Color, err = objString(objDef, 0, "COLOR", false, err)
-	c.Note, err = objString(objDef, 0, "NOTE", false, err)
-	c.Skin, err = objInt(objDef, 0, "SKIN", false, err)
-	c.SkinSize, err = objStrings(objDef, 0, "SKINSIZE", false, err)
-	c.Size, err = objString(objDef, 0, "SIZE", true, err)
-	c.StatusList, err = objStrings(objDef, 0, "STATUSLIST", false, err)
-	c.AoE, err = objAoEShape(objDef, err)
-	c.Area, err = objString(objDef, 0, "AREA", true, err)
-	c.Reach, err = objBool(objDef, 0, "REACH", false, err)
-	c.Killed, err = objBool(objDef, 0, "KILLED", false, err)
-	c.Dim, err = objBool(objDef, 0, "DIM", false, err)
-
-	return c, err
 }
 
 //
@@ -1343,104 +962,33 @@ func objCreature(objID string, objDef map[string][]string) (CreatureToken, error
 //
 type CreatureHealth struct {
 	// The maximum hit points possible for the creature.
-	MaxHP int
+	MaxHP int `json:",omitempty"`
 
 	// The amount of lethal and non-lethal damage suffered by the creature.
-	LethalDamage    int
-	NonLethalDamage int
+	LethalDamage    int `json:",omitempty"`
+	NonLethalDamage int `json:",omitempty"`
 
 	// The grace amount of hit points a creature may suffer over their maximum before
 	// they are actually dead (as opposed to critically wounded). This is generally
 	// the creature's Constitution score, hence the name.
-	Con int
+	Con int `json:",omitempty"`
 
 	// Is the creature flat-footed?
-	IsFlatFooted bool
+	IsFlatFooted bool `json:",omitempty"`
 
 	// Has the creature been stabilized to prevent death while critically wounded?
-	IsStable bool
+	IsStable bool `json:",omitempty"`
 
 	// Override the map client's idea of how to display the creature's health condition.
 	// Normally this is the empty string which allows the client to calculate it from the
 	// information available to it.
-	Condition string
+	Condition string `json:",omitempty"`
 
 	// If 0, the creature's health is displayed accurately on the map. Otherwise,
 	// this gives the percentage by which to "blur" the hit points as seen by the
-	// players. For example, if HpBlur is 10, then hit points are displayed only in
+	// players. For example, if HPBlur is 10, then hit points are displayed only in
 	// 10% increments.
-	HpBlur int
-}
-
-//
-// objHealth looks for a HEALTH entry in the objDef map, parses
-// it and returns the CreatureHealth struct it defines, or nil
-// if no such entry was found, or it was the empty string.
-//
-// HEALTH {}
-// HEALTH {max lethal sub con flat? stable? condition [blur]}
-//         int int    int int bool  bool    str       {}/int
-//
-func objHealth(objDef map[string][]string, err error) (*CreatureHealth, error) {
-	if err != nil {
-		return nil, err
-	}
-	healthStats, ok := objDef["HEALTH"]
-	if !ok || len(strings.TrimSpace(healthStats[0])) == 0 {
-		return nil, err
-	}
-
-	return newHealth(healthStats[0], err)
-}
-
-func newHealth(healthStats string, err error) (*CreatureHealth, error) {
-	var hs []string
-	var hstats []interface{}
-	h := CreatureHealth{}
-
-	hs, err = tcllist.ParseTclList(healthStats)
-	if err != nil {
-		return nil, err
-	}
-	if len(hs) < 8 {
-		hstats, err = tcllist.ConvertTypes(hs, "iiii??s")
-		hstats = append(hstats, 0)
-	} else {
-		hstats, err = tcllist.ConvertTypes(hs, "iiii??sI")
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	h.MaxHP = hstats[0].(int)
-	h.LethalDamage = hstats[1].(int)
-	h.NonLethalDamage = hstats[2].(int)
-	h.Con = hstats[3].(int)
-	h.IsFlatFooted = hstats[4].(bool)
-	h.IsStable = hstats[5].(bool)
-	h.Condition = hstats[6].(string)
-	h.HpBlur = hstats[7].(int)
-	return &h, err
-}
-
-//
-// saveHealth converts a CreatureHealth value to a string as it
-// appears in the file format.
-//
-func saveHealth(h *CreatureHealth) (string, error) {
-	if h == nil {
-		return "", nil
-	}
-	data := make([]string, 0, 8)
-	data = append(data, fmt.Sprintf("%d", h.MaxHP))
-	data = append(data, fmt.Sprintf("%d", h.LethalDamage))
-	data = append(data, fmt.Sprintf("%d", h.NonLethalDamage))
-	data = append(data, fmt.Sprintf("%d", h.Con))
-	data = append(data, saveBool(h.IsFlatFooted))
-	data = append(data, saveBool(h.IsStable))
-	data = append(data, h.Condition)
-	data = append(data, fmt.Sprintf("%d", h.HpBlur))
-	return tcllist.ToTclString(data)
+	HPBlur int `json:",omitempty"`
 }
 
 //
@@ -1453,128 +1001,6 @@ type RadiusAoE struct {
 
 	// Color to draw the affected zone.
 	Color string
-}
-
-//
-// objAoEShape looks for an AOE entry in the objDef map, returning a
-// RadiusAoE value or nil if no such entry was found or it was the
-// empty string.
-//
-// AOE {}
-// AOE {radius r color}
-//           float str
-//
-func objAoEShape(objDef map[string][]string, err error) (*RadiusAoE, error) {
-	if err != nil {
-		return nil, err
-	}
-
-	aoe, ok := objDef["AOE"]
-	if !ok || len(strings.TrimSpace(aoe[0])) == 0 {
-		return nil, err
-	}
-
-	var as []string
-	var al []interface{}
-
-	as, err = tcllist.ParseTclList(aoe[0])
-	if err != nil || len(as) == 0 {
-		return nil, err
-	}
-
-	switch as[0] {
-	case "radius":
-		al, err = tcllist.ConvertTypes(as, "sfs")
-		if err != nil {
-			return nil, err
-		}
-		return &RadiusAoE{
-			Radius: al[1].(float64),
-			Color:  al[2].(string),
-		}, err
-	}
-	return nil, fmt.Errorf("undefined area of effect shape: %s", as[0])
-}
-
-//
-// saveCreatureAoE converts a RadiusAoE value to the string representation
-// for it in the output data.
-//
-func saveCreatureAoE(aoe *RadiusAoE) (string, error) {
-	if aoe == nil {
-		return "", nil
-	}
-	return tcllist.ToTclString([]string{
-		"radius",
-		fmt.Sprintf("%g", aoe.Radius),
-		aoe.Color,
-	})
-}
-
-//
-// saveData converts a CreatureToken to a text representation
-// in the map file format (suitable for sending to clients or saving to a disk
-// file).
-//
-// This works just as described for BaseMapElement.saveData.
-//
-func (o CreatureToken) saveData(data []string, prefix, id string) ([]string, error) {
-	var err error
-	if data, err = o.BaseMapObject.saveData(data, prefix, id); err != nil {
-		return nil, err
-	}
-
-	ss, err := tcllist.ToTclString(o.SkinSize)
-	if err != nil {
-		return nil, err
-	}
-	sl, err := tcllist.ToTclString(o.StatusList)
-	if err != nil {
-		return nil, err
-	}
-	ae, err := saveCreatureAoE(o.AoE)
-	if err != nil {
-		return nil, err
-	}
-	mm, err := saveEnum(byte(o.MoveMode), enumMoveModes)
-	if err != nil {
-		return nil, err
-	}
-	he, err := saveHealth(o.Health)
-	if err != nil {
-		return nil, err
-	}
-
-	var myType string
-	switch o.CreatureType {
-	case CreatureTypePlayer:
-		myType = "player"
-	case CreatureTypeMonster:
-		myType = "monster"
-	default:
-		return nil, fmt.Errorf("CreatureToken has unknown type")
-	}
-
-	return saveValues(data, prefix, id, []saveAttributes{
-		{"TYPE", "s", true, myType},
-		{"NAME", "s", true, o.Name},
-		{"GX", "f", true, o.Gx},
-		{"GY", "f", true, o.Gy},
-		{"SKIN", "i", true, o.Skin},
-		{"SKINSIZE", "s", false, ss},
-		{"ELEV", "i", true, o.Elev},
-		{"COLOR", "s", true, o.Color},
-		{"NOTE", "s", false, o.Note},
-		{"SIZE", "s", true, o.Size},
-		{"STATUSLIST", "s", false, sl},
-		{"AOE", "s", false, ae},
-		{"AREA", "s", true, o.Area},
-		{"MOVEMODE", "s", false, mm},
-		{"REACH", "b", false, o.Reach},
-		{"KILLED", "b", true, o.Killed},
-		{"DIM", "b", true, o.Dim},
-		{"HEALTH", "s", false, he},
-	})
 }
 
 //________________________________________________________________________________
@@ -1592,17 +1018,7 @@ type PlayerToken struct {
 	CreatureToken
 }
 
-//
-// objPlayer creates a new PlayerToken instance from the fields in objDef.
-//
-func objPlayer(objID string, objDef map[string][]string) (PlayerToken, error) {
-	c, err := objCreature(objID, objDef)
-	c.CreatureType = CreatureTypePlayer
-	return PlayerToken{
-		CreatureToken: c,
-	}, err
-}
-
+/*
 //
 // saveData converts a PlayerToken to a text representation
 // in the map file format (suitable for sending to clients or saving to a disk
@@ -1613,6 +1029,7 @@ func objPlayer(objID string, objDef map[string][]string) (PlayerToken, error) {
 func (o PlayerToken) saveData(data []string, prefix, id string) ([]string, error) {
 	return o.CreatureToken.saveData(data, "P", id)
 }
+*/
 
 //________________________________________________________________________________
 //  __  __                 _           _____     _
@@ -1628,28 +1045,6 @@ type MonsterToken struct {
 	CreatureToken
 }
 
-//
-// objMonster creates a new MonsterToken instance from the fields in objDef.
-//
-func objMonster(objID string, objDef map[string][]string) (MonsterToken, error) {
-	c, err := objCreature(objID, objDef)
-	c.CreatureType = CreatureTypeMonster
-	return MonsterToken{
-		CreatureToken: c,
-	}, err
-}
-
-//
-// saveData converts a MonsterToken to a text representation
-// in the map file format (suitable for sending to clients or saving to a disk
-// file).
-//
-// This works just as described for BaseMapElement.saveData.
-//
-func (o MonsterToken) saveData(data []string, prefix, id string) ([]string, error) {
-	return o.CreatureToken.saveData(data, "M", id)
-}
-
 //________________________________________________________________________________
 //  ___                            ____        __ _       _ _   _
 // |_ _|_ __ ___   __ _  __ _  ___|  _ \  ___ / _(_)_ __ (_) |_(_) ___  _ __
@@ -1658,17 +1053,21 @@ func (o MonsterToken) saveData(data []string, prefix, id string) ([]string, erro
 // |___|_| |_| |_|\__,_|\__, |\___|____/ \___|_| |_|_| |_|_|\__|_|\___/|_| |_|
 //                      |___/
 
+//
 // ImageDefinition describes an image as known to the mapper system.
 // TileElements' Image attribute refers to the Name attribute of one of
 // these.
 //
 type ImageDefinition struct {
+	// The name of the image as known within the mapper.
+	Name  string
+	Sizes []ImageInstance
+}
+
+type ImageInstance struct {
 	// The zoom (magnification) level this bitmap represents for the given
 	// image.
 	Zoom float64
-
-	// The name of the image as known within the mapper.
-	Name string
 
 	// The filename by which the image can be retrieved.
 	File string
@@ -1676,7 +1075,12 @@ type ImageDefinition struct {
 	// If IsLocalFile is true, File is the name of the image file on disk;
 	// otherwise it is the server's internal ID by which you may request
 	// that file from the server.
-	IsLocalFile bool
+	IsLocalFile bool `json:",omitempty"`
+
+	// If non-nil, this holds the image data received directly
+	// from the server. This usage is not recommended but still
+	// supported.
+	ImageData []byte `json:",omitempty"`
 }
 
 //________________________________________________________________________________
@@ -1697,183 +1101,7 @@ type FileDefinition struct {
 	// If IsLocalFile is true, File is the name of the file on disk;
 	// otherwise it is the server's internal ID by which you may request
 	// that file from the server.
-	IsLocalFile bool
-}
-
-//________________________________________________________________________________
-//  ____                      ___  _     _           _
-// |  _ \ __ _ _ __ ___  ___ / _ \| |__ (_) ___  ___| |_ ___
-// | |_) / _` | '__/ __|/ _ \ | | | '_ \| |/ _ \/ __| __/ __|
-// |  __/ (_| | |  \__ \  __/ |_| | |_) | |  __/ (__| |_\__ \
-// |_|   \__,_|_|  |___/\___|\___/|_.__// |\___|\___|\__|___/
-//                                    |__/
-
-//
-// ParseObjects reads a map file which has already been loaded from disk or
-// received from the server into a string slice, one string per line.
-// These lines are parsed to construct
-// the set of map objects recorded in them. These are returned along with
-// the image and file definitions declared in the data stream.
-//
-// The image list is a map
-// of "imagename:zoom" to ImageDefinition structures.
-//
-func ParseObjects(dataStream []string) ([]MapObject, map[string]ImageDefinition, []FileDefinition, error) {
-	format := 0
-	images := make(map[string]ImageDefinition)
-	objects := make(map[string]map[string][]string)
-	var files []FileDefinition
-
-	for lineNo, incomingAttribute := range dataStream {
-		fields, err := tcllist.ParseTclList(incomingAttribute)
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf("Error parsing data stream at line %d: %v at \"%s\"", lineNo, err, incomingAttribute)
-		}
-		if len(fields) < 2 {
-			return nil, nil, nil, fmt.Errorf("Error parsing data stream at line %d: not enough fields in \"%s\"", lineNo, incomingAttribute)
-		}
-
-		//
-		// __MAPPER__:<version> <comment>
-		// file header
-		//
-		if strings.HasPrefix(fields[0], "__MAPPER__:") {
-			if len(fields[0]) > 11 {
-				f, err := strconv.Atoi(fields[0][11:])
-				if err != nil {
-					return nil, nil, nil, fmt.Errorf("Error parsing data stream at line %d: Unable to parse map file version: %v", lineNo, err)
-				}
-				if format > 0 {
-					if format != f {
-						return nil, nil, nil, fmt.Errorf("Error parsing data stream at line %d: Multiple conflicting __MAPPER__ headers", lineNo)
-					}
-				}
-				format = f
-
-				if format < MinimumSupportedMapFileFormat || format > MaximumSupportedMapFileFormat {
-					return nil, nil, nil, fmt.Errorf("Error parsing data stream at line %d: file format version %d is not supported", lineNo, format)
-				}
-			}
-			continue
-		}
-
-		switch fields[0] {
-		case "F":
-			//
-			// F <file>
-			// Define file reference
-			//
-			f, err := tcllist.ConvertTypes(fields, "ss")
-			if err != nil {
-				return nil, nil, nil, fmt.Errorf("Error parsing data stream at line %d: %v at \"%s\"", lineNo, err, incomingAttribute)
-			}
-			files = append(files, FileDefinition{
-				File:        f[1].(string),
-				IsLocalFile: !strings.HasPrefix(f[1].(string), "@"),
-			})
-
-		case "I":
-			//
-			// I <name> <zoom> <file>
-			// Define image reference
-			//
-			f, err := tcllist.ConvertTypes(fields, "ssfs")
-			if err != nil {
-				return nil, nil, nil, fmt.Errorf("Error parsing data stream at line %d: %v at \"%s\"", lineNo, err, incomingAttribute)
-			}
-			images[fmt.Sprintf("%s:%g", f[1].(string), f[2].(float64))] = ImageDefinition{
-				Zoom:        f[2].(float64),
-				Name:        f[1].(string),
-				File:        f[3].(string),
-				IsLocalFile: !strings.HasPrefix(f[3].(string), "@"),
-			}
-
-		case "P", "M":
-			a := strings.SplitN(fields[1], ":", 2)
-			if len(a) != 2 {
-				return nil, nil, nil, fmt.Errorf("Error parsing data stream at line %d: not a valid attr:id value: %s", lineNo, fields[1])
-			}
-			if _, ok := objects[a[1]]; !ok {
-				objects[a[1]] = make(map[string][]string)
-				objects[a[1]]["__mob_type__"] = []string{fields[0]}
-			}
-			fields = fields[1:]
-			fallthrough
-
-		default:
-			if len(fields) < 2 {
-				return nil, nil, nil, fmt.Errorf("Error parsing data stream at line %d: not enough fields at \"%q\"", lineNo, fields)
-			}
-			a := strings.SplitN(fields[0], ":", 2)
-			if len(a) != 2 {
-				return nil, nil, nil, fmt.Errorf("Error parsing data stream at line %d: not a valid attr:id value: %s", lineNo, fields[0])
-			}
-			if _, ok := objects[a[1]]; !ok {
-				objects[a[1]] = make(map[string][]string)
-			}
-			objects[a[1]][a[0]] = fields[1:]
-		}
-	}
-
-	//
-	// Now we have collected all of the files, images, and object raw data.
-	// (It's necessary to do this as a first pass because objects are described
-	// on multiple lines of the data stream and may not be in order. They
-	// may even be interleaved.) Now that we've sorted them out we can look
-	// at each object individually.
-	//
-	oList := make([]MapObject, 0, len(objects))
-	var o MapObject
-	var err error
-
-	for objID, objDef := range objects {
-		mType, ok := objDef["__mob_type__"]
-		if ok {
-			switch mType[0] {
-			case "M":
-				o, err = objMonster(objID, objDef)
-			case "P":
-				o, err = objPlayer(objID, objDef)
-			default:
-				err = fmt.Errorf("unknown creature type (%s) for ID %s", mType, objID)
-			}
-		} else {
-			oType, ok := objDef["TYPE"]
-			if ok {
-				switch oType[0] {
-				case "aoe":
-					o, err = objSpellAreaOfEffectElement(objID, objDef)
-				case "arc":
-					o, err = objArcElement(objID, objDef)
-				case "circ":
-					o, err = objCircleElement(objID, objDef)
-				case "line":
-					o, err = objLineElement(objID, objDef)
-				case "poly":
-					o, err = objPolygonElement(objID, objDef)
-				case "rect":
-					o, err = objRectangleElement(objID, objDef)
-				case "text":
-					o, err = objTextElement(objID, objDef)
-				case "tile":
-					o, err = objTileElement(objID, objDef)
-				case "player":
-					o, err = objPlayer(objID, objDef)
-				case "monster":
-					o, err = objMonster(objID, objDef)
-				default:
-					err = fmt.Errorf("unknown element type (%s) for ID %s", oType, objID)
-				}
-			} else {
-				err = fmt.Errorf("element ID %s missing TYPE attribute", objID)
-			}
-		}
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf("Error parsing data stream: %v", err)
-		}
-		oList = append(oList, o)
-	}
-	return oList, images, files, nil
+	IsLocalFile bool `json:",omitempty"`
 }
 
 //
@@ -1896,6 +1124,9 @@ func objFloat(objDef map[string][]string, i int, fldName string, required bool, 
 		return 0, err
 	}
 	if len(val) <= i {
+		if !required {
+			return 0, err
+		}
 		return 0, fmt.Errorf("attribute %s only has %d elements; can't get [%d]", fldName, len(val), i)
 	}
 	return strconv.ParseFloat(val[i], 64)
@@ -1921,6 +1152,9 @@ func objInt(objDef map[string][]string, i int, fldName string, required bool, er
 		return 0, err
 	}
 	if len(val) <= i {
+		if !required {
+			return 0, err
+		}
 		return 0, fmt.Errorf("attribute %s only has %d elements; can't get [%d]", fldName, len(val), i)
 	}
 	return strconv.Atoi(val[i])
@@ -1946,6 +1180,9 @@ func objBool(objDef map[string][]string, i int, fldName string, required bool, e
 		return false, err
 	}
 	if len(val) <= i {
+		if !required {
+			return false, err
+		}
 		return false, fmt.Errorf("attribute %s only has %d elements; can't get [%d]", fldName, len(val), i)
 	}
 	return strconv.ParseBool(val[i])
@@ -1968,64 +1205,12 @@ func objString(objDef map[string][]string, i int, fldName string, required bool,
 		return "", err
 	}
 	if len(val) <= i {
+		if !required {
+			return "", err
+		}
 		return "", fmt.Errorf("attribute %s only has %d elements; can't get [%d]", fldName, len(val), i)
 	}
 	return val[i], err
-}
-
-//
-// objEnum looks for the given field in objDef, returning it as a byte value
-// according to which of the defined valid value strings was found.
-// If required is true, it is an error if no such value is found; otherwise a
-// missing value is returned as the zero value.
-//
-// i indicates which element of the field's value is to be retrieved. Most of our
-// fields are singletons, so this is usually 0.
-//
-// choices is a map of string to byte value. It is an error if the string found in
-// the data set is not found among these choices.
-//
-
-type enumChoices map[string]byte
-
-type enumDescriptor struct {
-	minValue, maxValue byte
-	choices            map[string]byte
-}
-
-func objEnum(objDef map[string][]string, i int, fldName string, required bool, choices enumChoices, err error) (byte, error) {
-	if err != nil {
-		return 0, err
-	}
-	val, ok := objDef[fldName]
-	if !ok {
-		if required {
-			return 0, fmt.Errorf("attribute %s required", fldName)
-		}
-		return 0, err
-	}
-	if len(val) <= i {
-		return 0, fmt.Errorf("attribute %s only has %d elements; can't get [%d]", fldName, len(val), i)
-	}
-	return strEnum(val[i], required, choices, err)
-}
-
-//
-// strEnum is like objEnum but simply looks at the input string value for a
-// match to the allowed choices rather than looking for a named field.
-//
-// If required is true, it is an error if the input is the empty string; otherwise
-// the zero value is returned for an empty input.
-//
-func strEnum(val string, required bool, choices enumChoices, err error) (byte, error) {
-	if val == "" && !required {
-		return 0, nil
-	}
-	choice, ok := choices[val]
-	if !ok {
-		return 0, fmt.Errorf("value %s not in allowed set", val)
-	}
-	return choice, err
 }
 
 //
@@ -2050,6 +1235,9 @@ func objStrings(objDef map[string][]string, i int, fldName string, required bool
 		return nil, err
 	}
 	if len(val) <= i {
+		if !required {
+			return nil, err
+		}
 		return nil, fmt.Errorf("attribute %s only has %d elements; can't get [%d]", fldName, len(val), i)
 	}
 	list, err := tcllist.ParseTclList(val[i])
@@ -2079,6 +1267,9 @@ func objCoordinateList(objDef map[string][]string, i int, fldName string, requir
 		return nil, err
 	}
 	if len(val) <= i {
+		if !required {
+			return nil, err
+		}
 		return nil, fmt.Errorf("attribute %s only has %d elements; can't get [%d]", fldName, len(val), i)
 	}
 	list, err := tcllist.ParseTclList(val[i])
@@ -2103,301 +1294,846 @@ func objCoordinateList(objDef map[string][]string, i int, fldName string, requir
 	return cl, nil
 }
 
-//________________________________________________________________________________
-//  ____                   ___  _     _           _
-// / ___|  __ ___   _____ / _ \| |__ (_) ___  ___| |_ ___
-// \___ \ / _` \ \ / / _ \ | | | '_ \| |/ _ \/ __| __/ __|
-//  ___) | (_| |\ V /  __/ |_| | |_) | |  __/ (__| |_\__ \
-// |____/ \__,_| \_/ \___|\___/|_.__// |\___|\___|\__|___/
-//                                 |__/
-
-// SaveObjects reverses the operation of ParseObjects. It accepts a slice of
-// MapObjects, a map containing ImageDefinitions, and a slice of FileDefinitions,
-// and emits as a slice of strings a text description of those objects in the
-// map file format, suitable for saving to disk or sending to clients and servers.
-//
-// A number of options may be given at the end of the argument list, including:
-//   WithoutHeader   -- suppress output of the normal header line
-//   WithDate(t)     -- use the given date instead of the current one
-//   WithComment(s)  -- include the comment string in the header line
-//
-func SaveObjects(objects []MapObject, images map[string]ImageDefinition, files []FileDefinition, options ...func(*saveObjOpts)) ([]string, error) {
-	var err error
-	opts := saveObjOpts{}
-	data := make([]string, 0, 32)
-
-	for _, o := range options {
-		o(&opts)
-	}
-
-	if !opts.suppressHeader {
-		if opts.date.IsZero() {
-			opts.date = time.Now()
-		}
-
-		fileDate, err := tcllist.ToTclString([]string{
-			strconv.FormatInt(opts.date.Unix(), 10),
-			opts.date.Format(time.UnixDate),
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		commentHdr, err := tcllist.ToTclString([]string{
-			opts.comment,
-			fileDate,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		header, err := tcllist.ToTclString([]string{
-			fmt.Sprintf("__MAPPER__:%d", GMAMapperFileFormat),
-			commentHdr,
-		})
-		if err != nil {
-			return nil, err
-		}
-		data = append(data, header)
-	}
-
-	for _, o := range objects {
-		data, err = o.saveData(data, "", o.ObjID())
-		if err != nil {
-			return nil, fmt.Errorf("could not save object %s: %v", o.ObjID(), err)
-		}
-	}
-
-	for _, im := range images {
-		imdata, err := tcllist.ToTclString([]string{
-			"I",
-			im.Name,
-			fmt.Sprintf("%g", im.Zoom),
-			im.File,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("error saving image %s: %v", im.Name, err)
-		}
-		data = append(data, imdata)
-	}
-
-	for _, f := range files {
-		fdata, err := tcllist.ToTclString([]string{
-			"F",
-			f.File,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("error saving file %s: %v", f.File, err)
-		}
-		data = append(data, fdata)
-	}
-
-	return data, nil
+type MapMetaData struct {
+	Timestamp   int64  `json:",omitempty"`
+	DateTime    string `json:",omitempty"`
+	Comment     string `json:",omitempty"`
+	Location    string `json:",omitempty"`
+	FileVersion uint   `json:"-"`
 }
 
 //
-// saveObjOpts gives configuration options for how we save objects.
+// WriteMapFile writes mapper data to a named file.
 //
-type saveObjOpts struct {
-	comment        string
-	date           time.Time
-	suppressHeader bool
-}
-
-//
-// WithoutHeader modifies a call to SaveObjects by suppressing the
-// normal "__MAPPER__" header line that should be in a map file.
-//
-// This may be used, for example, if SaveObjects is generating output
-// that will only be part of, but not the entire, saved data set.
-//
-func WithoutHeader(o *saveObjOpts) {
-	o.suppressHeader = true
-}
-
-//
-// WithDate modifies a call to SaveObjects by specifying
-// an already-determined date to record into the
-// "__MAPPER__" header line. Normally, the current date and time is
-// used.
-//
-func WithDate(d time.Time) func(*saveObjOpts) {
-	return func(o *saveObjOpts) {
-		o.date = d
-	}
-}
-
-//
-// WithComment modifies a call to SaveObjects by providing
-// a comment string to include in the "__MAPPER__" header line.
-//
-func WithComment(c string) func(*saveObjOpts) {
-	return func(o *saveObjOpts) {
-		o.comment = c
-	}
-}
-
-//
-// This describes each attribute to save to the output
-// data set by the saveValues function.
-//
-type saveAttributes struct {
-	Tag      string
-	Type     string
-	Required bool
-	Value    interface{}
-}
-
-//
-// saveBool converts a bool value to the string as it will appear in the output
-//
-func saveBool(b bool) string {
-	if b {
-		return "1"
-	}
-	return "0"
-}
-
-//
-// saveEnum converts an enum type to the string representing that value
-// as indicated by the supplied choice list.
-//
-func saveEnum(choice byte, choices enumChoices) (string, error) {
-	for k, v := range choices {
-		if v == choice {
-			return k, nil
-		}
-	}
-	return "", fmt.Errorf("value %v not in list of valid enum choices %v", choice, choices)
-}
-
-func enumToString(v byte, choices enumChoices, desc string) string {
-	s, err := saveEnum(v, choices)
+func WriteMapFile(path string, objList []any, meta MapMetaData) error {
+	file, err := os.Create(path)
 	if err != nil {
-		return fmt.Sprintf("(unknown %s)", desc)
+		return err
 	}
-	return s
-}
-
-//
-// MoveModeString returns a string representation of the internal MoveMode value.
-//
-func MoveModeString(m MoveModeType) string {
-	return enumToString(byte(m), enumMoveModes, "move mode")
-}
-
-//
-// DashTypeString returns a string representation of the internal DashType value.
-//
-func DashTypeString(m DashType) string {
-	return enumToString(byte(m), enumDashes, "dash type")
-}
-
-//
-// ArcModeString returns a string representation of the internal ArcModeType value.
-//
-func ArcModeString(m ArcModeType) string {
-	return enumToString(byte(m), enumArcs, "arc type")
-}
-
-//
-// ArrowTypeString returns a string representation of the internal ArrowType value.
-//
-func ArrowTypeString(m ArrowType) string {
-	return enumToString(byte(m), enumArrows, "arrow type")
-}
-
-//
-// JoinStyleString returns a string representation of the internal JoinStyle value.
-//
-func JoinStyleString(m JoinStyle) string {
-	return enumToString(byte(m), enumJoins, "join style")
-}
-
-//
-// AoETypeString returns a string representation of the internal AoEType value.
-//
-func AoETypeString(m AoEType) string {
-	return enumToString(byte(m), enumAoeShapes, "AoE shape")
-}
-
-//
-// FontWeightString returns a string representation of the internal FontWeight value.
-//
-func FontWeightString(m FontWeightType) string {
-	return enumToString(byte(m), enumFontWeights, "font weight")
-}
-
-//
-// FontSlantString returns a string representation of the internal FontSlantType value.
-//
-func FontSlantString(m FontSlantType) string {
-	return enumToString(byte(m), enumFontSlants, "font slant")
-}
-
-//
-// AnchorDirectionString returns a string representation of the internal AnchorDirection value.
-//
-func AnchorDirectionString(m AnchorDirection) string {
-	return enumToString(byte(m), enumAnchors, "anchor direction")
-}
-
-//
-// CreatureTypeString returns a string representation of the internal CreatureTypeCode value.
-//
-func CreatureTypeString(t CreatureTypeCode) string {
-	switch t {
-	case CreatureTypeMonster:
-		return "monster"
-	case CreatureTypePlayer:
-		return "player"
-	default:
-		return "(unknown creature type)"
-	}
-}
-
-//
-// saveValues saves a series of values according to the description of each
-// in saveAttributes, converting generic types to strings.
-//
-func saveValues(previous []string, prefix, objID string, attrs []saveAttributes) ([]string, error) {
-	for _, attr := range attrs {
-		data := make([]string, 0, 8)
-		if prefix != "" {
-			data = append(data, prefix)
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Printf("WARNING: mapobject WriteMapFile was unable to close the output file: %v\n", err)
 		}
-		data = append(data, attr.Tag+":"+objID)
-		var s string
-		switch attr.Type {
-		case "b":
-			if !attr.Value.(bool) && !attr.Required {
-				s = ""
-			} else {
-				s = saveBool(attr.Value.(bool))
+	}()
+	return SaveMapFile(file, objList, meta)
+}
+
+//
+// SaveMapFile writes a mapper file.
+//
+func SaveMapFile(output io.Writer, objList []any, meta MapMetaData) error {
+	writer := bufio.NewWriter(output)
+	writer.WriteString("__MAPPER__:20\n")
+	if meta.Timestamp == 0 {
+		now := time.Now()
+		meta.Timestamp = now.Unix()
+		meta.DateTime = now.String()
+	}
+	data, err := json.MarshalIndent(meta, "", "    ")
+	if err != nil {
+		return err
+	}
+	writer.WriteString("«__META__» ")
+	writer.WriteString(string(data))
+	writer.WriteString("\n")
+
+	//
+	// To produce consistent output (and aid testing), we
+	// will always write out records sorted by ObjID values.
+	//
+	sort.Slice(objList, func(i, j int) bool {
+		switch a := objList[i].(type) {
+		case ImageDefinition:
+			if b, ok := objList[j].(ImageDefinition); ok {
+				return a.Name < b.Name
 			}
-		case "f":
-			s = fmt.Sprintf("%g", attr.Value.(float64))
-		case "i":
-			s = fmt.Sprintf("%d", attr.Value.(int))
-		case "s":
-			s = attr.Value.(string)
+			return true // images are less than everything else
+
+		case FileDefinition:
+			if b, ok := objList[j].(FileDefinition); ok {
+				return a.File < b.File
+			}
+			return true // files are next after image definitions
+
+		case MapObject:
+			if b, ok := objList[j].(MapObject); ok {
+				return a.ObjID() < b.ObjID()
+			}
+			return false // objects go last
 		default:
-			return nil, fmt.Errorf("unrecognized saveValues type %s for %s", attr.Type, attr.Tag)
+			return i < j
+		}
+	})
+
+	for _, obj := range objList {
+		data, err := json.MarshalIndent(obj, "", "    ")
+		if err != nil {
+			return fmt.Errorf("unable to serialize map object: %v", err)
 		}
 
-		if s != "" || attr.Required {
-			data = append(data, s)
-			record, err := tcllist.ToTclString(data)
-			if err != nil {
-				return nil, err
-			}
-			previous = append(previous, record)
+		switch obj.(type) {
+		case ArcElement:
+			writer.WriteString("«ARC» ")
+		case CircleElement:
+			writer.WriteString("«CIRC» ")
+		case LineElement:
+			writer.WriteString("«LINE» ")
+		case PolygonElement:
+			writer.WriteString("«POLY» ")
+		case RectangleElement:
+			writer.WriteString("«RECT» ")
+		case SpellAreaOfEffectElement:
+			writer.WriteString("«SAOE» ")
+		case TextElement:
+			writer.WriteString("«TEXT» ")
+		case TileElement:
+			writer.WriteString("«TILE» ")
+		case ImageDefinition:
+			writer.WriteString("«IMG» ")
+		case FileDefinition:
+			writer.WriteString("«MAP» ")
+		case CreatureToken:
+			writer.WriteString("«CREATURE» ")
+		default:
+			return fmt.Errorf("unable to serialize map object: unsupported type")
 		}
+		writer.WriteString(string(data))
+		writer.WriteString("\n")
 	}
-	return previous, nil
+	writer.WriteString("«__EOF__»\n")
+	writer.Flush()
+	return nil
 }
 
-// @[00]@| GMA 4.4.1
+func ReadMapFile(path string) ([]any, MapMetaData, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, MapMetaData{}, err
+	}
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Printf("WARNING: mapobject ReadMapFile was unable to close the file: %v", err)
+		}
+	}()
+	return LoadMapFile(file)
+}
+
+func ReadMapMetaData(path string) (MapMetaData, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return MapMetaData{}, err
+	}
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Printf("WARNING: mapobject ReadMapMetaData was unable to close the file: %v", err)
+		}
+	}()
+	return LoadMapMetaData(file)
+}
+
+//
+// loadLegacyMapFile(scanner
+// reads a mapper file with format < 20, returning a slice
+// of map elements.
+//
+func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta string, metaDataOnly bool) ([]any, MapMetaData, error) {
+	//
+	// The map file formats prior to version 20 used a very different
+	// format. This function is called *after* we have read the initial
+	// line which held the version number and metadata. This function
+	// picks up from that point.
+	//
+	// The legacy format's initial line was of the form
+	//    __MAPPER__:<version> {<comment> {<timestamp> {<timestring>}}}
+	// Following this are a series of lines of the form
+	//    <attr>:<id> [<value-list>]
+	// where <value-list> is a TCL list with values appropriate for the
+	// given <attr> of the map objectd <id> (whose type is specified by
+	// the TYPE attribute).
+	// OR M <attr>:<id> [<value-list>]  for monster tokens,
+	// OR P <attr>:<id> [<value-list>]  for player tokens,
+	// OR F <serverID>                  for map files,
+	// OR I <name> <zoom> <serverID>    for images.
+	//
+	// The lines may be in ANY order, so it's necessary to read all the
+	// lines in the file and then assemble them into objects.
+	//
+	var rawFiles []string
+	var objList []any
+	var err error
+
+	// rawData holds the file's data strings as a map of <id> to map of <attr> to <value-list>
+	rawData := make(map[string]map[string][]string)
+	rawMonsters := make(map[string]map[string][]string)
+	rawPlayers := make(map[string]map[string][]string)
+	rawImages := make(map[string]ImageDefinition)
+
+	metaList, err := tcllist.ParseTclList(legacyMeta)
+	if err != nil {
+		return nil, meta, fmt.Errorf("legacy map file has invalid metadata: %v", err)
+	}
+	if len(metaList) > 0 {
+		metaList, err = tcllist.ParseTclList(metaList[0])
+		if err != nil {
+			return nil, meta, fmt.Errorf("legacy map file has invalid metadata: %v", err)
+		}
+		if len(metaList) > 0 {
+			meta.Comment = metaList[0]
+			if len(metaList) > 1 {
+				if dateList, err := tcllist.ParseTclList(metaList[1]); err == nil {
+					meta.Timestamp, _ = strconv.ParseInt(dateList[0], 10, 64)
+					if len(dateList) > 1 {
+						meta.DateTime = dateList[1]
+					}
+				}
+			}
+		}
+	}
+	if metaDataOnly {
+		return nil, meta, nil
+	}
+
+	for scanner.Scan() {
+		f, err := tcllist.ParseTclList(scanner.Text())
+		if err != nil {
+			return nil, meta, fmt.Errorf("legacy map file has invalid record: %v", err)
+		}
+		switch f[0] {
+		case "M":
+			attr, objID, ok := strings.Cut(f[1], ":")
+			if !ok {
+				return nil, meta, fmt.Errorf("legacy map file has improperly formed M record (can't parse <attr>:<id> from \"%s\")", f[1])
+			}
+			if rawMonsters[objID] == nil {
+				rawMonsters[objID] = make(map[string][]string)
+			}
+			rawMonsters[objID][attr] = f[2:]
+
+		case "P":
+			attr, objID, ok := strings.Cut(f[1], ":")
+			if !ok {
+				return nil, meta, fmt.Errorf("legacy map file has improperly formed P record (can't parse <attr>:<id> from \"%s\")", f[1])
+			}
+			if rawPlayers[objID] == nil {
+				rawPlayers[objID] = make(map[string][]string)
+			}
+			rawPlayers[objID][attr] = f[2:]
+
+		case "F":
+			if len(f) != 2 {
+				return nil, meta, fmt.Errorf("legacy map file has improperly formed F record (%d fields)", len(f))
+			}
+			rawFiles = append(rawFiles, f[1])
+
+		case "I":
+			ff, err := tcllist.ConvertTypes(f, "ssfs")
+			if err != nil {
+				return nil, meta, fmt.Errorf("legacy map file has improperly formed I record: %v", err)
+			}
+			serverID := ff[3].(string)
+
+			var def ImageDefinition
+			var ok bool
+			def, ok = rawImages[ff[1].(string)]
+			if !ok {
+				def = ImageDefinition{
+					Name: ff[1].(string),
+				}
+			}
+			if len(serverID) > 0 && serverID[0] == '@' {
+				def.Sizes = append(def.Sizes, ImageInstance{
+					Zoom:        ff[2].(float64),
+					File:        serverID[1:],
+					IsLocalFile: false,
+				})
+			} else {
+				def.Sizes = append(def.Sizes, ImageInstance{
+					Zoom:        ff[2].(float64),
+					File:        serverID,
+					IsLocalFile: true,
+				})
+			}
+			rawImages[ff[1].(string)] = def
+
+		default:
+			attr, objID, ok := strings.Cut(f[0], ":")
+			if !ok {
+				return nil, meta, fmt.Errorf("legacy map file has improperly formed record (can't parse <attr>:<id> from \"%s\")", f[0])
+			}
+			if rawData[objID] == nil {
+				rawData[objID] = make(map[string][]string)
+			}
+			rawData[objID][attr] = f[1:]
+		}
+	}
+
+	// Now assemble the collected data into a collection of MapObjects
+	writeCreature := func(ct string, mob map[string][]string, m *CreatureToken, objID string) error {
+		if t, ok := mob["TYPE"]; !ok || len(t) < 1 || t[0] != ct {
+			return fmt.Errorf("legacy file %s %s has missing or invalid TYPE", ct, objID)
+		}
+		m.Name, err = objString(mob, 0, "NAME", true, err)
+		if healthStruct, ok := mob["HEALTH"]; ok {
+			ss, err := tcllist.ParseTclList(healthStruct[0])
+			if err != nil {
+				return fmt.Errorf("legacy file %s %s has invalid HEALTH: %v", ct, objID, err)
+			}
+			if len(ss) > 0 {
+				hob := map[string][]string{
+					"HEALTH": ss,
+				}
+				maxhp, err := objInt(hob, 0, "HEALTH", true, err)
+				lethal, err := objInt(hob, 1, "HEALTH", true, err)
+				subdual, err := objInt(hob, 2, "HEALTH", true, err)
+				con, err := objInt(hob, 3, "HEALTH", true, err)
+				flat, err := objBool(hob, 4, "HEALTH", true, err)
+				stab, err := objBool(hob, 5, "HEALTH", true, err)
+				cond, err := objString(hob, 6, "HEALTH", false, err)
+				blur, err := objInt(hob, 7, "HEALTH", false, err)
+
+				m.Health = &CreatureHealth{
+					MaxHP:           maxhp,
+					LethalDamage:    lethal,
+					NonLethalDamage: subdual,
+					Con:             con,
+					IsFlatFooted:    flat,
+					IsStable:        stab,
+					Condition:       cond,
+					HPBlur:          blur,
+				}
+			}
+		}
+		m.Gx, err = objFloat(mob, 0, "GX", false, err)
+		m.Gy, err = objFloat(mob, 0, "GY", false, err)
+		m.Skin, err = objInt(mob, 0, "SKIN", false, err)
+		m.SkinSize, err = objStrings(mob, 0, "SKINSIZE", false, err)
+		m.Elev, err = objInt(mob, 0, "ELEV", false, err)
+		m.Color, err = objString(mob, 0, "COLOR", false, err)
+		m.Note, err = objString(mob, 0, "NOTE", false, err)
+		m.Size, err = objString(mob, 0, "SIZE", false, err)
+		m.Area, err = objString(mob, 0, "AREA", false, err)
+		m.StatusList, err = objStrings(mob, 0, "STATUSLIST", false, err)
+		if aoeStruct, ok := mob["AOE"]; ok {
+			ss, err := tcllist.ParseTclList(aoeStruct[0])
+			if err != nil {
+				return fmt.Errorf("legacy file %s %s has invalid AOE: %v", ct, objID, err)
+			}
+			if len(ss) > 0 {
+				aob := map[string][]string{
+					"AOE": ss,
+				}
+
+				atype, err := objString(aob, 0, "AOE", true, err)
+				if atype != "radius" {
+					err = fmt.Errorf("invalid AOE type \"%s\"", atype)
+				}
+				radius, err := objFloat(aob, 1, "AOE", true, err)
+				color, err := objString(aob, 2, "AOE", true, err)
+
+				m.AoE = &RadiusAoE{
+					Radius: radius,
+					Color:  color,
+				}
+			}
+		}
+		if s, ok := mob["MOVEMODE"]; ok {
+			if len(s) > 0 {
+				switch s[0] {
+				case "fly":
+					m.MoveMode = MoveModeFly
+				case "climb":
+					m.MoveMode = MoveModeClimb
+				case "swim":
+					m.MoveMode = MoveModeSwim
+				case "burrow":
+					m.MoveMode = MoveModeBurrow
+				case "land", "":
+					m.MoveMode = MoveModeLand
+				default:
+					return fmt.Errorf("legacy file %s %s has invalid MOVEMODE: unsupported mode \"%s\"", ct, objID, s)
+				}
+			}
+		}
+		m.Reach, err = objBool(mob, 0, "REACH", false, err)
+		m.Killed, err = objBool(mob, 0, "KILLED", false, err)
+		m.Dim, err = objBool(mob, 0, "DIM", false, err)
+		objList = append(objList, *m)
+		if err != nil {
+			return fmt.Errorf("legacy file %s %s: %v", ct, objID, err)
+		}
+		return nil
+	}
+
+	for objID, mob := range rawMonsters {
+		m := CreatureToken{
+			BaseMapObject: BaseMapObject{
+				ID: objID,
+			},
+			CreatureType: CreatureTypeMonster,
+		}
+		if err := writeCreature("monster", mob, &m, objID); err != nil {
+			return nil, meta, err
+		}
+	}
+
+	for objID, mob := range rawPlayers {
+		m := CreatureToken{
+			BaseMapObject: BaseMapObject{
+				ID: objID,
+			},
+			CreatureType: CreatureTypePlayer,
+		}
+		if err := writeCreature("player", mob, &m, objID); err != nil {
+			return nil, meta, err
+		}
+	}
+
+	for objID, obj := range rawData {
+		var objType string
+
+		objType, err := objString(obj, 0, "TYPE", true, err)
+		base := MapElement{
+			BaseMapObject: BaseMapObject{
+				ID: objID,
+			},
+		}
+		base.X, err = objFloat(obj, 0, "X", false, err)
+		base.Y, err = objFloat(obj, 0, "Y", false, err)
+		base.Z, err = objInt(obj, 0, "Z", false, err)
+		base.Points, err = objCoordinateList(obj, 0, "POINTS", false, err)
+		base.Line, err = objString(obj, 0, "LINE", false, err)
+		base.Fill, err = objString(obj, 0, "FILL", false, err)
+		base.Width, err = objInt(obj, 0, "WIDTH", false, err)
+		base.Layer, err = objString(obj, 0, "LAYER", false, err)
+		base.Level, err = objInt(obj, 0, "LEVEL", false, err)
+		base.Group, err = objString(obj, 0, "GROUP", false, err)
+		if s, ok := obj["DASH"]; ok {
+			if len(s) > 0 {
+				switch s[0] {
+				case "":
+					base.Dash = DashSolid
+				case "-":
+					base.Dash = DashLong
+				case ",":
+					base.Dash = DashMedium
+				case ".":
+					base.Dash = DashShort
+				case "-.":
+					base.Dash = DashLongShort
+				case "-..":
+					base.Dash = DashLong2Short
+				default:
+					return nil, meta, fmt.Errorf("legacy file element %s has invalid DASH: %s", objID, s)
+				}
+			}
+		}
+		base.Hidden, err = objBool(obj, 0, "HIDDEN", false, err)
+		base.Locked, err = objBool(obj, 0, "LOCKED", false, err)
+
+		switch objType {
+		case "aoe":
+			o := SpellAreaOfEffectElement{
+				MapElement: base,
+			}
+			if s, ok := obj["AOESHAPE"]; ok {
+				if len(s) > 0 {
+					switch s[0] {
+					case "cone":
+						o.AoEShape = AoEShapeCone
+					case "radius":
+						o.AoEShape = AoEShapeRadius
+					case "ray":
+						o.AoEShape = AoEShapeRay
+					default:
+						return nil, meta, fmt.Errorf("legacy file element %s has invalid AOESHAPE: \"%s\"", objID, s)
+					}
+				}
+			}
+			objList = append(objList, o)
+
+		case "arc":
+			o := ArcElement{
+				MapElement: base,
+			}
+			if s, ok := obj["ARCMODE"]; ok {
+				if len(s) > 0 {
+					switch s[0] {
+					case "pieslice":
+						o.ArcMode = ArcModePieSlice
+					case "arc":
+						o.ArcMode = ArcModeArc
+					case "chord":
+						o.ArcMode = ArcModeChord
+					default:
+						return nil, meta, fmt.Errorf("legacy file element %s has invalid ARCMODE: \"%s\"", objID, s)
+					}
+				}
+			}
+			o.Start, err = objFloat(obj, 0, "START", true, err)
+			o.Extent, err = objFloat(obj, 0, "EXTENT", true, err)
+			objList = append(objList, o)
+
+		case "circ":
+			o := CircleElement{
+				MapElement: base,
+			}
+			objList = append(objList, o)
+
+		case "group", "layer", "token":
+			return nil, meta, fmt.Errorf("legacy file element %s has invalid TYPE \"%s\" (this was never implemented for legacy files)", objID, objType)
+
+		case "line":
+			o := LineElement{
+				MapElement: base,
+			}
+			if s, ok := obj["ARROW"]; ok {
+				if len(s) > 0 {
+					switch s[0] {
+					case "none", "":
+						o.Arrow = ArrowNone
+					case "first":
+						o.Arrow = ArrowFirst
+					case "last":
+						o.Arrow = ArrowLast
+					case "both":
+						o.Arrow = ArrowBoth
+					default:
+						return nil, meta, fmt.Errorf("legacy file element %s has invalid ARROW: \"%s\"", objID, s)
+					}
+				}
+			}
+			objList = append(objList, o)
+
+		case "poly":
+			o := PolygonElement{
+				MapElement: base,
+			}
+			o.Spline, err = objFloat(obj, 0, "SPLINE", false, err)
+			if s, ok := obj["JOIN"]; ok {
+				if len(s) > 0 {
+					switch s[0] {
+					case "bevel":
+						o.Join = JoinBevel
+					case "miter":
+						o.Join = JoinMiter
+					case "round":
+						o.Join = JoinRound
+					default:
+						return nil, meta, fmt.Errorf("legacy file element %s has invalid JOIN: \"%s\"", objID, s)
+					}
+				}
+			}
+			objList = append(objList, o)
+
+		case "rect":
+			o := RectangleElement{
+				MapElement: base,
+			}
+			objList = append(objList, o)
+
+		case "text":
+			if _, ok := obj["TEXT"]; !ok {
+				return nil, meta, fmt.Errorf("legacy file element %s missing TEXT", objID)
+			}
+			o := TextElement{
+				MapElement: base,
+			}
+
+			o.Text, err = objString(obj, 0, "TEXT", true, err)
+
+			var fontStruct string
+			fontStruct, err = objString(obj, 0, "FONT", false, err)
+			if fontStruct != "" {
+				ss, err := tcllist.ParseTclList(fontStruct)
+				if err != nil {
+					return nil, meta, fmt.Errorf("legacy file element %s has invalid FONT (1st level): %v", objID, err)
+				}
+				if len(ss) > 0 {
+					ss, err = tcllist.ParseTclList(ss[0])
+					if err != nil {
+						return nil, meta, fmt.Errorf("legacy file element %s has invalid FONT (2nd level): %v", objID, err)
+					}
+					if len(ss) < 2 {
+						return nil, meta, fmt.Errorf("legacy file element %s has invalid FONT: len=%d", objID, len(ss))
+					}
+					if len(ss) < 3 {
+						ss = append(ss, "normal")
+					}
+					if len(ss) < 4 {
+						ss = append(ss, "roman")
+					}
+					o.Font = TextFont{
+						Family: ss[0],
+					}
+					o.Font.Size, err = strconv.ParseFloat(ss[1], 64)
+					if err != nil {
+						return nil, meta, fmt.Errorf("legacy file element %s has invalid FONT size: %v", objID, err)
+					}
+					switch ss[2] {
+					case "normal":
+						o.Font.Weight = FontWeightNormal
+					case "bold":
+						o.Font.Weight = FontWeightBold
+					default:
+						return nil, meta, fmt.Errorf("legacy file element %s has invalid FONT weight \"%s\"", objID, ss[2])
+					}
+					switch ss[3] {
+					case "roman", "Roman":
+						o.Font.Slant = FontSlantRoman
+					case "italic", "Italic":
+						o.Font.Slant = FontSlantItalic
+					default:
+						return nil, meta, fmt.Errorf("legacy file element %s has invalid FONT slant \"%s\"", objID, ss[3])
+					}
+				}
+			} else {
+				return nil, meta, fmt.Errorf("legacy file element %s missing FONT", objID)
+			}
+			if s, ok := obj["ANCHOR"]; ok {
+				if len(s) > 0 {
+					switch s[0] {
+					case "center":
+						o.Anchor = AnchorCenter
+					case "n":
+						o.Anchor = AnchorNorth
+					case "s":
+						o.Anchor = AnchorSouth
+					case "e":
+						o.Anchor = AnchorEast
+					case "w":
+						o.Anchor = AnchorWest
+					case "ne":
+						o.Anchor = AnchorNE
+					case "nw":
+						o.Anchor = AnchorNW
+					case "se":
+						o.Anchor = AnchorSE
+					case "sw":
+						o.Anchor = AnchorSW
+					default:
+						return nil, meta, fmt.Errorf("legacy file element %s has invalid missing ANCHOR \"%s\"", objID, s)
+					}
+				}
+			}
+			objList = append(objList, o)
+
+		case "tile":
+			o := TileElement{
+				MapElement: base,
+			}
+			o.Image, err = objString(obj, 0, "IMAGE", true, err)
+			o.BBHeight, err = objFloat(obj, 0, "BBHEIGHT", false, err)
+			o.BBWidth, err = objFloat(obj, 0, "BBWIDTH", false, err)
+			objList = append(objList, o)
+
+		default:
+			return nil, meta, fmt.Errorf("legacy file element %s has invalid TYPE \"%s\"", objID, objType)
+		}
+		if err != nil {
+			return nil, meta, fmt.Errorf("legacy file object %s: %v", objID, err)
+		}
+	}
+
+	for _, f := range rawFiles {
+		objList = append(objList, FileDefinition{
+			File:        f,
+			IsLocalFile: false,
+		})
+	}
+
+	for _, i := range rawImages {
+		objList = append(objList, i)
+	}
+
+	return objList, meta, nil
+}
+
+//
+// LoadMapMetaData is just like LoadMapFile but only reads enough of the
+// file to get the meta data, which is returned.
+//
+func LoadMapMetaData(input io.Reader) (MapMetaData, error) {
+	_, meta, err := loadMapFile(input, true)
+	return meta, err
+}
+
+//
+// LoadMapFile reads a mapper file with file format >= 20, returning
+// a slice of map elements.
+//
+func LoadMapFile(input io.Reader) ([]any, MapMetaData, error) {
+	return loadMapFile(input, false)
+}
+
+func loadMapFile(input io.Reader, metaDataOnly bool) ([]any, MapMetaData, error) {
+	//
+	// The map file format consists of an initial line of the form
+	//    __MAPPER__:<version>
+	//
+	// This is followed by zero or more object definitions which are
+	// of the form
+	//    «<type>» <json>
+	// where <json> may be a multi-line structure. The start of each
+	// new object is marked with the «<type>» string, so the breaking
+	// up of <json> must not result in an accidental line starting with
+	// that pattern. Disallowing a newline in the middle of a string should
+	// accomplish that.
+	// OR
+	//    __META__ <json>		for file metadata
+	//    IMG <json>        for an image file definition
+	//    MAP <json>        for a map file definition
+	//    CREATURE <json>   for a general creature definition
+	//
+	// The final line is of the form
+	//    «__EOF__»
+	//
+	// Despite the indentation above, the line MUST begin with « to signal
+	// each of these.
+	//
+	var meta MapMetaData
+	var objList []any
+	var f []string
+	var v uint64
+	var err error
+
+	if input == nil {
+		return nil, meta, nil
+	}
+
+	startPattern := regexp.MustCompile("^__MAPPER__:(\\d+)\\s*(.*)$")
+	recordPattern := regexp.MustCompile("^«(.*?)» (.+)$")
+	eofPattern := regexp.MustCompile("^«__EOF__»$")
+	scanner := bufio.NewScanner(input)
+	if !scanner.Scan() {
+		// no data
+		return nil, meta, nil
+	}
+
+	if f = startPattern.FindStringSubmatch(scanner.Text()); f == nil {
+		return nil, meta, fmt.Errorf("invalid map file format in initial header")
+	}
+	if v, err = strconv.ParseUint(f[1], 10, 64); err != nil {
+		return nil, meta, fmt.Errorf("invalid map file format: can't parse version \"%v\": %v", f[1], err)
+	}
+	meta.FileVersion = uint(v)
+	if v < MinimumSupportedMapFileFormat || v > MaximumSupportedMapFileFormat {
+		if MinimumSupportedMapFileFormat == MaximumSupportedMapFileFormat {
+			return nil, meta, fmt.Errorf("cannot read map file format version %d (only version %d is supported)", v, MinimumSupportedMapFileFormat)
+		}
+		return nil, meta, fmt.Errorf("cannot read map file format version %d (only versions %d-%d are supported)", v, MinimumSupportedMapFileFormat, MaximumSupportedMapFileFormat)
+	}
+	if v < 20 {
+		return loadLegacyMapFile(scanner, meta, f[2], metaDataOnly)
+	}
+
+	for scanner.Scan() {
+	rescan:
+		if strings.TrimSpace(scanner.Text()) == "" {
+			continue
+		}
+		if eofPattern.MatchString(scanner.Text()) {
+			return objList, meta, nil
+		}
+		if f = recordPattern.FindStringSubmatch(scanner.Text()); f == nil {
+			return nil, meta, fmt.Errorf("invalid map file format: unexpected data \"%v\"", scanner.Text())
+		}
+		// Start of record type f[1] with start of JSON string f[2]
+		// collect more lines of JSON data...
+		var dataPacket strings.Builder
+		dataPacket.WriteString(f[2])
+
+		for scanner.Scan() {
+			if strings.HasPrefix(scanner.Text(), "«") {
+				var err error
+
+				switch f[1] {
+				case "META":
+					err = json.Unmarshal([]byte(dataPacket.String()), &meta)
+					if metaDataOnly {
+						return nil, meta, nil
+					}
+
+				case "ARC":
+					var arc ArcElement
+					if err = json.Unmarshal([]byte(dataPacket.String()), &arc); err == nil {
+						objList = append(objList, arc)
+					}
+
+				case "CIRC":
+					var circle CircleElement
+					if err = json.Unmarshal([]byte(dataPacket.String()), &circle); err == nil {
+						objList = append(objList, circle)
+					}
+
+				case "LINE":
+					var line LineElement
+					if err = json.Unmarshal([]byte(dataPacket.String()), &line); err == nil {
+						objList = append(objList, line)
+					}
+
+				case "POLY":
+					var poly PolygonElement
+					if err = json.Unmarshal([]byte(dataPacket.String()), &poly); err == nil {
+						objList = append(objList, poly)
+					}
+
+				case "RECT":
+					var rect RectangleElement
+					if err = json.Unmarshal([]byte(dataPacket.String()), &rect); err == nil {
+						objList = append(objList, rect)
+					}
+
+				case "SAOE":
+					var effect SpellAreaOfEffectElement
+					if err = json.Unmarshal([]byte(dataPacket.String()), &effect); err == nil {
+						objList = append(objList, effect)
+					}
+
+				case "TEXT":
+					var text TextElement
+					if err = json.Unmarshal([]byte(dataPacket.String()), &text); err == nil {
+						objList = append(objList, text)
+					}
+
+				case "TILE":
+					var tile TileElement
+					if err = json.Unmarshal([]byte(dataPacket.String()), &tile); err == nil {
+						objList = append(objList, tile)
+					}
+
+				case "IMG":
+					var img ImageDefinition
+					if err = json.Unmarshal([]byte(dataPacket.String()), &img); err == nil {
+						objList = append(objList, img)
+					}
+
+				case "MAP":
+					var file FileDefinition
+					if err = json.Unmarshal([]byte(dataPacket.String()), &file); err == nil {
+						objList = append(objList, file)
+					}
+
+				case "CREATURE":
+					var mob CreatureToken
+					if err = json.Unmarshal([]byte(dataPacket.String()), &mob); err == nil {
+						objList = append(objList, mob)
+					}
+
+				default:
+					return nil, meta, fmt.Errorf("invalid map file format: unexpected record type \"%s\"", f[1])
+				}
+				if err != nil {
+					return nil, meta, fmt.Errorf("invalid map file format: %v", err)
+				}
+				goto rescan
+			}
+			dataPacket.WriteString(scanner.Text())
+		}
+	}
+	return nil, meta, fmt.Errorf("invalid map file format: unexpected end of file")
+}
+
+// @[00]@| GMA 4.7.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2022 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___          ___        __                 #
-# (  ____ \(       )(  ___  )              /   )        /   )      /  \                #
-# | (    \/| () () || (   ) |             / /) |       / /) |      \/) )               #
-# | |      | || || || (___) |            / (_) (_     / (_) (_       | |               #
-# | | ____ | |(_)| ||  ___  |           (____   _)   (____   _)      | |               #
-# | | \_  )| |   | || (   ) | Game           ) (          ) (        | |               #
-# | (___) || )   ( || )   ( | Master's       | |   _      | |   _  __) (_              #
-# (_______)|/     \||/     \| Assistant      (_)  (_)     (_)  (_) \____/              #
+#  _______  _______  _______                ___       ______      _______              #
+# (  ____ \(       )(  ___  )              /   )     / ___  \    (  __   )             #
+# | (    \/| () () || (   ) |             / /) |     \/   )  )   | (  )  |             #
+# | |      | || || || (___) |            / (_) (_        /  /    | | /   |             #
+# | | ____ | |(_)| ||  ___  |           (____   _)      /  /     | (/ /) |             #
+# | | \_  )| |   | || (   ) | Game           ) (       /  /      |   / | |             #
+# | (___) || )   ( || )   ( | Master's       | |   _  /  /     _ |  (__) |             #
+# (_______)|/     \||/     \| Assistant      (_)  (_) \_/     (_)(_______)             #
 #                                                                                      #
 ########################################################################################
 #
@@ -42,16 +42,18 @@ import (
 	"time"
 
 	"github.com/MadScienceZone/go-gma/v4/auth"
+	"github.com/MadScienceZone/go-gma/v4/dice"
 	"github.com/MadScienceZone/go-gma/v4/gma"
 	"github.com/MadScienceZone/go-gma/v4/mapper"
 	"github.com/MadScienceZone/go-gma/v4/tcllist"
 	"github.com/MadScienceZone/go-gma/v4/util"
 )
 
-const GMAVersionNumber = "4.4.1" //@@##@@
+const GMAVersionNumber="4.7.0" //@@##@@
 
 func main() {
 	fmt.Printf("GMA mapper console %s\n", GMAVersionNumber)
+	log.SetPrefix("map-console: ")
 
 	conf, err := configureApp()
 	if err != nil {
@@ -90,7 +92,14 @@ func main() {
 			mapper.CombatMode,
 			mapper.Comment,
 			mapper.LoadFrom,
-			mapper.LoadObject,
+			mapper.LoadArcObject,
+			mapper.LoadCircleObject,
+			mapper.LoadLineObject,
+			mapper.LoadPolygonObject,
+			mapper.LoadRectangleObject,
+			mapper.LoadSpellAreaOfEffectObject,
+			mapper.LoadTextObject,
+			mapper.LoadTileObject,
 			mapper.Marco,
 			mapper.Mark,
 			mapper.PlaceSomeone,
@@ -107,6 +116,7 @@ func main() {
 			mapper.UpdateStatusMarker,
 			mapper.UpdateTurn,
 		),
+		mapper.WithDebugging(5),
 	}
 
 	if pass != "" {
@@ -137,9 +147,15 @@ func main() {
 		time.Sleep(100 * time.Millisecond)
 	}
 	fmt.Println(colorize("Connected to server.", "Green", mono))
-	if err = server.Allow(mapper.DiceColorBoxes); err != nil {
-		fmt.Println(colorize(fmt.Sprintf("Error asking for optional features: %v", err), "red", mono))
+
+	update, err := server.CheckVersionOf("core", GMAVersionNumber)
+	if err != nil {
+		log.Printf("Error checking for version updates: %v", err)
+	} else if update != nil {
+		log.Printf("UPDATE AVAILABLE! You are running version %v of GMA.", GMAVersionNumber)
+		log.Printf("UPDATE AVAILABLE! Version %v is available for %v on %v.", update.Version, update.OS, update.Arch)
 	}
+
 	fmt.Printf("Server protocol %d; using %s calendar.\n", server.Protocol, server.CalendarSystem)
 	fmt.Println("Characters Defined:")
 	fmt.Println(colorize("NAME----------- ID-------- COLOR----- AREA SIZE", "Blue", mono))
@@ -152,6 +168,15 @@ func main() {
 	for _, def := range server.Conditions {
 		fmt.Println(colorize(fmt.Sprintf("%-15s %-5s %-10s %.46s", def.Condition, def.Shape, def.Color, def.Description), "Yellow", mono))
 	}
+
+	fmt.Println("Available Software Updates:")
+	fmt.Println(colorize("PACKAGE--- OS-------- ARCH------ VERSION", "Blue", mono))
+	for name, pkg := range server.PackageUpdatesAvailable {
+		for _, vers := range pkg {
+			fmt.Println(colorize(fmt.Sprintf("%-10s %-10s %-10s %s", name, vers.OS, vers.Arch, vers.Version), "Yellow", mono))
+		}
+	}
+
 	go readUserInput(mono, cancel, server)
 
 	if server.CalendarSystem == "" {
@@ -219,13 +244,13 @@ func describeBaseMapObject(mono bool, o mapper.MapElement) string {
 		fieldDesc{"layer", o.Layer},
 		fieldDesc{"level", o.Level},
 		fieldDesc{"group", o.Group},
-		fieldDesc{"dash", mapper.DashTypeString(o.Dash)},
+		fieldDesc{"dash", o.Dash},
 		fieldDesc{"hidden", o.Hidden},
 		fieldDesc{"locked", o.Locked},
 	)
 }
 
-func describeObject(mono bool, obj interface{}) string {
+func describeObject(mono bool, obj any) string {
 	var desc strings.Builder
 
 	switch o := obj.(type) {
@@ -242,7 +267,7 @@ func describeObject(mono bool, obj interface{}) string {
 				fieldDesc{"flat", (*o).IsFlatFooted},
 				fieldDesc{"stable", (*o).IsStable},
 				fieldDesc{"condition", (*o).Condition},
-				fieldDesc{"blur", (*o).HpBlur},
+				fieldDesc{"blur", (*o).HPBlur},
 			))
 		}
 
@@ -257,7 +282,7 @@ func describeObject(mono bool, obj interface{}) string {
 			))
 		}
 
-	case map[string]interface{}:
+	case map[string]any:
 		var m []fieldDesc
 
 		for k, v := range o {
@@ -282,7 +307,7 @@ func describeObject(mono bool, obj interface{}) string {
 		fmt.Fprint(&desc, colorize("arc{", "magenta", mono))
 		fmt.Fprint(&desc, describeBaseMapObject(mono, o.MapElement))
 		fmt.Fprint(&desc, descFields(mono,
-			fieldDesc{"mode", mapper.ArcModeString(o.ArcMode)},
+			fieldDesc{"mode", o.ArcMode},
 			fieldDesc{"start", o.Start},
 			fieldDesc{"extent", o.Extent},
 		))
@@ -295,7 +320,7 @@ func describeObject(mono bool, obj interface{}) string {
 		fmt.Fprint(&desc, colorize("line{", "magenta", mono))
 		fmt.Fprint(&desc, describeBaseMapObject(mono, o.MapElement))
 		fmt.Fprint(&desc, descFields(mono,
-			fieldDesc{"arrow", mapper.ArrowTypeString(o.Arrow)},
+			fieldDesc{"arrow", o.Arrow},
 		))
 
 	case mapper.PolygonElement:
@@ -303,7 +328,7 @@ func describeObject(mono bool, obj interface{}) string {
 		fmt.Fprint(&desc, describeBaseMapObject(mono, o.MapElement))
 		fmt.Fprint(&desc, descFields(mono,
 			fieldDesc{"spline", o.Spline},
-			fieldDesc{"join", mapper.JoinStyleString(o.Join)},
+			fieldDesc{"join", o.Join},
 		))
 
 	case mapper.RectangleElement:
@@ -314,7 +339,7 @@ func describeObject(mono bool, obj interface{}) string {
 		fmt.Fprint(&desc, colorize("aoe{", "magenta", mono))
 		fmt.Fprint(&desc, describeBaseMapObject(mono, o.MapElement))
 		fmt.Fprint(&desc, descFields(mono,
-			fieldDesc{"shape", mapper.AoETypeString(o.AoEShape)},
+			fieldDesc{"shape", o.AoEShape},
 		))
 
 	case mapper.TextElement:
@@ -324,9 +349,9 @@ func describeObject(mono bool, obj interface{}) string {
 			fieldDesc{"text", o.Text},
 			fieldDesc{"family", o.Font.Family},
 			fieldDesc{"size", o.Font.Size},
-			fieldDesc{"weight", mapper.FontWeightString(o.Font.Weight)},
-			fieldDesc{"slant", mapper.FontSlantString(o.Font.Slant)},
-			fieldDesc{"anchor", mapper.AnchorDirectionString(o.Anchor)},
+			fieldDesc{"weight", o.Font.Weight},
+			fieldDesc{"slant", o.Font.Slant},
+			fieldDesc{"anchor", o.Anchor},
 		))
 
 	case mapper.TileElement:
@@ -355,11 +380,11 @@ func describeObject(mono bool, obj interface{}) string {
 			fieldDesc{"area", o.Area},
 			fieldDesc{"statuslist", o.StatusList},
 			fieldDesc{"aoe", describeObject(mono, o.AoE)},
-			fieldDesc{"movemode", mapper.MoveModeString(o.MoveMode)},
+			fieldDesc{"movemode", o.MoveMode},
 			fieldDesc{"reach", o.Reach},
 			fieldDesc{"killed", o.Killed},
 			fieldDesc{"dim", o.Dim},
-			fieldDesc{"type", mapper.CreatureTypeString(o.CreatureType)},
+			fieldDesc{"type", o.CreatureType},
 		))
 
 	case mapper.MapElement:
@@ -390,7 +415,7 @@ func describeObject(mono bool, obj interface{}) string {
 //
 type fieldDesc struct {
 	name  string
-	value interface{}
+	value any
 }
 
 func printFields(mono bool, cmd string, fields ...fieldDesc) {
@@ -411,17 +436,21 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"size", m.Size},
 		)
 	case mapper.AddImageMessagePayload:
-		if m.ImageData != nil {
-			printFields(mono, "AddImage",
-				fieldDesc{"data", fmt.Sprintf("(%d bytes)", len(m.ImageData))},
-			)
-		} else {
-			printFields(mono, "AddImage",
-				fieldDesc{"name", m.Name},
-				fieldDesc{"zoom", m.Zoom},
-				fieldDesc{"file", m.File},
-				fieldDesc{"local", m.IsLocalFile},
-			)
+		for i, inst := range m.Sizes {
+			if inst.ImageData != nil {
+				printFields(mono, fmt.Sprintf("AddImage %d of %d", i+1, len(m.Sizes)),
+					fieldDesc{"name", m.Name},
+					fieldDesc{"zoom", inst.Zoom},
+					fieldDesc{"data", fmt.Sprintf("(%d bytes)", len(inst.ImageData))},
+				)
+			} else {
+				printFields(mono, fmt.Sprintf("AddImage %d of %d", i+1, len(m.Sizes)),
+					fieldDesc{"name", m.Name},
+					fieldDesc{"zoom", inst.Zoom},
+					fieldDesc{"file", inst.File},
+					fieldDesc{"local", inst.IsLocalFile},
+				)
+			}
 		}
 
 	case mapper.AddObjAttributesMessagePayload:
@@ -484,8 +513,48 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"merge", m.Merge},
 		)
 
-	case mapper.LoadObjectMessagePayload:
-		printFields(mono, "LoadObject",
+		//	case mapper.LoadObjectMessagePayload:
+		//		printFields(mono, "LoadObject",
+		//			fieldDesc{"objID", m.ObjID()},
+		//			fieldDesc{"obj", describeObject(mono, m)},
+		//		)
+	case mapper.LoadArcObjectMessagePayload:
+		printFields(mono, "LoadArcObject",
+			fieldDesc{"objID", m.ObjID()},
+			fieldDesc{"obj", describeObject(mono, m)},
+		)
+	case mapper.LoadCircleObjectMessagePayload:
+		printFields(mono, "LoadCircleObject",
+			fieldDesc{"objID", m.ObjID()},
+			fieldDesc{"obj", describeObject(mono, m)},
+		)
+	case mapper.LoadLineObjectMessagePayload:
+		printFields(mono, "LoadLineObject",
+			fieldDesc{"objID", m.ObjID()},
+			fieldDesc{"obj", describeObject(mono, m)},
+		)
+	case mapper.LoadPolygonObjectMessagePayload:
+		printFields(mono, "LoadPolygonObject",
+			fieldDesc{"objID", m.ObjID()},
+			fieldDesc{"obj", describeObject(mono, m)},
+		)
+	case mapper.LoadRectangleObjectMessagePayload:
+		printFields(mono, "LoadRectangleObject",
+			fieldDesc{"objID", m.ObjID()},
+			fieldDesc{"obj", describeObject(mono, m)},
+		)
+	case mapper.LoadSpellAreaOfEffectObjectMessagePayload:
+		printFields(mono, "LoadSpellAreaOfEffectObject",
+			fieldDesc{"objID", m.ObjID()},
+			fieldDesc{"obj", describeObject(mono, m)},
+		)
+	case mapper.LoadTextObjectMessagePayload:
+		printFields(mono, "LoadTextObject",
+			fieldDesc{"objID", m.ObjID()},
+			fieldDesc{"obj", describeObject(mono, m)},
+		)
+	case mapper.LoadTileObjectMessagePayload:
+		printFields(mono, "LoadTileObject",
 			fieldDesc{"objID", m.ObjID()},
 			fieldDesc{"obj", describeObject(mono, m)},
 		)
@@ -506,12 +575,14 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 		)
 
 	case mapper.QueryImageMessagePayload:
-		printFields(mono, "QueryImage",
-			fieldDesc{"zoom", m.Zoom},
-			fieldDesc{"name", m.Name},
-			fieldDesc{"file", m.File},
-			fieldDesc{"local", m.IsLocalFile},
-		)
+		for i, inst := range m.Sizes {
+			printFields(mono, fmt.Sprintf("QueryImage %d of %d", i+1, len(m.Sizes)),
+				fieldDesc{"name", m.Name},
+				fieldDesc{"zoom", inst.Zoom},
+				fieldDesc{"file", inst.File},
+				fieldDesc{"local", inst.IsLocalFile},
+			)
+		}
 
 	case mapper.RemoveObjAttributesMessagePayload:
 		printFields(mono, "RemoveObjAttributes",
@@ -782,13 +853,6 @@ func readLines(filename string) ([]string, error) {
 	return data, scanner.Err()
 }
 
-func plural(n int) string {
-	if n == 1 {
-		return ""
-	}
-	return "s"
-}
-
 //
 // readUserInput takes lines of input from the user which correspond to
 // map server requests. While the Python version of the map-console
@@ -864,11 +928,12 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 					fmt.Println(colorize(fmt.Sprintf("I/O ERROR: %v", err), "Red", mono))
 					break
 				}
-				if err := server.AddImageData(mapper.ImageDefinition{
-					Zoom:        v[2].(float64),
-					Name:        v[1].(string),
-					IsLocalFile: true,
-				}, data); err != nil {
+				if err := server.AddImage(mapper.ImageDefinition{
+					Name: v[1].(string),
+					Sizes: []mapper.ImageInstance{
+						{Zoom: v[2].(float64), ImageData: data},
+					},
+				}); err != nil {
 					fmt.Println(colorize(fmt.Sprintf("server ERROR: %v", err), "Red", mono))
 					break
 				}
@@ -886,8 +951,10 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 					break
 				}
 				if err := server.QueryImage(mapper.ImageDefinition{
-					Zoom: v[2].(float64),
 					Name: v[1].(string),
+					Sizes: []mapper.ImageInstance{
+						{Zoom: v[2].(float64)},
+					},
 				}); err != nil {
 					fmt.Println(colorize(fmt.Sprintf("server ERROR: %v", err), "Red", mono))
 					break
@@ -901,10 +968,10 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 					break
 				}
 				if err := server.AddImage(mapper.ImageDefinition{
-					Name:        v[1].(string),
-					Zoom:        v[2].(float64),
-					File:        v[3].(string),
-					IsLocalFile: false,
+					Name: v[1].(string),
+					Sizes: []mapper.ImageInstance{
+						{Zoom: v[2].(float64), File: v[3].(string), IsLocalFile: false},
+					},
 				}); err != nil {
 					fmt.Println(colorize(fmt.Sprintf("server ERROR: %v", err), "Red", mono))
 					break
@@ -1000,14 +1067,14 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 					fmt.Println(colorize(fmt.Sprintf("ERROR in preset list: %v", err), "Red", mono))
 					break
 				}
-				var presetList []mapper.DieRollPreset
+				var presetList []dice.DieRollPreset
 				for i, ps := range p {
 					pl, err := tcllist.Parse(ps, "sss")
 					if err != nil {
 						fmt.Println(colorize(fmt.Sprintf("ERROR in preset list, #%d: %v", i+1, err), "Red", mono))
 						break handle_input
 					}
-					presetList = append(presetList, mapper.DieRollPreset{
+					presetList = append(presetList, dice.DieRollPreset{
 						Name:        pl[0].(string),
 						Description: pl[1].(string),
 						DieRollSpec: pl[2].(string),
@@ -1070,70 +1137,73 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 
 			case "LS":
 				// LS
-				if len(fields) != 2 {
-					fmt.Println(colorize("usage ERROR: wrong number of fields: LS <file>", "Red", mono))
-					break
-				}
-				data, err := readLines(fields[1])
-				if err != nil {
-					fmt.Println(colorize(fmt.Sprintf("I/O ERROR: %v", err), "Red", mono))
-					break
-				}
-				log.Printf("Reading objects from local mapper file %s", fields[1])
-				objects, images, files, err := mapper.ParseObjects(data)
-				if err != nil {
-					fmt.Println(colorize(fmt.Sprintf("parser ERROR: %v", err), "Red", mono))
-					break
-				}
-				log.Printf("Found %d object%s, %d image%s, and %d file%s in %s",
-					len(objects), plural(len(objects)),
-					len(images), plural(len(images)),
-					len(files), plural(len(files)),
-					fields[1],
-				)
-				if len(objects) > 0 {
-					fmt.Print("Sending objects...")
-					for i, o := range objects {
-						if i%10 == 9 {
-							fmt.Print(".")
-						}
-						if err := server.LoadObject(o); err != nil {
-							fmt.Println(colorize(fmt.Sprintf("server ERROR sending object #%d (%s): %v",
-								i+1, o.ObjID(), err), "Red", mono))
-							break handle_input
-						}
+				fmt.Println(colorize("LS not supported", "Red", mono))
+				/*
+					if len(fields) != 2 {
+						fmt.Println(colorize("usage ERROR: wrong number of fields: LS <file>", "Red", mono))
+						break
 					}
-					fmt.Println("done")
-				}
-				if len(images) > 0 {
-					fmt.Print("Sending images...")
-					for id, image := range images {
-						if err := server.AddImage(image); err != nil {
-							fmt.Println(colorize(fmt.Sprintf("server ERROR sending image %s: %v",
-								id, err), "Red", mono))
-							break handle_input
-						}
+					data, err := readLines(fields[1])
+					if err != nil {
+						fmt.Println(colorize(fmt.Sprintf("I/O ERROR: %v", err), "Red", mono))
+						break
 					}
-					fmt.Println("done")
-				}
-				if len(files) > 0 {
-					fmt.Print("Sending files...")
-					for i, f := range files {
-						if i%10 == 9 {
-							fmt.Print(".")
-						}
-						if f.IsLocalFile {
-							log.Printf("%s include local file definition %s which doesn't make sense. Ignoring this.", fields[1], f.File)
-						} else {
-							if err := server.CacheFile(f.File); err != nil {
-								fmt.Println(colorize(fmt.Sprintf("server ERROR sending file #%d: %v",
-									i+1, err), "Red", mono))
+					log.Printf("Reading objects from local mapper file %s", fields[1])
+					objects, images, files, err := mapper.ParseObjects(data)
+					if err != nil {
+						fmt.Println(colorize(fmt.Sprintf("parser ERROR: %v", err), "Red", mono))
+						break
+					}
+					log.Printf("Found %d object%s, %d image%s, and %d file%s in %s",
+						len(objects), plural(len(objects)),
+						len(images), plural(len(images)),
+						len(files), plural(len(files)),
+						fields[1],
+					)
+					if len(objects) > 0 {
+						fmt.Print("Sending objects...")
+						for i, o := range objects {
+							if i%10 == 9 {
+								fmt.Print(".")
+							}
+							if err := server.LoadObject(o); err != nil {
+								fmt.Println(colorize(fmt.Sprintf("server ERROR sending object #%d (%s): %v",
+									i+1, o.ObjID(), err), "Red", mono))
 								break handle_input
 							}
 						}
+						fmt.Println("done")
 					}
-					fmt.Println("done")
-				}
+					if len(images) > 0 {
+						fmt.Print("Sending images...")
+						for id, image := range images {
+							if err := server.AddImage(image); err != nil {
+								fmt.Println(colorize(fmt.Sprintf("server ERROR sending image %s: %v",
+									id, err), "Red", mono))
+								break handle_input
+							}
+						}
+						fmt.Println("done")
+					}
+					if len(files) > 0 {
+						fmt.Print("Sending files...")
+						for i, f := range files {
+							if i%10 == 9 {
+								fmt.Print(".")
+							}
+							if f.IsLocalFile {
+								log.Printf("%s include local file definition %s which doesn't make sense. Ignoring this.", fields[1], f.File)
+							} else {
+								if err := server.CacheFile(f.File); err != nil {
+									fmt.Println(colorize(fmt.Sprintf("server ERROR sending file #%d: %v",
+										i+1, err), "Red", mono))
+									break handle_input
+								}
+							}
+						}
+						fmt.Println("done")
+					}
+				*/
 
 			case "M":
 				// M filenames
@@ -1213,7 +1283,7 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 					fmt.Println(colorize("usage ERROR: kv list must have an even number of elements", "Red", mono))
 					break
 				}
-				attrs := make(map[string]interface{})
+				attrs := make(map[string]any)
 				for i := 0; i < len(alist); i += 2 {
 					attrs[alist[i]] = alist[i+1]
 				}
@@ -1398,7 +1468,7 @@ func colorize(text, color string, mono bool) string {
 }
 
 /*
-# @[00]@| GMA 4.4.1
+# @[00]@| GMA 4.7.0
 # @[01]@|
 # @[10]@| Copyright © 1992–2022 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

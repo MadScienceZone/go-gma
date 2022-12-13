@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___          ___        __                 #
-# (  ____ \(       )(  ___  )              /   )        /   )      /  \                #
-# | (    \/| () () || (   ) |             / /) |       / /) |      \/) )               #
-# | |      | || || || (___) |            / (_) (_     / (_) (_       | |               #
-# | | ____ | |(_)| ||  ___  |           (____   _)   (____   _)      | |               #
-# | | \_  )| |   | || (   ) | Game           ) (          ) (        | |               #
-# | (___) || )   ( || )   ( | Master's       | |   _      | |   _  __) (_              #
-# (_______)|/     \||/     \| Assistant      (_)  (_)     (_)  (_) \____/              #
+#  _______  _______  _______                ___       ______      _______              #
+# (  ____ \(       )(  ___  )              /   )     / ___  \    (  __   )             #
+# | (    \/| () () || (   ) |             / /) |     \/   )  )   | (  )  |             #
+# | |      | || || || (___) |            / (_) (_        /  /    | | /   |             #
+# | | ____ | |(_)| ||  ___  |           (____   _)      /  /     | (/ /) |             #
+# | | \_  )| |   | || (   ) | Game           ) (       /  /      |   / | |             #
+# | (___) || )   ( || )   ( | Master's       | |   _  /  /     _ |  (__) |             #
+# (_______)|/     \||/     \| Assistant      (_)  (_) \_/     (_)(_______)             #
 #                                                                                      #
 ########################################################################################
 */
@@ -118,20 +118,20 @@
 // directly, the way it is used by the map server and its clients uses the following
 // protocol:
 //
-//  (server->client) "OK <v> <challenge>"
+//  (server->client) OK {"Protocol":<v>, "Challenge":"<challenge>"}
 // The server's greeting to the client includes this line which gives the server's
 // protocol version (<v>) and a base-64 encoding of the binary challenge value (C in the
 // algorithm described above)
 //
-//  (server<-client) "AUTH <response> [<user> <client>]"
+//  (server<-client) AUTH {"Response":"<response>", "User":"<user>", "Client":"<client>"}
 // The client's response is sent with this line, where <response> is the base-64
 // encoded representation of the response to the challenge (D above), and the optional <user> and
 // <client> values are the desired user name and description of the client program.
 //
-//  (server->client) "DENIED [<message>]"
+//  (server->client) DENIED {"Reason":"<message>"}
 // Server response indicating that the authentication was unsuccessful.
 //
-//  (server->client) "GRANTED <user>"
+//  (server->client) GRANTED {"User":"<user>"}
 // Server response indicating that the authentication was successful. The <user> value is
 // "GM" if the GM password was used, or the user name supplied by the user, which will be
 // the name they're known by inside the game map (usually a character name). If the user
@@ -333,14 +333,25 @@ func (a *Authenticator) AcceptChallenge(challenge string) (string, error) {
 	if len(c) < 2 {
 		return "", fmt.Errorf("challenge value is too short")
 	}
-	a.Challenge = c
-
-	response, err := a.calcResponse(a.Secret)
+	response, err := a.AcceptChallengeBytes(c)
 	if err != nil {
-		return "", fmt.Errorf("unable to generate response: %v", err)
+		return "", err
 	}
 
 	return base64.StdEncoding.EncodeToString(response), nil
+}
+
+//
+// AcceptChallengeBytes is like Accept Challenge but takes the raw binary
+// challenge and emits the raw binay response as []byte slices.
+//
+func (a *Authenticator) AcceptChallengeBytes(challenge []byte) ([]byte, error) {
+	a.Challenge = challenge
+	response, err := a.calcResponse(a.Secret)
+	if err != nil {
+		return nil, fmt.Errorf("unable to generate response: %v", err)
+	}
+	return response, nil
 }
 
 //
@@ -427,7 +438,7 @@ func NewClientAuthenticator(username string, secret []byte, client string) *Auth
 	return a
 }
 
-// @[00]@| GMA 4.4.1
+// @[00]@| GMA 4.7.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2022 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

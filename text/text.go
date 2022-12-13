@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___          ___        __                 #
-# (  ____ \(       )(  ___  )              /   )        /   )      /  \                #
-# | (    \/| () () || (   ) |             / /) |       / /) |      \/) )               #
-# | |      | || || || (___) |            / (_) (_     / (_) (_       | |               #
-# | | ____ | |(_)| ||  ___  |           (____   _)   (____   _)      | |               #
-# | | \_  )| |   | || (   ) | Game           ) (          ) (        | |               #
-# | (___) || )   ( || )   ( | Master's       | |   _      | |   _  __) (_              #
-# (_______)|/     \||/     \| Assistant      (_)  (_)     (_)  (_) \____/              #
+#  _______  _______  _______                ___       ______      _______              #
+# (  ____ \(       )(  ___  )              /   )     / ___  \    (  __   )             #
+# | (    \/| () () || (   ) |             / /) |     \/   )  )   | (  )  |             #
+# | |      | || || || (___) |            / (_) (_        /  /    | | /   |             #
+# | | ____ | |(_)| ||  ___  |           (____   _)      /  /     | (/ /) |             #
+# | | \_  )| |   | || (   ) | Game           ) (       /  /      |   / | |             #
+# | (___) || )   ( || )   ( | Master's       | |   _  /  /     _ |  (__) |             #
+# (_______)|/     \||/     \| Assistant      (_)  (_) \_/     (_)(_______)             #
 #                                                                                      #
 ########################################################################################
 */
@@ -1189,9 +1189,9 @@ func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 	newListBullet := regexp.MustCompile(`^[*#]+`)
 	formatReqs := regexp.MustCompile(`//|\*\*|\[\[|\]\]|\\\.`)
 
-	paragraphs := make([][][]interface{}, 0, 10)
-	thisParagraph := make([][]interface{}, 0, 10)
-	thisLine := make([]interface{}, 0, 10)
+	paragraphs := make([][][]any, 0, 10)
+	thisParagraph := make([][]any, 0, 10)
+	thisLine := make([]any, 0, 10)
 
 	for _, sourceLine := range strings.Split(text, "\n") {
 		sourceLine = collapseSpaces.ReplaceAllLiteralString(sourceLine, " ")
@@ -1204,10 +1204,10 @@ func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 		if trimmedSourceLine == "" {
 			if len(thisLine) > 0 {
 				thisParagraph = append(thisParagraph, thisLine)
-				thisLine = make([]interface{}, 0, 10)
+				thisLine = make([]any, 0, 10)
 
 				paragraphs = append(paragraphs, thisParagraph)
-				thisParagraph = make([][]interface{}, 0, 10)
+				thisParagraph = make([][]any, 0, 10)
 			}
 			continue
 		}
@@ -1243,7 +1243,7 @@ func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 			parts := strings.SplitN(sourceLine, "\\\\", 2)
 			thisLine = append(thisLine, parts[0])
 			thisParagraph = append(thisParagraph, thisLine)
-			thisLine = make([]interface{}, 0, 10)
+			thisLine = make([]any, 0, 10)
 			sourceLine = parts[1]
 		}
 		thisLine = append(thisLine, sourceLine)
@@ -1419,7 +1419,7 @@ func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 	return ops.formatter.finalize(), nil
 }
 
-// @[00]@| GMA 4.4.1
+// @[00]@| GMA 4.7.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2022 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
