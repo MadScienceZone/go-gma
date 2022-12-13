@@ -33,8 +33,8 @@ import (
 // and protocol versions supported by this code.
 //
 const (
-	GMAMapperProtocol           = 400      // @@##@@ auto-configured
-	GMAVersionNumber            = "4.3.12" // @@##@@ auto-configured
+	GMAMapperProtocol=400      // @@##@@ auto-configured
+	GMAVersionNumber="4.7.0" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
 	MaximumSupportedMapProtocol = 400
 )

@@ -1,10 +1,34 @@
 # Changelog
 ## Current Version Information
- * GMA Core API Library Version: 4.3.12		<!-- @@##@@ -->
- * Supported GMA Mapper Version: 4.0.0		<!-- @@##@@ -->
+ * GMA Core API Library Version: 4.7.0		<!-- @@##@@ -->
+ * Supported GMA Mapper Version: 4.0.3		<!-- @@##@@ -->
  * Supported GMA Mapper Protocol: 400		<!-- @@##@@ -->
  * Supported GMA Mapper File Format: 20		<!-- @@##@@ -->
- * Effective Date: 07-May-2022			<!-- @@##@@ -->
+ * Effective Date: 12-Dec-2022			<!-- @@##@@ -->
+
+## v4.7.0
+ * Moved to server protocol version 400.
+ * Updated file format versions to JSON-based (mapper file format 20, die-roll file format 2).
+
+**Warning: requires Go 1.18 or later**
+
+## v4.4.1 (alpha)
+### Enhancements
+ * Updated for protocol version 333.
+ * Added support for Allow server command.
+ * Now supports extended status marker definitions (with description of effects).
+
+### Housekeeping
+Synced version number with GMA core.
+
+## v4.3.13 (alpha)
+Added subtotals to die roll results.
+
+**Warning: a future release of this code will require Go 1.18.**
+
+## v4.3.12 (alpha)
+Added additional core GMA functions and the map-console tool, which gives an
+interactive interface from the command line to the map server.
 
 ## v4.3.10 (alpha)
 Added note pointing to paizo's Community Use Policy and GMA's usage of Pathfinder
