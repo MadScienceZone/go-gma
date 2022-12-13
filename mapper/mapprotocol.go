@@ -117,7 +117,7 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 			return c.sendJSON("AV", av)
 		}
 	case Allow:
-		if al, ok := data.(AllowMessagepayload); ok {
+		if al, ok := data.(AllowMessagePayload); ok {
 			return c.sendJSON("ALLOW", al)
 		}
 	case Auth:

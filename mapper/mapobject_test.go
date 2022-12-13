@@ -84,13 +84,13 @@ I #SimonKazar 0.25 @OoSmGY0XERJRrA8ZiK_igg_Firefly@12
 
 func TestObjLoadImages(t *testing.T) {
 	objs, meta, err := LoadMapFile(strings.NewReader(`__MAPPER__:20
-__META__ {
+«__META__» {
     "Comment": "test",
     "Location": "somewhere",
     "Timestamp": 0,
     "DateTime": ""
 }
-__IMG__ {
+«IMG» {
     "Name": "#SimonKazar",
     "Sizes": [
         {
@@ -105,7 +105,7 @@ __IMG__ {
         }
     ]
 }
-__IMG__ {
+«IMG» {
     "Name": "#Firefly",
     "Sizes": [
         {
@@ -114,7 +114,7 @@ __IMG__ {
         }
     ]
 }
-__EOF__
+«__EOF__»
 `))
 	if err != nil {
 		t.Errorf("error %v", err)
@@ -143,13 +143,13 @@ __EOF__
 
 func TestLegacyObjLoadOnePlayer(t *testing.T) {
 	expected := `__MAPPER__:20
-__META__ {
+«__META__» {
     "Timestamp": 1,
     "DateTime": "n/a",
     "Comment": "no",
     "Location": "here"
 }
-__CREATURE__ {
+«CREATURE» {
     "ID": "PC73",
     "Name": "Jigu",
     "Health": {
@@ -166,7 +166,7 @@ __CREATURE__ {
     "Dim": true,
     "CreatureType": 2
 }
-__EOF__
+«__EOF__»
 `
 	objs, meta, err := LoadMapFile(strings.NewReader(`__MAPPER__:17 {test {0 nil}}
 P HEALTH:PC73 {28 6 0 16 0 0 {} 10}
@@ -512,13 +512,13 @@ POINTS:e68d5354f175401582866a75d806d8d7 {450.0 800.0}
 DASH:e68d5354f175401582866a75d806d8d7 {}
 `))
 	expected_save := `__MAPPER__:20
-__META__ {
+«__META__» {
     "Timestamp": 1,
     "DateTime": "n/a",
     "Comment": "no",
     "Location": "here"
 }
-__TILE__ {
+«TILE» {
     "ID": "0006bc4a7063427b8fb1f8990a24b980",
     "X": 2100,
     "Y": 7350,
@@ -528,7 +528,7 @@ __TILE__ {
     "BBHeight": 57,
     "BBWidth": 100.5
 }
-__POLY__ {
+«POLY» {
     "ID": "0268e7eeb78e41ff82fddc4f5f0e2c1d",
     "X": 10888,
     "Y": 12642,
@@ -612,7 +612,7 @@ __POLY__ {
     "Width": 5,
     "Layer": "walls"
 }
-__POLY__ {
+«POLY» {
     "ID": "09426d492f784ad25684536c35e0d8d5",
     "X": 9591,
     "Y": 13222,
@@ -788,7 +788,7 @@ __POLY__ {
     "Width": 2,
     "Layer": "walls"
 }
-__POLY__ {
+«POLY» {
     "ID": "0c36b6a97a074bd174cda800f07206f4",
     "X": 12598,
     "Y": 5697,
@@ -872,7 +872,7 @@ __POLY__ {
     "Width": 5,
     "Layer": "walls"
 }
-__ARC__ {
+«ARC» {
     "ID": "13a2dd4a64a94e178509744e1a0a4481",
     "X": 473,
     "Y": 523,
@@ -891,7 +891,7 @@ __ARC__ {
     "Extent": 225,
     "Start": 20
 }
-__LINE__ {
+«LINE» {
     "ID": "2a1751827a954d8fad688da8e431502a",
     "X": 675,
     "Y": 584,
@@ -909,7 +909,7 @@ __LINE__ {
     "Dash": 1,
     "Arrow": 1
 }
-__TEXT__ {
+«TEXT» {
     "ID": "2c4a8ae53c5c4cbdb902d581402230e7",
     "X": 565,
     "Y": 707,
@@ -922,7 +922,7 @@ __TEXT__ {
         "Size": 24
     }
 }
-__CREATURE__ {
+«CREATURE» {
     "ID": "2df3e0a104614c5cb76f31836bc3f84d",
     "Name": "Fleshdreg #4",
     "Health": {
@@ -939,7 +939,7 @@ __CREATURE__ {
     "Dim": true,
     "CreatureType": 1
 }
-__LINE__ {
+«LINE» {
     "ID": "38f633da2d6749467f5406f187b8cc3f",
     "X": 10810,
     "Y": 14350,
@@ -955,7 +955,7 @@ __LINE__ {
     "Width": 5,
     "Layer": "walls"
 }
-__RECT__ {
+«RECT» {
     "ID": "39880f0c6e904bf9a866d9af8783fd70",
     "X": 445.5,
     "Y": 33,
@@ -972,7 +972,7 @@ __RECT__ {
     "Layer": "walls",
     "Locked": true
 }
-__CREATURE__ {
+«CREATURE» {
     "ID": "39a1afc1b1aa4cac87eee32be93ebe9a",
     "Name": "barbarian2=Caroll",
     "Health": {
@@ -992,7 +992,7 @@ __CREATURE__ {
     "Dim": true,
     "CreatureType": 1
 }
-__CIRC__ {
+«CIRC» {
     "ID": "3f5b6a2655214928b868daad9a97db4d",
     "X": 110,
     "Y": 18,
@@ -1007,7 +1007,7 @@ __CIRC__ {
     "Width": 5,
     "Layer": "walls"
 }
-__SAOE__ {
+«SAOE» {
     "ID": "4b82e91b987d412b9c1a2b5110319072",
     "X": 500,
     "Y": 400,
@@ -1024,7 +1024,7 @@ __SAOE__ {
     "Layer": "walls",
     "AoEShape": 1
 }
-__ARC__ {
+«ARC» {
     "ID": "5b1a4fa32af54eb2b35ebec0a4c88089",
     "X": 59,
     "Y": 309,
@@ -1043,7 +1043,7 @@ __ARC__ {
     "Extent": 61,
     "Start": 140
 }
-__LINE__ {
+«LINE» {
     "ID": "61dc2ff4efe54be7a18791b338c29c5c",
     "X": 604,
     "Y": 229,
@@ -1065,7 +1065,7 @@ __LINE__ {
     "Dash": 1,
     "Arrow": 1
 }
-__ARC__ {
+«ARC» {
     "ID": "7b39f6dbeea44b8baa20032c443a0654",
     "X": 126,
     "Y": 274,
@@ -1084,7 +1084,7 @@ __ARC__ {
     "Extent": 235,
     "Start": 151
 }
-__CREATURE__ {
+«CREATURE» {
     "ID": "976e7148ae86409f99fdebf83f3f0904",
     "Name": "Jigu2",
     "Gx": 6,
@@ -1107,7 +1107,7 @@ __CREATURE__ {
     "MoveMode": 3,
     "CreatureType": 2
 }
-__CREATURE__ {
+«CREATURE» {
     "ID": "PC73",
     "Name": "Jigu",
     "Health": {
@@ -1133,7 +1133,7 @@ __CREATURE__ {
     "Dim": true,
     "CreatureType": 2
 }
-__SAOE__ {
+«SAOE» {
     "ID": "afd136735d7e400082f331485e73f7a1",
     "X": 150,
     "Y": 600,
@@ -1150,7 +1150,7 @@ __SAOE__ {
     "Layer": "walls",
     "AoEShape": 2
 }
-__RECT__ {
+«RECT» {
     "ID": "bf29dfa85cc54498bb33a2d7523d9edc",
     "X": 289,
     "Y": 36,
@@ -1165,7 +1165,7 @@ __RECT__ {
     "Width": 5,
     "Layer": "walls"
 }
-__SAOE__ {
+«SAOE» {
     "ID": "e68d5354f175401582866a75d806d8d7",
     "X": 850,
     "Y": 800,
@@ -1182,7 +1182,7 @@ __SAOE__ {
     "Layer": "walls",
     "AoEShape": 0
 }
-__EOF__
+«__EOF__»
 `
 	check := func() {
 		if err != nil {
