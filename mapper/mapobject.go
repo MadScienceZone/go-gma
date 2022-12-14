@@ -51,7 +51,7 @@ const GMAMapperFileFormat = 20 // @@##@@ auto-configured
 // MinimumSupportedMapFileFormat gives the lowest file format this package can
 // understand.
 //
-const MinimumSupportedMapFileFormat = 14
+const MinimumSupportedMapFileFormat = 17
 
 //
 // MaximumSupportedMapFileFormat gives the highest file format this package
@@ -94,17 +94,6 @@ const (
 	DashLong2Short
 )
 
-/*
-var enumDashes = enumChoices{
-	"":    byte(DashSolid),
-	"-":   byte(DashLong),
-	",":   byte(DashMedium),
-	".":   byte(DashShort),
-	"-.":  byte(DashLongShort),
-	"-..": byte(DashLong2Short),
-}
-*/
-
 //
 // These are the allowed values for the ArcMode attribute of an ArcElement.
 //
@@ -115,14 +104,6 @@ const (
 	ArcModeArc
 	ArcModeChord
 )
-
-/*
-var enumArcs = enumChoices{
-	"pieslice": byte(ArcModePieSlice),
-	"arc":      byte(ArcModeArc),
-	"chord":    byte(ArcModeChord),
-}
-*/
 
 //
 // Valid values for a line's Arrow attribute.
@@ -136,15 +117,6 @@ const (
 	ArrowBoth
 )
 
-/*
-var enumArrows = enumChoices{
-	"none":  byte(ArrowNone),
-	"first": byte(ArrowFirst),
-	"last":  byte(ArrowLast),
-	"both":  byte(ArrowBoth),
-}
-*/
-
 //
 // These are the allowed values for the Join attribute of a PolygonElement.
 //
@@ -155,14 +127,6 @@ const (
 	JoinMiter
 	JoinRound
 )
-
-/*
-var enumJoins = enumChoices{
-	"bevel": byte(JoinBevel),
-	"miter": byte(JoinMiter),
-	"round": byte(JoinRound),
-}
-*/
 
 //
 // These are the valid values for the AoEShape attribute.
@@ -175,14 +139,6 @@ const (
 	AoEShapeRay
 )
 
-/*
-var enumAoeShapes = enumChoices{
-	"cone":   byte(AoEShapeCone),
-	"radius": byte(AoEShapeRadius),
-	"ray":    byte(AoEShapeRay),
-}
-*/
-
 //
 // The valid font weights.
 //
@@ -192,13 +148,6 @@ const (
 	FontWeightNormal FontWeightType = iota
 	FontWeightBold
 )
-
-/*
-var enumFontWeights = enumChoices{
-	"normal": byte(FontWeightNormal),
-	"bold":   byte(FontWeightBold),
-}
-*/
 
 //
 // The valid font slants.
@@ -227,20 +176,6 @@ const (
 	AnchorSE
 )
 
-/*
-var enumAnchors = enumChoices{
-	"center": byte(AnchorCenter),
-	"n":      byte(AnchorNorth),
-	"s":      byte(AnchorSouth),
-	"e":      byte(AnchorEast),
-	"w":      byte(AnchorWest),
-	"ne":     byte(AnchorNE),
-	"se":     byte(AnchorSE),
-	"nw":     byte(AnchorNW),
-	"sw":     byte(AnchorSW),
-}
-*/
-
 //
 // The valid values for a creature's MoveMode attribute.
 //
@@ -254,17 +189,7 @@ const (
 	MoveModeSwim
 )
 
-/*
-var enumMoveModes = enumChoices{
-	"fly":    byte(MoveModeFly),
-	"climb":  byte(MoveModeClimb),
-	"swim":   byte(MoveModeSwim),
-	"burrow": byte(MoveModeBurrow),
-	"land":   byte(MoveModeLand),
-}
-*/
-
-/*
+/* XXX
 //
 // This returns the underlying Go data type
 // for attribute values as a string. If the boolean
@@ -295,7 +220,7 @@ func enumToByte(attrName, value string) (evalue byte, ok bool) {
 }
 */
 
-/*
+/* XXX
 //
 // This returns a string describing the expected data type
 // of a MapObject's attribute.
@@ -343,7 +268,6 @@ func attributeType(attrName string) (string, bool) {
 //
 type MapObject interface {
 	ObjID() string
-	//	saveData([]string, string, string) ([]string, error)
 }
 
 //
@@ -354,73 +278,40 @@ type Coordinates struct {
 	X, Y float64
 }
 
-/*
-//
-// saveData converts a Coordinate pair to a text representation
-// in the map file format (suitable for sending to clients or saving to a disk
-// file).
-//
-// This works just as described for BaseMapElement.saveData, but simply
-// saves the X and Y fields for the element's reference point.
-//
-func (c Coordinates) saveData(data []string, prefix, id string) ([]string, error) {
-	return saveValues(data, prefix, id, []saveAttributes{
-		{"X", "f", true, c.X},
-		{"Y", "f", true, c.Y},
-	})
-}
-*/
-
-// Coordinates
-//  saveData
 //
 // MapObject
 //  BaseMapObject
 //   MapElement
 //     objMapElement
-//     saveData
 //    ArcElement
 //      objArcElement
-//      saveData
 //    CircleElement
 //      objCircleElement
-//      saveData
 //    LineElement
 //      objLineElement
-//      saveData
 //    PolygonElement
 //      objPolygonElement
-//      saveData
 //    RectangleElement
 //      objRectangleElement
-//      saveData
 //    SpellAreaOfEffect
 //      objSpellAreaOfEffect
-//      saveData
 //    (TextFont)
 //      objTextFont
 //    TextElement
 //      objTextElement
-//      saveData
 //    TileElement
 //      objTileElement
-//      saveData
 //   CreatureToken
 //     objCreature
-//     saveData
 //    PlayerToken
 //      objPlayer
-//      saveData
 //    MonsterToken
 //      objMonster
-//      saveData
 //    (CreatureHealth)
 //      objHealth
 //      newHealth
-//      saveHealth
 //    (RadiusAoE)
 //      objAoEShape
-//      saveCreatureAoE
 // ImageDefinition
 // FileDefinition
 //
@@ -440,29 +331,6 @@ type BaseMapObject struct {
 	// "PC1", "PC2", etc.
 	ID string
 }
-
-//
-// saveData converts a MapObject to a text representation of that object
-// in the map file format (suitable for sending to clients or saving to a disk
-// file). Each type must have one of these methods to satisfy the MapObject
-// interface.
-//
-// In the save file format (and client/server protocol) the data for this
-// object occupies one or more lines of data. These lines are appended
-// as a list of strings (one per line) to the input strings in the data parameter.
-// The new list of strings (input data + this object's) is returned.
-//
-// If prefix is non-empty, it is prepended to each line as the first field of the
-// lines saved for this object. This is specified in the file format for certain
-// object types such as players, monsters, files, and images.
-//
-// The object's ID as recorded in the saved data list is given by the id parameter.
-//
-/*
-func (o BaseMapObject) saveData(data []string, prefix, id string) ([]string, error) {
-	return data, nil
-}
-*/
 
 //
 // ObjID returns the unique ID of a MapObject.
@@ -493,13 +361,30 @@ type MapElement struct {
 	BaseMapObject
 	Coordinates
 
-	// Objects which need additional coordinate pairs to describe their
-	// geometry (beyond the standard reference point) store them here.
-	Points []Coordinates `json:",omitempty"`
+	// Is this element currently concealed from view?
+	Hidden bool `json:",omitempty"`
+
+	// Is the object locked from editing by the user?
+	Locked bool `json:",omitempty"`
+
+	// The element's line(s) are to be drawn with this dash pattern.
+	Dash DashType `json:",omitempty"`
 
 	// The z "coordinate" is the vertical stacking order relative to the other
 	// displayed on-screen objects.
 	Z int
+
+	// The width in pixel units to draw the element's outline.
+	Width int `json:",omitempty"`
+
+	// The dungeon level where this element appears. Typically, level 0
+	// is the default (ground) level, with level numbers increasing as
+	// 1, 2, 3, etc., for floors above it, and with underground levels
+	Level int `json:",omitempty"`
+
+	// Objects which need additional coordinate pairs to describe their
+	// geometry (beyond the standard reference point) store them here.
+	Points []Coordinates `json:",omitempty"`
 
 	// The colors used to draw the element's outline and/or to fill it's interior.
 	// These may be standard color names such as "blue" or an RGB string such as
@@ -507,118 +392,13 @@ type MapElement struct {
 	Line string `json:",omitempty"`
 	Fill string `json:",omitempty"`
 
-	// The width in pixel units to draw the element's outline.
-	Width int `json:",omitempty"`
-
 	// The map layer this element belongs to.
 	Layer string `json:",omitempty"`
-
-	// The dungeon level where this element appears. Typically, level 0
-	// is the default (ground) level, with level numbers increasing as
-	// 1, 2, 3, etc., for floors above it, and with underground levels
 
 	// Elements may be arranged into logical groups to be manipulated
 	// together. This is the ID of the group to which this belongs, or
 	// is empty if this element is not grouped.
-	Group string
-
-	// The element's line(s) are to be drawn with this dash pattern.
-	Dash DashType
-
-	// Is this element currently concealed from view?
-	Hidden bool
-
-	// Is the object locked from editing by the user?
-	Locked bool
-}
-
-//
-// objMapElement constructs a new MapElement from fields in objDef, generally as part of
-// constructing something that is a more specific kind of object.
-//
-func objMapElement(objID string, objDef map[string][]string) (MapElement, error) {
-	var err error
-
-	e := MapElement{
-		BaseMapObject: BaseMapObject{
-			ID: objID,
-		},
-	}
-	var b byte
-	e.X, err = objFloat(objDef, 0, "X", true, err)
-	e.Y, err = objFloat(objDef, 0, "Y", true, err)
-	e.Z, err = objInt(objDef, 0, "Z", true, err)
-	e.Level, err = objInt(objDef, 0, "LEVEL", false, err)
-	e.Group, err = objString(objDef, 0, "GROUP", false, err)
-	e.Points, err = objCoordinateList(objDef, 0, "POINTS", false, err)
-	e.Fill, err = objString(objDef, 0, "FILL", false, err)
-	b, err = objEnum(objDef, 0, "DASH", false, enumDashes, err)
-	e.Dash = DashType(b)
-	e.Line, err = objString(objDef, 0, "LINE", false, err)
-	e.Width, err = objInt(objDef, 0, "WIDTH", false, err)
-	e.Layer, err = objString(objDef, 0, "LAYER", false, err)
-	e.Hidden, err = objBool(objDef, 0, "HIDDEN", false, err)
-	e.Locked, err = objBool(objDef, 0, "LOCKED", false, err)
-
-	return e, err
-}
-
-//
-// saveData converts a MapElement to a text representation
-// in the map file format (suitable for sending to clients or saving to a disk
-// file).
-//
-// This works just as described for BaseMapElement.saveData.
-//
-func (o MapElement) saveData(data []string, prefix, id string) ([]string, error) {
-	var err error
-	if data, err = o.BaseMapObject.saveData(data, prefix, id); err != nil {
-		return nil, err
-	}
-	if data, err = o.Coordinates.saveData(data, prefix, id); err != nil {
-		return nil, err
-	}
-
-	var coords string
-	if len(o.Points) > 0 {
-		cl := make([]string, 0, len(o.Points))
-		for _, c := range o.Points {
-			cl = append(cl, fmt.Sprintf("%g", c.X))
-			cl = append(cl, fmt.Sprintf("%g", c.Y))
-		}
-		if coords, err = tcllist.ToTclString(cl); err != nil {
-			return nil, err
-		}
-	}
-
-	da, err := saveEnum(byte(o.Dash), enumDashes)
-	if err != nil {
-		return nil, err
-	}
-
-	return saveValues(data, prefix, id, []saveAttributes{
-		{"Z", "i", true, o.Z},
-		{"POINTS", "s", true, coords},
-		{"LOCKED", "b", false, o.Locked},
-		{"FILL", "s", true, o.Fill},
-		{"LINE", "s", false, o.Line},
-		{"WIDTH", "i", false, o.Width},
-		{"LAYER", "s", true, o.Layer},
-		{"HIDDEN", "b", false, o.Hidden},
-		{"LEVEL", "i", false, o.Level},
-		{"GROUP", "s", false, o.Group},
-		{"DASH", "s", false, da},
-	})
 	Group string `json:",omitempty"`
-
-	// The element's line(s) are to be drawn with this dash pattern.
-	Dash DashType `json:",omitempty"`
-
-	// Is this element currently concealed from view?
-	Hidden bool `json:",omitempty"`
-
-	// Is the object locked from editing by the user?
-	Locked bool `json:",omitempty"`
 }
 
 //________________________________________________________________________________
@@ -646,8 +426,8 @@ func (o MapElement) saveData(data []string, prefix, id string) ([]string, error)
 type ArcElement struct {
 	MapElement
 	ArcMode ArcModeType
-	Extent  float64
 	Start   float64
+	Extent  float64
 }
 
 //________________________________________________________________________________
@@ -710,13 +490,13 @@ type LineElement struct {
 type PolygonElement struct {
 	MapElement
 
+	// The join style to control how the intersection between line segments is drawn.
+	Join JoinStyle `json:",omitempty"`
+
 	// Spline gives the factor to use when smoothing the sides of the polygon between
 	// its points. 0 means not to smooth them at all, resulting in a shape with straight
 	// edges between the vertices. Otherwise, larger values provide greater smoothing.
 	Spline float64 `json:",omitempty"`
-
-	// The join style to control how the intersection between line segments is drawn.
-	Join JoinStyle `json:",omitempty"`
 }
 
 //________________________________________________________________________________
@@ -806,14 +586,14 @@ type TextFont struct {
 type TextElement struct {
 	MapElement
 
+	// Where is the reference point in relation to the text?
+	Anchor AnchorDirection `json:",omitempty"`
+
 	// The text to be displayed.
 	Text string
 
 	// Font to use for the text.
 	Font TextFont
-
-	// Where is the reference point in relation to the text?
-	Anchor AnchorDirection `json:",omitempty"`
 }
 
 //________________________________________________________________________________
@@ -941,7 +721,12 @@ type CreatureToken struct {
 
 	// Is the creature currently wielding a reach weapon or otherwise
 	// using the "reach" alternate threat zone?
-	Reach bool `json:",omitempty"`
+	// If this value is 0, the threat zone is normal for a creature
+	// of its size. If 1, an extended area (appropriate for using
+	// a reach weapon) is used instead. If 2, both areas are used,
+	// so the creature may attack into the reach zone AND adjacent
+	// foes.
+	Reach int `json:",omitempty"`
 
 	// Is the creature currently dead? (This takes precedence over the
 	// Health attribute's indication that the creature has taken a
@@ -1294,16 +1079,40 @@ func objCoordinateList(objDef map[string][]string, i int, fldName string, requir
 	return cl, nil
 }
 
+//
+// MapMetaData describes a mapper location save file (itself, not its contents)
+//
 type MapMetaData struct {
+	// Timestamp is the generation or modification time of the map file
+	// as a 64-bit integer Unix timestamp value.
 	Timestamp   int64  `json:",omitempty"`
+
+	// DateTime is a human-readable string which gives the same information
+	// as Timestamp. The software only uses Timestamp. DateTime is provided
+	// only for convenience and is not guaranteed to match Timestamp's time
+	// value or even any valid value at all. The format is this string is
+	// arbitrary.
 	DateTime    string `json:",omitempty"`
+
+	// Comment is any brief comment the map author wishes to leave in the file
+	// about this map.
 	Comment     string `json:",omitempty"`
+
+	// Location is a string describing the locale within the adventure area or
+	// world which is represented by this file.
 	Location    string `json:",omitempty"`
+
+	// FileVersion is the file format version number detected when reading in
+	// the data from this file. This is for informational purposes only and does
+	// not control the format used to write the data to a new file.
 	FileVersion uint   `json:"-"`
 }
 
 //
-// WriteMapFile writes mapper data to a named file.
+// WriteMapFile writes mapper data from a slice of map object values and
+// MapMetaData struct into the named file.  It is identical to
+// SaveMapFile other than the fact that it creates and opens the requested 
+// file to be written into.
 //
 func WriteMapFile(path string, objList []any, meta MapMetaData) error {
 	file, err := os.Create(path)
@@ -1319,7 +1128,11 @@ func WriteMapFile(path string, objList []any, meta MapMetaData) error {
 }
 
 //
-// SaveMapFile writes a mapper file.
+// SaveMapFile is the same as WriteMapFile, except it writes to an open
+// data stream.
+//
+// If the Timestamp field of the metadata is zero, the current date and
+// time will be written to the Timestamp and DateTime fields on output.
 //
 func SaveMapFile(output io.Writer, objList []any, meta MapMetaData) error {
 	writer := bufio.NewWriter(output)
@@ -1405,6 +1218,13 @@ func SaveMapFile(output io.Writer, objList []any, meta MapMetaData) error {
 	return nil
 }
 
+//
+// ReadMapFile loads GMA mapper data from the named file, returning the data as three values: a slice of
+// MapObject values (which the caller will want to interpret based on their actual data type), the file
+// metadata, and an error (which will be nil if everything went as planned).
+//
+// Other than opening the named input file, it is identical to LoadMapFile.
+//
 func ReadMapFile(path string) ([]any, MapMetaData, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -1418,6 +1238,13 @@ func ReadMapFile(path string) ([]any, MapMetaData, error) {
 	return LoadMapFile(file)
 }
 
+//
+// ReadMapMetaData is just like ReadMapFile, except that it only goes as far
+// as reading the metadata from the file, returning that, but including any of
+// the actual map data.
+//
+// Its operation is identical to LoadMapMetaData other than opening the input file for you.
+//
 func ReadMapMetaData(path string) (MapMetaData, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -1499,7 +1326,7 @@ func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta stri
 			return nil, meta, fmt.Errorf("legacy map file has invalid record: %v", err)
 		}
 		switch f[0] {
-		case "M":
+		case "M":	// M <attr>:<id> <value>	-> rawMonsters[<id>][<attr>] = []<value>
 			attr, objID, ok := strings.Cut(f[1], ":")
 			if !ok {
 				return nil, meta, fmt.Errorf("legacy map file has improperly formed M record (can't parse <attr>:<id> from \"%s\")", f[1])
@@ -1509,7 +1336,7 @@ func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta stri
 			}
 			rawMonsters[objID][attr] = f[2:]
 
-		case "P":
+		case "P":	// P <attr>:<id> <value>	-> rawPlayers[<id>][<attr>] = []<value>
 			attr, objID, ok := strings.Cut(f[1], ":")
 			if !ok {
 				return nil, meta, fmt.Errorf("legacy map file has improperly formed P record (can't parse <attr>:<id> from \"%s\")", f[1])
@@ -1519,13 +1346,14 @@ func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta stri
 			}
 			rawPlayers[objID][attr] = f[2:]
 
-		case "F":
+		case "F":	// F <serverID>		-> rawFiles[] = <serverID>
 			if len(f) != 2 {
 				return nil, meta, fmt.Errorf("legacy map file has improperly formed F record (%d fields)", len(f))
 			}
 			rawFiles = append(rawFiles, f[1])
 
-		case "I":
+		case "I":	// I <name> <zoom> <serverID>	-> rawImages[<name>] = ImageDefinition struct (with multiple sizes)
+					// interprets @<serverID> notation
 			ff, err := tcllist.ConvertTypes(f, "ssfs")
 			if err != nil {
 				return nil, meta, fmt.Errorf("legacy map file has improperly formed I record: %v", err)
@@ -1555,7 +1383,7 @@ func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta stri
 			}
 			rawImages[ff[1].(string)] = def
 
-		default:
+		default:	// <attr>:<id> <value>	-> rawData[<id>][<attr>] = []<value>
 			attr, objID, ok := strings.Cut(f[0], ":")
 			if !ok {
 				return nil, meta, fmt.Errorf("legacy map file has improperly formed record (can't parse <attr>:<id> from \"%s\")", f[0])
@@ -1654,7 +1482,7 @@ func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta stri
 				}
 			}
 		}
-		m.Reach, err = objBool(mob, 0, "REACH", false, err)
+		m.Reach, err = objInt(mob, 0, "REACH", false, err)
 		m.Killed, err = objBool(mob, 0, "KILLED", false, err)
 		m.Dim, err = objBool(mob, 0, "DIM", false, err)
 		objList = append(objList, *m)
@@ -1731,7 +1559,7 @@ func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta stri
 		base.Locked, err = objBool(obj, 0, "LOCKED", false, err)
 
 		switch objType {
-		case "aoe":
+		case "aoe", "saoe":
 			o := SpellAreaOfEffectElement{
 				MapElement: base,
 			}
@@ -1748,7 +1576,10 @@ func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta stri
 						return nil, meta, fmt.Errorf("legacy file element %s has invalid AOESHAPE: \"%s\"", objID, s)
 					}
 				}
+			} else {
+				return nil, meta, fmt.Errorf("legacy file element %s has missing AOESHAPE", objID)
 			}
+
 			objList = append(objList, o)
 
 		case "arc":
@@ -1958,8 +1789,10 @@ func LoadMapMetaData(input io.Reader) (MapMetaData, error) {
 }
 
 //
-// LoadMapFile reads a mapper file with file format >= 20, returning
-// a slice of map elements.
+// LoadMapFile reads GMA mapper data from an already-open data stream,
+// returning a slice of map elements and the metadata read from the stream.
+//
+// If called with a nil input object, it just returns with empty data values.
 //
 func LoadMapFile(input io.Reader) ([]any, MapMetaData, error) {
 	return loadMapFile(input, false)
@@ -1967,28 +1800,23 @@ func LoadMapFile(input io.Reader) ([]any, MapMetaData, error) {
 
 func loadMapFile(input io.Reader, metaDataOnly bool) ([]any, MapMetaData, error) {
 	//
-	// The map file format consists of an initial line of the form
+	// The map file format consists of an initial line which begins with
 	//    __MAPPER__:<version>
+	// (there may be additional text following <version> if it is
+	// separated from <version> by a space; older file formats used this
+	// for metadata but newer versions ignore the extra text if present).
 	//
-	// This is followed by zero or more object definitions which are
-	// of the form
+	// For versions >= 20, this is followed by zero or more object 
+	// definitions which are of the form
 	//    «<type>» <json>
 	// where <json> may be a multi-line structure. The start of each
-	// new object is marked with the «<type>» string, so the breaking
-	// up of <json> must not result in an accidental line starting with
-	// that pattern. Disallowing a newline in the middle of a string should
-	// accomplish that.
-	// OR
-	//    __META__ <json>		for file metadata
-	//    IMG <json>        for an image file definition
-	//    MAP <json>        for a map file definition
-	//    CREATURE <json>   for a general creature definition
+	// new object or the EOF marker is indicated by encountering a line
+	// which begins with a '«' rune, so the <json> data must not end up
+	// triggering this condition. This may be accomplished by placing the
+	// entire JSON string on one line, or indenting it on subsequent lines.
 	//
 	// The final line is of the form
 	//    «__EOF__»
-	//
-	// Despite the indentation above, the line MUST begin with « to signal
-	// each of these.
 	//
 	var meta MapMetaData
 	var objList []any
@@ -2047,10 +1875,10 @@ func loadMapFile(input io.Reader, metaDataOnly bool) ([]any, MapMetaData, error)
 				var err error
 
 				switch f[1] {
-				case "META":
+				case "__META__":
 					err = json.Unmarshal([]byte(dataPacket.String()), &meta)
 					if metaDataOnly {
-						return nil, meta, nil
+						return nil, meta, err
 					}
 
 				case "ARC":

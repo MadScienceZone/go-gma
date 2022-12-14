@@ -503,13 +503,7 @@ func pickSuffix(genderData map[string][]nameFragment, prefix string, dr *dice.Di
 	return choices[len(choices)-1].Suffix
 }
 
-<<<<<<< HEAD
-// @[00]@| GMA 4.4.1
-||||||| 52d71f1
-// @[00]@| GMA 4.3.10
-=======
 // @[00]@| GMA 4.7.0
->>>>>>> json
 // @[01]@|
 // @[10]@| Copyright © 1992–2022 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

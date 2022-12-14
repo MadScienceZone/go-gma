@@ -229,7 +229,7 @@ P SPAM:PC73 eggs
 			AoE:        nil,
 			Area:       "M",
 			MoveMode:   MoveModeLand,
-			Reach:      false,
+			Reach:      0,
 			Killed:     false,
 			Dim:        true,
 		}) {
@@ -532,6 +532,8 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
     "ID": "0268e7eeb78e41ff82fddc4f5f0e2c1d",
     "X": 10888,
     "Y": 12642,
+    "Z": 271,
+    "Width": 5,
     "Points": [
         {
             "X": 10882,
@@ -606,16 +608,16 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
             "Y": 12282
         }
     ],
-    "Z": 271,
     "Line": "#7e7f12",
     "Fill": "#7e7f12",
-    "Width": 5,
     "Layer": "walls"
 }
 «POLY» {
     "ID": "09426d492f784ad25684536c35e0d8d5",
     "X": 9591,
     "Y": 13222,
+    "Z": 25,
+    "Width": 2,
     "Points": [
         {
             "X": 9600,
@@ -782,16 +784,16 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
             "Y": 13489
         }
     ],
-    "Z": 25,
     "Line": "#000000",
     "Fill": "#000000",
-    "Width": 2,
     "Layer": "walls"
 }
 «POLY» {
     "ID": "0c36b6a97a074bd174cda800f07206f4",
     "X": 12598,
     "Y": 5697,
+    "Z": 57,
+    "Width": 5,
     "Points": [
         {
             "X": 12630,
@@ -866,47 +868,45 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
             "Y": 5851
         }
     ],
-    "Z": 57,
     "Line": "#000000",
     "Fill": "#000000",
-    "Width": 5,
     "Layer": "walls"
 }
 «ARC» {
     "ID": "13a2dd4a64a94e178509744e1a0a4481",
     "X": 473,
     "Y": 523,
+    "Z": 8,
+    "Width": 5,
     "Points": [
         {
             "X": 321,
             "Y": 669
         }
     ],
-    "Z": 8,
     "Line": "black",
     "Fill": "#ff2600",
-    "Width": 5,
     "Layer": "walls",
     "ArcMode": 1,
-    "Extent": 225,
-    "Start": 20
+    "Start": 20,
+    "Extent": 225
 }
 «LINE» {
     "ID": "2a1751827a954d8fad688da8e431502a",
     "X": 675,
     "Y": 584,
+    "Dash": 1,
+    "Z": 1,
+    "Width": 5,
     "Points": [
         {
             "X": 779,
             "Y": 291
         }
     ],
-    "Z": 1,
     "Line": "black",
     "Fill": "#ff2600",
-    "Width": 5,
     "Layer": "walls",
-    "Dash": 1,
     "Arrow": 1
 }
 «TEXT» {
@@ -943,34 +943,34 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
     "ID": "38f633da2d6749467f5406f187b8cc3f",
     "X": 10810,
     "Y": 14350,
+    "Z": 12,
+    "Width": 5,
     "Points": [
         {
             "X": 10908,
             "Y": 14396
         }
     ],
-    "Z": 12,
     "Line": "black",
     "Fill": "#000000",
-    "Width": 5,
     "Layer": "walls"
 }
 «RECT» {
     "ID": "39880f0c6e904bf9a866d9af8783fd70",
     "X": 445.5,
     "Y": 33,
+    "Locked": true,
+    "Z": 3,
+    "Width": 5,
     "Points": [
         {
             "X": 625,
             "Y": 160
         }
     ],
-    "Z": 3,
     "Line": "black",
     "Fill": "#ff2600",
-    "Width": 5,
-    "Layer": "walls",
-    "Locked": true
+    "Layer": "walls"
 }
 «CREATURE» {
     "ID": "39a1afc1b1aa4cac87eee32be93ebe9a",
@@ -988,7 +988,7 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
     "StatusList": [
         "stable"
     ],
-    "Reach": true,
+    "Reach": 1,
     "Dim": true,
     "CreatureType": 1
 }
@@ -996,31 +996,31 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
     "ID": "3f5b6a2655214928b868daad9a97db4d",
     "X": 110,
     "Y": 18,
+    "Z": 5,
+    "Width": 5,
     "Points": [
         {
             "X": 237,
             "Y": 150
         }
     ],
-    "Z": 5,
     "Line": "black",
-    "Width": 5,
     "Layer": "walls"
 }
 «SAOE» {
     "ID": "4b82e91b987d412b9c1a2b5110319072",
     "X": 500,
     "Y": 400,
+    "Z": 99999999,
+    "Width": 5,
     "Points": [
         {
             "X": 500,
             "Y": 150
         }
     ],
-    "Z": 99999999,
     "Line": "black",
     "Fill": "black",
-    "Width": 5,
     "Layer": "walls",
     "AoEShape": 1
 }
@@ -1028,25 +1028,28 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
     "ID": "5b1a4fa32af54eb2b35ebec0a4c88089",
     "X": 59,
     "Y": 309,
+    "Z": 6,
+    "Width": 5,
     "Points": [
         {
             "X": 161,
             "Y": 485
         }
     ],
-    "Z": 6,
     "Line": "black",
     "Fill": "#ff2600",
-    "Width": 5,
     "Layer": "walls",
     "ArcMode": 0,
-    "Extent": 61,
-    "Start": 140
+    "Start": 140,
+    "Extent": 61
 }
 «LINE» {
     "ID": "61dc2ff4efe54be7a18791b338c29c5c",
     "X": 604,
     "Y": 229,
+    "Dash": 1,
+    "Z": 2,
+    "Width": 5,
     "Points": [
         {
             "X": 509,
@@ -1057,32 +1060,29 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
             "Y": 360
         }
     ],
-    "Z": 2,
     "Line": "black",
     "Fill": "#ff2600",
-    "Width": 5,
     "Layer": "walls",
-    "Dash": 1,
     "Arrow": 1
 }
 «ARC» {
     "ID": "7b39f6dbeea44b8baa20032c443a0654",
     "X": 126,
     "Y": 274,
+    "Z": 7,
+    "Width": 5,
     "Points": [
         {
             "X": 166,
             "Y": 375
         }
     ],
-    "Z": 7,
     "Line": "black",
     "Fill": "#ff2600",
-    "Width": 5,
     "Layer": "walls",
     "ArcMode": 2,
-    "Extent": 235,
-    "Start": 151
+    "Start": 151,
+    "Extent": 235
 }
 «CREATURE» {
     "ID": "976e7148ae86409f99fdebf83f3f0904",
@@ -1137,16 +1137,16 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
     "ID": "afd136735d7e400082f331485e73f7a1",
     "X": 150,
     "Y": 600,
+    "Z": 99999999,
+    "Width": 5,
     "Points": [
         {
             "X": 200,
             "Y": 200
         }
     ],
-    "Z": 99999999,
     "Line": "black",
     "Fill": "#00f900",
-    "Width": 5,
     "Layer": "walls",
     "AoEShape": 2
 }
@@ -1154,31 +1154,31 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
     "ID": "bf29dfa85cc54498bb33a2d7523d9edc",
     "X": 289,
     "Y": 36,
+    "Z": 4,
+    "Width": 5,
     "Points": [
         {
             "X": 355,
             "Y": 97
         }
     ],
-    "Z": 4,
     "Line": "black",
-    "Width": 5,
     "Layer": "walls"
 }
 «SAOE» {
     "ID": "e68d5354f175401582866a75d806d8d7",
     "X": 850,
     "Y": 800,
+    "Z": 99999999,
+    "Width": 5,
     "Points": [
         {
             "X": 450,
             "Y": 800
         }
     ],
-    "Z": 99999999,
     "Line": "black",
     "Fill": "#00f900",
-    "Width": 5,
     "Layer": "walls",
     "AoEShape": 0
 }
@@ -1219,7 +1219,7 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
 					}
 					sEq(obj.Area, "S", "Area", t)
 					BEq(byte(obj.MoveMode), byte(MoveModeLand), "MoveMode", t)
-					bEq(obj.Reach, false, "Reach", t)
+					iEq(obj.Reach, 0, "Reach", t)
 					bEq(obj.Killed, true, "Killed", t)
 					bEq(obj.Dim, true, "Dim", t)
 					BEq(byte(obj.CreatureType), byte(CreatureTypeMonster), "CreatureType", t)
@@ -1251,7 +1251,7 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
 					}
 					sEq(obj.Area, "M", "Area", t)
 					BEq(byte(obj.MoveMode), byte(MoveModeLand), "MoveMode", t)
-					bEq(obj.Reach, true, "Reach", t)
+					iEq(obj.Reach, 1, "Reach", t)
 					bEq(obj.Killed, false, "Killed", t)
 					bEq(obj.Dim, true, "Dim", t)
 					BEq(byte(obj.CreatureType), byte(CreatureTypeMonster), "CreatureType", t)
@@ -1280,7 +1280,7 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
 					}
 					sEq(obj.Area, "M", "Area", t)
 					BEq(byte(obj.MoveMode), byte(MoveModeFly), "MoveMode", t)
-					bEq(obj.Reach, false, "Reach", t)
+					iEq(obj.Reach, 0, "Reach", t)
 					bEq(obj.Killed, false, "Killed", t)
 					bEq(obj.Dim, true, "Dim", t)
 					BEq(byte(obj.CreatureType), byte(CreatureTypePlayer), "CreatureType", t)
@@ -1303,7 +1303,7 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
 					sEq(obj.AoE.Color, "black", "Aoe Color", t)
 					sEq(obj.Area, "M", "Area", t)
 					BEq(byte(obj.MoveMode), byte(MoveModeFly), "MoveMode", t)
-					bEq(obj.Reach, false, "Reach", t)
+					iEq(obj.Reach, 0, "Reach", t)
 					bEq(obj.Killed, false, "Killed", t)
 					bEq(obj.Dim, false, "Dim", t)
 					BEq(byte(obj.CreatureType), byte(CreatureTypePlayer), "CreatureType", t)
