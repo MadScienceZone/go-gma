@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___       ______      _______              #
-# (  ____ \(       )(  ___  )              /   )     / ___  \    (  __   )             #
-# | (    \/| () () || (   ) |             / /) |     \/   )  )   | (  )  |             #
-# | |      | || || || (___) |            / (_) (_        /  /    | | /   |             #
-# | | ____ | |(_)| ||  ___  |           (____   _)      /  /     | (/ /) |             #
-# | | \_  )| |   | || (   ) | Game           ) (       /  /      |   / | |             #
-# | (___) || )   ( || )   ( | Master's       | |   _  /  /     _ |  (__) |             #
-# (_______)|/     \||/     \| Assistant      (_)  (_) \_/     (_)(_______)             #
+#  _______  _______  _______             _______     _______     _______               #
+# (  ____ \(       )(  ___  )           (  ____ \   (  __   )   (  __   )              #
+# | (    \/| () () || (   ) |           | (    \/   | (  )  |   | (  )  |              #
+# | |      | || || || (___) |           | (____     | | /   |   | | /   |              #
+# | | ____ | |(_)| ||  ___  |           (_____ \    | (/ /) |   | (/ /) |              #
+# | | \_  )| |   | || (   ) | Game            ) )   |   / | |   |   / | |              #
+# | (___) || )   ( || )   ( | Master's  /\____) ) _ |  (__) | _ |  (__) |              #
+# (_______)|/     \||/     \| Assistant \______/ (_)(_______)(_)(_______)              #
 #                                                                                      #
 ########################################################################################
 */
@@ -74,7 +74,7 @@ func TestLoadDieRollPresets(t *testing.T) {
 	}{
 		// 0
 		{`__DICE__:2
-__EOF__`, 2, nil, DieRollPresetMetaData{
+«__EOF__»`, 2, nil, DieRollPresetMetaData{
 			FileVersion: 2,
 		}, false},
 
@@ -115,16 +115,16 @@ abc456 {} d12
 
 		// 5
 		{`__DICE__:2
-__META__ {
+«__META__» {
 	"Timestamp": 123456,
 	"DateTime": "some time or other",
 	"Comment": "a test file"
 }
-PRESET {
+«PRESET» {
 	"Name": "01|a", "Description": "xyz", "DieRollSpec": "d20+d10+d8"
 }
-PRESET {"Name":"02|a", "DieRollSpec":"concealment=50% miss"}
-__EOF__
+«PRESET» {"Name":"02|a", "DieRollSpec":"concealment=50% miss"}
+«__EOF__»
 `, 2, []DieRollPreset{
 			{Name: "01|a", Description: "xyz", DieRollSpec: "d20+d10+d8"},
 			{Name: "02|a", Description: "", DieRollSpec: "concealment=50% miss"},
@@ -137,15 +137,15 @@ __EOF__
 
 		// 6
 		{`__DICE__:2
-__META__ {
+«__META__» {
 	"Timestamp": 123456,
 	"DateTime": "some time or other",
 	"Comment": "a test file" }
-PRESET {
+«PRESET» {
 	"Name": "01|a", "Description": "xyz", "DieRollSpec": "d20+d10+d8"
 	}
-PRESET {"Name":"02|a", "DieRollSpec":"concealment=50% miss",}
-__EOF__
+«PRESET» {"Name":"02|a", "DieRollSpec":"concealment=50% miss",}
+«__EOF__»
 `, 2, nil, DieRollPresetMetaData{
 			Timestamp:   123456,
 			DateTime:    "some time or other",
@@ -155,17 +155,17 @@ __EOF__
 
 		// 7
 		{`__DICE__:2
-__META__ {
+«__META__» {
 	"Timestamp": 123456,
 	"DateTime": "some time or other",
 	"Comment": "a test file" 
 }
-PRESET {
+«PRESET» {
 	"Name": "01|a", "Description": "xyz", "DieRollSpec": "d20+d10+d8"
 }
-PRESET {
+«PRESET» {
 	"Name":"02|a", "DieRollSpec":"concealment=50% miss"}
-__EOF__
+«__EOF__»
 `, 2, []DieRollPreset{
 			{Name: "01|a", Description: "xyz", DieRollSpec: "d20+d10+d8"},
 			{Name: "02|a", Description: "", DieRollSpec: "concealment=50% miss"},
@@ -1837,7 +1837,7 @@ func TestDiceStructured(t *testing.T) {
 	}
 }
 
-// @[00]@| GMA 4.7.0
+// @[00]@| GMA 5.0.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2022 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___       ______      _______              #
-# (  ____ \(       )(  ___  )              /   )     / ___  \    (  __   )             #
-# | (    \/| () () || (   ) |             / /) |     \/   )  )   | (  )  |             #
-# | |      | || || || (___) |            / (_) (_        /  /    | | /   |             #
-# | | ____ | |(_)| ||  ___  |           (____   _)      /  /     | (/ /) |             #
-# | | \_  )| |   | || (   ) | Game           ) (       /  /      |   / | |             #
-# | (___) || )   ( || )   ( | Master's       | |   _  /  /     _ |  (__) |             #
-# (_______)|/     \||/     \| Assistant      (_)  (_) \_/     (_)(_______)             #
+#  _______  _______  _______             _______     _______     _______               #
+# (  ____ \(       )(  ___  )           (  ____ \   (  __   )   (  __   )              #
+# | (    \/| () () || (   ) |           | (    \/   | (  )  |   | (  )  |              #
+# | |      | || || || (___) |           | (____     | | /   |   | | /   |              #
+# | | ____ | |(_)| ||  ___  |           (_____ \    | (/ /) |   | (/ /) |              #
+# | | \_  )| |   | || (   ) | Game            ) )   |   / | |   |   / | |              #
+# | (___) || )   ( || )   ( | Master's  /\____) ) _ |  (__) | _ |  (__) |              #
+# (_______)|/     \||/     \| Assistant \______/ (_)(_______)(_)(_______)              #
 #                                                                                      #
 ########################################################################################
 */
@@ -2406,7 +2406,7 @@ func SaveDieRollPresetFile(output io.Writer, presets []DieRollPreset, meta DieRo
 	if err != nil {
 		return err
 	}
-	writer.WriteString("__META__ ")
+	writer.WriteString("«__META__» ")
 	writer.WriteString(string(data))
 	writer.WriteString("\n")
 
@@ -2420,11 +2420,11 @@ func SaveDieRollPresetFile(output io.Writer, presets []DieRollPreset, meta DieRo
 			return fmt.Errorf("unable to serialize preset \"%s\": %v", preset.Name, err)
 		}
 
-		writer.WriteString("__PRESET__ ")
+		writer.WriteString("«PRESET» ")
 		writer.WriteString(string(data))
 		writer.WriteString("\n")
 	}
-	writer.WriteString("__EOF__\n")
+	writer.WriteString("«__EOF__»\n")
 	writer.Flush()
 	return nil
 }
@@ -2501,10 +2501,8 @@ func LoadDieRollPresetFile(input io.Reader) ([]DieRollPreset, DieRollPresetMetaD
 	}
 
 	startPattern := regexp.MustCompile("^__DICE__:(\\d+)\\s*(.*)$")
-	recordPattern := regexp.MustCompile("^(PRESET|__META__)\\s(.+)$")
-	endRecordPattern := regexp.MustCompile("^\\}$")
-	continueRecordPattern := regexp.MustCompile("^\\s+")
-	eofPattern := regexp.MustCompile("^__EOF__$")
+	recordPattern := regexp.MustCompile("^«(PRESET|__META__)»\\s(.+)$")
+	eofPattern := regexp.MustCompile("^«__EOF__»$")
 	scanner := bufio.NewScanner(input)
 
 	if !scanner.Scan() {
@@ -2543,54 +2541,37 @@ func LoadDieRollPresetFile(input io.Reader) ([]DieRollPreset, DieRollPresetMetaD
 		// Start of record type f[1] with start of JSON string f[2]
 		// collect more lines of JSON data...
 		var dataPacket strings.Builder
-		overscan := false
 		dataPacket.WriteString(f[2])
 
 		for scanner.Scan() {
-			// Collect lines from the input file until we have a whole JSON object.
-			// If we find an indented line, add it to the one we already started.
-			// Otherwise we should find the closing brace here.
-			if continueRecordPattern.MatchString(scanner.Text()) {
-				dataPacket.WriteString(scanner.Text())
-			} else if endRecordPattern.MatchString(scanner.Text()) {
-				dataPacket.WriteString(scanner.Text())
-				break
-			} else {
-				// If neither of those were found, we are at the start of the next
-				// record already.
-				overscan = true
-				break
+			if strings.HasPrefix(scanner.Text(), "«") {
+				var err error
+
+				switch f[1] {
+				case "__META__":
+					err = json.Unmarshal([]byte(dataPacket.String()), &meta)
+
+				case "PRESET":
+					var preset DieRollPreset
+					if err = json.Unmarshal([]byte(dataPacket.String()), &preset); err == nil {
+						presets = append(presets, preset)
+					}
+
+				default:
+					return nil, meta, fmt.Errorf("invalid die-roll preset file: unexpected record type \"%s\"", f[1])
+				}
+				if err != nil {
+					return nil, meta, fmt.Errorf("invalid die-roll preset file: %v", err)
+				}
+				goto rescan
 			}
-		}
-		// dataPacket should now be a complete JSON object. Our next read should be the start
-		// of the next record.
-		var err error
-
-		switch f[1] {
-		case "__META__":
-			err = json.Unmarshal([]byte(dataPacket.String()), &meta)
-
-		case "PRESET":
-			var preset DieRollPreset
-			if err = json.Unmarshal([]byte(dataPacket.String()), &preset); err == nil {
-				presets = append(presets, preset)
-			}
-
-		default:
-			return nil, meta, fmt.Errorf("invalid die-roll preset file format: unexpected record type \"%s\"", f[1])
-		}
-
-		if err != nil {
-			return nil, meta, fmt.Errorf("invalid die-roll preset file format: %v", err)
-		}
-		if overscan {
-			goto rescan
+			dataPacket.WriteString(scanner.Text())
 		}
 	}
 	return nil, meta, fmt.Errorf("invalid die-roll preset file format: unexpected end of file")
 }
 
-// @[00]@| GMA 4.7.0
+// @[00]@| GMA 5.0.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2022 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

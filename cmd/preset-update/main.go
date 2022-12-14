@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___       ______      _______              #
-# (  ____ \(       )(  ___  )              /   )     / ___  \    (  __   )             #
-# | (    \/| () () || (   ) |             / /) |     \/   )  )   | (  )  |             #
-# | |      | || || || (___) |            / (_) (_        /  /    | | /   |             #
-# | | ____ | |(_)| ||  ___  |           (____   _)      /  /     | (/ /) |             #
-# | | \_  )| |   | || (   ) | Game           ) (       /  /      |   / | |             #
-# | (___) || )   ( || )   ( | Master's       | |   _  /  /     _ |  (__) |             #
-# (_______)|/     \||/     \| Assistant      (_)  (_) \_/     (_)(_______)             #
+#  _______  _______  _______             _______     _______     _______               #
+# (  ____ \(       )(  ___  )           (  ____ \   (  __   )   (  __   )              #
+# | (    \/| () () || (   ) |           | (    \/   | (  )  |   | (  )  |              #
+# | |      | || || || (___) |           | (____     | | /   |   | | /   |              #
+# | | ____ | |(_)| ||  ___  |           (_____ \    | (/ /) |   | (/ /) |              #
+# | | \_  )| |   | || (   ) | Game            ) )   |   / | |   |   / | |              #
+# | (___) || )   ( || )   ( | Master's  /\____) ) _ |  (__) | _ |  (__) |              #
+# (_______)|/     \||/     \| Assistant \______/ (_)(_______)(_)(_______)              #
 #                                                                                      #
 ########################################################################################
 #
@@ -15,7 +15,7 @@
 # (and this software is primarily for our own use in our play group,
 # anyway, but could be generalized later as a stand-alone product).
 #
-# Copyright (c) 2021 by Steven L. Willoughby, Aloha, Oregon, USA.
+# Copyright (c) 2022 by Steven L. Willoughby, Aloha, Oregon, USA.
 # All Rights Reserved.
 # Licensed under the terms and conditions of the BSD 3-Clause license.
 #
@@ -35,7 +35,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v4/util"
 )
 
-const GMAVersionNumber="4.7.0"    //@@##@@
+const GMAVersionNumber="5.0.0"    //@@##@@
 const GMADieRollPresetFileFormat = 2 //@@##@@
 
 func main() {
@@ -75,7 +75,7 @@ func main() {
 }
 
 /*
-# @[00]@| GMA 4.7.0
+# @[00]@| GMA 5.0.0
 # @[01]@|
 # @[10]@| Copyright © 1992–2022 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

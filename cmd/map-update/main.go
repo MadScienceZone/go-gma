@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______                ___       ______      _______              #
-# (  ____ \(       )(  ___  )              /   )     / ___  \    (  __   )             #
-# | (    \/| () () || (   ) |             / /) |     \/   )  )   | (  )  |             #
-# | |      | || || || (___) |            / (_) (_        /  /    | | /   |             #
-# | | ____ | |(_)| ||  ___  |           (____   _)      /  /     | (/ /) |             #
-# | | \_  )| |   | || (   ) | Game           ) (       /  /      |   / | |             #
-# | (___) || )   ( || )   ( | Master's       | |   _  /  /     _ |  (__) |             #
-# (_______)|/     \||/     \| Assistant      (_)  (_) \_/     (_)(_______)             #
+#  _______  _______  _______             _______     _______     _______               #
+# (  ____ \(       )(  ___  )           (  ____ \   (  __   )   (  __   )              #
+# | (    \/| () () || (   ) |           | (    \/   | (  )  |   | (  )  |              #
+# | |      | || || || (___) |           | (____     | | /   |   | | /   |              #
+# | | ____ | |(_)| ||  ___  |           (_____ \    | (/ /) |   | (/ /) |              #
+# | | \_  )| |   | || (   ) | Game            ) )   |   / | |   |   / | |              #
+# | (___) || )   ( || )   ( | Master's  /\____) ) _ |  (__) | _ |  (__) |              #
+# (_______)|/     \||/     \| Assistant \______/ (_)(_______)(_)(_______)              #
 #                                                                                      #
 ########################################################################################
 #
@@ -35,7 +35,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v4/util"
 )
 
-const GMAVersionNumber="4.7.0" //@@##@@
+const GMAVersionNumber="5.0.0" //@@##@@
 const GMAMapperFileFormat = 20    //@@##@@
 
 func main() {
@@ -43,10 +43,12 @@ func main() {
 		// filter stdin->stdout
 		objects, meta, err := mapper.LoadMapFile(os.Stdin)
 		if err != nil {
-			panic(err)
+			fmt.Printf("Fatal: %v\n", err)
+			os.Exit(1)
 		}
 		if err = mapper.SaveMapFile(os.Stdout, objects, meta); err != nil {
-			panic(err)
+			fmt.Printf("Fatal: %v\n", err)
+			os.Exit(1)
 		}
 	} else {
 		fmt.Printf("GMA map-update tool %s for map file format %d\n", GMAVersionNumber, GMAMapperFileFormat)
@@ -74,7 +76,7 @@ func main() {
 }
 
 /*
-# @[00]@| GMA 4.7.0
+# @[00]@| GMA 5.0.0
 # @[01]@|
 # @[10]@| Copyright © 1992–2022 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
