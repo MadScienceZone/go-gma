@@ -9,6 +9,7 @@
 ## v5.0.0
  * Moved to server protocol version 400.
  * Updated file format versions to JSON-based (mapper file format 20, die-roll file format 2).
+ * Refactored client/server code.
 
 **Warning: requires Go 1.18 or later**
 
