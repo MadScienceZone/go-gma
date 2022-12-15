@@ -6,7 +6,7 @@
  * Supported GMA Mapper File Format: 20		<!-- @@##@@ -->
  * Effective Date: 13-Dec-2022			<!-- @@##@@ -->
 
-## v4.7.0
+## v5.0.0
  * Moved to server protocol version 400.
  * Updated file format versions to JSON-based (mapper file format 20, die-roll file format 2).
 

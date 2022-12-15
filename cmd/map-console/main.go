@@ -41,12 +41,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/MadScienceZone/go-gma/v4/auth"
-	"github.com/MadScienceZone/go-gma/v4/dice"
-	"github.com/MadScienceZone/go-gma/v4/gma"
-	"github.com/MadScienceZone/go-gma/v4/mapper"
-	"github.com/MadScienceZone/go-gma/v4/tcllist"
-	"github.com/MadScienceZone/go-gma/v4/util"
+	"github.com/MadScienceZone/go-gma/v5/auth"
+	"github.com/MadScienceZone/go-gma/v5/dice"
+	"github.com/MadScienceZone/go-gma/v5/gma"
+	"github.com/MadScienceZone/go-gma/v5/mapper"
+	"github.com/MadScienceZone/go-gma/v5/tcllist"
+	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
 const GMAVersionNumber="5.0.0" //@@##@@
@@ -160,7 +160,7 @@ func main() {
 	fmt.Println("Characters Defined:")
 	fmt.Println(colorize("NAME----------- ID-------- COLOR----- AREA SIZE", "Blue", mono))
 	for _, def := range server.Characters {
-		fmt.Println(colorize(fmt.Sprintf("%-15s %-10s %-10s %4s %4s", def.Name, def.ObjID, def.Color, def.Area, def.Size), "Yellow", mono))
+		fmt.Println(colorize(fmt.Sprintf("%-15s %-10s %-10s %4s %4s", def.Name, def.ObjID(), def.Color, def.Area, def.Size), "Yellow", mono))
 	}
 
 	fmt.Println("Condition Codes from Server:")
@@ -430,7 +430,7 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 	case mapper.AddCharacterMessagePayload:
 		printFields(mono, "AddCharacter",
 			fieldDesc{"name", m.Name},
-			fieldDesc{"id", m.ObjID},
+			fieldDesc{"id", m.ObjID()},
 			fieldDesc{"color", m.Color},
 			fieldDesc{"area", m.Area},
 			fieldDesc{"size", m.Size},
@@ -663,12 +663,10 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 	case mapper.UpdatePeerListMessagePayload:
 		printFields(mono, "UpdatePeerList")
 		printFields(mono, "",
-			fieldDesc{"       USERNAME------------ ADDRESS-------------- CLIENT------------------- AU ME MN WO PING--", nil})
+			fieldDesc{"       USERNAME------------ ADDRESS-------------- CLIENT------------------- AU ME PING--", nil})
 		for i, peer := range m.PeerList {
-			// --------------------------------------------------------------------------------
-			// ...[##] user------20--- addr----21----- client--25----- Auth Me Main W/O ping
 			printFields(mono, "",
-				fieldDesc{fmt.Sprintf("  [%02d]", i), fmt.Sprintf("%-20s %-21s %-25s %s %s %s %s %s",
+				fieldDesc{fmt.Sprintf("  [%02d]", i), fmt.Sprintf("%-20s %-21s %-25s %s %s %s",
 					peer.User, peer.Addr, peer.Client,
 					func(b bool) string {
 						if b {
@@ -682,18 +680,6 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 						}
 						return colorize("N ", "Red", mono)
 					}(peer.IsMe),
-					func(b bool) string {
-						if b {
-							return colorize("Y ", "green", mono)
-						}
-						return colorize("N ", "Red", mono)
-					}(peer.IsMain),
-					func(b bool) string {
-						if b {
-							return colorize("Y ", "green", mono)
-						}
-						return colorize("N ", "Red", mono)
-					}(peer.IsWriteOnly),
 					func(p float64) string {
 						if p <= 0 {
 							return colorize("------", "yellow", mono)
@@ -900,7 +886,6 @@ M <filename>                            Tell clients to merge local file to mapp
 M? <serverid>                           Ensure local cache of server file
 M@ <serverid>                           Tell clients to merge contents of server file to canvas
 MARK <x> <y>                            Show visual marker at coordinates
-NO                                      Ask for no more server messages
 OA <id> {<k0> <v0> ... <kN> <vN>}       Set object attribute(s)
 OA+ <id> <key> {<v0> <v1> ... <vN>}     Add to list-type object attribute
 OA- <id> <key> {<v0> <v1> ... <vN>}     Remove from list-type object attribute
@@ -1250,17 +1235,6 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 					break
 				}
 
-			case "NO":
-				// NO
-				if len(fields) != 1 {
-					fmt.Println(colorize("usage ERROR: wrong number of fields: NO", "Red", mono))
-					break
-				}
-				if err := server.WriteOnly(); err != nil {
-					fmt.Println(colorize(fmt.Sprintf("server ERROR: %v", err), "Red", mono))
-					break
-				}
-
 			case "OA":
 				// OA id kvlist
 				// It just happens to be a side effect of the protocol definition that we
@@ -1326,7 +1300,7 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 			case "PS":
 				// PS id color name area size player|monster x y reach
 				// 0  1  2     3    4    5    6              7 8 9
-				v, err := tcllist.ConvertTypes(fields, "sssssssff?")
+				v, err := tcllist.ConvertTypes(fields, "sssssssffi")
 				if err != nil {
 					fmt.Println(colorize(fmt.Sprintf("usage ERROR: %v", err), "Red", mono))
 					break
@@ -1341,7 +1315,7 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 				c.Size = v[5].(string)
 				c.Gx = v[7].(float64)
 				c.Gy = v[8].(float64)
-				c.Reach = v[9].(bool)
+				c.Reach = v[9].(int)
 
 				switch v[6].(string) {
 				case "player":

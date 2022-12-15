@@ -1,4 +1,4 @@
-module github.com/MadScienceZone/go-gma/v4
+module github.com/MadScienceZone/go-gma/v5
 
 go 1.18
 

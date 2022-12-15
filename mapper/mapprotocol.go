@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 )
 
@@ -334,10 +335,7 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 		if wo, ok := data.(WorldMessagePayload); ok {
 			return c.sendJSON("WORLD", wo)
 		}
-	case WriteOnly:
-		return c.sendln("NO", "")
 	}
-
 	return fmt.Errorf("send: invalid command or data type")
 }
 
@@ -785,6 +783,11 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 		p.messageType = Challenge
 		return p
 
+	case "POLO":
+		p := PoloMessagePayload{BaseMessagePayload: payload}
+		p.messageType = Polo
+		return p
+
 	case "PRIV":
 		p := PrivMessagePayload{BaseMessagePayload: payload}
 		if hasJsonPart {
@@ -795,11 +798,6 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 		p.messageType = Priv
 		return p
 
-	case "POLO":
-		p := PoloMessagePayload{BaseMessagePayload: payload}
-		p.messageType = Polo
-		return p
-
 	case "PROGRESS":
 		p := UpdateProgressMessagePayload{BaseMessagePayload: payload}
 		if hasJsonPart {
@@ -808,6 +806,20 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = UpdateProgress
+		return p
+
+	case "PROTOCOL":
+		p := ProtocolMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			// not really JSON for this command; just the protocol version as an integer
+			p.ProtocolVersion, err = strconv.Atoi(jsonString)
+			if err != nil {
+				break
+			}
+		} else {
+			err = fmt.Errorf("Server PROTOCOL command invalid (no version value)")
+			break
+		}
 		return p
 
 	case "PS":

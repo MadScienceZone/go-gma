@@ -31,8 +31,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/MadScienceZone/go-gma/v4/mapper"
-	"github.com/MadScienceZone/go-gma/v4/util"
+	"github.com/MadScienceZone/go-gma/v5/mapper"
+	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
 const GMAVersionNumber="5.0.0" //@@##@@

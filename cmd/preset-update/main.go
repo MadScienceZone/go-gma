@@ -31,8 +31,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/MadScienceZone/go-gma/v4/dice"
-	"github.com/MadScienceZone/go-gma/v4/util"
+	"github.com/MadScienceZone/go-gma/v5/dice"
+	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
 const GMAVersionNumber="5.0.0"    //@@##@@

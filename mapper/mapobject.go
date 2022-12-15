@@ -38,7 +38,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/MadScienceZone/go-gma/v4/tcllist"
+	"github.com/MadScienceZone/go-gma/v5/tcllist"
 )
 
 //

@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/MadScienceZone/go-gma/v4/dice"
+	"github.com/MadScienceZone/go-gma/v5/dice"
 )
 
 func ExampleCulture() {

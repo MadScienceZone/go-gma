@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/MadScienceZone/go-gma/v4/dice"
+	"github.com/MadScienceZone/go-gma/v5/dice"
 )
 
 //

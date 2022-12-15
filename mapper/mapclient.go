@@ -53,12 +53,13 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"runtime"
 	"strings"
 	"time"
 
-	"github.com/MadScienceZone/go-gma/v4/auth"
-	"github.com/MadScienceZone/go-gma/v4/dice"
-	"github.com/MadScienceZone/go-gma/v4/util"
+	"github.com/MadScienceZone/go-gma/v5/auth"
+	"github.com/MadScienceZone/go-gma/v5/dice"
+	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
 // ErrAuthenticationRequired is the error returned when the server requires authentication but we didn't provide any.
@@ -66,6 +67,10 @@ var ErrAuthenticationRequired = errors.New("authenticator required for connectio
 
 // ErrAuthenticationFailed is the error returned when our authentication was rejected by the server.
 var ErrAuthenticationFailed = errors.New("access denied to server")
+
+// ErrServerProtocolError is the error returned when something fundamental about the server's conversation
+// with us is so wrong we can't even deal with the conversation any further.
+var ErrServerProtocolError = errors.New("server protocol error; unable to continue")
 
 //
 // Connection describes a connection to the server. These are
@@ -100,7 +105,7 @@ type Connection struct {
 	Endpoint string
 
 	// Characters received from the server.
-	Characters map[string]CharacterDefinition
+	Characters map[string]PlayerToken
 
 	// Conditions and their token markings received from the server.
 	Conditions map[string]StatusMarkerDefinition
@@ -168,56 +173,6 @@ func (c *Connection) Logf(format string, data ...any) {
 //
 func (c *Connection) IsReady() bool {
 	return c != nil && c.serverConn.IsReady() && c.signedOn
-}
-
-//
-// CharacterDefinition describes a PC known as a regular player of the
-// game system.
-//
-type CharacterDefinition struct {
-	// Character name as appears on the map.
-	Name string
-
-	// ObjID to use for the character rather than generating one.
-	ObjID string
-
-	// Color to use to draw the threat zone around the character.
-	Color string
-
-	// Size codes of the threat area and creature token size.
-	Area, Size string
-}
-
-//
-// Text produces a simple text description of the receiving CharacterDefinition value.
-//
-func (c CharacterDefinition) Text() string {
-	return fmt.Sprintf("ID %q; Name %q; Zone color %q; Size %q; Threat Space %q",
-		c.ObjID, c.Name, c.Color, c.Size, c.Area)
-}
-
-//
-// CharacterDefinitions is a collection of the known characters
-// in the game (note that these are the ones explicitly defined
-// by the server up-front, usually the player characters in the party,
-// which are special enough to be included in UI elements, not the
-// other characters and other creatures encountered during the game).
-//
-// These are collected in a map where the keys are the object IDs
-// of the characters.
-//
-type CharacterDefinitions map[string]CharacterDefinition
-
-//
-// Text describes the PCs in the receiving map of CharacterDefinitions in a
-// simple multi-line text form.
-//
-func (cs CharacterDefinitions) Text() string {
-	var s strings.Builder
-	for k, c := range cs {
-		fmt.Fprintf(&s, "[%s] %s\n", k, c.Text())
-	}
-	return s.String()
 }
 
 //
@@ -405,7 +360,7 @@ func NewConnection(endpoint string, opts ...ConnectionOption) (Connection, error
 		Context:                 context.Background(),
 		Endpoint:                endpoint,
 		Subscriptions:           make(map[ServerMessage]chan MessagePayload),
-		Characters:              make(map[string]CharacterDefinition),
+		Characters:              make(map[string]PlayerToken),
 		Conditions:              make(map[string]StatusMarkerDefinition),
 		Retries:                 1,
 		Logger:                  log.Default(),
@@ -577,6 +532,7 @@ const (
 	PlaceSomeone
 	Polo
 	Priv
+	Protocol
 	QueryDicePresets
 	QueryImage
 	QueryPeers
@@ -597,7 +553,6 @@ const (
 	UpdateTurn
 	UpdateVersions
 	World
-	WriteOnly
 	UNKNOWN
 	ERROR
 	maximumServerMessage
@@ -619,10 +574,7 @@ type BaseMessagePayload struct {
 // be looking at instead.
 //
 // The raw message data may be useful for debugging purposes or other
-// low-level poking around, though, so we make it available here. The value
-// returned is a slice of strings representing the fields of the received
-// message after being broken out into fields. For multi-line messages, it
-// will instead be a slice of un-broken-out lines.
+// low-level poking around, though, so we make it available here.
 //
 func (p BaseMessagePayload) RawMessage() string { return p.rawMessage }
 func (p BaseMessagePayload) RawBytes() []byte   { return []byte(p.rawMessage) }
@@ -684,6 +636,15 @@ type UnknownMessagePayload struct {
 }
 
 //
+// ProtocolMessagePayload describes the server's statement of
+// what protocol version it implements.
+//
+type ProtocolMessagePayload struct {
+	BaseMessagePayload
+	ProtocolVersion int
+}
+
+//
 //     _                      _
 //    / \   ___ ___ ___ _ __ | |_
 //   / _ \ / __/ __/ _ \ '_ \| __|
@@ -695,6 +656,8 @@ type UnknownMessagePayload struct {
 //
 // AcceptMessagePayload holds the information sent by a client requesting
 // that the server only send a subset of its possible message types to it.
+//
+// Clients send this by calling the Subscribe method on their connection.
 //
 type AcceptMessagePayload struct {
 	BaseMessagePayload
@@ -719,7 +682,7 @@ type AcceptMessagePayload struct {
 //
 type AddCharacterMessagePayload struct {
 	BaseMessagePayload
-	CharacterDefinition
+	PlayerToken
 }
 
 //________________________________________________________________________________
@@ -739,8 +702,6 @@ type AddCharacterMessagePayload struct {
 //
 type AddImageMessagePayload struct {
 	BaseMessagePayload
-
-	// The image definition received from the server.
 	ImageDefinition
 }
 
@@ -750,28 +711,6 @@ type AddImageMessagePayload struct {
 func (c *Connection) AddImage(idef ImageDefinition) error {
 	return c.serverConn.Send(AddImage, idef)
 }
-
-//
-// AddImageData sends binary image data to peer clients.
-//
-// Generally, it is better to store an image file on the server, and
-// then call AddImage to point others to find the image there, since
-// that will be more efficient than sending it through the mapper
-// protocol.
-//
-/*
-func (c *Connection) AddImageData(idef ImageDefinition, data []byte) error {
-	return c.serverConn.Send(AddImage, AddImageMessagePayload{
-		ImageDefinition: ImageDefinition{
-			File:        idef.File,
-			IsLocalFile: false,
-			Name:        idef.Name,
-			Zoom:        idef.Zoom,
-		},
-		ImageData: data,
-	})
-}
-*/
 
 //     _       _     _  ___  _     _    _   _   _        _ _           _
 //    / \   __| | __| |/ _ \| |__ (_)  / \ | |_| |_ _ __(_) |__  _   _| |_ ___  ___
@@ -797,7 +736,7 @@ type AddObjAttributesMessagePayload struct {
 //
 // AddObjAttributes informs peers to add a set of string values to the existing
 // value of an object attribute. The attribute must be one whose value is a list
-// of strings, such as STATUSLIST.
+// of strings, such as StatusList.
 //
 func (c *Connection) AddObjAttributes(objID, attrName string, values []string) error {
 	if c == nil {
@@ -864,38 +803,6 @@ type AllowMessagePayload struct {
 	Features []string `json:",omitempty"`
 }
 
-//
-//     _         _   _
-//    / \  _   _| |_| |__
-//   / _ \| | | | __| '_ \
-//  / ___ \ |_| | |_| | | |
-// /_/   \_\__,_|\__|_| |_|
-//
-
-//
-// AuthMessagePayload holds the data sent by a client when authenticating
-// to the server.
-//
-type AuthMessagePayload struct {
-	BaseMessagePayload
-
-	// Client describes the client program (e.g., "mapper 4.0.1")
-	Client string `json:",omitempty"`
-
-	// Response gives the binary response to the server's challenge
-	Response []byte
-
-	// User gives the username requested by the client
-	User string `json:",omitempty"`
-}
-
-//     _    _ _
-//    / \  | | | _____      __
-//   / _ \ | | |/ _ \ \ /\ / /
-//  / ___ \| | | (_) \ V  V /
-// /_/   \_\_|_|\___/ \_/\_/
-//
-
 type OptionalFeature byte
 
 const (
@@ -922,6 +829,31 @@ func (c *Connection) Allow(features ...OptionalFeature) error {
 	return c.serverConn.Send(Allow, AllowMessagePayload{
 		Features: featureList,
 	})
+}
+
+//
+//     _         _   _
+//    / \  _   _| |_| |__
+//   / _ \| | | | __| '_ \
+//  / ___ \ |_| | |_| | | |
+// /_/   \_\__,_|\__|_| |_|
+//
+
+//
+// AuthMessagePayload holds the data sent by a client when authenticating
+// to the server.
+//
+type AuthMessagePayload struct {
+	BaseMessagePayload
+
+	// Client describes the client program (e.g., "mapper 4.0.1")
+	Client string `json:",omitempty"`
+
+	// Response gives the binary response to the server's challenge
+	Response []byte
+
+	// User gives the username requested by the client
+	User string `json:",omitempty"`
 }
 
 //   ____           _          _____ _ _
@@ -1222,6 +1154,18 @@ type ToolbarMessagePayload struct {
 	Enabled bool
 }
 
+//
+// Toolbar tells peers to turn on or off their toolbars.
+//
+func (c *Connection) Toolbar(enabled bool) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(Toolbar, ToolbarMessagePayload{
+		Enabled: enabled,
+	})
+}
+
 //   ____                                     _
 //  / ___|___  _ __ ___  _ __ ___   ___ _ __ | |_
 // | |   / _ \| '_ ` _ \| '_ ` _ \ / _ \ '_ \| __|
@@ -1279,8 +1223,20 @@ func (c *Connection) FilterDicePresets(re string) error {
 	})
 }
 
+// FilterDicePresetsFor is like FilterDicePresets but works on another
+// user's saved presets (GM only).
+func (c *Connection) FilterDicePresetsFor(user, re string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(FilterDicePresets, FilterDicePresetsMessagePayload{
+		For: user,
+		Filter: re,
+	})
+}
+
 //
-// DilterDicePresetMessagePayload holds the filter expression
+// FilterDicePresetMessagePayload holds the filter expression
 // the client sends to the server.
 //
 type FilterDicePresetsMessagePayload struct {
@@ -1563,6 +1519,11 @@ func (c *Connection) PlaceSomeone(someone any) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
 	}
+	_, isMonster := someone.(MonsterToken)
+	_, isPlayer := someone.(PlayerToken)
+	if !isMonster && !isPlayer {
+		return fmt.Errorf("PlaceSomeone requires a MonsterToken or PlayerToken, not a %T", someone)
+	}
 	return c.serverConn.Send(PlaceSomeone, someone)
 }
 
@@ -1688,7 +1649,7 @@ type RemoveObjAttributesMessagePayload struct {
 //
 // RemoveObjAttributes informs peers to remove a set of string values from the existing
 // value of an object attribute. The attribute must be one whose value is a list
-// of strings, such as STATUSLIST.
+// of strings, such as StatusList.
 //
 func (c *Connection) RemoveObjAttributes(objID, attrName string, values []string) error {
 	if c == nil {
@@ -1724,7 +1685,7 @@ func (c *Connection) RemoveObjAttributes(objID, attrName string, values []string
 //
 // The rollspec may have any form that would be accepted to the
 // dice.Roll function and dice.DieRoller.DoRoll method. See the dice package for details.
-// https://pkg.go.dev/github.com/MadScienceZone/go-gma/v4/dice#DieRoller.DoRoll
+// https://pkg.go.dev/github.com/MadScienceZone/go-gma/v5/dice#DieRoller.DoRoll
 //
 func (c *Connection) RollDice(to []string, rollspec string) error {
 	if c == nil {
@@ -1815,6 +1776,18 @@ func (c *Connection) DefineDicePresets(presets []dice.DieRollPreset) error {
 	})
 }
 
+// DefineDicePresetsFor is just like DefineDicePresets but performs the operation
+// for another user (GM only).
+func (c *Connection) DefineDicePresetsFor(user string, presets []dice.DieRollPreset) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(DefineDicePresets, DefineDicePresetsMessagePayload{
+		For: user,
+		Presets: presets,
+	})
+}
+
 type DefineDicePresetsMessagePayload struct {
 	BaseMessagePayload
 	For     string               `json:",omitempty"`
@@ -1830,6 +1803,18 @@ func (c *Connection) AddDicePresets(presets []dice.DieRollPreset) error {
 		return fmt.Errorf("nil Connection")
 	}
 	return c.serverConn.Send(AddDicePresets, AddDicePresetsMessagePayload{
+		Presets: presets,
+	})
+}
+
+// AddDicePresetsFor is just like AddDicePresets but performs the operation
+// for another user (GM only).
+func (c *Connection) AddDicePresetsFor(user string, presets []dice.DieRollPreset) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(AddDicePresets, AddDicePresetsMessagePayload{
+		For: user,
 		Presets: presets,
 	})
 }
@@ -1872,6 +1857,24 @@ type UpdateClockMessagePayload struct {
 	// some reference point set by the GM (often the start of
 	// combat).
 	Relative float64
+
+	// If true and not in combat mode, local clients should
+	// keep running the clock in real time.
+	Running bool
+}
+
+//
+// UpdateClock informs everyone of the current time
+//
+func (c *Connection) UpdateClock(absolute, relative float64, keepRunning bool) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(UpdateClock, UpdateClockMessagePayload{
+		Absolute: absolute,
+		Relative: relative,
+		Running: keepRunning,
+	})
 }
 
 //
@@ -1894,6 +1897,17 @@ type UpdateDicePresetsMessagePayload struct {
 type UpdateInitiativeMessagePayload struct {
 	BaseMessagePayload
 	InitiativeList []InitiativeSlot
+}
+
+// UpdateInitiative informs our peers of a change to the
+// inititive order.
+func (c *Connection) UpdateInitiative(ilist []InitiativeSlot) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(UpdateInitiative, UpdateInitiativeMessagePayload{
+		InitiativeList: ilist,
+	})
 }
 
 //
@@ -1984,13 +1998,6 @@ type Peer struct {
 
 	// True if this structure describes the connection of this client program
 	IsMe bool `json:",omitempty"`
-
-	// True if the peer is running as the "main" or "primary" client
-	IsMain bool `json:",omitempty"`
-
-	// True if the peer client is not paying attention to any incoming
-	// messages
-	IsWriteOnly bool `json:",omitempty"`
 }
 
 //
@@ -2019,11 +2026,9 @@ type QueryPeersMessagePayload struct {
 type UpdateProgressMessagePayload struct {
 	BaseMessagePayload
 
-	// Unique identifier for the operation we're tracking
-	OperationID string
-
-	// Description of the operation in progress, suitable for display.
-	Title string `json:",omitempty"`
+	// If true, we can dispose of the tracked operation
+	// and should not expect further updates about it.
+	IsDone bool `json:",omitempty"`
 
 	// The current progress toward MaxValue.
 	Value int
@@ -2034,9 +2039,11 @@ type UpdateProgressMessagePayload struct {
 	// the server realizes its previous estimate was incorrect.
 	MaxValue int `json:",omitempty"`
 
-	// If true, we can dispose of the tracked operation
-	// and should not expect further updates about it.
-	IsDone bool `json:",omitempty"`
+	// Unique identifier for the operation we're tracking
+	OperationID string
+
+	// Description of the operation in progress, suitable for display.
+	Title string `json:",omitempty"`
 }
 
 //
@@ -2046,10 +2053,7 @@ type UpdateProgressMessagePayload struct {
 // on creature tokens.
 //
 // Note: the server usually sends these upon login, which the Connection
-// struct stores internally. When this message is received, the Connection's
-// status marker list is updated regardless of whether the client is subscribed
-// to this message (which it may be if some overt action is required on its part
-// to (re-)define the status marker later in the interaction).
+// struct stores internally. 
 //
 type UpdateStatusMarkerMessagePayload struct {
 	BaseMessagePayload
@@ -2127,6 +2131,20 @@ func (c StatusMarkerDefinition) Text() string {
 type StatusMarkerDefinitions map[string]StatusMarkerDefinition
 
 //
+// CharacterDefinitions is a map of a character name to their token object.
+//
+type CharacterDefinitions map[string]PlayerToken
+
+// Text produces a simple text description of a map of PlayerTokens
+func (cs CharacterDefinitions) Text() string {
+	var s strings.Builder
+	for k, c := range cs {
+		fmt.Fprintf(&s, "[%s] %v\n", k, c)
+	}
+	return s.String()
+}
+
+//
 // Text produces a simple text description of a map of StatusMarkerDefinitions
 // as a multi-line string.
 //
@@ -2157,22 +2175,24 @@ type UpdateTurnMessagePayload struct {
 }
 
 //
-// WriteOnly informs the server that from this point forward,
-// we will not be interested in receiving any messages. We will
-// only be sending.
+// UpdateTurn advances the initiative turn clock for connected clients.
 //
-// Regardless of sending this, clients should still read any
-// data that is sent anyway. The Dial method does in fact do this
-// in case a misbehaving server doesn't fully respect the WriteOnly
-// request.
-//
-func (c *Connection) WriteOnly() error {
+func (c *Connection) UpdateTurn(relative float64, actor string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
 	}
-	return c.serverConn.Send(WriteOnly, nil)
+	return c.serverConn.Send(UpdateTurn, UpdateTurnMessagePayload{
+		ActorID: actor,
+		// hours, minutes, seconds since start of combat
+		Hours:   int(relative) / 3600,
+		Minutes: (int(relative) / 60) % 60,
+		Seconds: int(relative) % 60,
+		// total rounds since start of combat
+		Rounds:  int(relative) / 6,
+		// initiative count since start of round
+		Count:   int(relative*10) % 60,
+	})
 }
-
 //
 // Sync requests that the server send the entire game state
 // to it.
@@ -2387,6 +2407,34 @@ func (c *Connection) login(done chan error) {
 	authPending := false
 	c.Preamble = nil
 
+	// The first thing we hear from the server MUST be a PROTOCOL command.
+	incomingPacket := c.serverConn.Receive(done)
+	p, ok := incomingPacket.(ProtocolMessagePayload)
+	if !ok {
+		p, ok := incomingPacket.(ErrorMessagePayload)
+		if ok {
+			c.Logf("unable to begin server negotiation: %v", p.Error)
+			done <- p.Error
+			return
+		}
+		c.Logf("unable to begin server negotiation: no PROTOCOL message seen")
+		done <- ErrServerProtocolError
+		return
+	}
+	c.Protocol = p.ProtocolVersion
+	if c.Protocol < MinimumSupportedMapProtocol {
+		c.Logf("unable to connect to mapper with protocol older than %d (server offers %d)", MinimumSupportedMapProtocol, c.Protocol)
+		done <- fmt.Errorf("server version %d too old (must be at least %d)", c.Protocol, MinimumSupportedMapProtocol)
+		return
+	}
+	if c.Protocol > MaximumSupportedMapProtocol {
+		c.Logf("unable to connect to mapper with protocol newer than %d (server offers %d)", MaximumSupportedMapProtocol, c.Protocol)
+		c.Log("** UPGRADE GMA **")
+		done <- fmt.Errorf("server version %d too new (must be at most %d)", c.Protocol, MaximumSupportedMapProtocol)
+		return
+	}
+
+	// Now proceed to get logged in to the server
 	for !syncDone {
 		incomingPacket := c.serverConn.Receive(done)
 		if incomingPacket == nil {
@@ -2397,19 +2445,21 @@ func (c *Connection) login(done chan error) {
 			c.debug(3, util.Hexdump(incomingPacket.RawBytes()))
 		}
 
+		// Protocol sequence:
+		// <- PROTOCOL v
+		// <- AC, DSM, UPDATES, WORLD, // messages
+		// <- OK
+		// -> AUTH (if authentication required)
+		// <- GRANTED or DENIED (if AUTH required and given)
+		// <- AC, DSM, UPDATES, WORLD, // messages
+		// <- READY
+
 		switch response := incomingPacket.(type) {
 		case ChallengeMessagePayload:
-			c.Protocol = response.Protocol
-
-			if c.Protocol < MinimumSupportedMapProtocol {
-				c.Logf("unable to connect to mapper with protocol older than %d (server offers %d)", MinimumSupportedMapProtocol, c.Protocol)
-				done <- fmt.Errorf("server version %d too old (must be at least %d)", c.Protocol, MinimumSupportedMapProtocol)
-				return
-			}
-			if c.Protocol > MaximumSupportedMapProtocol {
-				c.Logf("unable to connect to mapper with protocol newer than %d (server offers %d)", MaximumSupportedMapProtocol, c.Protocol)
-				c.Log("** UPGRADE GMA **")
-				done <- fmt.Errorf("server version %d too new (must be at most %d)", c.Protocol, MaximumSupportedMapProtocol)
+			// OK Protocol=v [Challenge=data]
+			if response.Protocol != c.Protocol {
+				c.Logf("server advertised protocol %v initially but then claimed version %v", c.Protocol, response.Protocol)
+				done <- fmt.Errorf("server can't make up its mind whether it uses protocol %v or %v", c.Protocol, response.Protocol)
 				return
 			}
 
@@ -2490,7 +2540,7 @@ func (c *Connection) login(done chan error) {
 			}
 
 		case UpdatePeerListMessagePayload, CommentMessagePayload:
-			// Ignore
+			c.Logf("Ignoring message %v while waiting for authentication to complete", incomingPacket.MessageType())
 
 		default:
 			c.Logf("unexpected server message %v while waiting for authentication to complete", incomingPacket.MessageType())
@@ -2572,12 +2622,16 @@ func (c *Connection) receiveDSM(d UpdateStatusMarkerMessagePayload) {
 
 func (c *Connection) receiveAddCharacter(d AddCharacterMessagePayload) {
 	if c != nil {
-		c.Characters[d.Name] = CharacterDefinition{
-			Name:  d.Name,
-			ObjID: d.ObjID,
-			Color: d.Color,
-			Area:  d.Area,
-			Size:  d.Size,
+		c.Characters[d.Name] = PlayerToken{
+			CreatureToken: CreatureToken{
+				BaseMapObject: BaseMapObject{
+					ID: d.ObjID(),
+				},
+				Name:  d.Name,
+				Color: d.Color,
+				Area:  d.Area,
+				Size:  d.Size,
+			},
 		}
 	}
 }
@@ -2618,29 +2672,23 @@ func (c *Connection) listen(done chan error) {
 		}
 
 		switch cmd := incomingPacket.(type) {
-		case CommentMessagePayload:
-			if ch, ok := c.Subscriptions[Comment]; ok {
-				ch <- cmd
-			}
-
-		case AddCharacterMessagePayload:
-			c.receiveAddCharacter(cmd)
-			if ch, ok := c.Subscriptions[AddCharacter]; ok {
-				ch <- cmd
-			}
-
 		case AddImageMessagePayload:
 			if ch, ok := c.Subscriptions[AddImage]; ok {
 				ch <- cmd
 			}
 
-		case QueryImageMessagePayload:
-			if ch, ok := c.Subscriptions[QueryImage]; ok {
+		case AddObjAttributesMessagePayload:
+			if ch, ok := c.Subscriptions[AddObjAttributes]; ok {
 				ch <- cmd
 			}
 
 		case AdjustViewMessagePayload:
 			if ch, ok := c.Subscriptions[AdjustView]; ok {
+				ch <- cmd
+			}
+
+		case ChatMessageMessagePayload:
+			if ch, ok := c.Subscriptions[ChatMessage]; ok {
 				ch <- cmd
 			}
 
@@ -2664,39 +2712,8 @@ func (c *Connection) listen(done chan error) {
 				ch <- cmd
 			}
 
-		case UpdatePeerListMessagePayload:
-			if ch, ok := c.Subscriptions[UpdatePeerList]; ok {
-				ch <- cmd
-			}
-
-		case UpdateClockMessagePayload:
-			if ch, ok := c.Subscriptions[UpdateClock]; ok {
-				ch <- cmd
-			}
-
-		case UpdateDicePresetsMessagePayload:
-			if ch, ok := c.Subscriptions[UpdateDicePresets]; ok {
-				ch <- cmd
-			}
-
-		case UpdateStatusMarkerMessagePayload:
-			c.receiveDSM(cmd)
-			if ch, ok := c.Subscriptions[UpdateStatusMarker]; ok {
-				ch <- cmd
-			}
-
-		case UpdateTurnMessagePayload:
-			if ch, ok := c.Subscriptions[UpdateTurn]; ok {
-				ch <- cmd
-			}
-
-		case UpdateInitiativeMessagePayload:
-			if ch, ok := c.Subscriptions[UpdateInitiative]; ok {
-				ch <- cmd
-			}
-
-		case LoadFromMessagePayload:
-			if ch, ok := c.Subscriptions[LoadFrom]; ok {
+		case CommentMessagePayload:
+			if ch, ok := c.Subscriptions[Comment]; ok {
 				ch <- cmd
 			}
 
@@ -2707,6 +2724,11 @@ func (c *Connection) listen(done chan error) {
 
 		case LoadCircleObjectMessagePayload:
 			if ch, ok := c.Subscriptions[LoadCircleObject]; ok {
+				ch <- cmd
+			}
+
+		case LoadFromMessagePayload:
+			if ch, ok := c.Subscriptions[LoadFrom]; ok {
 				ch <- cmd
 			}
 
@@ -2752,20 +2774,90 @@ func (c *Connection) listen(done chan error) {
 				ch <- cmd
 			}
 
+		case PlaceSomeoneMessagePayload:
+			if ch, ok := c.Subscriptions[PlaceSomeone]; ok {
+				ch <- cmd
+			}
+
+		case PrivMessagePayload:
+			if ch, ok := c.Subscriptions[Priv]; ok {
+				ch <- cmd
+			}
+
+		case QueryImageMessagePayload:
+			if ch, ok := c.Subscriptions[QueryImage]; ok {
+				ch <- cmd
+			}
+
+		case RemoveObjAttributesMessagePayload:
+			if ch, ok := c.Subscriptions[RemoveObjAttributes]; ok {
+				ch <- cmd
+			}
+
+		case RollResultMessagePayload:
+			if ch, ok := c.Subscriptions[RollResult]; ok {
+				ch <- cmd
+			}
+
+		case ToolbarMessagePayload:
+			if ch, ok := c.Subscriptions[Toolbar]; ok {
+				ch <- cmd
+			}
+
+		case UpdateClockMessagePayload:
+			if ch, ok := c.Subscriptions[UpdateClock]; ok {
+				ch <- cmd
+			}
+
+		case UpdateDicePresetsMessagePayload:
+			if ch, ok := c.Subscriptions[UpdateDicePresets]; ok {
+				ch <- cmd
+			}
+
+		case UpdateInitiativeMessagePayload:
+			if ch, ok := c.Subscriptions[UpdateInitiative]; ok {
+				ch <- cmd
+			}
+
 		case UpdateObjAttributesMessagePayload:
 			if ch, ok := c.Subscriptions[UpdateObjAttributes]; ok {
 				ch <- cmd
 			}
 
-		case AddObjAttributesMessagePayload:
-			if ch, ok := c.Subscriptions[AddObjAttributes]; ok {
+		case UpdatePeerListMessagePayload:
+			if ch, ok := c.Subscriptions[UpdatePeerList]; ok {
 				ch <- cmd
 			}
 
-		case AcceptMessagePayload, AddDicePresetsMessagePayload, AuthMessagePayload, DefineDicePresetsMessagePayload, FilterDicePresetsMessagePayload,
-			PoloMessagePayload, QueryDicePresetsMessagePayload, QueryPeersMessagePayload, RollDiceMessagePayload,
-			SyncChatMessagePayload, SyncMessagePayload:
-			c.reportError(fmt.Errorf("server message type %v should not be sent to a client (ignored)", cmd.MessageType()))
+		case UpdateProgressMessagePayload:
+			if ch, ok := c.Subscriptions[UpdateProgress]; ok {
+				ch <- cmd
+			}
+
+		case UpdateStatusMarkerMessagePayload:
+			c.receiveDSM(cmd)
+			if ch, ok := c.Subscriptions[UpdateStatusMarker]; ok {
+				ch <- cmd
+			}
+
+		case UpdateTurnMessagePayload:
+			if ch, ok := c.Subscriptions[UpdateTurn]; ok {
+				ch <- cmd
+			}
+
+		case AddCharacterMessagePayload, ChallengeMessagePayload, DeniedMessagePayload,
+			 GrantedMessagePayload, ProtocolMessagePayload, ReadyMessagePayload,
+			 UpdateVersionsMessagePayload, WorldMessagePayload:
+
+			c.reportError(fmt.Errorf("message type %v should not be sent to client at this stage in the session", cmd.MessageType()))
+
+		case AcceptMessagePayload, AddDicePresetsMessagePayload, AllowMessagePayload,
+			 AuthMessagePayload, DefineDicePresetsMessagePayload, 
+			 FilterDicePresetsMessagePayload, PoloMessagePayload,
+			 QueryDicePresetsMessagePayload, QueryPeersMessagePayload,
+			 RollDiceMessagePayload, SyncMessagePayload, SyncChatMessagePayload:
+
+			c.reportError(fmt.Errorf("message type %v should not be sent to a client (ignored)", cmd.MessageType()))
 
 		default:
 			if ch, ok := c.Subscriptions[UNKNOWN]; ok {
@@ -2874,31 +2966,31 @@ func (c *Connection) filterSubscriptions() error {
 		return nil
 	}
 
-	subList := []string{"AC", "DSM", "MARCO"} // these are unconditional
+	subList := []string{"MARCO", "PRIV"} // these are unconditional
 	for msg := range c.Subscriptions {
 		switch msg {
-		//Accept
-		//AddCharacter (mandatory)
-		//AddDicePresets
-		//Auth
-		//Challenge
-		//DefineDicePresets
-		//Denied
-		//FilterDicePresets
-		//Granted
+		//Accept (client)
+		//AddCharacter (forbidden)
+		//AddDicePresets (client)
+		//Allow (client)
+		//Auth (client)
+		//Challenge (forbidden)
+		//DefineDicePresets (client)
+		//Denied (forbidden)
+		//FilterDicePresets (client)
+		//Granted (forbidden)
 		//Marco (mandatory)
-		//Polo
-		//Priv
-		//QueryDicePresets
-		//QueryPeers
-		//Ready
-		//RollDice
-		//Sync
-		//SyncChat
-		//UpdateStatusMarker (mandatory)
-		//UpdateVersions
-		//World
-		//WriteOnly
+		//Polo (client)
+		//Priv (mandatory)
+		//Protocol (forbidden)
+		//QueryDicePresets (client)
+		//QueryPeers (client)
+		//Ready (forbidden)
+		//RollDice (client)
+		//Sync (client)
+		//SyncChat (client)
+		//UpdateVersions (forbidden)
+		//World (forbidden)
 
 		case AddImage:
 			subList = append(subList, "AI")
@@ -2960,6 +3052,8 @@ func (c *Connection) filterSubscriptions() error {
 			subList = append(subList, "CONN")
 		case UpdateProgress:
 			subList = append(subList, "PROGRESS")
+		case UpdateStatusMarker:
+				subList = append(subList, "DSM")
 		case UpdateTurn:
 			subList = append(subList, "I")
 		}
@@ -2973,6 +3067,7 @@ func (c *Connection) filterSubscriptions() error {
 //
 // Tell the server to send us all possible messages.
 //
+/*
 func (c *Connection) unfilterSubscriptions() error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -2981,6 +3076,34 @@ func (c *Connection) unfilterSubscriptions() error {
 		Messages: nil,
 	})
 }
+*/
+
+//
+// CheckVersionOf returns the closest match of the requested package
+// to the platform we are currently running, or nil if we're already
+// on the advertised version.
+//
+func (c *Connection) CheckVersionOf(packageName, myVersionNumber string) (*PackageVersion, error) {
+	var availableVersion *PackageVersion
+
+	candidates, ok := c.PackageUpdatesAvailable[packageName]
+	if !ok {
+		return nil, fmt.Errorf("The server provided no upgrade information for package \"%s\"", packageName)
+	}
+	for _, candidate := range candidates {
+		if (candidate.OS == "" || candidate.OS == runtime.GOOS) && (candidate.Arch == "" || candidate.Arch == runtime.GOARCH) {
+			if availableVersion.Version != "" && ((candidate.OS != "" && availableVersion.OS == "") || (candidate.Arch != "" && availableVersion.Arch == "")) {
+				// found a more specific match, use that instead
+				availableVersion = &candidate
+			} else if availableVersion.Version == "" {
+				availableVersion = &candidate
+			}
+		}
+	}
+
+	return availableVersion, nil
+}
+				
 
 // @[00]@| GMA 5.0.0
 // @[01]@|
