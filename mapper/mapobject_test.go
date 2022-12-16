@@ -151,6 +151,10 @@ func TestLegacyObjLoadOnePlayer(t *testing.T) {
 }
 «CREATURE» {
     "ID": "PC73",
+    "Dim": true,
+    "CreatureType": 2,
+    "Gx": 31,
+    "Gy": 14,
     "Name": "Jigu",
     "Health": {
         "MaxHP": 28,
@@ -158,13 +162,9 @@ func TestLegacyObjLoadOnePlayer(t *testing.T) {
         "Con": 16,
         "HPBlur": 10
     },
-    "Gx": 31,
-    "Gy": 14,
     "Color": "blue",
     "Size": "M",
-    "Area": "M",
-    "Dim": true,
-    "CreatureType": 2
+    "Area": "M"
 }
 «__EOF__»
 `
@@ -924,20 +924,20 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
 }
 «CREATURE» {
     "ID": "2df3e0a104614c5cb76f31836bc3f84d",
+    "Killed": true,
+    "Dim": true,
+    "CreatureType": 1,
+    "Gx": 27,
+    "Gy": 22,
     "Name": "Fleshdreg #4",
     "Health": {
         "MaxHP": 9,
         "LethalDamage": 29,
         "Con": 15
     },
-    "Gx": 27,
-    "Gy": 22,
     "Color": "red",
     "Size": "S",
-    "Area": "S",
-    "Killed": true,
-    "Dim": true,
-    "CreatureType": 1
+    "Area": "S"
 }
 «LINE» {
     "ID": "38f633da2d6749467f5406f187b8cc3f",
@@ -974,23 +974,23 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
 }
 «CREATURE» {
     "ID": "39a1afc1b1aa4cac87eee32be93ebe9a",
+    "Dim": true,
+    "CreatureType": 1,
+    "Reach": 1,
+    "Gx": 19,
+    "Gy": 19,
     "Name": "barbarian2=Caroll",
     "Health": {
         "MaxHP": 45,
         "LethalDamage": 56,
         "Con": 14
     },
-    "Gx": 19,
-    "Gy": 19,
     "Color": "red",
     "Size": "M",
     "Area": "M",
     "StatusList": [
         "stable"
-    ],
-    "Reach": 1,
-    "Dim": true,
-    "CreatureType": 1
+    ]
 }
 «CIRC» {
     "ID": "3f5b6a2655214928b868daad9a97db4d",
@@ -1086,11 +1086,13 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
 }
 «CREATURE» {
     "ID": "976e7148ae86409f99fdebf83f3f0904",
-    "Name": "Jigu2",
-    "Gx": 6,
-    "Gy": 6,
+    "CreatureType": 2,
+    "MoveMode": 3,
     "Skin": 1,
     "Elev": 20,
+    "Gx": 6,
+    "Gy": 6,
+    "Name": "Jigu2",
     "Color": "green",
     "Note": "spam spam",
     "Size": "M",
@@ -1103,12 +1105,17 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
     "AoE": {
         "Radius": 2,
         "Color": "black"
-    },
-    "MoveMode": 3,
-    "CreatureType": 2
+    }
 }
 «CREATURE» {
     "ID": "PC73",
+    "Dim": true,
+    "CreatureType": 2,
+    "MoveMode": 3,
+    "Skin": 1,
+    "Elev": 30,
+    "Gx": 31,
+    "Gy": 14,
     "Name": "Jigu",
     "Health": {
         "MaxHP": 28,
@@ -1117,21 +1124,14 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
         "Con": 16,
         "Condition": "surprised"
     },
-    "Gx": 31,
-    "Gy": 14,
-    "Skin": 1,
     "SkinSize": [
         "M",
         "L"
     ],
-    "Elev": 30,
     "Color": "blue",
     "Note": "Mirror Image 2",
     "Size": "M",
-    "Area": "M",
-    "MoveMode": 3,
-    "Dim": true,
-    "CreatureType": 2
+    "Area": "M"
 }
 «SAOE» {
     "ID": "afd136735d7e400082f331485e73f7a1",

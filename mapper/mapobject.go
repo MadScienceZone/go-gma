@@ -649,18 +649,31 @@ const (
 type CreatureToken struct {
 	BaseMapObject
 
-	// The name of the creature as displayed on the map. Must be unique
-	// among the other creatures.
-	Name string
+	// Is the creature currently dead? (This takes precedence over the
+	// Health attribute's indication that the creature has taken a
+	// fatal amount of damage.)
+	Killed bool `json:",omitempty"`
 
-	// If non-nil, this tracks the health status of the creature.
-	Health *CreatureHealth `json:",omitempty"`
+	// In combat, if this is true, the token is "dimmed" to indicate
+	// that it is not their turn to act.
+	Dim bool `json:",omitempty"`
 
-	// Grid (x, y) coordinates for the reference point of the
-	// creature.  Unlike MapElement coordinates, these are in
-	// grid units (1 grid = 5 feet).  The upper-left corner of
-	// the creature token is at this location.
-	Gx, Gy float64
+	// The creature type.
+	CreatureType CreatureTypeCode
+
+	// The method of locomotion currently being used by this creature.
+	// Normally this is MoveModeLand for land-based creatures which
+	// are walking/running.
+	MoveMode MoveModeType `json:",omitempty"`
+
+	// Is the creature currently wielding a reach weapon or otherwise
+	// using the "reach" alternate threat zone?
+	// If this value is 0, the threat zone is normal for a creature
+	// of its size. If 1, an extended area (appropriate for using
+	// a reach weapon) is used instead. If 2, both areas are used,
+	// so the creature may attack into the reach zone AND adjacent
+	// foes.
+	Reach int `json:",omitempty"`
 
 	// For creatures which may change their shape or appearance,
 	// multiple "skins" may be defined to display as appropriate.
@@ -668,6 +681,23 @@ type CreatureToken struct {
 	// Skin is 0 for the default appearance of the creature, 1
 	// for the alternate image, 2 for the 2nd alternate image, etc.
 	Skin int `json:",omitempty"`
+
+	// Current elevation in feet relative to the "floor" of the
+	// current location.
+	Elev int `json:",omitempty"`
+
+	// Grid (x, y) coordinates for the reference point of the
+	// creature.  Unlike MapElement coordinates, these are in
+	// grid units (1 grid = 5 feet).  The upper-left corner of
+	// the creature token is at this location.
+	Gx, Gy float64
+
+	// The name of the creature as displayed on the map. Must be unique
+	// among the other creatures.
+	Name string
+
+	// If non-nil, this tracks the health status of the creature.
+	Health *CreatureHealth `json:",omitempty"`
 
 	// If the different "skins" are different sizes, this is a list
 	// of size codes for each of them. For example, if there are 3
@@ -677,10 +707,6 @@ type CreatureToken struct {
 	// size specified in the Size attribute. Note that SkinSize
 	// also sets the Area at the same time.
 	SkinSize []string `json:",omitempty"`
-
-	// Current elevation in feet relative to the "floor" of the
-	// current location.
-	Elev int `json:",omitempty"`
 
 	// The color to draw the creature's threat zone when in combat.
 	Color string
@@ -713,32 +739,6 @@ type CreatureToken struct {
 	// Currently only radius emanations are supported. In future, the
 	// type of this attribute may change to handle other shapes.
 	AoE *RadiusAoE `json:",omitempty"`
-
-	// The method of locomotion currently being used by this creature.
-	// Normally this is MoveModeLand for land-based creatures which
-	// are walking/running.
-	MoveMode MoveModeType `json:",omitempty"`
-
-	// Is the creature currently wielding a reach weapon or otherwise
-	// using the "reach" alternate threat zone?
-	// If this value is 0, the threat zone is normal for a creature
-	// of its size. If 1, an extended area (appropriate for using
-	// a reach weapon) is used instead. If 2, both areas are used,
-	// so the creature may attack into the reach zone AND adjacent
-	// foes.
-	Reach int `json:",omitempty"`
-
-	// Is the creature currently dead? (This takes precedence over the
-	// Health attribute's indication that the creature has taken a
-	// fatal amount of damage.)
-	Killed bool `json:",omitempty"`
-
-	// In combat, if this is true, the token is "dimmed" to indicate
-	// that it is not their turn to act.
-	Dim bool `json:",omitempty"`
-
-	// The creature type.
-	CreatureType CreatureTypeCode
 }
 
 //
@@ -746,6 +746,12 @@ type CreatureToken struct {
 // tracking it for them.
 //
 type CreatureHealth struct {
+	// Is the creature flat-footed?
+	IsFlatFooted bool `json:",omitempty"`
+
+	// Has the creature been stabilized to prevent death while critically wounded?
+	IsStable bool `json:",omitempty"`
+
 	// The maximum hit points possible for the creature.
 	MaxHP int `json:",omitempty"`
 
@@ -758,22 +764,16 @@ type CreatureHealth struct {
 	// the creature's Constitution score, hence the name.
 	Con int `json:",omitempty"`
 
-	// Is the creature flat-footed?
-	IsFlatFooted bool `json:",omitempty"`
-
-	// Has the creature been stabilized to prevent death while critically wounded?
-	IsStable bool `json:",omitempty"`
-
-	// Override the map client's idea of how to display the creature's health condition.
-	// Normally this is the empty string which allows the client to calculate it from the
-	// information available to it.
-	Condition string `json:",omitempty"`
-
 	// If 0, the creature's health is displayed accurately on the map. Otherwise,
 	// this gives the percentage by which to "blur" the hit points as seen by the
 	// players. For example, if HPBlur is 10, then hit points are displayed only in
 	// 10% increments.
 	HPBlur int `json:",omitempty"`
+
+	// Override the map client's idea of how to display the creature's health condition.
+	// Normally this is the empty string which allows the client to calculate it from the
+	// information available to it.
+	Condition string `json:",omitempty"`
 }
 
 //
@@ -850,17 +850,17 @@ type ImageDefinition struct {
 }
 
 type ImageInstance struct {
+	// If IsLocalFile is true, File is the name of the image file on disk;
+	// otherwise it is the server's internal ID by which you may request
+	// that file from the server.
+	IsLocalFile bool `json:",omitempty"`
+
 	// The zoom (magnification) level this bitmap represents for the given
 	// image.
 	Zoom float64
 
 	// The filename by which the image can be retrieved.
 	File string
-
-	// If IsLocalFile is true, File is the name of the image file on disk;
-	// otherwise it is the server's internal ID by which you may request
-	// that file from the server.
-	IsLocalFile bool `json:",omitempty"`
 
 	// If non-nil, this holds the image data received directly
 	// from the server. This usage is not recommended but still
@@ -880,13 +880,13 @@ type ImageInstance struct {
 // may be of interest to retrieve at some point.
 //
 type FileDefinition struct {
-	// The filename or Server ID.
-	File string
-
 	// If IsLocalFile is true, File is the name of the file on disk;
 	// otherwise it is the server's internal ID by which you may request
 	// that file from the server.
 	IsLocalFile bool `json:",omitempty"`
+
+	// The filename or Server ID.
+	File string
 }
 
 //
