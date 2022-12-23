@@ -73,6 +73,93 @@ var ErrAuthenticationFailed = errors.New("access denied to server")
 var ErrServerProtocolError = errors.New("server protocol error; unable to continue")
 
 //
+// Debugging information is enabled by selecting a nummber
+// of discrete topics which you want logged as the application
+// runs (previous versions used a "level" of verbosity which
+// doesn't provide the better granularity this version provides
+// to just get the info you want.
+//
+type DebugFlags uint64
+
+const (
+	DebugAuth DebugFlags = 1 << iota
+	DebugBinary
+	DebugEvents
+	DebugIO
+	DebugMisc
+	DebugAll DebugFlags = 0xffffffff
+)
+
+//
+// DebugFlagNames returns a string representation of
+// the debugging flags (topics) stored in the DebugFlags
+// value passed in.
+//
+func DebugFlagNames(flags DebugFlags) string {
+	if flags == 0 {
+		return "<none>"
+	}
+	if flags == DebugAll {
+		return "<all>"
+	}
+
+	var list []string
+	for _, f := range []struct {
+		bits DebugFlags
+		name string
+	}{
+		{bits: DebugAuth, name: "auth"},
+		{bits: DebugBinary, name: "binary"},
+		{bits: DebugEvents, name: "events"},
+		{bits: DebugIO, name: "i/o"},
+		{bits: DebugMisc, name: "misc"},
+	} {
+		if (flags & f.bits) != 0 {
+			list = append(list, f.name)
+		}
+	}
+	return "<" + strings.Join(list, ",") + ">"
+}
+
+//
+// NamedDebugFlags takes a comma-separated list of
+// debug flag (topic) names, or a list of individual
+// names, or both, and returns the DebugFlags
+// value which includes all of them.
+//
+// If "none" appears in the list, it cancels all previous
+// values seen, but subsequent names will add their values
+// to the list.
+//
+func NamedDebugFlags(names ...string) (DebugFlags, error) {
+	var d DebugFlags
+	for _, name := range names {
+		for _, flag := range strings.Split(name, ",") {
+			switch flag {
+			case "":
+			case "none":
+				d = 0
+			case "all":
+				d = DebugAll
+			case "auth":
+				d |= DebugAuth
+			case "binary":
+				d |= DebugBinary
+			case "events":
+				d |= DebugEvents
+			case "i/o", "io":
+				d |= DebugIO
+			case "misc":
+				d |= DebugMisc
+			default:
+				return 0, fmt.Errorf("unknown debug flag name \"%s\"", flag)
+			}
+		}
+	}
+	return d, nil
+}
+
+//
 // Connection describes a connection to the server. These are
 // created with NewConnection and then send methods such as
 // Subscribe and Dial.
@@ -94,7 +181,7 @@ type Connection struct {
 	Protocol int
 
 	// The verbosity level of debugging log messages.
-	DebuggingLevel uint
+	DebuggingLevel DebugFlags
 
 	// If nonzero, our connection attempts will timeout after the
 	// specified time interval. Otherwise they will wait indefinitely.
@@ -152,7 +239,7 @@ type Connection struct {
 //
 func (c *Connection) Log(message ...any) {
 	if c != nil && c.Logger != nil {
-		message = append([]any{"[client]"}, message...)
+		message = append([]any{"[client] "}, message...)
 		c.Logger.Print(message...)
 	}
 }
@@ -308,15 +395,11 @@ func StayConnected(enable bool) ConnectionOption {
 //
 // WithDebugging modifies the behavior of the NewConnection function
 // so that the operations of the Connection's interaction with the
-// server are logged to varying levels of verbosity:
-//   0 - no extra logging
-//   1 - each incoming/outgoing message is logged
-//   2 - more internal state is exposed
-//   3 - the full data for each incoming/outgoing message is logged
+// server are logged to varying levels of verbosity.
 //
-func WithDebugging(level uint) ConnectionOption {
+func WithDebugging(flags DebugFlags) ConnectionOption {
 	return func(c *Connection) error {
-		c.DebuggingLevel = level
+		c.DebuggingLevel = flags
 		return nil
 	}
 }
@@ -383,11 +466,11 @@ func NewConnection(endpoint string, opts ...ConnectionOption) (Connection, error
 //
 // Log debugging info at the given level.
 //
-func (c *Connection) debug(level uint, msg string) {
-	if c != nil && c.DebuggingLevel >= level {
+func (c *Connection) debug(level DebugFlags, msg string) {
+	if c != nil && (c.DebuggingLevel&level) != 0 {
 		for i, line := range strings.Split(msg, "\n") {
 			if line != "" {
-				c.Logf("DEBUG%d.%02d: %s", level, i, line)
+				c.Logf("DEBUG%s%02d: %s", DebugFlagNames(level), i, line)
 			}
 		}
 	}
@@ -405,7 +488,7 @@ func (c *Connection) debug(level uint, msg string) {
 //
 func (c *Connection) Close() {
 	if c != nil {
-		c.debug(1, "Close()")
+		c.debug(DebugIO, "Close()")
 		c.serverConn.Close()
 	}
 }
@@ -1230,7 +1313,7 @@ func (c *Connection) FilterDicePresetsFor(user, re string) error {
 		return fmt.Errorf("nil Connection")
 	}
 	return c.serverConn.Send(FilterDicePresets, FilterDicePresetsMessagePayload{
-		For: user,
+		For:    user,
 		Filter: re,
 	})
 }
@@ -1783,7 +1866,7 @@ func (c *Connection) DefineDicePresetsFor(user string, presets []dice.DieRollPre
 		return fmt.Errorf("nil Connection")
 	}
 	return c.serverConn.Send(DefineDicePresets, DefineDicePresetsMessagePayload{
-		For: user,
+		For:     user,
 		Presets: presets,
 	})
 }
@@ -1814,7 +1897,7 @@ func (c *Connection) AddDicePresetsFor(user string, presets []dice.DieRollPreset
 		return fmt.Errorf("nil Connection")
 	}
 	return c.serverConn.Send(AddDicePresets, AddDicePresetsMessagePayload{
-		For: user,
+		For:     user,
 		Presets: presets,
 	})
 }
@@ -1873,7 +1956,7 @@ func (c *Connection) UpdateClock(absolute, relative float64, keepRunning bool) e
 	return c.serverConn.Send(UpdateClock, UpdateClockMessagePayload{
 		Absolute: absolute,
 		Relative: relative,
-		Running: keepRunning,
+		Running:  keepRunning,
 	})
 }
 
@@ -2053,7 +2136,7 @@ type UpdateProgressMessagePayload struct {
 // on creature tokens.
 //
 // Note: the server usually sends these upon login, which the Connection
-// struct stores internally. 
+// struct stores internally.
 //
 type UpdateStatusMarkerMessagePayload struct {
 	BaseMessagePayload
@@ -2188,11 +2271,12 @@ func (c *Connection) UpdateTurn(relative float64, actor string) error {
 		Minutes: (int(relative) / 60) % 60,
 		Seconds: int(relative) % 60,
 		// total rounds since start of combat
-		Rounds:  int(relative) / 6,
+		Rounds: int(relative) / 6,
 		// initiative count since start of round
-		Count:   int(relative*10) % 60,
+		Count: int(relative*10) % 60,
 	})
 }
+
 //
 // Sync requests that the server send the entire game state
 // to it.
@@ -2338,8 +2422,8 @@ func (c *Connection) tryConnect() error {
 	var conn net.Conn
 	var i uint
 
-	c.debug(2, "tryConnect() started")
-	defer c.debug(2, "tryConnect() ended")
+	c.debug(DebugIO, "tryConnect() started")
+	defer c.debug(DebugIO, "tryConnect() ended")
 
 	for i = 0; c.Retries == 0 || i < c.Retries; i++ {
 		if c.Timeout == 0 {
@@ -2399,8 +2483,8 @@ func (c *Connection) login(done chan error) {
 		return
 	}
 
-	c.debug(2, "login() started")
-	defer c.debug(2, "login() ended")
+	c.debug(DebugIO, "login() started")
+	defer c.debug(DebugIO, "login() ended")
 
 	c.Log("initial server negotiation...")
 	syncDone := false
@@ -2441,8 +2525,8 @@ func (c *Connection) login(done chan error) {
 			break
 		}
 
-		if c.DebuggingLevel >= 3 {
-			c.debug(3, util.Hexdump(incomingPacket.RawBytes()))
+		if (c.DebuggingLevel & DebugBinary) != 0 {
+			c.debug(DebugBinary, util.Hexdump(incomingPacket.RawBytes()))
 		}
 
 		// Protocol sequence:
@@ -2483,6 +2567,9 @@ func (c *Connection) login(done chan error) {
 					User:     c.Authenticator.Username,
 				})
 				c.Log("authentication sent, awaiting validation.")
+				if err := c.serverConn.Flush(); err != nil {
+					c.Logf("can't authenticate: %v", err)
+				}
 				authPending = true
 			} else {
 				c.Logf("using protocol %d.", c.Protocol)
@@ -2517,14 +2604,14 @@ func (c *Connection) login(done chan error) {
 	}
 
 	// If we're still waiting for authentication results, do that...
-	c.debug(2, "Switched to authentication result scanner")
+	c.debug(DebugIO, "Switched to authentication result scanner")
 	for authPending {
 		incomingPacket := c.serverConn.Receive(done)
 		if incomingPacket == nil {
 			break
 		}
-		if c.DebuggingLevel >= 3 {
-			c.debug(3, util.Hexdump(incomingPacket.RawBytes()))
+		if (c.DebuggingLevel & DebugBinary) != 0 {
+			c.debug(DebugBinary, util.Hexdump(incomingPacket.RawBytes()))
 		}
 		switch response := incomingPacket.(type) {
 		case DeniedMessagePayload:
@@ -2559,8 +2646,8 @@ waitForReady:
 			break
 		}
 
-		if c.DebuggingLevel >= 3 {
-			c.debug(3, util.Hexdump(incomingPacket.RawBytes()))
+		if (c.DebuggingLevel & DebugBinary) != 0 {
+			c.debug(DebugBinary, util.Hexdump(incomingPacket.RawBytes()))
 		}
 
 		switch response := incomingPacket.(type) {
@@ -2587,9 +2674,7 @@ waitForReady:
 		}
 	}
 
-	if c.DebuggingLevel >= 2 {
-		c.debug(2, "Server ready; filtering to subscription list")
-	}
+	c.debug(DebugIO, "Server ready; filtering to subscription list")
 
 	if err := c.filterSubscriptions(); err != nil {
 		done <- err
@@ -2597,15 +2682,15 @@ waitForReady:
 	}
 
 	if c.DebuggingLevel >= 2 {
-		c.debug(2, "Completed server sign-on process")
+		c.debug(DebugIO, "Completed server sign-on process")
 		if c.Authenticator != nil {
-			c.debug(2, fmt.Sprintf("Logged in as %s", c.Authenticator.Username))
+			c.debug(DebugAuth, fmt.Sprintf("Logged in as %s", c.Authenticator.Username))
 		}
-		c.debug(2, fmt.Sprintf("Server is using protocol version %d", c.Protocol))
-		c.debug(2, fmt.Sprintf("Defined Characters:\n%s", CharacterDefinitions(c.Characters).Text()))
-		c.debug(2, fmt.Sprintf("Defined Status Markers:\n%s", StatusMarkerDefinitions(c.Conditions).Text()))
-		c.debug(2, "Preamble:\n"+strings.Join(c.Preamble, "\n"))
-		c.debug(2, fmt.Sprintf("Last error: %v", c.LastError))
+		c.debug(DebugIO, fmt.Sprintf("Server is using protocol version %d", c.Protocol))
+		c.debug(DebugIO, fmt.Sprintf("Defined Characters:\n%s", CharacterDefinitions(c.Characters).Text()))
+		c.debug(DebugIO, fmt.Sprintf("Defined Status Markers:\n%s", StatusMarkerDefinitions(c.Conditions).Text()))
+		c.debug(DebugIO, "Preamble:\n"+strings.Join(c.Preamble, "\n"))
+		c.debug(DebugIO, fmt.Sprintf("Last error: %v", c.LastError))
 	}
 }
 
@@ -2656,9 +2741,9 @@ func (c *Connection) listen(done chan error) {
 	defer func() {
 		close(done)
 		c.Log("stopped listening to server")
-		c.debug(2, "listen() ended")
+		c.debug(DebugIO, "listen() ended")
 	}()
-	c.debug(2, "listen() started")
+	c.debug(DebugIO, "listen() started")
 
 	c.Log("listening for server messages to dispatch...")
 	for {
@@ -2667,8 +2752,8 @@ func (c *Connection) listen(done chan error) {
 			break
 		}
 
-		if c.DebuggingLevel >= 3 {
-			c.debug(3, util.Hexdump(incomingPacket.RawBytes()))
+		if (c.DebuggingLevel & DebugBinary) != 0 {
+			c.debug(DebugBinary, util.Hexdump(incomingPacket.RawBytes()))
 		}
 
 		switch cmd := incomingPacket.(type) {
@@ -2846,16 +2931,16 @@ func (c *Connection) listen(done chan error) {
 			}
 
 		case AddCharacterMessagePayload, ChallengeMessagePayload, DeniedMessagePayload,
-			 GrantedMessagePayload, ProtocolMessagePayload, ReadyMessagePayload,
-			 UpdateVersionsMessagePayload, WorldMessagePayload:
+			GrantedMessagePayload, ProtocolMessagePayload, ReadyMessagePayload,
+			UpdateVersionsMessagePayload, WorldMessagePayload:
 
 			c.reportError(fmt.Errorf("message type %v should not be sent to client at this stage in the session", cmd.MessageType()))
 
 		case AcceptMessagePayload, AddDicePresetsMessagePayload, AllowMessagePayload,
-			 AuthMessagePayload, DefineDicePresetsMessagePayload, 
-			 FilterDicePresetsMessagePayload, PoloMessagePayload,
-			 QueryDicePresetsMessagePayload, QueryPeersMessagePayload,
-			 RollDiceMessagePayload, SyncMessagePayload, SyncChatMessagePayload:
+			AuthMessagePayload, DefineDicePresetsMessagePayload,
+			FilterDicePresetsMessagePayload, PoloMessagePayload,
+			QueryDicePresetsMessagePayload, QueryPeersMessagePayload,
+			RollDiceMessagePayload, SyncMessagePayload, SyncChatMessagePayload:
 
 			c.reportError(fmt.Errorf("message type %v should not be sent to a client (ignored)", cmd.MessageType()))
 
@@ -2908,8 +2993,8 @@ func (c *Connection) interact() error {
 		c.Close()
 	}()
 
-	c.debug(2, "interact() started")
-	defer c.debug(2, "interact() ended")
+	c.debug(DebugIO, "interact() started")
+	defer c.debug(DebugIO, "interact() ended")
 
 	listenerDone := make(chan error, 1)
 	go c.listen(listenerDone)
@@ -2935,12 +3020,10 @@ func (c *Connection) interact() error {
 		// Send the next outgoing message in the buffer
 		//
 		if c.serverConn.writer != nil && len(c.serverConn.sendBuf) > 0 {
-			if c.DebuggingLevel >= 3 {
-				c.debug(3, util.Hexdump([]byte(c.serverConn.sendBuf[0])))
+			if (c.DebuggingLevel & DebugBinary) != 0 {
+				c.debug(DebugBinary, util.Hexdump([]byte(c.serverConn.sendBuf[0])))
 			}
-			if c.DebuggingLevel >= 1 {
-				c.debug(1, fmt.Sprintf("client->%q (%d)", c.serverConn.sendBuf[0], len(c.serverConn.sendBuf)))
-			}
+			c.debug(DebugIO, fmt.Sprintf("client->%q (%d)", c.serverConn.sendBuf[0], len(c.serverConn.sendBuf)))
 			if written, err := c.serverConn.writer.WriteString(c.serverConn.sendBuf[0]); err != nil {
 				return fmt.Errorf("only wrote %d of %d bytes: %v", written, len(c.serverConn.sendBuf[0]), err)
 			}
@@ -3053,7 +3136,7 @@ func (c *Connection) filterSubscriptions() error {
 		case UpdateProgress:
 			subList = append(subList, "PROGRESS")
 		case UpdateStatusMarker:
-				subList = append(subList, "DSM")
+			subList = append(subList, "DSM")
 		case UpdateTurn:
 			subList = append(subList, "I")
 		}
@@ -3103,7 +3186,6 @@ func (c *Connection) CheckVersionOf(packageName, myVersionNumber string) (*Packa
 
 	return availableVersion, nil
 }
-				
 
 // @[00]@| GMA 5.0.0
 // @[01]@|

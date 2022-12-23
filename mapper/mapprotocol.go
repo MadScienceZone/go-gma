@@ -34,8 +34,8 @@ import (
 // and protocol versions supported by this code.
 //
 const (
-	GMAMapperProtocol=400      // @@##@@ auto-configured
-	GMAVersionNumber="5.0.0" // @@##@@ auto-configured
+	GMAMapperProtocol           = 400     // @@##@@ auto-configured
+	GMAVersionNumber            = "5.0.0" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
 	MaximumSupportedMapProtocol = 400
 )
@@ -257,6 +257,8 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 		if reason, ok := data.(PrivMessagePayload); ok {
 			return c.sendJSON("PRIV", reason)
 		}
+	case Protocol:
+		return c.sendln("PROTOCOL", fmt.Sprintf("%v", data))
 	case QueryDicePresets:
 		return c.sendln("DR", "")
 	case QueryImage:
@@ -369,10 +371,19 @@ func (c *MapConnection) sendln(commandWord, data string) error {
 	}
 	packet.WriteString("\n")
 
-	select {
-	case c.sendChan <- packet.String():
-	default:
-		return fmt.Errorf("unable to send to server (Dial() not running?")
+	//	select {
+	//	case c.sendChan <- packet.String():
+	//	default:
+	//		return fmt.Errorf("unable to send to server (Dial() not running or data backed up?")
+	//	}
+	c.sendChan <- packet.String()
+	return nil
+}
+
+// blocking raw data sent to other side
+func (c *MapConnection) sendRaw(data string) error {
+	if c != nil {
+		c.sendChan <- data + "\n"
 	}
 	return nil
 }
@@ -921,4 +932,28 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 	}
 
 	return nil
+}
+
+//
+// Send out all waiting outbound messages and then return
+//
+func (c *MapConnection) Flush() error {
+	// receive all the messages still in the channel
+	for {
+		select {
+		case packet := <-c.sendChan:
+			c.sendBuf = append(c.sendBuf, packet)
+		default:
+			if c.writer == nil || len(c.sendBuf) == 0 {
+				return nil
+			}
+			if written, err := c.writer.WriteString(c.sendBuf[0]); err != nil {
+				return fmt.Errorf("error sending \"%s\" (wrote %d): %v", c.sendBuf[0], written, err)
+			}
+			if err := c.writer.Flush(); err != nil {
+				return fmt.Errorf("error sending \"%s\" (in flush): %v", c.sendBuf[0], err)
+			}
+			c.sendBuf = c.sendBuf[1:]
+		}
+	}
 }

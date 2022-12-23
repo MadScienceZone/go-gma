@@ -49,7 +49,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GMAVersionNumber="5.0.0" //@@##@@
+const GMAVersionNumber = "5.0.0" //@@##@@
 
 func main() {
 	fmt.Printf("GMA mapper console %s\n", GMAVersionNumber)
@@ -58,6 +58,14 @@ func main() {
 	conf, err := configureApp()
 	if err != nil {
 		log.Fatalf("unable to set up: %v", err)
+	}
+	logfile, _ := conf.GetDefault("logfile", "")
+	if logfile != "" && logfile != "-" {
+		f, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatalf("unable to open log file \"%s\": %v", logfile, err)
+		}
+		log.SetOutput(f)
 	}
 
 	host, ok := conf.Get("host")
@@ -76,6 +84,12 @@ func main() {
 	done := make(chan int)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	debugFlagList, _ := conf.GetDefault("debug", "")
+	debugFlags, err := mapper.NamedDebugFlags(debugFlagList)
+	if err != nil {
+		log.Fatalf("-debug: %v", err)
+	}
 
 	conOpts := []mapper.ConnectionOption{
 		mapper.WithContext(ctx),
@@ -116,7 +130,8 @@ func main() {
 			mapper.UpdateStatusMarker,
 			mapper.UpdateTurn,
 		),
-		mapper.WithDebugging(5),
+		mapper.WithDebugging(debugFlags),
+		mapper.WithLogger(log.Default()),
 	}
 
 	if pass != "" {
@@ -141,8 +156,9 @@ func main() {
 
 	waitCounter := 0
 	for !server.IsReady() {
-		if waitCounter++; waitCounter > 10 {
+		if waitCounter++; waitCounter > 30 {
 			fmt.Println(colorize("Waiting for server to be ready...", "blue", mono))
+			waitCounter = 0
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
@@ -749,6 +765,8 @@ func configureApp() (util.SimpleConfigurationData, error) {
 	var Fmono = flag.Bool("mono", false, "Suppress the output of ANSI color codes")
 	var Fverb = flag.Bool("verbose", false, "Print extra output about connection")
 	var Fcals = flag.String("calendar", "golarion", "Calendar system in use")
+	var Fdebug = flag.String("debug", "", "Comma-separated list of debugging topics to print")
+	var Flog = flag.String("log", "", "Logfile ('-' is standard output)")
 	flag.Parse()
 
 	//
@@ -800,6 +818,12 @@ func configureApp() (util.SimpleConfigurationData, error) {
 	}
 	if *Fcals != "" {
 		conf.Set("calendar", *Fcals)
+	}
+	if *Flog != "" {
+		conf.Set("logfile", *Flog)
+	}
+	if *Fdebug != "" {
+		conf.Set("debug", *Fdebug)
 	}
 
 	// Sanity check and defaults
