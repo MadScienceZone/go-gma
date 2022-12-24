@@ -3232,10 +3232,10 @@ func (c *Connection) CheckVersionOf(packageName, myVersionNumber string) (*Packa
 	}
 	for _, candidate := range candidates {
 		if (candidate.OS == "" || candidate.OS == runtime.GOOS) && (candidate.Arch == "" || candidate.Arch == runtime.GOARCH) {
-			if availableVersion.Version != "" && ((candidate.OS != "" && availableVersion.OS == "") || (candidate.Arch != "" && availableVersion.Arch == "")) {
+			if availableVersion != nil && availableVersion.Version != "" && ((candidate.OS != "" && availableVersion.OS == "") || (candidate.Arch != "" && availableVersion.Arch == "")) {
 				// found a more specific match, use that instead
 				availableVersion = &candidate
-			} else if availableVersion.Version == "" {
+			} else if availableVersion == nil || availableVersion.Version == "" {
 				availableVersion = &candidate
 			}
 		}

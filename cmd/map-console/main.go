@@ -168,8 +168,18 @@ func main() {
 	if err != nil {
 		log.Printf("Error checking for version updates: %v", err)
 	} else if update != nil {
-		log.Printf("UPDATE AVAILABLE! You are running version %v of GMA.", GMAVersionNumber)
-		log.Printf("UPDATE AVAILABLE! Version %v is available for %v on %v.", update.Version, update.OS, update.Arch)
+		cmp, err := util.VersionCompare(update.Version, GMAVersionNumber)
+		if err != nil {
+			log.Printf("Error comparing version information: %v", err)
+			log.Printf("Version %v is available for %v on %v.", update.Version, sDefault(update.OS, "any OS"), sDefault(update.Arch, "any architecture"))
+		} else if cmp > 0 {
+			log.Printf("UPDATE AVAILABLE! You are running version %v of GMA.", GMAVersionNumber)
+			log.Printf("UPDATE AVAILABLE! Version %v is available for %v on %v.", update.Version, sDefault(update.OS, "any OS"), sDefault(update.Arch, "any architecture"))
+		} else if cmp < 0 {
+			log.Printf("Your GMA version %v is ahead of the advertised version %v for %v on %v.", GMAVersionNumber, update.Version, sDefault(update.OS, "any OS"), sDefault(update.Arch, "any architecture"))
+		} else {
+			log.Printf("Your GMA version %s is up to date.", GMAVersionNumber)
+		}
 	}
 
 	fmt.Printf("Server protocol %d; using %s calendar.\n", server.Protocol, server.CalendarSystem)
@@ -189,7 +199,7 @@ func main() {
 	fmt.Println(colorize("PACKAGE--- OS-------- ARCH------ VERSION", "Blue", mono))
 	for name, pkg := range server.PackageUpdatesAvailable {
 		for _, vers := range pkg {
-			fmt.Println(colorize(fmt.Sprintf("%-10s %-10s %-10s %s", name, vers.OS, vers.Arch, vers.Version), "Yellow", mono))
+			fmt.Println(colorize(fmt.Sprintf("%-10s %-10s %-10s %s", name, strOrAny(vers.OS), strOrAny(vers.Arch), vers.Version), "Yellow", mono))
 		}
 	}
 
@@ -220,6 +230,18 @@ eventloop:
 			log.Printf("Server connection ended.")
 			break eventloop
 		}
+	}
+}
+
+func strOrAny(x string) string {
+	return sDefault(x, "(any)")
+}
+
+func sDefault(x, d string) string {
+	if x == "" {
+		return d
+	} else {
+		return x
 	}
 }
 

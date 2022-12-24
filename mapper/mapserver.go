@@ -195,6 +195,7 @@ syncloop:
 	// Now we have a fully established connection to the client.
 	// wait for each client command and then respond to it.
 	incomingPacket := make(chan MessagePayload)
+	done := make(chan error)
 	go func(incomingPacket chan MessagePayload, done chan error) {
 		for {
 			incomingPacket <- c.conn.Receive(done)
@@ -212,7 +213,15 @@ mainloop:
 			c.Logf("client task signalled to stop")
 			break mainloop
 
+		case err := <-done:
+			c.Logf("error reading from client: %v", err)
+			break mainloop
+
 		case packet := <-incomingPacket:
+			if packet == nil {
+				c.Log("EOF from client")
+				break mainloop
+			}
 			switch p := packet.(type) {
 			case CommentMessagePayload:
 
@@ -225,7 +234,7 @@ mainloop:
 					Reason:  "I get to send that command, not you.",
 				})
 
-			case AuthMessagepayload:
+			case AuthMessagePayload:
 				c.conn.Send(Priv, PrivMessagePayload{
 					Command: p.RawMessage(),
 					Reason:  "It's not the right time in our conversation for that.",
@@ -236,7 +245,7 @@ mainloop:
 					c.Subscriptions = nil
 				} else {
 					c.Subscriptions = make(map[ServerMessage]bool)
-					for _, message := range c.Messages {
+					for _, message := range p.Messages {
 						if msgId, ok := ServerMessageByName[message]; ok {
 							c.Subscriptions[msgId] = true
 						}
@@ -256,7 +265,7 @@ mainloop:
 				c.LastPoloTime = time.Now()
 
 			default:
-				c.server.HandleServerMessage(payload)
+				c.server.HandleServerMessage(packet)
 			}
 		}
 	}
