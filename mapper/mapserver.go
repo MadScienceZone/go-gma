@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/MadScienceZone/go-gma/v5/auth"
+	"github.com/MadScienceZone/go-gma/v5/dice"
 	"golang.org/x/exp/slices"
 )
 
@@ -33,6 +34,8 @@ type MapServer interface {
 	GetPreamble() ([]string, []string, []string, bool)
 	GetPersonalCredentials(user string) []byte
 	HandleServerMessage(MessagePayload, *ClientConnection)
+	AddClient(*ClientConnection)
+	RemoveClient(*ClientConnection)
 }
 
 //
@@ -64,16 +67,25 @@ type ClientConnection struct {
 	Server MapServer
 
 	Conn MapConnection
+	D    *dice.DieRoller
 }
 
 func NewClientConnection(socket net.Conn, opts ...ClientConnectionOption) (ClientConnection, error) {
+	var err error
+
 	newCon := ClientConnection{
 		Address: socket.RemoteAddr().String(),
 		Conn:    NewMapConnection(socket),
 	}
+	newCon.Conn.debug = newCon.debug
+	newCon.Conn.debugf = newCon.debugf
+	newCon.D, err = dice.NewDieRoller()
+	if err != nil {
+		return newCon, err
+	}
 
 	for _, o := range opts {
-		if err := o(&newCon); err != nil {
+		if err = o(&newCon); err != nil {
 			return newCon, err
 		}
 	}
@@ -85,6 +97,14 @@ type ClientConnectionOption func(*ClientConnection) error
 func WithServer(s MapServer) ClientConnectionOption {
 	return func(c *ClientConnection) error {
 		c.Server = s
+		return nil
+	}
+}
+
+func WithDebugFunctions(debugFunc func(DebugFlags, string), debugfFunc func(DebugFlags, string, ...any)) ClientConnectionOption {
+	return func(c *ClientConnection) error {
+		c.Conn.debug = debugFunc
+		c.Conn.debugf = debugfFunc
 		return nil
 	}
 }
@@ -181,6 +201,7 @@ syncloop:
 				c.Logf("client login failed: %v", err)
 				return
 			}
+			c.debugf(DebugIO, "login successfully completed")
 			break syncloop
 
 		case <-ctx.Done():
@@ -192,6 +213,9 @@ syncloop:
 			return
 		}
 	}
+
+	c.Server.AddClient(c)
+	defer c.Server.RemoveClient(c)
 
 	// Now we have a fully established connection to the client.
 	// wait for each client command and then respond to it.
@@ -206,11 +230,7 @@ syncloop:
 mainloop:
 	for {
 		select {
-		case <-loginctx.Done():
-			// we no longer care
-
 		case <-ctx.Done():
-			// ok, this one we care about.
 			c.Logf("client task signalled to stop")
 			break mainloop
 
@@ -218,18 +238,24 @@ mainloop:
 			c.Logf("error reading from client: %v", err)
 			break mainloop
 
+		case packet := <-c.Conn.sendChan:
+			c.Conn.sendBuf = append(c.Conn.sendBuf, packet)
+			c.debugf(DebugIO, "moved packet %v to output buffer (depth %d)", packet, len(c.Conn.sendBuf))
+
 		case packet := <-incomingPacket:
 			if packet == nil {
 				c.Log("EOF from client")
 				break mainloop
 			}
+			c.debugf(DebugIO, "received packet %v", packet)
 			switch p := packet.(type) {
 			case CommentMessagePayload:
 
 			case AddCharacterMessagePayload, ChallengeMessagePayload, ProtocolMessagePayload,
 				UpdateDicePresetsMessagePayload, DeniedMessagePayload, GrantedMessagePayload,
 				MarcoMessagePayload, PrivMessagePayload, ReadyMessagePayload,
-				RollResultMessagePayload, UpdateVersionsMessagePayload, WorldMessagePayload:
+				RollResultMessagePayload, UpdatePeerListMessagePayload, UpdateVersionsMessagePayload,
+				WorldMessagePayload:
 				c.Conn.Send(Priv, PrivMessagePayload{
 					Command: p.RawMessage(),
 					Reason:  "I get to send that command, not you.",
@@ -267,6 +293,19 @@ mainloop:
 
 			default:
 				c.Server.HandleServerMessage(packet, c)
+			}
+
+		default:
+			if c.Conn.writer != nil && len(c.Conn.sendBuf) > 0 {
+				if written, err := c.Conn.writer.WriteString(c.Conn.sendBuf[0]); err != nil {
+					c.Logf("error sending %v to client (wrote %d): %v", c.Conn.sendBuf[0], written, err)
+				}
+				if err := c.Conn.writer.Flush(); err != nil {
+					c.Logf("error sending %v to client (in flush): %v", c.Conn.sendBuf[0], err)
+				}
+				c.debugf(DebugIO, "sent %v", c.Conn.sendBuf[0])
+				c.Conn.sendBuf = c.Conn.sendBuf[1:]
+				c.debugf(DebugIO, "depth now %d", len(c.Conn.sendBuf))
 			}
 		}
 	}
@@ -339,8 +378,9 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error) {
 			select {
 			case <-ctx.Done():
 				c.Log("Timeout/cancel while waiting for authentication from client")
-				c.Conn.Send(Denied, DeniedMessagePayload{Reason: "Login timed out"})
+				c.Conn.Send(Denied, DeniedMessagePayload{Reason: "Life is short indeed / I don't have time for waiting / for you to log in"})
 				_ = c.Conn.Flush()
+				time.Sleep(1 * time.Second)
 				done <- fmt.Errorf("timeout waiting for client auth")
 				return
 

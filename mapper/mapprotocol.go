@@ -60,6 +60,8 @@ type MapConnection struct {
 	writer   *bufio.Writer  // write interface to socket
 	sendBuf  []string       // internal buffer of outgoing packets
 	sendChan chan string    // outgoing packets go through this channel
+	debug    func(DebugFlags, string)
+	debugf   func(DebugFlags, string, ...any)
 }
 
 func (m *MapConnection) IsReady() bool {
@@ -87,6 +89,9 @@ func (c *MapConnection) Close() {
 func (c *MapConnection) Send(command ServerMessage, data any) error {
 	if c == nil {
 		return fmt.Errorf("nil MapConnection")
+	}
+	if c.debugf != nil {
+		c.debugf(DebugIO, "Send(%v, %v)", command, data)
 	}
 
 	switch command {
@@ -346,6 +351,9 @@ func (c *MapConnection) sendJSON(commandWord string, data any) error {
 	if c == nil {
 		return fmt.Errorf("nil MapConnection")
 	}
+	if c.debugf != nil {
+		c.debugf(DebugIO, "sendJSON(%v, %v)", commandWord, data)
+	}
 	if data == nil {
 		return c.sendln(commandWord, "")
 	}
@@ -358,6 +366,9 @@ func (c *MapConnection) sendJSON(commandWord string, data any) error {
 func (c *MapConnection) sendln(commandWord, data string) error {
 	if c == nil {
 		return fmt.Errorf("nil MapConnection")
+	}
+	if c.debugf != nil {
+		c.debugf(DebugIO, "->%s %s", commandWord, data)
 	}
 	if strings.ContainsAny(data, "\n\r") {
 		return fmt.Errorf("protocol error: outgoing data packet may not contain newlines")
@@ -939,12 +950,21 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 //
 func (c *MapConnection) Flush() error {
 	// receive all the messages still in the channel
+	if c.debug != nil {
+		c.debug(DebugIO, "flushing output")
+	}
 	for {
 		select {
 		case packet := <-c.sendChan:
 			c.sendBuf = append(c.sendBuf, packet)
+			if c.debugf != nil {
+				c.debugf(DebugIO, "flush: moved %v out to sendBuf (depth %d)", packet, len(c.sendBuf))
+			}
 		default:
 			if c.writer == nil || len(c.sendBuf) == 0 {
+				if c.debugf != nil {
+					c.debugf(DebugIO, "flush: terminating (writer=%v, sendBuf=%v)", c.writer != nil, c.sendBuf)
+				}
 				return nil
 			}
 			if written, err := c.writer.WriteString(c.sendBuf[0]); err != nil {
@@ -952,6 +972,9 @@ func (c *MapConnection) Flush() error {
 			}
 			if err := c.writer.Flush(); err != nil {
 				return fmt.Errorf("error sending \"%s\" (in flush): %v", c.sendBuf[0], err)
+			}
+			if c.debugf != nil {
+				c.debugf(DebugIO, "flush: sent %v (depth now %d)", c.sendBuf[0], len(c.sendBuf)-1)
 			}
 			c.sendBuf = c.sendBuf[1:]
 		}

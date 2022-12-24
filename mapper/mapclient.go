@@ -95,12 +95,12 @@ const (
 // the debugging flags (topics) stored in the DebugFlags
 // value passed in.
 //
-func DebugFlagNames(flags DebugFlags) string {
+func DebugFlagNameSlice(flags DebugFlags) []string {
 	if flags == 0 {
-		return "<none>"
+		return nil
 	}
 	if flags == DebugAll {
-		return "<all>"
+		return []string{"all"}
 	}
 
 	var list []string
@@ -118,6 +118,14 @@ func DebugFlagNames(flags DebugFlags) string {
 			list = append(list, f.name)
 		}
 	}
+	return list
+}
+
+func DebugFlagNames(flags DebugFlags) string {
+	list := DebugFlagNameSlice(flags)
+	if list == nil {
+		return "<none>"
+	}
 	return "<" + strings.Join(list, ",") + ">"
 }
 
@@ -133,6 +141,7 @@ func DebugFlagNames(flags DebugFlags) string {
 //
 func NamedDebugFlags(names ...string) (DebugFlags, error) {
 	var d DebugFlags
+	var err error
 	for _, name := range names {
 		for _, flag := range strings.Split(name, ",") {
 			switch flag {
@@ -152,11 +161,12 @@ func NamedDebugFlags(names ...string) (DebugFlags, error) {
 			case "misc":
 				d |= DebugMisc
 			default:
-				return 0, fmt.Errorf("unknown debug flag name \"%s\"", flag)
+				err = fmt.Errorf("invalid debug flag name")
+				// but keep processing the rest
 			}
 		}
 	}
-	return d, nil
+	return d, err
 }
 
 //
