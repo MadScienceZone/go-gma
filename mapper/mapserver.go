@@ -32,7 +32,7 @@ type MapServer interface {
 	Logf(format string, args ...any)
 	GetPreamble() ([]string, []string, []string, bool)
 	GetPersonalCredentials(user string) []byte
-	HandleServerMessage(payload MessagePayload)
+	HandleServerMessage(MessagePayload, *ClientConnection)
 }
 
 //
@@ -61,14 +61,15 @@ type ClientConnection struct {
 	// Level of debugging requested for this client
 	DebuggingLevel DebugFlags
 
-	server MapServer
-	conn   MapConnection
+	Server MapServer
+
+	Conn MapConnection
 }
 
 func NewClientConnection(socket net.Conn, opts ...ClientConnectionOption) (ClientConnection, error) {
 	newCon := ClientConnection{
 		Address: socket.RemoteAddr().String(),
-		conn:    NewMapConnection(socket),
+		Conn:    NewMapConnection(socket),
 	}
 
 	for _, o := range opts {
@@ -83,7 +84,7 @@ type ClientConnectionOption func(*ClientConnection) error
 
 func WithServer(s MapServer) ClientConnectionOption {
 	return func(c *ClientConnection) error {
-		c.server = s
+		c.Server = s
 		return nil
 	}
 }
@@ -103,10 +104,10 @@ func WithClientAuthenticator(a *auth.Authenticator) ClientConnectionOption {
 }
 
 func (c *ClientConnection) clientIdTag() string {
-	return "[client " + c.idTag() + "]"
+	return "[client " + c.IdTag() + "]"
 }
 
-func (c *ClientConnection) idTag() string {
+func (c *ClientConnection) IdTag() string {
 	if c == nil {
 		return "(nil client)"
 	}
@@ -117,10 +118,10 @@ func (c *ClientConnection) idTag() string {
 }
 
 func (c *ClientConnection) debug(level DebugFlags, msg string) {
-	if c != nil && c.server != nil && (c.DebuggingLevel&level) != 0 {
+	if c != nil && c.Server != nil && (c.DebuggingLevel&level) != 0 {
 		for i, line := range strings.Split(msg, "\n") {
 			if line != "" {
-				c.server.Logf("%s DEBUG%s%02d: %s", c.clientIdTag(), DebugFlagNames(level), i, line)
+				c.Server.Logf("%s DEBUG%s%02d: %s", c.clientIdTag(), DebugFlagNames(level), i, line)
 			}
 		}
 	}
@@ -131,21 +132,21 @@ func (c *ClientConnection) debugf(level DebugFlags, format string, args ...any) 
 }
 
 func (c *ClientConnection) Log(message ...any) {
-	if c.server != nil {
+	if c.Server != nil {
 		message = append([]any{c.clientIdTag()}, message...)
-		c.server.Log(message...)
+		c.Server.Log(message...)
 	}
 }
 
 func (c *ClientConnection) Logf(format string, args ...any) {
-	if c.server != nil {
+	if c.Server != nil {
 		args = append([]any{c.clientIdTag()}, args...)
-		c.server.Logf("%s "+format, args...)
+		c.Server.Logf("%s "+format, args...)
 	}
 }
 
 func (c *ClientConnection) Close() {
-	c.conn.Close()
+	c.Conn.Close()
 }
 
 //func (c *ClientConnection) EmergencyReject(message string) {
@@ -198,7 +199,7 @@ syncloop:
 	done := make(chan error)
 	go func(incomingPacket chan MessagePayload, done chan error) {
 		for {
-			incomingPacket <- c.conn.Receive(done)
+			incomingPacket <- c.Conn.Receive(done)
 		}
 	}(incomingPacket, done)
 
@@ -229,13 +230,13 @@ mainloop:
 				UpdateDicePresetsMessagePayload, DeniedMessagePayload, GrantedMessagePayload,
 				MarcoMessagePayload, PrivMessagePayload, ReadyMessagePayload,
 				RollResultMessagePayload, UpdateVersionsMessagePayload, WorldMessagePayload:
-				c.conn.Send(Priv, PrivMessagePayload{
+				c.Conn.Send(Priv, PrivMessagePayload{
 					Command: p.RawMessage(),
 					Reason:  "I get to send that command, not you.",
 				})
 
 			case AuthMessagePayload:
-				c.conn.Send(Priv, PrivMessagePayload{
+				c.Conn.Send(Priv, PrivMessagePayload{
 					Command: p.RawMessage(),
 					Reason:  "It's not the right time in our conversation for that.",
 				})
@@ -265,7 +266,7 @@ mainloop:
 				c.LastPoloTime = time.Now()
 
 			default:
-				c.server.HandleServerMessage(packet)
+				c.Server.HandleServerMessage(packet, c)
 			}
 		}
 	}
@@ -284,12 +285,12 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error) {
 	defer c.debug(DebugIO, "loginClient() ended")
 
 	c.Log("initial client negotiation...")
-	preamble, postAuth, postReady, syncData := c.server.GetPreamble()
-	c.conn.Send(Protocol, GMAMapperProtocol)
+	preamble, postAuth, postReady, syncData := c.Server.GetPreamble()
+	c.Conn.Send(Protocol, GMAMapperProtocol)
 	for i, line := range preamble {
 		c.debugf(DebugIO, "preamble line %d: %s", i, line)
-		c.conn.sendRaw(line)
-		if err := c.conn.Flush(); err != nil {
+		c.Conn.sendRaw(line)
+		if err := c.Conn.Flush(); err != nil {
 			done <- err
 			return
 		}
@@ -303,11 +304,11 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error) {
 			done <- fmt.Errorf("error generating authentication challenge: %v", err)
 			return
 		}
-		c.conn.Send(Challenge, ChallengeMessagePayload{
+		c.Conn.Send(Challenge, ChallengeMessagePayload{
 			Protocol:  GMAMapperProtocol,
 			Challenge: challenge,
 		})
-		if err := c.conn.Flush(); err != nil {
+		if err := c.Conn.Flush(); err != nil {
 			done <- err
 			return
 		}
@@ -315,7 +316,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error) {
 		reply := make(chan AuthMessagePayload)
 		go func(reply chan AuthMessagePayload) {
 			for {
-				packet := c.conn.Receive(done)
+				packet := c.Conn.Receive(done)
 				if packet == nil {
 					c.Log("error reading auth response from client; stopping")
 					return
@@ -338,14 +339,14 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error) {
 			select {
 			case <-ctx.Done():
 				c.Log("Timeout/cancel while waiting for authentication from client")
-				c.conn.Send(Denied, DeniedMessagePayload{Reason: "Login timed out"})
-				_ = c.conn.Flush()
+				c.Conn.Send(Denied, DeniedMessagePayload{Reason: "Login timed out"})
+				_ = c.Conn.Flush()
 				done <- fmt.Errorf("timeout waiting for client auth")
 				return
 
 			case packet := <-reply:
 				c.debugf(DebugAuth, "received client authentication %v", packet)
-				if newSecret := c.server.GetPersonalCredentials(packet.User); newSecret != nil {
+				if newSecret := c.Server.GetPersonalCredentials(packet.User); newSecret != nil {
 					c.Auth.SetSecret(newSecret)
 				}
 				success, err := c.Auth.ValidateResponseBytes(packet.Response)
@@ -365,11 +366,11 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error) {
 							c.Auth.Username = packet.User
 						}
 					}
-					c.conn.Send(Granted, GrantedMessagePayload{User: c.Auth.Username})
+					c.Conn.Send(Granted, GrantedMessagePayload{User: c.Auth.Username})
 					break awaitUserAuth
 				} else {
-					c.conn.Send(Denied, DeniedMessagePayload{Reason: "login incorrect"})
-					_ = c.conn.Flush()
+					c.Conn.Send(Denied, DeniedMessagePayload{Reason: "login incorrect"})
+					_ = c.Conn.Flush()
 					done <- fmt.Errorf("access denied")
 					return
 				}
@@ -380,31 +381,31 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error) {
 
 	} else {
 		c.debug(DebugIO, "proceeding without authentication")
-		c.conn.Send(Challenge, ChallengeMessagePayload{
+		c.Conn.Send(Challenge, ChallengeMessagePayload{
 			Protocol: GMAMapperProtocol,
 		})
-		if err := c.conn.Flush(); err != nil {
+		if err := c.Conn.Flush(); err != nil {
 			done <- err
 		}
 	}
 
 	for i, line := range postAuth {
 		c.debugf(DebugIO, "post-auth preamble line %d: %s", i, line)
-		c.conn.sendRaw(line)
-		if err := c.conn.Flush(); err != nil {
+		c.Conn.sendRaw(line)
+		if err := c.Conn.Flush(); err != nil {
 			done <- err
 		}
 	}
 
 	c.debug(DebugIO, "signalling end of login step")
-	c.conn.Send(Ready, nil)
-	if err := c.conn.Flush(); err != nil {
+	c.Conn.Send(Ready, nil)
+	if err := c.Conn.Flush(); err != nil {
 		done <- err
 	}
 	for i, line := range postReady {
 		c.debugf(DebugIO, "post-ready preamble line %d: %s", i, line)
-		c.conn.sendRaw(line)
-		if err := c.conn.Flush(); err != nil {
+		c.Conn.sendRaw(line)
+		if err := c.Conn.Flush(); err != nil {
 			done <- err
 		}
 	}
