@@ -90,9 +90,6 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 	if c == nil {
 		return fmt.Errorf("nil MapConnection")
 	}
-	if c.debugf != nil {
-		c.debugf(DebugIO, "Send(%v, %v)", command, data)
-	}
 
 	switch command {
 	case Accept:
@@ -350,9 +347,6 @@ func (c *MapConnection) sendJSON(commandWord string, data any) error {
 	var err error
 	if c == nil {
 		return fmt.Errorf("nil MapConnection")
-	}
-	if c.debugf != nil {
-		c.debugf(DebugIO, "sendJSON(%v, %v)", commandWord, data)
 	}
 	if data == nil {
 		return c.sendln(commandWord, "")

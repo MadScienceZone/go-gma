@@ -31,11 +31,25 @@ import (
 type MapServer interface {
 	Log(messsage ...any)
 	Logf(format string, args ...any)
-	GetPreamble() ([]string, []string, []string, bool)
 	GetPersonalCredentials(user string) []byte
+	GetClientPreamble() *ClientPreamble
 	HandleServerMessage(MessagePayload, *ClientConnection)
 	AddClient(*ClientConnection)
 	RemoveClient(*ClientConnection)
+	SendGameState(*ClientConnection)
+}
+
+// ClientPreamble contains information given to each client upon
+// connection to the server.
+type ClientPreamble struct {
+	// Do we send the connecting client a full dump of the current game state?
+	SyncData bool
+
+	// Initial commands sent at the start, after authentication, and
+	// at the end of the sign-on sequence.
+	Preamble  []string
+	PostAuth  []string
+	PostReady []string
 }
 
 //
@@ -324,14 +338,22 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error) {
 	defer c.debug(DebugIO, "loginClient() ended")
 
 	c.Log("initial client negotiation...")
-	preamble, postAuth, postReady, syncData := c.Server.GetPreamble()
+	c.debug(DebugIO, "fetching preamble data from generator")
+	preamble := c.Server.GetClientPreamble()
+	if preamble != nil {
+		c.debugf(DebugIO, "got %d initial command(s)", len(preamble.Preamble)+len(preamble.PostAuth)+len(preamble.PostReady))
+	} else {
+		c.Log("got nil preamble data!")
+	}
 	c.Conn.Send(Protocol, GMAMapperProtocol)
-	for i, line := range preamble {
-		c.debugf(DebugIO, "preamble line %d: %s", i, line)
-		c.Conn.sendRaw(line)
-		if err := c.Conn.Flush(); err != nil {
-			done <- err
-			return
+	if preamble != nil {
+		for i, line := range preamble.Preamble {
+			c.debugf(DebugIO, "preamble line %d: %s", i, line)
+			c.Conn.sendRaw(line)
+			if err := c.Conn.Flush(); err != nil {
+				done <- err
+				return
+			}
 		}
 	}
 
@@ -429,11 +451,13 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error) {
 		}
 	}
 
-	for i, line := range postAuth {
-		c.debugf(DebugIO, "post-auth preamble line %d: %s", i, line)
-		c.Conn.sendRaw(line)
-		if err := c.Conn.Flush(); err != nil {
-			done <- err
+	if preamble != nil {
+		for i, line := range preamble.PostAuth {
+			c.debugf(DebugIO, "post-auth preamble line %d: %s", i, line)
+			c.Conn.sendRaw(line)
+			if err := c.Conn.Flush(); err != nil {
+				done <- err
+			}
 		}
 	}
 
@@ -442,17 +466,19 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error) {
 	if err := c.Conn.Flush(); err != nil {
 		done <- err
 	}
-	for i, line := range postReady {
-		c.debugf(DebugIO, "post-ready preamble line %d: %s", i, line)
-		c.Conn.sendRaw(line)
-		if err := c.Conn.Flush(); err != nil {
-			done <- err
+	if preamble != nil {
+		for i, line := range preamble.PostReady {
+			c.debugf(DebugIO, "post-ready preamble line %d: %s", i, line)
+			c.Conn.sendRaw(line)
+			if err := c.Conn.Flush(); err != nil {
+				done <- err
+			}
 		}
-	}
-	if syncData {
-		c.Log("syncing client to current game state...")
-		// TODO
-		c.Log("syncing done")
+		if preamble.SyncData {
+			c.Log("syncing client to current game state...")
+			c.Server.SendGameState(c)
+			c.Log("syncing done")
+		}
 	}
 	done <- nil
 }
