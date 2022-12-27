@@ -300,7 +300,7 @@ func WithContext(ctx context.Context) func(*Connection) error {
 // is ready to receive our commands.
 //
 func WhenReady(ch chan byte) func(*Connection) error {
-	return func(c *Connection) erro {
+	return func(c *Connection) error {
 		c.ReadySignal = ch
 		return nil
 	}
