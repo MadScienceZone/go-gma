@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______             _______     _______     _______               #
-# (  ____ \(       )(  ___  )           (  ____ \   (  __   )   (  __   )              #
-# | (    \/| () () || (   ) |           | (    \/   | (  )  |   | (  )  |              #
-# | |      | || || || (___) |           | (____     | | /   |   | | /   |              #
-# | | ____ | |(_)| ||  ___  |           (_____ \    | (/ /) |   | (/ /) |              #
-# | | \_  )| |   | || (   ) | Game            ) )   |   / | |   |   / | |              #
-# | (___) || )   ( || )   ( | Master's  /\____) ) _ |  (__) | _ |  (__) |              #
-# (_______)|/     \||/     \| Assistant \______/ (_)(_______)(_)(_______)              #
+#  _______  _______  _______             _______     _______     _______         _____ #
+# (  ____ \(       )(  ___  )           (  ____ \   (  __   )   (  __   )       (  ___ #
+# | (    \/| () () || (   ) |           | (    \/   | (  )  |   | (  )  |       | (    #
+# | |      | || || || (___) |           | (____     | | /   |   | | /   | _____ | (___ #
+# | | ____ | |(_)| ||  ___  |           (_____ \    | (/ /) |   | (/ /) |(_____)|  ___ #
+# | | \_  )| |   | || (   ) | Game            ) )   |   / | |   |   / | |       | (    #
+# | (___) || )   ( || )   ( | Master's  /\____) ) _ |  (__) | _ |  (__) |       | )    #
+# (_______)|/     \||/     \| Assistant \______/ (_)(_______)(_)(_______)       |/     #
 #                                                                                      #
 ########################################################################################
 */
@@ -931,7 +931,7 @@ func (c *Connection) AddObjAttributes(objID, attrName string, values []string) e
 //
 type AdjustViewMessagePayload struct {
 	BaseMessagePayload
-	XView, YView float64
+	XView, YView float64 `json:",omitempty"`
 }
 
 //
@@ -1296,7 +1296,7 @@ type CombatModeMessagePayload struct {
 	BaseMessagePayload
 
 	// If true, we should be in combat mode.
-	Enabled bool
+	Enabled bool `json:",omitempty"`
 }
 
 //
@@ -1317,7 +1317,7 @@ func (c *Connection) CombatMode(enabled bool) error {
 //
 type ToolbarMessagePayload struct {
 	BaseMessagePayload
-	Enabled bool
+	Enabled bool `json:",omitempty"`
 }
 
 //
@@ -3360,7 +3360,7 @@ func (c *Connection) CheckVersionOf(packageName, myVersionNumber string) (*Packa
 	return availableVersion, nil
 }
 
-// @[00]@| GMA 5.0.0
+// @[00]@| GMA 5.0.0-alpha.1
 // @[01]@|
 // @[10]@| Copyright © 1992–2022 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
