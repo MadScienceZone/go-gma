@@ -242,6 +242,9 @@ type Connection struct {
 
 	// Server message subscriptions currently in effect.
 	Subscriptions map[ServerMessage]chan MessagePayload
+
+	// Our signal that we're ready for the client to talk.
+	ReadySignal chan byte
 }
 
 //
@@ -292,6 +295,17 @@ func WithContext(ctx context.Context) func(*Connection) error {
 }
 
 //
+// WhenReady specifies a channel on which to send a single byte
+// when the server login process is complete and the server
+// is ready to receive our commands.
+//
+func WhenReady(ch chan byte) func(*Connection) error {
+	return func(c *Connection) erro {
+		c.ReadySignal = ch
+		return nil
+	}
+}
+
 // ConnectionOption is an option to be passed to the NewConnection
 // function.
 //
@@ -2799,7 +2813,6 @@ waitForReady:
 			c.Log("ignoring unexpected data before server ready signal")
 		}
 	}
-
 	c.debug(DebugIO, "Server ready; filtering to subscription list")
 
 	if err := c.filterSubscriptions(); err != nil {
@@ -2817,6 +2830,9 @@ waitForReady:
 		c.debug(DebugIO, fmt.Sprintf("Defined Status Markers:\n%s", StatusMarkerDefinitions(c.Conditions).Text()))
 		c.debug(DebugIO, "Preamble:\n"+strings.Join(c.Preamble, "\n"))
 		c.debug(DebugIO, fmt.Sprintf("Last error: %v", c.LastError))
+	}
+	if c.ReadySignal != nil {
+		c.ReadySignal <- 0
 	}
 }
 
