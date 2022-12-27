@@ -408,8 +408,10 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 	}
 	if !c.reader.Scan() {
 		if err = c.reader.Err(); err != nil {
+			c.Debug(DebugIO, "Receive: scan failed with %v", err)
 			done <- err
 		}
+		c.Debug(DebugIO, "Receive: scan failed; stopping")
 		return nil
 	}
 
@@ -949,6 +951,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 		}
 	}
 
+	c.debug(DebugIO, "unable to cope with message, returning nil")
 	return nil
 }
 
