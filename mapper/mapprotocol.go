@@ -400,19 +400,18 @@ func (c *MapConnection) sendRaw(data string) error {
 //
 // Receive waits for a message to arrive on the MapConnection's input then returns it.
 //
-func (c *MapConnection) Receive(done chan error) MessagePayload {
+func (c *MapConnection) Receive() (MessagePayload, error) {
 	var err error
 	if c == nil {
-		done <- fmt.Errorf("Receive called on nil MapConnection")
-		return nil
+		return nil, fmt.Errorf("Receive called on nil MapConnection")
 	}
 	if !c.reader.Scan() {
+		//c.debug(DebugIO, "Receive: scan failed; stopping")
 		if err = c.reader.Err(); err != nil {
-			c.Debug(DebugIO, "Receive: scan failed with %v", err)
-			done <- err
+			//c.debugf(DebugIO, "Receive: scan failed with %v", err)
+			return nil, err
 		}
-		c.Debug(DebugIO, "Receive: scan failed; stopping")
-		return nil
+		return nil, nil
 	}
 
 	// Comments are anything starting with "//"
@@ -426,7 +425,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 		return CommentMessagePayload{
 			BaseMessagePayload: payload,
 			Text:               c.reader.Text()[2:],
-		}
+		}, nil
 	}
 
 	switch commandWord {
@@ -438,7 +437,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = AddCharacter
-		return p
+		return p, nil
 
 	case "ACCEPT":
 		p := AcceptMessagePayload{BaseMessagePayload: payload}
@@ -448,7 +447,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = Accept
-		return p
+		return p, nil
 
 	case "AI":
 		p := AddImageMessagePayload{BaseMessagePayload: payload}
@@ -458,7 +457,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = AddImage
-		return p
+		return p, nil
 
 	case "AI?":
 		p := QueryImageMessagePayload{BaseMessagePayload: payload}
@@ -468,7 +467,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = QueryImage
-		return p
+		return p, nil
 
 	case "ALLOW":
 		p := AllowMessagePayload{BaseMessagePayload: payload}
@@ -478,7 +477,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = Allow
-		return p
+		return p, nil
 
 	case "AUTH":
 		p := AuthMessagePayload{BaseMessagePayload: payload}
@@ -488,7 +487,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = Auth
-		return p
+		return p, nil
 
 	case "AV":
 		p := AdjustViewMessagePayload{BaseMessagePayload: payload}
@@ -498,7 +497,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = AdjustView
-		return p
+		return p, nil
 
 	case "CC":
 		p := ClearChatMessagePayload{BaseMessagePayload: payload}
@@ -508,7 +507,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = ClearChat
-		return p
+		return p, nil
 
 	case "CLR":
 		p := ClearMessagePayload{BaseMessagePayload: payload}
@@ -518,7 +517,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = Clear
-		return p
+		return p, nil
 
 	case "CLR@":
 		p := ClearFromMessagePayload{BaseMessagePayload: payload}
@@ -528,7 +527,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = ClearFrom
-		return p
+		return p, nil
 
 	case "CO":
 		p := CombatModeMessagePayload{BaseMessagePayload: payload}
@@ -538,12 +537,12 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = CombatMode
-		return p
+		return p, nil
 
 	case "CONN":
 		p := UpdatePeerListMessagePayload{BaseMessagePayload: payload}
 		p.messageType = UpdatePeerList
-		return p
+		return p, nil
 
 	case "CS":
 		p := UpdateClockMessagePayload{BaseMessagePayload: payload}
@@ -553,7 +552,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = UpdateClock
-		return p
+		return p, nil
 
 	case "D":
 		p := RollDiceMessagePayload{BaseMessagePayload: payload}
@@ -563,7 +562,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = RollDice
-		return p
+		return p, nil
 
 	case "DD":
 		p := DefineDicePresetsMessagePayload{BaseMessagePayload: payload}
@@ -573,7 +572,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = DefineDicePresets
-		return p
+		return p, nil
 
 	case "DD+":
 		p := AddDicePresetsMessagePayload{BaseMessagePayload: payload}
@@ -583,7 +582,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = AddDicePresets
-		return p
+		return p, nil
 
 	case "DD/":
 		p := FilterDicePresetsMessagePayload{BaseMessagePayload: payload}
@@ -593,7 +592,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = FilterDicePresets
-		return p
+		return p, nil
 
 	case "DD=":
 		p := UpdateDicePresetsMessagePayload{BaseMessagePayload: payload}
@@ -603,7 +602,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = UpdateDicePresets
-		return p
+		return p, nil
 
 	case "DENIED":
 		p := DeniedMessagePayload{BaseMessagePayload: payload}
@@ -613,12 +612,12 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = Denied
-		return p
+		return p, nil
 
 	case "DR":
 		p := QueryDicePresetsMessagePayload{BaseMessagePayload: payload}
 		p.messageType = QueryDicePresets
-		return p
+		return p, nil
 
 	case "DSM":
 		p := UpdateStatusMarkerMessagePayload{BaseMessagePayload: payload}
@@ -628,7 +627,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = UpdateStatusMarker
-		return p
+		return p, nil
 
 	case "ECHO":
 		p := EchoMessagePayload{BaseMessagePayload: payload}
@@ -638,6 +637,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = Echo
+		return p, nil
 
 	case "GRANTED":
 		p := GrantedMessagePayload{BaseMessagePayload: payload}
@@ -647,7 +647,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = Granted
-		return p
+		return p, nil
 
 	case "I":
 		p := UpdateTurnMessagePayload{BaseMessagePayload: payload}
@@ -657,7 +657,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = UpdateTurn
-		return p
+		return p, nil
 
 	case "IL":
 		p := UpdateInitiativeMessagePayload{BaseMessagePayload: payload}
@@ -667,7 +667,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = UpdateInitiative
-		return p
+		return p, nil
 
 	case "L":
 		p := LoadFromMessagePayload{BaseMessagePayload: payload}
@@ -677,7 +677,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = LoadFrom
-		return p
+		return p, nil
 
 	case "LS-ARC":
 		p := LoadArcObjectMessagePayload{BaseMessagePayload: payload}
@@ -687,7 +687,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = LoadArcObject
-		return p
+		return p, nil
 
 	case "LS-CIRC":
 		p := LoadCircleObjectMessagePayload{BaseMessagePayload: payload}
@@ -697,7 +697,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = LoadCircleObject
-		return p
+		return p, nil
 
 	case "LS-LINE":
 		p := LoadLineObjectMessagePayload{BaseMessagePayload: payload}
@@ -707,7 +707,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = LoadLineObject
-		return p
+		return p, nil
 
 	case "LS-POLY":
 		p := LoadPolygonObjectMessagePayload{BaseMessagePayload: payload}
@@ -717,7 +717,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = LoadPolygonObject
-		return p
+		return p, nil
 
 	case "LS-RECT":
 		p := LoadRectangleObjectMessagePayload{BaseMessagePayload: payload}
@@ -727,7 +727,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = LoadRectangleObject
-		return p
+		return p, nil
 
 	case "LS-SAOE":
 		p := LoadSpellAreaOfEffectObjectMessagePayload{BaseMessagePayload: payload}
@@ -737,7 +737,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = LoadSpellAreaOfEffectObject
-		return p
+		return p, nil
 
 	case "LS-TEXT":
 		p := LoadTextObjectMessagePayload{BaseMessagePayload: payload}
@@ -747,7 +747,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = LoadTextObject
-		return p
+		return p, nil
 
 	case "LS-TILE":
 		p := LoadTileObjectMessagePayload{BaseMessagePayload: payload}
@@ -757,12 +757,12 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = LoadTileObject
-		return p
+		return p, nil
 
 	case "MARCO":
 		p := MarcoMessagePayload{BaseMessagePayload: payload}
 		p.messageType = Marco
-		return p
+		return p, nil
 
 	case "MARK":
 		p := MarkMessagePayload{BaseMessagePayload: payload}
@@ -772,7 +772,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = Mark
-		return p
+		return p, nil
 
 	case "OA":
 		p := UpdateObjAttributesMessagePayload{BaseMessagePayload: payload}
@@ -782,7 +782,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = UpdateObjAttributes
-		return p
+		return p, nil
 
 	case "OA+":
 		p := AddObjAttributesMessagePayload{BaseMessagePayload: payload}
@@ -792,7 +792,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = AddObjAttributes
-		return p
+		return p, nil
 
 	case "OA-":
 		p := RemoveObjAttributesMessagePayload{BaseMessagePayload: payload}
@@ -802,7 +802,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = RemoveObjAttributes
-		return p
+		return p, nil
 
 	case "OK":
 		p := ChallengeMessagePayload{BaseMessagePayload: payload}
@@ -812,12 +812,12 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = Challenge
-		return p
+		return p, nil
 
 	case "POLO":
 		p := PoloMessagePayload{BaseMessagePayload: payload}
 		p.messageType = Polo
-		return p
+		return p, nil
 
 	case "PRIV":
 		p := PrivMessagePayload{BaseMessagePayload: payload}
@@ -827,7 +827,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = Priv
-		return p
+		return p, nil
 
 	case "PROGRESS":
 		p := UpdateProgressMessagePayload{BaseMessagePayload: payload}
@@ -837,7 +837,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = UpdateProgress
-		return p
+		return p, nil
 
 	case "PROTOCOL":
 		p := ProtocolMessagePayload{BaseMessagePayload: payload}
@@ -851,7 +851,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			err = fmt.Errorf("Server PROTOCOL command invalid (no version value)")
 			break
 		}
-		return p
+		return p, nil
 
 	case "PS":
 		p := PlaceSomeoneMessagePayload{BaseMessagePayload: payload}
@@ -861,12 +861,12 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = PlaceSomeone
-		return p
+		return p, nil
 
 	case "READY":
 		p := ReadyMessagePayload{BaseMessagePayload: payload}
 		p.messageType = Ready
-		return p
+		return p, nil
 
 	case "ROLL":
 		p := RollResultMessagePayload{BaseMessagePayload: payload}
@@ -876,12 +876,12 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = RollResult
-		return p
+		return p, nil
 
 	case "SYNC":
 		p := SyncMessagePayload{BaseMessagePayload: payload}
 		p.messageType = Sync
-		return p
+		return p, nil
 
 	case "SYNC-CHAT":
 		p := SyncChatMessagePayload{BaseMessagePayload: payload}
@@ -891,7 +891,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = SyncChat
-		return p
+		return p, nil
 
 	case "TB":
 		p := ToolbarMessagePayload{BaseMessagePayload: payload}
@@ -901,7 +901,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = Toolbar
-		return p
+		return p, nil
 
 	case "TO":
 		p := ChatMessageMessagePayload{BaseMessagePayload: payload}
@@ -911,7 +911,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = ChatMessage
-		return p
+		return p, nil
 
 	case "UPDATES":
 		p := UpdateVersionsMessagePayload{BaseMessagePayload: payload}
@@ -921,7 +921,7 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = UpdateVersions
-		return p
+		return p, nil
 
 	case "WORLD":
 		p := WorldMessagePayload{BaseMessagePayload: payload}
@@ -931,16 +931,16 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 			}
 		}
 		p.messageType = World
-		return p
+		return p, nil
 
 	case "/CONN":
 		p := QueryPeersMessagePayload{BaseMessagePayload: payload}
 		p.messageType = QueryPeers
-		return p
+		return p, nil
 
 	default:
 		payload.messageType = UNKNOWN
-		return payload
+		return payload, nil
 	}
 
 	if err != nil {
@@ -948,11 +948,11 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 		return ErrorMessagePayload{
 			BaseMessagePayload: payload,
 			Error:              err,
-		}
+		}, nil
 	}
 
 	c.debug(DebugIO, "unable to cope with message, returning nil")
-	return nil
+	return nil, fmt.Errorf("bailing out, unable to cope with received packet")
 }
 
 //

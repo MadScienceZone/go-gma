@@ -237,7 +237,12 @@ syncloop:
 	done := make(chan error)
 	go func(incomingPacket chan MessagePayload, done chan error) {
 		for {
-			incomingPacket <- c.Conn.Receive(done)
+			p, err := c.Conn.Receive()
+			if err != nil {
+				done <- err
+			} else {
+				incomingPacket <- p
+			}
 		}
 	}(incomingPacket, done)
 
@@ -377,9 +382,13 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error) {
 		reply := make(chan AuthMessagePayload)
 		go func(reply chan AuthMessagePayload) {
 			for {
-				packet := c.Conn.Receive(done)
+				packet, err := c.Conn.Receive()
+				if err != nil {
+					c.Logf("error reacing auth response from client: %v; stopping", err)
+					return
+				}
 				if packet == nil {
-					c.Log("error reading auth response from client; stopping")
+					c.Log("EOF reading auth response from client; stopping")
 					return
 				}
 				switch p := packet.(type) {

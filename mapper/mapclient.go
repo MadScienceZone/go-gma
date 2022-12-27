@@ -2632,7 +2632,15 @@ func (c *Connection) login(done chan error) {
 	c.Preamble = nil
 
 	// The first thing we hear from the server MUST be a PROTOCOL command.
-	incomingPacket := c.serverConn.Receive(done)
+	incomingPacket, err := c.serverConn.Receive()
+	if err != nil {
+		done <- err
+		return
+	}
+	if incomingPacket == nil {
+		done <- fmt.Errorf("EOF reading server's greeting")
+		return
+	}
 	p, ok := incomingPacket.(ProtocolMessagePayload)
 	if !ok {
 		p, ok := incomingPacket.(ErrorMessagePayload)
@@ -2660,7 +2668,11 @@ func (c *Connection) login(done chan error) {
 
 	// Now proceed to get logged in to the server
 	for !syncDone {
-		incomingPacket := c.serverConn.Receive(done)
+		incomingPacket, err := c.serverConn.Receive()
+		if err != nil {
+			done <- err
+			break
+		}
 		if incomingPacket == nil {
 			break
 		}
@@ -2746,7 +2758,11 @@ func (c *Connection) login(done chan error) {
 	// If we're still waiting for authentication results, do that...
 	c.debug(DebugIO, "Switched to authentication result scanner")
 	for authPending {
-		incomingPacket := c.serverConn.Receive(done)
+		incomingPacket, err := c.serverConn.Receive()
+		if err != nil {
+			done <- err
+			return
+		}
 		if incomingPacket == nil {
 			break
 		}
@@ -2781,7 +2797,11 @@ func (c *Connection) login(done chan error) {
 	// wait for server READY signal, accept incoming preliminary data
 waitForReady:
 	for {
-		incomingPacket := c.serverConn.Receive(done)
+		incomingPacket, err := c.serverConn.Receive()
+		if err != nil {
+			done <- err
+			return
+		}
 		if incomingPacket == nil {
 			break
 		}
@@ -2889,7 +2909,11 @@ func (c *Connection) listen(done chan error) {
 
 	c.Log("listening for server messages to dispatch...")
 	for {
-		incomingPacket := c.serverConn.Receive(done)
+		incomingPacket, err := c.serverConn.Receive()
+		if err != nil {
+			done <- err
+			return
+		}
 		if incomingPacket == nil {
 			break
 		}
