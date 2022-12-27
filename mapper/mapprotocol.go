@@ -166,6 +166,10 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 		if reason, ok := data.(DeniedMessagePayload); ok {
 			return c.sendJSON("DENIED", reason)
 		}
+	case Echo:
+		if e, ok := data.(EchoMessagePayload); ok {
+			return c.sendJSON("ECHO", e)
+		}
 	case FilterDicePresets:
 		if fi, ok := data.(FilterDicePresetsMessagePayload); ok {
 			return c.sendJSON("DD/", fi)
@@ -623,6 +627,15 @@ func (c *MapConnection) Receive(done chan error) MessagePayload {
 		}
 		p.messageType = UpdateStatusMarker
 		return p
+
+	case "ECHO":
+		p := EchoMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
+		p.messageType = Echo
 
 	case "GRANTED":
 		p := GrantedMessagePayload{BaseMessagePayload: payload}

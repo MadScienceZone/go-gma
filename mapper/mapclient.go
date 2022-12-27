@@ -609,6 +609,7 @@ const (
 	Comment
 	DefineDicePresets
 	Denied
+	Echo
 	FilterDicePresets
 	Granted
 	LoadFrom
@@ -669,6 +670,7 @@ var ServerMessageByName = map[string]ServerMessage{
 	"Comment":                     Comment,
 	"DefineDicePresets":           DefineDicePresets,
 	"Denied":                      Denied,
+	"Echo":                        Echo,
 	"FilterDicePresets":           FilterDicePresets,
 	"Granted":                     Granted,
 	"LoadFrom":                    LoadFrom,
@@ -1350,6 +1352,63 @@ type CommentMessagePayload struct {
 type DeniedMessagePayload struct {
 	BaseMessagePayload
 	Reason string
+}
+
+//  _____     _
+// | ____|___| |__   ___
+// |  _| / __| '_ \ / _ \
+// | |__| (__| | | | (_) |
+// |_____\___|_| |_|\___/
+//
+
+//
+// EchoMessagePayload holds information the client wants echoed back
+// to it. This is typically used to synchronize a client with a server
+// by issuing a number of commands and then sending an Echo packet,
+// waiting for the server to send back the echo so the client knows
+// it's seen the previous messages at that point.
+//
+// The echo payload may contain an arbitrary boolean, integer, or
+// string value named B, I, and S, respectively, for convenience in
+// keeping track of the client's state or intentions behind sending
+// the echo request. An arbitrary map of named values may also be
+// given as the O value.
+//
+type EchoMessagePayload struct {
+	BaseMessagePayload
+
+	B bool           `json:"b,omitempty"`
+	I int            `json:"i,omitempty"`
+	S string         `json:"s,omitempty"`
+	O map[string]any `json:"o,omitempty"`
+}
+
+func (c *Connection) EchoString(s string) error {
+	if c == nil {
+		return fmt.Errorf("nil connection")
+	}
+	return c.Echo(false, 0, s, nil)
+}
+
+func (c *Connection) EchoInt(i int) error {
+	if c == nil {
+		return fmt.Errorf("nil connection")
+	}
+	return c.Echo(false, i, "", nil)
+}
+
+func (c *Connection) EchoBool(b bool) error {
+	if c == nil {
+		return fmt.Errorf("nil connection")
+	}
+	return c.Echo(b, 0, "", nil)
+}
+
+func (c *Connection) Echo(b bool, i int, s string, o map[string]any) error {
+	if c == nil {
+		return fmt.Errorf("nil connection")
+	}
+	return c.serverConn.Send(Echo, EchoMessagePayload{B: b, I: i, S: s, O: o})
 }
 
 //  _____ _ _ _            ____  _          ____                     _
@@ -2869,6 +2928,11 @@ func (c *Connection) listen(done chan error) {
 				ch <- cmd
 			}
 
+		case EchoMessagePayload:
+			if ch, ok := c.Subscriptions[Echo]; ok {
+				ch <- cmd
+			}
+
 		case LoadArcObjectMessagePayload:
 			if ch, ok := c.Subscriptions[LoadArcObject]; ok {
 				ch <- cmd
@@ -3160,6 +3224,8 @@ func (c *Connection) filterSubscriptions() error {
 			subList = append(subList, "CO")
 		case Comment:
 			subList = append(subList, "//")
+		case Echo:
+			subList = append(subList, "ECHO")
 		case LoadFrom:
 			subList = append(subList, "L")
 		case LoadArcObject:
