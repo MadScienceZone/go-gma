@@ -2087,7 +2087,7 @@ type UpdateClockMessagePayload struct {
 
 	// If true and not in combat mode, local clients should
 	// keep running the clock in real time.
-	Running bool
+	Running bool `json:",omitempty"`
 }
 
 //

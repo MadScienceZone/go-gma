@@ -192,6 +192,7 @@ func (a *Application) GetClientPreamble() *mapper.ClientPreamble {
 //
 func (a *Application) AddClient(c *mapper.ClientConnection) {
 	a.clientData.add <- c
+	a.SendPeerListToAll()
 }
 
 //
@@ -199,6 +200,7 @@ func (a *Application) AddClient(c *mapper.ClientConnection) {
 //
 func (a *Application) RemoveClient(c *mapper.ClientConnection) {
 	a.clientData.remove <- c
+	a.SendPeerListToAll()
 }
 
 //
@@ -817,23 +819,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		}
 
 	case mapper.QueryPeersMessagePayload:
-		var peers mapper.UpdatePeerListMessagePayload
-		for _, peer := range a.GetClients() {
-			thisPeer := mapper.Peer{
-				Addr:     peer.Address,
-				LastPolo: time.Since(peer.LastPoloTime).Seconds(),
-				IsMe:     peer == requester,
-			}
-			if peer.Auth != nil {
-				thisPeer.User = peer.Auth.Username
-				thisPeer.Client = peer.Auth.Client
-				thisPeer.IsAuthenticated = peer.Auth.Username != ""
-			}
-			peers.PeerList = append(peers.PeerList, thisPeer)
-		}
-		if err := requester.Conn.Send(mapper.UpdatePeerList, peers); err != nil {
-			a.Logf("error sending peer list: %v", err)
-		}
+		a.SendPeerListTo(requester)
 
 	// These commands are passed on to our peers with no further action required.
 	case mapper.MarkMessagePayload,
@@ -886,6 +872,32 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 
 	default:
 		a.Logf("received unexpected message (type %T, value %v); ignored", payload, payload)
+	}
+}
+
+func (a *Application) SendPeerListToAll() {
+	for _, peer := range a.GetClients() {
+		a.SendPeerListTo(peer)
+	}
+}
+
+func (a *Application) SendPeerListTo(requester *mapper.ClientConnection) {
+	var peers mapper.UpdatePeerListMessagePayload
+	for _, peer := range a.GetClients() {
+		thisPeer := mapper.Peer{
+			Addr:     peer.Address,
+			LastPolo: time.Since(peer.LastPoloTime).Seconds(),
+			IsMe:     peer == requester,
+		}
+		if peer.Auth != nil {
+			thisPeer.User = peer.Auth.Username
+			thisPeer.Client = peer.Auth.Client
+			thisPeer.IsAuthenticated = peer.Auth.Username != ""
+		}
+		peers.PeerList = append(peers.PeerList, thisPeer)
+	}
+	if err := requester.Conn.Send(mapper.UpdatePeerList, peers); err != nil {
+		a.Logf("error sending peer list: %v", err)
 	}
 }
 
