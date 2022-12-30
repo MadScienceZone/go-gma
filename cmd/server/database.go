@@ -29,6 +29,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/dice"
 	"github.com/MadScienceZone/go-gma/v5/mapper"
 	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/exp/slices"
 )
 
 func (a *Application) dbOpen() error {
@@ -157,6 +158,10 @@ func (a *Application) QueryChatHistory(target int, requester *mapper.ClientConne
 	var rows *sql.Rows
 	var err error
 
+	if requester == nil || requester.Auth == nil || requester.Auth.Username == "" {
+		return fmt.Errorf("query of chat history denied to unauthenticated requester")
+	}
+
 	a.Debugf(DebugDB, "query of chat history target=%d", target)
 	if target == 0 {
 		rows, err = a.sqldb.Query(`SELECT msgid, msgtype, rawdata FROM chats`)
@@ -193,16 +198,18 @@ func (a *Application) QueryChatHistory(target int, requester *mapper.ClientConne
 			if err := json.Unmarshal([]byte(jdata), &chat); err != nil {
 				return err
 			}
-			// TODO ONLY if it was for them
-			requester.Conn.Send(mapper.ChatMessage, chat)
+			if chat.ToAll || (chat.ToGM && requester.Auth.GmMode) || slices.Contains[string](chat.Recipients, requester.Auth.Username) {
+				requester.Conn.Send(mapper.ChatMessage, chat)
+			}
 
 		case int(mapper.RollResult):
 			var rr mapper.RollResultMessagePayload
 			if err := json.Unmarshal([]byte(jdata), &rr); err != nil {
 				return err
 			}
-			// TODO ONLY if it was for them
-			requester.Conn.Send(mapper.RollResult, rr)
+			if rr.ToAll || (rr.ToGM && requester.Auth.GmMode) || slices.Contains[string](rr.Recipients, requester.Auth.Username) {
+				requester.Conn.Send(mapper.RollResult, rr)
+			}
 
 		default:
 			a.Logf("Found item of type %v in chat history (ignored)", msgtype)
