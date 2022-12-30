@@ -166,7 +166,7 @@ func (a *Application) QueryChatHistory(target int, requester *mapper.ClientConne
 	if target == 0 {
 		rows, err = a.sqldb.Query(`SELECT msgid, msgtype, rawdata FROM chats`)
 	} else if target < 0 {
-		rows, err = a.sqldb.Query(`SELECT msgid, msgtype, rawdata FROM chats WHERE msgid not in (select msgid from chats order by msgid desc limit ?)`, -target)
+		rows, err = a.sqldb.Query(`SELECT msgid, msgtype, rawdata FROM chats order by msgid desc limit ?`, -target)
 	} else {
 		rows, err = a.sqldb.Query(`SELECT msgid, msgtype, rawdata FROM chats WHERE msgid > ?`, target)
 	}

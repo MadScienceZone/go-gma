@@ -27,6 +27,7 @@ const (
 	DebugEvents
 	DebugIO
 	DebugInit
+	DebugMessages
 	DebugMisc
 	DebugState
 	DebugAll DebugFlags = 0xffffffff
@@ -54,6 +55,7 @@ func DebugFlagNameSlice(flags DebugFlags) []string {
 		{bits: DebugEvents, name: "events"},
 		{bits: DebugIO, name: "i/o"},
 		{bits: DebugInit, name: "init"},
+		{bits: DebugMessages, name: "messages"},
 		{bits: DebugMisc, name: "misc"},
 		{bits: DebugState, name: "state"},
 	} {
@@ -107,6 +109,8 @@ func NamedDebugFlags(names ...string) (DebugFlags, error) {
 				d |= DebugIO
 			case "init":
 				d |= DebugInit
+			case "messages":
+				d |= DebugMessages
 			case "misc":
 				d |= DebugMisc
 			case "state":
@@ -224,9 +228,9 @@ func (a *Application) manageClientList() {
 		// if we have a list already in the channel, consume it ourselves
 		select {
 		case <-a.clientData.fetch:
-			a.Log("removed old client list from channel")
+			a.Debug(DebugIO, "removed old client list from channel")
 		default:
-			a.Log("no old client list in channel")
+			a.Debug(DebugIO, "no old client list in channel")
 		}
 	}
 
@@ -236,7 +240,7 @@ func (a *Application) manageClientList() {
 		select {
 		case a.clientData.fetch <- clientListCopy:
 			clientListCopy = newClientListCopy()
-			a.Log("pushed client list to channel")
+			a.Debug(DebugIO, "pushed client list to channel")
 
 		case c := <-a.clientData.add:
 			if c != nil {
@@ -504,7 +508,7 @@ func (a *Application) refreshAuthenticator() error {
 }
 
 func (a *Application) HandleServerMessage(payload mapper.MessagePayload, requester *mapper.ClientConnection) {
-	a.Logf("Received %T %v", payload, payload)
+	a.Debugf(DebugMessages, "HandleServerMessage received %T %v", payload, payload)
 	switch p := payload.(type) {
 	case mapper.AddImageMessagePayload:
 		for _, instance := range p.Sizes {
@@ -879,14 +883,17 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 
 	case mapper.SyncMessagePayload:
 		a.SendGameState(requester)
+
+	default:
+		a.Logf("received unexpected message (type %T, value %v); ignored", payload, payload)
 	}
 }
 
 func (a *Application) SendToAllExcept(c *mapper.ClientConnection, cmd mapper.ServerMessage, data any) error {
 	if c == nil {
-		a.Debugf(DebugIO, "sending %v %v to all clients", cmd, data)
+		a.Debugf(DebugIO|DebugMessages, "sending %v %v to all clients", cmd, data)
 	} else {
-		a.Debugf(DebugIO, "sending %v %v to all clients except %v", cmd, data, c.IdTag())
+		a.Debugf(DebugIO|DebugMessages, "sending %v %v to all clients except %v", cmd, data, c.IdTag())
 	}
 	var reportedError error
 

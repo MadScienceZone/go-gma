@@ -366,7 +366,7 @@ func (c *MapConnection) sendln(commandWord, data string) error {
 		return fmt.Errorf("nil MapConnection")
 	}
 	if c.debugf != nil {
-		c.debugf(DebugIO, "->%s %s", commandWord, data)
+		c.debugf(DebugIO|DebugMessages, "->%s %s", commandWord, data)
 	}
 	if strings.ContainsAny(data, "\n\r") {
 		return fmt.Errorf("protocol error: outgoing data packet may not contain newlines")
@@ -416,6 +416,7 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 
 	// Comments are anything starting with "//"
 	// The input line is in the form COMMAND-WORD [JSON] \n
+	c.debugf(DebugIO|DebugMessages, "<-%v", c.reader.Text())
 	payload := BaseMessagePayload{
 		rawMessage: c.reader.Text(),
 	}

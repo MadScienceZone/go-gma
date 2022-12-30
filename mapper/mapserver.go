@@ -224,6 +224,7 @@ syncloop:
 
 		case <-loginctx.Done():
 			c.Logf("timeout/cancel of login negotiation")
+			time.Sleep(2 * time.Second)
 			return
 		}
 	}

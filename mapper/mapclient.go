@@ -86,6 +86,7 @@ const (
 	DebugBinary
 	DebugEvents
 	DebugIO
+	DebugMessages
 	DebugMisc
 	DebugAll DebugFlags = 0xffffffff
 )
@@ -112,6 +113,7 @@ func DebugFlagNameSlice(flags DebugFlags) []string {
 		{bits: DebugBinary, name: "binary"},
 		{bits: DebugEvents, name: "events"},
 		{bits: DebugIO, name: "i/o"},
+		{bits: DebugMessages, name: "messages"},
 		{bits: DebugMisc, name: "misc"},
 	} {
 		if (flags & f.bits) != 0 {
@@ -158,6 +160,8 @@ func NamedDebugFlags(names ...string) (DebugFlags, error) {
 				d |= DebugEvents
 			case "i/o", "io":
 				d |= DebugIO
+			case "messages":
+				d |= DebugMessages
 			case "misc":
 				d |= DebugMisc
 			default:
