@@ -2074,12 +2074,12 @@ type UpdateClockMessagePayload struct {
 
 	// The clock is now at the given absolute number of
 	// seconds from the GMA clock's global epoch.
-	Absolute float64
+	Absolute int64
 
 	// The elapsed time counter is now this many seconds from
 	// some reference point set by the GM (often the start of
 	// combat).
-	Relative float64
+	Relative int64
 
 	// If true and not in combat mode, local clients should
 	// keep running the clock in real time.
@@ -2089,7 +2089,7 @@ type UpdateClockMessagePayload struct {
 //
 // UpdateClock informs everyone of the current time
 //
-func (c *Connection) UpdateClock(absolute, relative float64, keepRunning bool) error {
+func (c *Connection) UpdateClock(absolute, relative int64, keepRunning bool) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
 	}

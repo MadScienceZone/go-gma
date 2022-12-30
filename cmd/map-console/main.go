@@ -49,7 +49,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GMAVersionNumber="5.0.0-alpha.1" //@@##@@
+const GMAVersionNumber = "5.0.0-alpha.1" //@@##@@
 
 func main() {
 	fmt.Printf("GMA mapper console %s\n", GMAVersionNumber)
@@ -646,10 +646,10 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 		)
 
 	case mapper.UpdateClockMessagePayload:
-		cal.SetTimeValue(int64(m.Absolute))
+		cal.SetTimeValue(m.Absolute)
 		printFields(mono, "UpdateClock",
 			fieldDesc{"absolute", cal.ToString(2)},
-			fieldDesc{"relative", cal.DeltaString(int64(m.Relative), false)},
+			fieldDesc{"relative", cal.DeltaString(m.Relative, false)},
 		)
 
 	case mapper.UpdateDicePresetsMessagePayload:
@@ -699,6 +699,7 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 		)
 
 	case mapper.UpdatePeerListMessagePayload:
+		fmt.Printf("peerlist len=%v\n", len(m.PeerList))
 		printFields(mono, "UpdatePeerList")
 		printFields(mono, "",
 			fieldDesc{"       USERNAME------------ ADDRESS-------------- CLIENT------------------- AU ME PING--", nil})

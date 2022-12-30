@@ -34,8 +34,8 @@ import (
 // and protocol versions supported by this code.
 //
 const (
-	GMAMapperProtocol=400     // @@##@@ auto-configured
-	GMAVersionNumber="5.0.0-alpha.1" // @@##@@ auto-configured
+	GMAMapperProtocol           = 400             // @@##@@ auto-configured
+	GMAVersionNumber            = "5.0.0-alpha.1" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
 	MaximumSupportedMapProtocol = 400
 )
@@ -541,6 +541,11 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 
 	case "CONN":
 		p := UpdatePeerListMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
 		p.messageType = UpdatePeerList
 		return p, nil
 
