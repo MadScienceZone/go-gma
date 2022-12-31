@@ -482,6 +482,9 @@ func NewConnection(endpoint string, opts ...ConnectionOption) (Connection, error
 		},
 	}
 
+	newCon.serverConn.debug = newCon.debug
+	newCon.serverConn.debugf = newCon.debugf
+
 	for _, o := range opts {
 		if err := o(&newCon); err != nil {
 			return newCon, err
@@ -501,6 +504,13 @@ func (c *Connection) debug(level DebugFlags, msg string) {
 				c.Logf("DEBUG%s%02d: %s", DebugFlagNames(level), i, line)
 			}
 		}
+	}
+}
+
+func (c *Connection) debugf(level DebugFlags, format string, args ...any) {
+	if c != nil && (c.DebuggingLevel&level) != 0 {
+		args = append([]any{DebugFlagNames(level)}, args...)
+		c.Logf("DEBUG%s: "+format, args...)
 	}
 }
 
