@@ -2570,7 +2570,7 @@ func LoadDieRollPresetFile(input io.Reader) ([]DieRollPreset, DieRollPresetMetaD
 	return nil, meta, fmt.Errorf("invalid die-roll preset file format: unexpected end of file")
 }
 
-// @[00]@| GMA 5.0.0-alpha.1
+// @[00]@| GMA 5.0.0-alpha.3
 // @[01]@|
 // @[10]@| Copyright © 1992–2022 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

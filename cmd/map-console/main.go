@@ -49,7 +49,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GMAVersionNumber = "5.0.0-alpha.1" //@@##@@
+const GMAVersionNumber="5.0.0-alpha.3" //@@##@@
 
 func main() {
 	fmt.Printf("GMA mapper console %s\n", GMAVersionNumber)
@@ -1489,7 +1489,7 @@ func colorize(text, color string, mono bool) string {
 }
 
 /*
-# @[00]@| GMA 5.0.0-alpha.1
+# @[00]@| GMA 5.0.0-alpha.3
 # @[01]@|
 # @[10]@| Copyright © 1992–2022 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/hashicorp/go-version"
 )
 
 func splitToInts(s string) ([]int, error) {
@@ -46,33 +48,20 @@ func splitToInts(s string) ([]int, error) {
 // Returns <0 if a is a version before b,
 // >0 if a is after b, or zero if they are the same.
 //
+// As of version 5.0.0, this is simply a wrapper to the hashicorp go-version package.
+//
 func VersionCompare(a, b string) (int, error) {
-	if a == b {
-		return 0, nil
-	}
-
-	al, err := splitToInts(a)
-	if err != nil {
-		return 0, err
-	}
-	bl, err := splitToInts(b)
+	va, err := version.NewSemver(a)
 	if err != nil {
 		return 0, err
 	}
 
-	for len(bl) != len(al) {
-		if len(bl) < len(al) {
-			bl = append(bl, 0)
-		} else {
-			al = append(al, 0)
-		}
+	vb, err := version.NewSemver(b)
+	if err != nil {
+		return 0, err
 	}
-	for i := 0; i < len(al); i++ {
-		if al[i] != bl[i] {
-			return al[i] - bl[i], nil
-		}
-	}
-	return 0, nil
+
+	return va.Compare(vb), nil
 }
 
 //
@@ -247,7 +236,7 @@ func PluralizeCustom(base, singularSuffix, pluralSuffix string, qty int) string 
 	return base + pluralSuffix
 }
 
-// @[00]@| GMA 5.0.0-alpha.1
+// @[00]@| GMA 5.0.0-alpha.3
 // @[01]@|
 // @[10]@| Copyright © 1992–2022 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

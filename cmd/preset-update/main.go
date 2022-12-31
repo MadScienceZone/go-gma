@@ -35,7 +35,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GMAVersionNumber="5.0.0-alpha.1"    //@@##@@
+const GMAVersionNumber="5.0.0-alpha.3"    //@@##@@
 const GMADieRollPresetFileFormat = 2 //@@##@@
 
 func main() {
@@ -75,7 +75,7 @@ func main() {
 }
 
 /*
-# @[00]@| GMA 5.0.0-alpha.1
+# @[00]@| GMA 5.0.0-alpha.3
 # @[01]@|
 # @[10]@| Copyright © 1992–2022 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

@@ -6,6 +6,7 @@ go 1.18
 require github.com/schwarmco/go-cartesian-product v0.0.0-20180515110546-d5ee747a6dc9
 
 require (
+	github.com/hashicorp/go-version v1.6.0
 	github.com/lestrrat-go/strftime v1.0.6
 	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/newrelic/go-agent/v3 v3.20.2

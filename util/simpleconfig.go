@@ -248,7 +248,7 @@ func OverrideBoolWithNegation(key string, value bool, neg bool) func(SimpleConfi
 	}
 }
 
-// @[00]@| GMA 5.0.0-alpha.1
+// @[00]@| GMA 5.0.0-alpha.3
 // @[01]@|
 // @[10]@| Copyright © 1992–2022 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
