@@ -251,7 +251,7 @@ syncloop:
 			if c == nil {
 				return
 			}
-			if c.Conn == nil || c.Conn.writer == nil {
+			if c.Conn.writer == nil {
 				c.Log("client writer gone; giving up now")
 				return
 			}
