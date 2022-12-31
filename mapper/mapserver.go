@@ -246,6 +246,35 @@ syncloop:
 			}
 		}
 	}(incomingPacket, done)
+	go func(c *ClientConnection) {
+		for {
+			if c == nil {
+				return
+			}
+			if c.Conn == nil || c.Conn.writer == nil {
+				c.Log("client writer gone; giving up now")
+				return
+			}
+			select {
+			case packet := <-c.Conn.sendChan:
+				c.Conn.sendBuf = append(c.Conn.sendBuf, packet)
+				c.debugf(DebugIO, "moved packet %v to output buffer (depth %d)", packet, len(c.Conn.sendBuf))
+
+			default:
+				if len(c.Conn.sendBuf) > 0 {
+					if written, err := c.Conn.writer.WriteString(c.Conn.sendBuf[0]); err != nil {
+						c.Logf("error sending %v to client (wrote %d): %v", c.Conn.sendBuf[0], written, err)
+					}
+					if err := c.Conn.writer.Flush(); err != nil {
+						c.Logf("error sending %v to client (in flush): %v", c.Conn.sendBuf[0], err)
+					}
+					c.debugf(DebugIO, "sent %v", c.Conn.sendBuf[0])
+					c.Conn.sendBuf = c.Conn.sendBuf[1:]
+					c.debugf(DebugIO, "depth now %d", len(c.Conn.sendBuf))
+				}
+			}
+		}
+	}(c)
 
 mainloop:
 	for {
@@ -257,10 +286,6 @@ mainloop:
 		case err := <-done:
 			c.Logf("error reading from client: %v", err)
 			break mainloop
-
-		case packet := <-c.Conn.sendChan:
-			c.Conn.sendBuf = append(c.Conn.sendBuf, packet)
-			c.debugf(DebugIO, "moved packet %v to output buffer (depth %d)", packet, len(c.Conn.sendBuf))
 
 		case packet := <-incomingPacket:
 			if packet == nil {
@@ -313,19 +338,6 @@ mainloop:
 
 			default:
 				c.Server.HandleServerMessage(packet, c)
-			}
-
-		default:
-			if c.Conn.writer != nil && len(c.Conn.sendBuf) > 0 {
-				if written, err := c.Conn.writer.WriteString(c.Conn.sendBuf[0]); err != nil {
-					c.Logf("error sending %v to client (wrote %d): %v", c.Conn.sendBuf[0], written, err)
-				}
-				if err := c.Conn.writer.Flush(); err != nil {
-					c.Logf("error sending %v to client (in flush): %v", c.Conn.sendBuf[0], err)
-				}
-				c.debugf(DebugIO, "sent %v", c.Conn.sendBuf[0])
-				c.Conn.sendBuf = c.Conn.sendBuf[1:]
-				c.debugf(DebugIO, "depth now %d", len(c.Conn.sendBuf))
 			}
 		}
 	}
