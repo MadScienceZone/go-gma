@@ -191,7 +191,7 @@ func (c *ClientConnection) Close() {
 //}
 //
 //
-// serveToClient is intended to be run in its own thread,
+// ServeToClient is intended to be run in its own thread,
 // and speaks to one client for the duration of its session.
 //
 func (c *ClientConnection) ServeToClient(ctx context.Context) {
@@ -205,6 +205,7 @@ func (c *ClientConnection) ServeToClient(ctx context.Context) {
 	defer c.debug(DebugIO, "serveToClient() ended")
 	loginDone := make(chan error, 1)
 	loginctx, _ := context.WithTimeout(ctx, 1*time.Minute)
+	c.LastPoloTime = time.Now()
 	go c.loginClient(loginctx, loginDone)
 
 syncloop:
