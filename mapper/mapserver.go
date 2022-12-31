@@ -489,13 +489,11 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error) {
 	if err := c.Conn.Flush(); err != nil {
 		done <- err
 	}
+	done <- nil // login is done at this point, let the caller start the normal client listener for I/O
 	if preamble != nil {
 		for i, line := range preamble.PostReady {
 			c.debugf(DebugIO, "post-ready preamble line %d: %s", i, line)
 			c.Conn.sendRaw(line)
-			if err := c.Conn.Flush(); err != nil {
-				done <- err
-			}
 		}
 		if preamble.SyncData {
 			c.Log("syncing client to current game state...")
@@ -503,7 +501,6 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error) {
 			c.Log("syncing done")
 		}
 	}
-	done <- nil
 }
 
 //	go app.ioRunner(&client)
