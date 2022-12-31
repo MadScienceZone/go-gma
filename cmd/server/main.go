@@ -46,7 +46,7 @@ import (
 // Auto-configured values
 //
 
-const GMAVersionNumber="5.0.0-alpha.1" // @@##@@
+const GMAVersionNumber = "5.0.0-alpha.1" // @@##@@
 
 //
 // eventMonitor responds to signals and timers that affect our overall operation
@@ -118,13 +118,15 @@ func eventMonitor(sigChan chan os.Signal, stopChan chan int, app *Application) {
 	}
 }
 
-func generateMessageIDs(c chan int) {
+func generateMessageIDs(logf func(format string, args ...any), c chan int) {
 	// Start off with the time on the clock, on the assumption
 	// that on average there won't be more than a chat message per
 	// second since the server was started, so when the server is
 	// restarted, this should give us a safe margin to start a new
 	// set of IDs. It's simplistic, but works for our purposes.
 	var nextMessageID int = int(time.Now().Unix())
+	logf("starting messsageID generator at %v", nextMessageID)
+	defer logf("stopping messageID generator")
 
 	// Now just feed these numbers to the channel as fast as they are
 	// consumed.
@@ -150,7 +152,7 @@ func main() {
 		mapper.MinimumSupportedMapProtocol,
 		mapper.MaximumSupportedMapProtocol)
 
-	go generateMessageIDs(app.MessageIDGenerator)
+	go generateMessageIDs(app.Logf, app.MessageIDGenerator)
 	go app.managePreambleData()
 	go app.manageClientList()
 	go app.manageGameState()
