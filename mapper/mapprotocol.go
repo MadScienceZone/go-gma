@@ -34,8 +34,8 @@ import (
 // and protocol versions supported by this code.
 //
 const (
-	GMAMapperProtocol=400             // @@##@@ auto-configured
-	GMAVersionNumber="5.0.0-alpha.3" // @@##@@ auto-configured
+	GMAMapperProtocol           = 400             // @@##@@ auto-configured
+	GMAVersionNumber            = "5.0.0-alpha.3" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
 	MaximumSupportedMapProtocol = 400
 )
@@ -73,7 +73,7 @@ func NewMapConnection(c net.Conn) MapConnection {
 		conn:     c,
 		reader:   bufio.NewScanner(c),
 		writer:   bufio.NewWriter(c),
-		sendChan: make(chan string, 16),
+		sendChan: make(chan string, 50),
 	}
 }
 

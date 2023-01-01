@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 
 	"github.com/MadScienceZone/go-gma/v5/dice"
 	"github.com/MadScienceZone/go-gma/v5/mapper"
@@ -243,12 +244,41 @@ func (a *Application) StoreDicePresets(user string, presets []dice.DieRollPreset
 }
 
 func (a *Application) FilterDicePresets(user string, f mapper.FilterDicePresetsMessagePayload) error {
+	var namesToDelete []string
+
 	a.Debugf(DebugDB, "removing existing die-roll presets for %s matching /%s/", user, f.Filter)
-	result, err := a.sqldb.Exec(`delete from dicepresets where user = ? and name regexp ?`, user, f.Filter)
+	filter, err := regexp.Compile(f.Filter)
 	if err != nil {
 		return err
 	}
-	a.debugDbAffected(result, fmt.Sprintf("filter presets for %s", user))
+
+	rows, err := a.sqldb.Query(`select name from dicepresets where user = ?`, user)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var thisName string
+		if err := rows.Scan(&thisName); err != nil {
+			return err
+		}
+		if filter.MatchString(thisName) {
+			namesToDelete = append(namesToDelete, thisName)
+		}
+	}
+	if len(namesToDelete) > 0 {
+		a.Debugf(DebugDB, "--filter pattern matches %v row(s)", len(namesToDelete))
+
+		for _, name := range namesToDelete {
+			_, err := a.sqldb.Exec(`delete from dicepresets where user = ? and name = ?`, user, name)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		a.Debugf(DebugDB, "--filter matched no presets")
+	}
 	return nil
 }
 

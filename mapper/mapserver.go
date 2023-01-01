@@ -183,13 +183,6 @@ func (c *ClientConnection) Close() {
 	c.Conn.Close()
 }
 
-//func (c *ClientConnection) EmergencyReject(message string) {
-//	c.Logf("performing emergency reject (%s)", message)
-//	c.Conn.Send(mapper.Protocol, mapper.GMAMapperProtocol)
-//	c.Conn.Send(mapper.Denied, mapper.DeniedMessagePayload{Reason: message})
-//	c.Conn.Close()
-//}
-//
 //
 // ServeToClient is intended to be run in its own thread,
 // and speaks to one client for the duration of its session.
@@ -235,7 +228,7 @@ syncloop:
 
 	// Now we have a fully established connection to the client.
 	// wait for each client command and then respond to it.
-	incomingPacket := make(chan MessagePayload)
+	incomingPacket := make(chan MessagePayload, 50)
 	done := make(chan error)
 	go func(incomingPacket chan MessagePayload, done chan error) {
 		for {
@@ -461,9 +454,6 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error) {
 				}
 			}
 		}
-
-		//TODO Flush() should allow a timeout
-
 	} else {
 		c.debug(DebugIO, "proceeding without authentication")
 		c.Conn.Send(Challenge, ChallengeMessagePayload{
