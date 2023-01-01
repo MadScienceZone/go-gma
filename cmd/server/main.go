@@ -46,7 +46,7 @@ import (
 // Auto-configured values
 //
 
-const GMAVersionNumber="5.0.0-alpha.3" // @@##@@
+const GMAVersionNumber = "5.0.0-alpha.3" // @@##@@
 
 //
 // eventMonitor responds to signals and timers that affect our overall operation
