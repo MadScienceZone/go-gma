@@ -39,6 +39,10 @@ the main GMA project, so version _x_._y_._z_ of `go-gma` will always
 be compatible with version _x_._y_._z_ of `gma`. (This is why `go-gma` started at
 at v4. It moved to v5 when the JSON formats were introduced as a breaking change.)
 
+## Game System Neutral
+
+The GMA software and the go-gma client in this repository are intended to be game-system-neutral. They are not written for, nor necessarily intended for use with, the Dungeons & Dragons game from Wizards of the Coast, nor do they rely upon OGL-licensed intellectual property from Wizards of the Coast. Where any game system was in mind for these tools, it was the Pathfinder role-playing game system from Paizo, Inc.
+
 ## Legal Notice
 GMA uses trademarks and/or copyrights owned by Paizo Inc., used under Paizo's 
 Community Use Policy ([paizo.com/communityuse]()). We are expressly prohibited from 
