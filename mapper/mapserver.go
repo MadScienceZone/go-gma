@@ -241,6 +241,9 @@ syncloop:
 		}
 	}(incomingPacket, done)
 	go func(c *ClientConnection) {
+		c.Log("client sender started")
+		defer c.Log("client sender stopped")
+
 		for {
 			if c == nil {
 				return
@@ -255,6 +258,10 @@ syncloop:
 				c.debugf(DebugIO, "moved packet %v to output buffer (depth %d)", packet, len(c.Conn.sendBuf))
 
 			default:
+				// XXX
+				// if we block trying to write out to the network socket, we block
+				// our ability to read from sendChan, which could in turn block
+				// other routines which are trying to tell us things.
 				if len(c.Conn.sendBuf) > 0 {
 					if written, err := c.Conn.writer.WriteString(c.Conn.sendBuf[0]); err != nil {
 						c.Logf("error sending %v to client (wrote %d): %v", c.Conn.sendBuf[0], written, err)
@@ -271,10 +278,13 @@ syncloop:
 	}(c)
 
 mainloop:
+	c.Log("main loop entered")
+	defer c.Log("Interaction with client ended")
+
 	for {
 		select {
 		case <-ctx.Done():
-			c.Logf("client task signalled to stop")
+			c.Log("client task signalled to stop")
 			break mainloop
 
 		case err := <-done:
@@ -282,6 +292,10 @@ mainloop:
 			break mainloop
 
 		case packet := <-incomingPacket:
+			// XXX
+			// this will block signals to stop this client until processing of the current
+			// packet is finished, but that shouldn't deadlock the I/O itself since that's
+			// in other goroutines that don't rely on this code.
 			if packet == nil {
 				c.Log("EOF from client")
 				break mainloop
@@ -336,7 +350,6 @@ mainloop:
 		}
 	}
 
-	c.Logf("Interaction with client ended")
 }
 
 func (c *ClientConnection) loginClient(ctx context.Context, done chan error) {
@@ -391,7 +404,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error) {
 			for {
 				packet, err := c.Conn.Receive()
 				if err != nil {
-					c.Logf("error reacing auth response from client: %v; stopping", err)
+					c.Logf("error reading auth response from client: %v; stopping", err)
 					return
 				}
 				if packet == nil {
