@@ -277,10 +277,10 @@ syncloop:
 		}
 	}(c)
 
-mainloop:
 	c.Log("main loop entered")
 	defer c.Log("Interaction with client ended")
 
+mainloop:
 	for {
 		select {
 		case <-ctx.Done():
