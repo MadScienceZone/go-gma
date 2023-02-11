@@ -140,14 +140,14 @@ func main() {
 	var nrApp *newrelic.Application
 	var err error
 
-	app := NewApplication()
+	app := *NewApplication()
 	app.Logger.SetPrefix("go-gma-server: ")
 	if err := app.GetAppOptions(); err != nil {
 		fmt.Fprintf(os.Stderr, "fatal error: %v\n", err)
 		os.Exit(1)
 	}
 	app.Logf("Server %s started", GMAVersionNumber)
-	app.Logf("Implements protocol %d (minimum %d, maximum %d)",
+	app.Logf("Implements protocol %d (library supports minimum %d, maximum %d)",
 		mapper.GMAMapperProtocol,
 		mapper.MinimumSupportedMapProtocol,
 		mapper.MaximumSupportedMapProtocol)

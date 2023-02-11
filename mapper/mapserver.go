@@ -28,6 +28,8 @@ import (
 
 // Server-side analogue to the client code.
 
+const IncomingClientPacketBacklog = 64 // How many incoming packets we can buffer waiting to be processed by the server before blocking
+
 type MapServer interface {
 	Log(messsage ...any)
 	Logf(format string, args ...any)
@@ -197,7 +199,8 @@ func (c *ClientConnection) ServeToClient(ctx context.Context) {
 	c.debug(DebugIO, "serveToClient() started")
 	defer c.debug(DebugIO, "serveToClient() ended")
 	loginDone := make(chan error, 1)
-	loginctx, _ := context.WithTimeout(ctx, 1*time.Minute)
+	loginctx, loginCancel := context.WithTimeout(ctx, 1*time.Minute)
+	defer loginCancel()
 	c.LastPoloTime = time.Now()
 	go c.loginClient(loginctx, loginDone)
 
@@ -207,18 +210,15 @@ syncloop:
 		case err = <-loginDone:
 			if err != nil {
 				c.Logf("client login failed: %v", err)
+				time.Sleep(2 * time.Second)
 				return
 			}
 			c.debugf(DebugIO, "login successfully completed")
+			loginCancel()
 			break syncloop
 
 		case <-ctx.Done():
 			c.Logf("context cancelled; closing connection to client and aborting login")
-			return
-
-		case <-loginctx.Done():
-			c.Logf("timeout/cancel of login negotiation")
-			time.Sleep(2 * time.Second)
 			return
 		}
 	}
@@ -228,54 +228,118 @@ syncloop:
 
 	// Now we have a fully established connection to the client.
 	// wait for each client command and then respond to it.
-	incomingPacket := make(chan MessagePayload, 50)
+
+	// Start a listener which will just watch the incoming socket connection
+	// and feed each received packet to the incomingPacket channel.
+	// Note that this won't notice a cancelled context until the socket scanner
+	// has hit an error, EOF, or has found an input line.
+
+	incomingPacket := make(chan MessagePayload, IncomingClientPacketBacklog)
+	clientListenerCtx, cancelClientListener := context.WithCancel(ctx)
+	defer cancelClientListener()
 	done := make(chan error)
-	go func(incomingPacket chan MessagePayload, done chan error) {
+
+	go func(ctx context.Context, incomingPacket chan MessagePayload, done chan error) {
+		c.Log("client listener started")
+		defer c.Log("client listener stopped")
+
 		for {
 			p, err := c.Conn.Receive()
 			if err != nil {
 				done <- err
-			} else {
+				return
+			}
+			select {
+			case <-ctx.Done():
+				return
+			default:
 				incomingPacket <- p
 			}
 		}
-	}(incomingPacket, done)
-	go func(c *ClientConnection) {
+	}(clientListenerCtx, incomingPacket, done)
+
+	// Start a buffer agent which will accept data on sendChan and buffer it locally
+	// to send out to the client socket. We don't try to write it to the client here
+	// in case the client is slow to receive our output since that could make us block
+	// and might possibly lock up the server as other routines wait in line to talk to
+	// this client.
+	//
+	// We want management of the buffer slice to happen only here in this one goroutine,
+	// so we also feed the buffered data to the toSend channel as fast as it can accept
+	// them (which is tied to the network socket being available and the client's reading
+	// speed, so this is where data backs up in the buffer when the client isn't able to
+	// accept as fast as we can send.
+
+	toSend := make(chan string)
+	clientBufferCtx, cancelClientBuffer := context.WithCancel(ctx)
+	defer cancelClientBuffer()
+
+	go func(ctx context.Context) {
+		c.Log("client buffer agent started")
+		defer c.Log("client buffer agent stopped")
+
+		for {
+			select {
+			case packet := <-c.Conn.sendChan:
+				if len(c.Conn.sendBuf) == 0 {
+					select {
+					case toSend <- packet:
+						c.debugf(DebugIO, "moved packet directly to output channel (buffer empty and channel available now)")
+						continue
+					default:
+					}
+				}
+				c.Conn.sendBuf = append(c.Conn.sendBuf, packet)
+				c.debugf(DebugIO, "moved packet to output buffer (depth %d)", len(c.Conn.sendBuf))
+
+			case <-ctx.Done():
+				c.Log("buffer manager context cancelled")
+				return
+
+			default:
+				if len(c.Conn.sendBuf) > 0 {
+					select {
+					case toSend <- c.Conn.sendBuf[0]:
+						c.Conn.sendBuf = c.Conn.sendBuf[1:]
+						c.debugf(DebugIO, "moved packet to output channel (depth %d)", len(c.Conn.sendBuf))
+					default:
+					}
+				}
+			}
+		}
+	}(clientBufferCtx)
+
+	// And now start a client sender which watches the output buffer and shuttles data from
+	// the toSend channel to the client socket as fast as we can manage that.  This will block
+	// when the client socket is full, which is fine, the buffer manager will collect the data
+	// backing up until it's ready again.
+
+	clientSenderCtx, cancelClientSender := context.WithCancel(ctx)
+	defer cancelClientSender()
+
+	go func(ctx context.Context, c *ClientConnection) {
 		c.Log("client sender started")
 		defer c.Log("client sender stopped")
 
 		for {
-			if c == nil {
-				return
-			}
 			if c.Conn.writer == nil {
 				c.Log("client writer gone; giving up now")
 				return
 			}
 			select {
-			case packet := <-c.Conn.sendChan:
-				c.Conn.sendBuf = append(c.Conn.sendBuf, packet)
-				c.debugf(DebugIO, "moved packet %v to output buffer (depth %d)", packet, len(c.Conn.sendBuf))
-
-			default:
-				// XXX
-				// if we block trying to write out to the network socket, we block
-				// our ability to read from sendChan, which could in turn block
-				// other routines which are trying to tell us things.
-				if len(c.Conn.sendBuf) > 0 {
-					if written, err := c.Conn.writer.WriteString(c.Conn.sendBuf[0]); err != nil {
-						c.Logf("error sending %v to client (wrote %d): %v", c.Conn.sendBuf[0], written, err)
-					}
-					if err := c.Conn.writer.Flush(); err != nil {
-						c.Logf("error sending %v to client (in flush): %v", c.Conn.sendBuf[0], err)
-					}
-					c.debugf(DebugIO, "sent %v", c.Conn.sendBuf[0])
-					c.Conn.sendBuf = c.Conn.sendBuf[1:]
-					c.debugf(DebugIO, "depth now %d", len(c.Conn.sendBuf))
+			case packet := <-toSend:
+				if written, err := c.Conn.writer.WriteString(packet); err != nil {
+					c.Logf("error sending %v to client (wrote %d): %v", packet, written, err)
 				}
+				if err := c.Conn.writer.Flush(); err != nil {
+					c.Logf("error sending %v to client (in flush): %v", packet, err)
+				}
+				c.debugf(DebugIO, "sent %v", packet)
+			case <-ctx.Done():
+				return
 			}
 		}
-	}(c)
+	}(clientSenderCtx, c)
 
 	c.Log("main loop entered")
 	defer c.Log("Interaction with client ended")
@@ -292,7 +356,6 @@ mainloop:
 			break mainloop
 
 		case packet := <-incomingPacket:
-			// XXX
 			// this will block signals to stop this client until processing of the current
 			// packet is finished, but that shouldn't deadlock the I/O itself since that's
 			// in other goroutines that don't rely on this code.
@@ -429,7 +492,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error) {
 			select {
 			case <-ctx.Done():
 				c.Log("Timeout/cancel while waiting for authentication from client")
-				c.Conn.Send(Denied, DeniedMessagePayload{Reason: "Life is short indeed / I don't have time for waiting / for you to log in"})
+				c.Conn.Send(Denied, DeniedMessagePayload{Reason: "Life is short indeed / I don't have time for waiting / For you to log in"})
 				_ = c.Conn.Flush()
 				time.Sleep(1 * time.Second)
 				done <- fmt.Errorf("timeout waiting for client auth")

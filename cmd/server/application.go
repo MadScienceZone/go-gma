@@ -634,11 +634,13 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				ToAll:      p.ToAll,
 				ToGM:       p.ToGM,
 			},
-			Title: label,
+			Title:     label,
+			RequestID: p.RequestID,
 		}
-		for _, r := range results {
+		for seq, r := range results {
 			response.MessageID = <-a.MessageIDGenerator
 			response.Result = r
+			response.MoreResults = seq+1 < len(results)
 
 			if err := a.AddToChatHistory(response.MessageID, mapper.RollResult, response); err != nil {
 				a.Logf("unable to add RollResult event to chat history: %v", err)
@@ -948,7 +950,7 @@ func (a *Application) SendToAll(cmd mapper.ServerMessage, data any) error {
 }
 
 // NewApplication creates and initializes a new Application value.
-func NewApplication() Application {
+func NewApplication() *Application {
 	app := Application{
 		Logger:             log.Default(),
 		MessageIDGenerator: make(chan int),
@@ -960,7 +962,7 @@ func NewApplication() Application {
 	app.clientData.add = make(chan *mapper.ClientConnection)
 	app.clientData.remove = make(chan *mapper.ClientConnection)
 	app.clientData.fetch = make(chan []*mapper.ClientConnection)
-	return app
+	return &app
 }
 
 //

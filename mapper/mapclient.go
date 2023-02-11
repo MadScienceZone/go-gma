@@ -1944,6 +1944,10 @@ type RollDiceMessagePayload struct {
 	BaseMessagePayload
 	ChatCommon
 
+	// If you want to track the results to the requests that created them,
+	// put a unique ID here. It will be repeated in the corresponding result(s).
+	RequestID string `json:",omitempty"`
+
 	// RollSpec describes the dice to be rolled and any modifiers.
 	RollSpec string
 }
@@ -1985,6 +1989,12 @@ func (c *Connection) RollDiceToGM(rollspec string) error {
 type RollResultMessagePayload struct {
 	BaseMessagePayload
 	ChatCommon
+
+	// True if there will be more results following this one for the same request
+	MoreResults bool `json:",omitempty"`
+
+	// The ID string passed by the user to associate this result with their request (may be blank)
+	RequestID string `json:",omitempty"`
 
 	// The title describing the purpose of the die-roll, as set by the user.
 	Title string `json:",omitempty"`
