@@ -1937,6 +1937,23 @@ func (c *Connection) RollDice(to []string, rollspec string) error {
 }
 
 //
+// RollDiceWithID is identical to RollDice except it passes a user-supplied request ID
+// to the server, which will be sent back with the corresponding result message(s).
+//
+func (c *Connection) RollDiceWithID(to []string, rollspec string, requestID string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(RollDice, RollDiceMessagePayload{
+		ChatCommon: ChatCommon{
+			Recipients: to,
+		},
+		RollSpec:  rollspec,
+		RequestID: requestID,
+	})
+}
+
+//
 // RollDiceMessagePayload holds the data sent from the client to the
 // server when requesting a die roll.
 //

@@ -630,6 +630,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 
 		response := mapper.RollResultMessagePayload{
 			ChatCommon: mapper.ChatCommon{
+				Sender:     requester.Auth.Username,
 				Recipients: p.Recipients,
 				ToAll:      p.ToAll,
 				ToGM:       p.ToGM,

@@ -49,7 +49,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GMAVersionNumber="5.0.0-alpha.3" //@@##@@
+const GMAVersionNumber = "5.0.0-alpha.3" //@@##@@
 
 func main() {
 	fmt.Printf("GMA mapper console %s\n", GMAVersionNumber)
@@ -638,6 +638,8 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"toGM", m.ToGM},
 			fieldDesc{"title", m.Title},
 			fieldDesc{"result", m.Result},
+			fieldDesc{"more?", m.MoreResults},
+			fieldDesc{"requestID", m.RequestID},
 		)
 
 	case mapper.ToolbarMessagePayload:
@@ -1073,8 +1075,12 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 
 			case "D":
 				// D reciplist dice
-				if len(fields) != 3 {
-					fmt.Println(colorize("usage ERROR: wrong number of fields: D <recip>|*|% <dice>", "Red", mono))
+				var requestID string
+
+				if len(fields) == 4 {
+					requestID = fields[3]
+				} else if len(fields) != 3 {
+					fmt.Println(colorize("usage ERROR: wrong number of fields: D <recip>|*|% <dice> [<id>]", "Red", mono))
 					break
 				}
 				recips, err := tcllist.ParseTclList(fields[1])
@@ -1082,7 +1088,7 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 					fmt.Println(colorize(fmt.Sprintf("ERROR in recipient list: %v", err), "Red", mono))
 					break
 				}
-				if err := server.RollDice(recips, fields[2]); err != nil {
+				if err := server.RollDiceWithID(recips, fields[2], requestID); err != nil {
 					fmt.Println(colorize(fmt.Sprintf("server ERROR: %v", err), "Red", mono))
 					break
 				}
