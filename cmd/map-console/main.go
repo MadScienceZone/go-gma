@@ -15,7 +15,7 @@
 # (and this software is primarily for our own use in our play group,
 # anyway, but could be generalized later as a stand-alone product).
 #
-# Copyright (c) 2021 by Steven L. Willoughby, Aloha, Oregon, USA.
+# Copyright (c) 2021-2023 by Steven L. Willoughby, Aloha, Oregon, USA.
 # All Rights Reserved.
 # Licensed under the terms and conditions of the BSD 3-Clause license.
 #
@@ -914,6 +914,8 @@ inputloop:
 			switch strings.ToUpper(fields[0]) {
 			case "HELP", "?":
 				fmt.Println(`Command summary:
+` + "`" + `<text>                                 Send <text> AS-IS to the server (must conform to protocol)
+!<cmd> k1=v1 k2=v2 k3#v3 ...            Send <cmd> with parameters; = quotes value, # does not; <cmd> is uppercased
 AI <name> <size> <filename>             Upload image from local file
 AI? <name> <size>                       Ask for definition of image
 AI@ <name> <size> <serverid>            Advertise image stored on server

@@ -78,7 +78,10 @@ func eventMonitor(sigChan chan os.Signal, stopChan chan int, app *Application) {
 				//				ms.DumpState()
 
 			case syscall.SIGUSR2:
-				app.Debug(DebugEvents, "SIGUSR2 (currently not used by the server)")
+				app.Debug(DebugEvents, "SIGUSR2 (dump database out to logfile)")
+				if err := app.LogDatabaseContents(); err != nil {
+					app.Logf("Error dumping database: %v", err)
+				}
 
 			case syscall.SIGINT:
 				app.Debug(DebugEvents, "SIGINT; sending STOP signal to application")

@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/MadScienceZone/go-gma/v5/dice"
 	"github.com/MadScienceZone/go-gma/v5/mapper"
@@ -323,9 +324,47 @@ func (a *Application) AddToChatHistory(id int, chatType mapper.ServerMessage, ch
 	return nil
 }
 
+func (a *Application) LogDatabaseContents() error {
+	a.Log("Datbase Contents:")
+	a.Log("-dice presets (user, name, description, rollspec):")
+
+	dumpTable := func(title, table string, fields ...string) error {
+		queryString := "select " + strings.Join(fields, ",") + " from " + table
+		a.Logf("-%s (query=%s)", title, queryString)
+		rows, err := a.sqldb.Query(queryString)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		dest := make([]any, len(fields))
+		values := make([]string, len(fields))
+		for i := range fields {
+			dest[i] = &values[i]
+		}
+		for rows.Next() {
+			if err := rows.Scan(dest...); err != nil {
+				return err
+			}
+			a.Logf("--%q", values)
+		}
+		return nil
+	}
+
+	if err := dumpTable("dice presets", "dicepresets", "user", "name", "description", "rollspec"); err != nil {
+		return err
+	}
+	if err := dumpTable("chat history", "chats", "msgid", "msgtype", "rawdata"); err != nil {
+		return err
+	}
+	if err := dumpTable("images known", "images", "name", "zoom", "location", "islocal"); err != nil {
+		return err
+	}
+	return nil
+}
+
 // @[00]@| GMA 5.0.0-alpha.3
 // @[01]@|
-// @[10]@| Copyright © 1992–2022 by Steven L. Willoughby (AKA MadScienceZone)
+// @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
 // @[12]@| Aloha, Oregon, USA. All Rights Reserved.
 // @[13]@| Distributed under the terms and conditions of the BSD-3-Clause
