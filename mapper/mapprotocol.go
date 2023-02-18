@@ -398,6 +398,26 @@ func (c *MapConnection) sendRaw(data string) error {
 }
 
 //
+// UNSAFEsendRaw will send raw data to the server without any checks or controls.
+// Use this function at your own risk. If you don't phrase the data perfectly, the server will
+// not understand your request. This is intended only for testing purposes including manually
+// communicating with the server for debugging.
+//
+func (c *MapConnection) UNSAFEsendRaw(data string) error {
+	return c.sendRaw(data)
+}
+
+//
+// UNSAFEsendRaw will send raw data to the server without any checks or controls.
+// Use this function at your own risk. If you don't phrase the data perfectly, the server will
+// not understand your request. This is intended only for testing purposes including manually
+// communicating with the server for debugging.
+//
+func (c *Connection) UNSAFEsendRaw(data string) error {
+	return c.serverConn.sendRaw(data)
+}
+
+//
 // Receive waits for a message to arrive on the MapConnection's input then returns it.
 //
 func (c *MapConnection) Receive() (MessagePayload, error) {

@@ -30,6 +30,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -38,6 +39,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -81,7 +83,7 @@ func main() {
 
 	problems := make(chan mapper.MessagePayload, 10)
 	messages := make(chan mapper.MessagePayload, 10)
-	done := make(chan int)
+	done := make(chan int, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -903,19 +905,84 @@ func readLines(filename string) ([]string, error) {
 func readUserInput(mono bool, cancel context.CancelFunc, server mapper.Connection) {
 	fmt.Printf("map-console> ")
 	scanner := bufio.NewScanner(os.Stdin)
+	simpleArg := regexp.MustCompile(`^(\w+)([#=:])(.*)$`)
 
 inputloop:
 	for scanner.Scan() {
-		fields, err := tcllist.ParseTclList(scanner.Text())
+		inputLine := scanner.Text()
+		if len(inputLine) == 0 {
+			continue
+		}
+		if inputLine[0] == '`' {
+			if err := server.UNSAFEsendRaw(inputLine[1:]); err != nil {
+				fmt.Println(colorize(fmt.Sprintf("ERROR sending raw string: %v", err), "Red", mono))
+			}
+			continue
+		}
+
+		fields, err := tcllist.ParseTclList(inputLine)
 		if err != nil {
 			fmt.Println(colorize(fmt.Sprintf("ERROR: Unrecognized input: %v", err), "Red", mono))
 		} else if len(fields) > 0 {
+			if len(fields[0]) > 1 && fields[0][0] == '!' {
+				var paramList strings.Builder
+				fmt.Fprintf(&paramList, "%s {", strings.ToUpper(fields[0][1:]))
+
+				for i, arg := range fields[1:] {
+					if i > 0 {
+						fmt.Fprint(&paramList, ",")
+					}
+
+					f := simpleArg.FindStringSubmatch(arg)
+					if f == nil || len(f) != 4 {
+						fmt.Println(colorize(fmt.Sprintf("ERROR: parameter #%d can't be parsed", i), "Red", mono))
+						continue inputloop
+					}
+					rawName, err := json.Marshal(f[1])
+					if err != nil {
+						fmt.Println(colorize(fmt.Sprintf("ERROR: parameter #%d, marshalling parameter name: %v", i, err), "Red", mono))
+						continue inputloop
+					}
+					fmt.Fprint(&paramList, string(rawName), ":")
+					switch f[2] {
+					case "#":
+						// name#value	place raw value in parameter list
+						fmt.Fprint(&paramList, f[3])
+					case "=":
+						// name=value	place string value in parameter list
+						rawVal, err := json.Marshal(f[3])
+						if err != nil {
+							fmt.Println(colorize(fmt.Sprintf("ERROR: parameter #%d, marshalling value: %v", i, err), "Red", mono))
+							continue inputloop
+						}
+						fmt.Fprint(&paramList, string(rawVal))
+					case ":":
+						// name:value	place string value in parameter list with _ standing for space in value
+						rawVal, err := json.Marshal(strings.ReplaceAll(f[3], "_", " "))
+						if err != nil {
+							fmt.Println(colorize(fmt.Sprintf("ERROR: parameter #%d, marshalling value: %v", i, err), "Red", mono))
+							continue inputloop
+						}
+						fmt.Fprint(&paramList, string(rawVal))
+					default:
+						fmt.Println(colorize(fmt.Sprintf("ERROR: parameter #%d has invalid separator", i), "Red", mono))
+						continue inputloop
+					}
+				}
+				fmt.Fprint(&paramList, "}")
+				fmt.Println(colorize(fmt.Sprintf("=> %s", paramList.String()), "Green", mono))
+				if err := server.UNSAFEsendRaw(paramList.String()); err != nil {
+					fmt.Println(colorize(fmt.Sprintf("ERROR sending raw string: %v", err), "Red", mono))
+				}
+				continue
+			}
+
 		handle_input:
 			switch strings.ToUpper(fields[0]) {
 			case "HELP", "?":
 				fmt.Println(`Command summary:
 ` + "`" + `<text>                                 Send <text> AS-IS to the server (must conform to protocol)
-!<cmd> k1=v1 k2=v2 k3#v3 ...            Send <cmd> with parameters; = quotes value, # does not; <cmd> is uppercased
+!<cmd> k1=v1 k2=v2 k3#v3 k4:v4 ...      Send <cmd> with parameters; = quotes value, # does not, : allows _ for space; <cmd> is uppercased
 AI <name> <size> <filename>             Upload image from local file
 AI? <name> <size>                       Ask for definition of image
 AI@ <name> <size> <serverid>            Advertise image stored on server

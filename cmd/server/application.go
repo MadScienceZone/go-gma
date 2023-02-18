@@ -954,15 +954,15 @@ func (a *Application) SendToAll(cmd mapper.ServerMessage, data any) error {
 func NewApplication() *Application {
 	app := Application{
 		Logger:             log.Default(),
-		MessageIDGenerator: make(chan int),
+		MessageIDGenerator: make(chan int, 1),
 	}
-	app.clientPreamble.reload = make(chan byte)
-	app.clientPreamble.fetch = make(chan *mapper.ClientPreamble)
-	app.gameState.sync = make(chan *mapper.ClientConnection)
-	app.gameState.update = make(chan *mapper.MessagePayload)
-	app.clientData.add = make(chan *mapper.ClientConnection)
-	app.clientData.remove = make(chan *mapper.ClientConnection)
-	app.clientData.fetch = make(chan []*mapper.ClientConnection)
+	app.clientPreamble.reload = make(chan byte, 1)
+	app.clientPreamble.fetch = make(chan *mapper.ClientPreamble, 1)
+	app.gameState.sync = make(chan *mapper.ClientConnection, 1)
+	app.gameState.update = make(chan *mapper.MessagePayload, 1)
+	app.clientData.add = make(chan *mapper.ClientConnection, 1)
+	app.clientData.remove = make(chan *mapper.ClientConnection, 1)
+	app.clientData.fetch = make(chan []*mapper.ClientConnection, 1)
 	return &app
 }
 

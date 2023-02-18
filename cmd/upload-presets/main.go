@@ -49,13 +49,13 @@ func main() {
 		fmt.Printf("You need to specify at least one preset file to be loaded.\n")
 	}
 
-	sync := make(chan mapper.MessagePayload)
-	ready := make(chan byte)
+	sync := make(chan mapper.MessagePayload, 1)
+	ready := make(chan byte, 1)
 
 	server, err := mapper.NewConnection(*fEndpoint,
 		mapper.WithAuthenticator(auth.NewClientAuthenticator(*fUser, []byte(*fPass), "upload-presets")),
 		mapper.WithSubscription(sync, mapper.Echo),
-//		mapper.WithDebugging(mapper.DebugAll),
+		//		mapper.WithDebugging(mapper.DebugAll),
 		mapper.WhenReady(ready),
 	)
 	if err != nil {
@@ -65,7 +65,6 @@ func main() {
 	go server.Dial()
 	fmt.Printf("Waiting for server to be ready\n")
 	<-ready
-
 
 	for _, inputFilename := range flag.Args() {
 		presets, metaData, err := dice.ReadDieRollPresetFile(inputFilename)
@@ -97,6 +96,6 @@ func main() {
 		fmt.Printf("Can't send echo to server: %v\n", err)
 		os.Exit(1)
 	}
-	<- sync
+	<-sync
 	fmt.Printf("Done.\n")
 }

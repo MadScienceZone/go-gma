@@ -237,7 +237,7 @@ syncloop:
 	incomingPacket := make(chan MessagePayload, IncomingClientPacketBacklog)
 	clientListenerCtx, cancelClientListener := context.WithCancel(ctx)
 	defer cancelClientListener()
-	done := make(chan error)
+	done := make(chan error, 1)
 
 	go func(ctx context.Context, incomingPacket chan MessagePayload, done chan error) {
 		c.Log("client listener started")
@@ -270,7 +270,7 @@ syncloop:
 	// speed, so this is where data backs up in the buffer when the client isn't able to
 	// accept as fast as we can send.
 
-	toSend := make(chan string)
+	toSend := make(chan string, 1)
 	clientBufferCtx, cancelClientBuffer := context.WithCancel(ctx)
 	defer cancelClientBuffer()
 
@@ -462,7 +462,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error) {
 			return
 		}
 
-		reply := make(chan AuthMessagePayload)
+		reply := make(chan AuthMessagePayload, 1)
 		go func(reply chan AuthMessagePayload) {
 			for {
 				packet, err := c.Conn.Receive()
