@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______             _______     _______     _______         _____ #
-# (  ____ \(       )(  ___  )           (  ____ \   (  __   )   (  __   )       (  ___ #
-# | (    \/| () () || (   ) |           | (    \/   | (  )  |   | (  )  |       | (    #
-# | |      | || || || (___) |           | (____     | | /   |   | | /   | _____ | (___ #
-# | | ____ | |(_)| ||  ___  |           (_____ \    | (/ /) |   | (/ /) |(_____)|  ___ #
-# | | \_  )| |   | || (   ) | Game            ) )   |   / | |   |   / | |       | (    #
-# | (___) || )   ( || )   ( | Master's  /\____) ) _ |  (__) | _ |  (__) |       | )    #
-# (_______)|/     \||/     \| Assistant \______/ (_)(_______)(_)(_______)       |/     #
+#  _______  _______  _______             _______     _______     _______               #
+# (  ____ \(       )(  ___  )           (  ____ \   (  __   )   (  __   )              #
+# | (    \/| () () || (   ) |           | (    \/   | (  )  |   | (  )  |              #
+# | |      | || || || (___) |           | (____     | | /   |   | | /   |              #
+# | | ____ | |(_)| ||  ___  |           (_____ \    | (/ /) |   | (/ /) |              #
+# | | \_  )| |   | || (   ) | Game            ) )   |   / | |   |   / | |              #
+# | (___) || )   ( || )   ( | Master's  /\____) ) _ |  (__) | _ |  (__) |              #
+# (_______)|/     \||/     \| Assistant \______/ (_)(_______)(_)(_______)              #
 #                                                                                      #
 ########################################################################################
 */
@@ -46,7 +46,7 @@ import (
 // Auto-configured values
 //
 
-const GMAVersionNumber = "5.0.0-alpha.3" // @@##@@
+const GMAVersionNumber="5.0.0" // @@##@@
 
 //
 // eventMonitor responds to signals and timers that affect our overall operation
@@ -266,9 +266,9 @@ func acceptIncomingConnections(incoming net.Listener, app *Application) {
 	}
 }
 
-// @[00]@| GMA 5.0.0-alpha.3
+// @[00]@| GMA 5.0.0
 // @[01]@|
-// @[10]@| Copyright © 1992–2022 by Steven L. Willoughby (AKA MadScienceZone)
+// @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
 // @[12]@| Aloha, Oregon, USA. All Rights Reserved.
 // @[13]@| Distributed under the terms and conditions of the BSD-3-Clause
