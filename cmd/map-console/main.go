@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______             _______     _______     _______               #
-# (  ____ \(       )(  ___  )           (  ____ \   (  __   )   (  __   )              #
-# | (    \/| () () || (   ) |           | (    \/   | (  )  |   | (  )  |              #
-# | |      | || || || (___) |           | (____     | | /   |   | | /   |              #
-# | | ____ | |(_)| ||  ___  |           (_____ \    | (/ /) |   | (/ /) |              #
-# | | \_  )| |   | || (   ) | Game            ) )   |   / | |   |   / | |              #
-# | (___) || )   ( || )   ( | Master's  /\____) ) _ |  (__) | _ |  (__) |              #
-# (_______)|/     \||/     \| Assistant \______/ (_)(_______)(_)(_______)              #
+#  _______  _______  _______             _______     _______     _______         _____ #
+# (  ____ \(       )(  ___  )           (  ____ \   (  __   )   (  __   )       (  ___ #
+# | (    \/| () () || (   ) |           | (    \/   | (  )  |   | (  )  |       | (    #
+# | |      | || || || (___) |           | (____     | | /   |   | | /   | _____ | (___ #
+# | | ____ | |(_)| ||  ___  |           (_____ \    | (/ /) |   | (/ /) |(_____)|  ___ #
+# | | \_  )| |   | || (   ) | Game            ) )   |   / | |   |   / | |       | (    #
+# | (___) || )   ( || )   ( | Master's  /\____) ) _ |  (__) | _ |  (__) |       | )    #
+# (_______)|/     \||/     \| Assistant \______/ (_)(_______)(_)(_______)       |/     #
 #                                                                                      #
 ########################################################################################
 #
@@ -15,7 +15,7 @@
 # (and this software is primarily for our own use in our play group,
 # anyway, but could be generalized later as a stand-alone product).
 #
-# Copyright (c) 2021 by Steven L. Willoughby, Aloha, Oregon, USA.
+# Copyright (c) 2021-2023 by Steven L. Willoughby, Aloha, Oregon, USA.
 # All Rights Reserved.
 # Licensed under the terms and conditions of the BSD 3-Clause license.
 #
@@ -30,6 +30,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -38,6 +39,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -49,7 +51,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GMAVersionNumber="5.0.0" //@@##@@
+const GMAVersionNumber = "5.0.0-alpha.3" //@@##@@
 
 func main() {
 	fmt.Printf("GMA mapper console %s\n", GMAVersionNumber)
@@ -58,6 +60,14 @@ func main() {
 	conf, err := configureApp()
 	if err != nil {
 		log.Fatalf("unable to set up: %v", err)
+	}
+	logfile, _ := conf.GetDefault("logfile", "")
+	if logfile != "" && logfile != "-" {
+		f, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatalf("unable to open log file \"%s\": %v", logfile, err)
+		}
+		log.SetOutput(f)
 	}
 
 	host, ok := conf.Get("host")
@@ -73,9 +83,15 @@ func main() {
 
 	problems := make(chan mapper.MessagePayload, 10)
 	messages := make(chan mapper.MessagePayload, 10)
-	done := make(chan int)
+	done := make(chan int, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	debugFlagList, _ := conf.GetDefault("debug", "")
+	debugFlags, err := mapper.NamedDebugFlags(debugFlagList)
+	if err != nil {
+		log.Fatalf("-debug: %v", err)
+	}
 
 	conOpts := []mapper.ConnectionOption{
 		mapper.WithContext(ctx),
@@ -116,7 +132,8 @@ func main() {
 			mapper.UpdateStatusMarker,
 			mapper.UpdateTurn,
 		),
-		mapper.WithDebugging(5),
+		mapper.WithDebugging(debugFlags),
+		mapper.WithLogger(log.Default()),
 	}
 
 	if pass != "" {
@@ -141,8 +158,9 @@ func main() {
 
 	waitCounter := 0
 	for !server.IsReady() {
-		if waitCounter++; waitCounter > 10 {
+		if waitCounter++; waitCounter > 30 {
 			fmt.Println(colorize("Waiting for server to be ready...", "blue", mono))
+			waitCounter = 0
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
@@ -152,8 +170,18 @@ func main() {
 	if err != nil {
 		log.Printf("Error checking for version updates: %v", err)
 	} else if update != nil {
-		log.Printf("UPDATE AVAILABLE! You are running version %v of GMA.", GMAVersionNumber)
-		log.Printf("UPDATE AVAILABLE! Version %v is available for %v on %v.", update.Version, update.OS, update.Arch)
+		cmp, err := util.VersionCompare(update.Version, GMAVersionNumber)
+		if err != nil {
+			log.Printf("Error comparing version information: %v", err)
+			log.Printf("Version %v is available for %v on %v.", update.Version, sDefault(update.OS, "any OS"), sDefault(update.Arch, "any architecture"))
+		} else if cmp > 0 {
+			log.Printf("UPDATE AVAILABLE! You are running version %v of GMA.", GMAVersionNumber)
+			log.Printf("UPDATE AVAILABLE! Version %v is available for %v on %v.", update.Version, sDefault(update.OS, "any OS"), sDefault(update.Arch, "any architecture"))
+		} else if cmp < 0 {
+			log.Printf("Your GMA version %v is ahead of the advertised version %v for %v on %v.", GMAVersionNumber, update.Version, sDefault(update.OS, "any OS"), sDefault(update.Arch, "any architecture"))
+		} else {
+			log.Printf("Your GMA version %s is up to date.", GMAVersionNumber)
+		}
 	}
 
 	fmt.Printf("Server protocol %d; using %s calendar.\n", server.Protocol, server.CalendarSystem)
@@ -173,7 +201,7 @@ func main() {
 	fmt.Println(colorize("PACKAGE--- OS-------- ARCH------ VERSION", "Blue", mono))
 	for name, pkg := range server.PackageUpdatesAvailable {
 		for _, vers := range pkg {
-			fmt.Println(colorize(fmt.Sprintf("%-10s %-10s %-10s %s", name, vers.OS, vers.Arch, vers.Version), "Yellow", mono))
+			fmt.Println(colorize(fmt.Sprintf("%-10s %-10s %-10s %s", name, strOrAny(vers.OS), strOrAny(vers.Arch), vers.Version), "Yellow", mono))
 		}
 	}
 
@@ -204,6 +232,18 @@ eventloop:
 			log.Printf("Server connection ended.")
 			break eventloop
 		}
+	}
+}
+
+func strOrAny(x string) string {
+	return sDefault(x, "(any)")
+}
+
+func sDefault(x, d string) string {
+	if x == "" {
+		return d
+	} else {
+		return x
 	}
 }
 
@@ -600,6 +640,8 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"toGM", m.ToGM},
 			fieldDesc{"title", m.Title},
 			fieldDesc{"result", m.Result},
+			fieldDesc{"more?", m.MoreResults},
+			fieldDesc{"requestID", m.RequestID},
 		)
 
 	case mapper.ToolbarMessagePayload:
@@ -608,10 +650,10 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 		)
 
 	case mapper.UpdateClockMessagePayload:
-		cal.SetTimeValue(int64(m.Absolute))
+		cal.SetTimeValue(m.Absolute)
 		printFields(mono, "UpdateClock",
 			fieldDesc{"absolute", cal.ToString(2)},
-			fieldDesc{"relative", cal.DeltaString(int64(m.Relative), false)},
+			fieldDesc{"relative", cal.DeltaString(m.Relative, false)},
 		)
 
 	case mapper.UpdateDicePresetsMessagePayload:
@@ -661,6 +703,7 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 		)
 
 	case mapper.UpdatePeerListMessagePayload:
+		fmt.Printf("peerlist len=%v\n", len(m.PeerList))
 		printFields(mono, "UpdatePeerList")
 		printFields(mono, "",
 			fieldDesc{"       USERNAME------------ ADDRESS-------------- CLIENT------------------- AU ME PING--", nil})
@@ -749,6 +792,8 @@ func configureApp() (util.SimpleConfigurationData, error) {
 	var Fmono = flag.Bool("mono", false, "Suppress the output of ANSI color codes")
 	var Fverb = flag.Bool("verbose", false, "Print extra output about connection")
 	var Fcals = flag.String("calendar", "golarion", "Calendar system in use")
+	var Fdebug = flag.String("debug", "", "Comma-separated list of debugging topics to print")
+	var Flog = flag.String("log", "", "Logfile ('-' is standard output)")
 	flag.Parse()
 
 	//
@@ -800,6 +845,12 @@ func configureApp() (util.SimpleConfigurationData, error) {
 	}
 	if *Fcals != "" {
 		conf.Set("calendar", *Fcals)
+	}
+	if *Flog != "" {
+		conf.Set("logfile", *Flog)
+	}
+	if *Fdebug != "" {
+		conf.Set("debug", *Fdebug)
 	}
 
 	// Sanity check and defaults
@@ -854,17 +905,84 @@ func readLines(filename string) ([]string, error) {
 func readUserInput(mono bool, cancel context.CancelFunc, server mapper.Connection) {
 	fmt.Printf("map-console> ")
 	scanner := bufio.NewScanner(os.Stdin)
+	simpleArg := regexp.MustCompile(`^(\w+)([#=:])(.*)$`)
 
 inputloop:
 	for scanner.Scan() {
-		fields, err := tcllist.ParseTclList(scanner.Text())
+		inputLine := scanner.Text()
+		if len(inputLine) == 0 {
+			continue
+		}
+		if inputLine[0] == '`' {
+			if err := server.UNSAFEsendRaw(inputLine[1:]); err != nil {
+				fmt.Println(colorize(fmt.Sprintf("ERROR sending raw string: %v", err), "Red", mono))
+			}
+			continue
+		}
+
+		fields, err := tcllist.ParseTclList(inputLine)
 		if err != nil {
 			fmt.Println(colorize(fmt.Sprintf("ERROR: Unrecognized input: %v", err), "Red", mono))
 		} else if len(fields) > 0 {
+			if len(fields[0]) > 1 && fields[0][0] == '!' {
+				var paramList strings.Builder
+				fmt.Fprintf(&paramList, "%s {", strings.ToUpper(fields[0][1:]))
+
+				for i, arg := range fields[1:] {
+					if i > 0 {
+						fmt.Fprint(&paramList, ",")
+					}
+
+					f := simpleArg.FindStringSubmatch(arg)
+					if f == nil || len(f) != 4 {
+						fmt.Println(colorize(fmt.Sprintf("ERROR: parameter #%d can't be parsed", i), "Red", mono))
+						continue inputloop
+					}
+					rawName, err := json.Marshal(f[1])
+					if err != nil {
+						fmt.Println(colorize(fmt.Sprintf("ERROR: parameter #%d, marshalling parameter name: %v", i, err), "Red", mono))
+						continue inputloop
+					}
+					fmt.Fprint(&paramList, string(rawName), ":")
+					switch f[2] {
+					case "#":
+						// name#value	place raw value in parameter list
+						fmt.Fprint(&paramList, f[3])
+					case "=":
+						// name=value	place string value in parameter list
+						rawVal, err := json.Marshal(f[3])
+						if err != nil {
+							fmt.Println(colorize(fmt.Sprintf("ERROR: parameter #%d, marshalling value: %v", i, err), "Red", mono))
+							continue inputloop
+						}
+						fmt.Fprint(&paramList, string(rawVal))
+					case ":":
+						// name:value	place string value in parameter list with _ standing for space in value
+						rawVal, err := json.Marshal(strings.ReplaceAll(f[3], "_", " "))
+						if err != nil {
+							fmt.Println(colorize(fmt.Sprintf("ERROR: parameter #%d, marshalling value: %v", i, err), "Red", mono))
+							continue inputloop
+						}
+						fmt.Fprint(&paramList, string(rawVal))
+					default:
+						fmt.Println(colorize(fmt.Sprintf("ERROR: parameter #%d has invalid separator", i), "Red", mono))
+						continue inputloop
+					}
+				}
+				fmt.Fprint(&paramList, "}")
+				fmt.Println(colorize(fmt.Sprintf("=> %s", paramList.String()), "Green", mono))
+				if err := server.UNSAFEsendRaw(paramList.String()); err != nil {
+					fmt.Println(colorize(fmt.Sprintf("ERROR sending raw string: %v", err), "Red", mono))
+				}
+				continue
+			}
+
 		handle_input:
 			switch strings.ToUpper(fields[0]) {
 			case "HELP", "?":
 				fmt.Println(`Command summary:
+` + "`" + `<text>                                 Send <text> AS-IS to the server (must conform to protocol)
+!<cmd> k1=v1 k2=v2 k3#v3 k4:v4 ...      Send <cmd> with parameters; = quotes value, # does not, : allows _ for space; <cmd> is uppercased
 AI <name> <size> <filename>             Upload image from local file
 AI? <name> <size>                       Ask for definition of image
 AI@ <name> <size> <serverid>            Advertise image stored on server
@@ -1026,8 +1144,12 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 
 			case "D":
 				// D reciplist dice
-				if len(fields) != 3 {
-					fmt.Println(colorize("usage ERROR: wrong number of fields: D <recip>|*|% <dice>", "Red", mono))
+				var requestID string
+
+				if len(fields) == 4 {
+					requestID = fields[3]
+				} else if len(fields) != 3 {
+					fmt.Println(colorize("usage ERROR: wrong number of fields: D <recip>|*|% <dice> [<id>]", "Red", mono))
 					break
 				}
 				recips, err := tcllist.ParseTclList(fields[1])
@@ -1035,7 +1157,7 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 					fmt.Println(colorize(fmt.Sprintf("ERROR in recipient list: %v", err), "Red", mono))
 					break
 				}
-				if err := server.RollDice(recips, fields[2]); err != nil {
+				if err := server.RollDiceWithID(recips, fields[2], requestID); err != nil {
 					fmt.Println(colorize(fmt.Sprintf("server ERROR: %v", err), "Red", mono))
 					break
 				}
@@ -1442,7 +1564,7 @@ func colorize(text, color string, mono bool) string {
 }
 
 /*
-# @[00]@| GMA 5.0.0
+# @[00]@| GMA 5.0.0-alpha.3
 # @[01]@|
 # @[10]@| Copyright © 1992–2022 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

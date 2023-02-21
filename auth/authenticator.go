@@ -1,13 +1,13 @@
 /*
 ########################################################################################
-#  _______  _______  _______             _______     _______     _______               #
-# (  ____ \(       )(  ___  )           (  ____ \   (  __   )   (  __   )              #
-# | (    \/| () () || (   ) |           | (    \/   | (  )  |   | (  )  |              #
-# | |      | || || || (___) |           | (____     | | /   |   | | /   |              #
-# | | ____ | |(_)| ||  ___  |           (_____ \    | (/ /) |   | (/ /) |              #
-# | | \_  )| |   | || (   ) | Game            ) )   |   / | |   |   / | |              #
-# | (___) || )   ( || )   ( | Master's  /\____) ) _ |  (__) | _ |  (__) |              #
-# (_______)|/     \||/     \| Assistant \______/ (_)(_______)(_)(_______)              #
+#  _______  _______  _______             _______     _______     _______         _____ #
+# (  ____ \(       )(  ___  )           (  ____ \   (  __   )   (  __   )       (  ___ #
+# | (    \/| () () || (   ) |           | (    \/   | (  )  |   | (  )  |       | (    #
+# | |      | || || || (___) |           | (____     | | /   |   | | /   | _____ | (___ #
+# | | ____ | |(_)| ||  ___  |           (_____ \    | (/ /) |   | (/ /) |(_____)|  ___ #
+# | | \_  )| |   | || (   ) | Game            ) )   |   / | |   |   / | |       | (    #
+# | (___) || )   ( || )   ( | Master's  /\____) ) _ |  (__) | _ |  (__) |       | )    #
+# (_______)|/     \||/     \| Assistant \______/ (_)(_______)(_)(_______)       |/     #
 #                                                                                      #
 ########################################################################################
 */
@@ -231,11 +231,25 @@ func bytesEqual(a, b []byte) bool {
 // The challenge is returned as a base-64-encoded string.
 //
 func (a *Authenticator) GenerateChallenge() (string, error) {
+	_, err := a.GenerateChallengeBytes()
+	if err != nil {
+		return "", err
+	}
+	return a.CurrentChallenge(), nil
+}
+
+//
+// GenerateChallengeBytes is just like GenerateChallenge but
+// returns the challenge as a binary byte slice instead of
+// encoding it in base 64.
+// (SERVER)
+//
+func (a *Authenticator) GenerateChallengeBytes() ([]byte, error) {
 	a.Challenge = make([]byte, 32)
 	a.GmMode = false
 	_, err := rand.Read(a.Challenge)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// The first two bytes of the nonce determine the number of
@@ -246,7 +260,7 @@ func (a *Authenticator) GenerateChallenge() (string, error) {
 	a.Challenge[0] &= 0x0f
 	a.Challenge[1] |= 0x40
 
-	return a.CurrentChallenge(), nil
+	return a.CurrentChallengeBytes(), nil
 }
 
 //
@@ -259,6 +273,15 @@ func (a *Authenticator) GenerateChallenge() (string, error) {
 //
 func (a *Authenticator) CurrentChallenge() string {
 	return base64.StdEncoding.EncodeToString(a.Challenge)
+}
+
+//
+// CurrentChallengeBytes is like CurrentChallenge but returns the value
+// as a byte slice instead of base 64 encoding it.
+// (SERVER)
+//
+func (a *Authenticator) CurrentChallengeBytes() []byte {
+	return a.Challenge
 }
 
 //
@@ -367,13 +390,23 @@ func (a *Authenticator) AcceptChallengeBytes(challenge []byte) ([]byte, error) {
 // Returns true if the authentication was successful.
 //
 func (a *Authenticator) ValidateResponse(response string) (bool, error) {
-	a.GmMode = false
-	if len(a.Secret) == 0 {
-		return false, fmt.Errorf("No password configured")
-	}
 	binaryResponse, err := base64.StdEncoding.DecodeString(response)
 	if err != nil {
 		return false, fmt.Errorf("Error decoding client response: %v", err)
+	}
+	return a.ValidateResponseBytes(binaryResponse)
+}
+
+//
+// ValidateResponseBytes is like ValidateResponse except that the response
+// value passed is in the form of a byte slice instead of being base 64
+// encoded.
+// (SERVER)
+//
+func (a *Authenticator) ValidateResponseBytes(binaryResponse []byte) (bool, error) {
+	a.GmMode = false
+	if len(a.Secret) == 0 {
+		return false, fmt.Errorf("No password configured")
 	}
 	ourResponse, err := a.calcResponse(a.Secret)
 	if err != nil {
@@ -438,7 +471,7 @@ func NewClientAuthenticator(username string, secret []byte, client string) *Auth
 	return a
 }
 
-// @[00]@| GMA 5.0.0
+// @[00]@| GMA 5.0.0-alpha.3
 // @[01]@|
 // @[10]@| Copyright © 1992–2022 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
