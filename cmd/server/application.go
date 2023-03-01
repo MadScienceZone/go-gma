@@ -167,9 +167,10 @@ type Application struct {
 	sqldb        *sql.DB
 
 	clientData struct {
-		add    chan *mapper.ClientConnection
-		remove chan *mapper.ClientConnection
-		fetch  chan []*mapper.ClientConnection
+		add       chan *mapper.ClientConnection
+		remove    chan *mapper.ClientConnection
+		fetch     chan []*mapper.ClientConnection
+		announcer chan byte
 	}
 
 	MessageIDGenerator chan int
@@ -192,7 +193,7 @@ func (a *Application) GetClientPreamble() *mapper.ClientPreamble {
 //
 func (a *Application) AddClient(c *mapper.ClientConnection) {
 	a.clientData.add <- c
-	//	a.SendPeerListToAll()
+	//a.SendPeerListToAll()
 }
 
 //
@@ -200,7 +201,7 @@ func (a *Application) AddClient(c *mapper.ClientConnection) {
 //
 func (a *Application) RemoveClient(c *mapper.ClientConnection) {
 	a.clientData.remove <- c
-	//	a.SendPeerListToAll()
+	//a.SendPeerListToAll()
 }
 
 //
@@ -209,6 +210,13 @@ func (a *Application) RemoveClient(c *mapper.ClientConnection) {
 //
 func (a *Application) GetClients() []*mapper.ClientConnection {
 	return <-a.clientData.fetch
+}
+
+func (a *Application) announceClients() {
+	for {
+		<-a.clientData.announcer
+		a.SendPeerListToAll()
+	}
 }
 
 func (a *Application) manageClientList() {
@@ -253,7 +261,7 @@ func (a *Application) manageClientList() {
 			}
 			clientListCopy = newClientListCopy()
 			refreshChannel()
-			a.SendPeerListToAll()
+			a.clientData.announcer <- 0
 
 		case c := <-a.clientData.remove:
 			if c == nil {
@@ -270,7 +278,7 @@ func (a *Application) manageClientList() {
 			clients = slices.Delete[[]*mapper.ClientConnection, *mapper.ClientConnection](clients, pos, pos+1)
 			clientListCopy = newClientListCopy()
 			refreshChannel()
-			a.SendPeerListToAll()
+			a.clientData.announcer <- 0
 		}
 	}
 }
@@ -965,6 +973,7 @@ func NewApplication() *Application {
 	app.clientData.add = make(chan *mapper.ClientConnection, 1)
 	app.clientData.remove = make(chan *mapper.ClientConnection, 1)
 	app.clientData.fetch = make(chan []*mapper.ClientConnection, 1)
+	app.clientData.announcer = make(chan byte)
 	return &app
 }
 

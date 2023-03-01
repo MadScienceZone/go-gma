@@ -49,7 +49,7 @@ import (
 // Auto-configured values
 //
 
-const GMAVersionNumber="5.1" // @@##@@
+const GMAVersionNumber = "5.1" // @@##@@
 
 //
 // eventMonitor responds to signals and timers that affect our overall operation
@@ -162,6 +162,7 @@ func main() {
 	go app.managePreambleData()
 	go app.manageClientList()
 	go app.manageGameState()
+	go app.announceClients()
 
 	/* instrumentation */
 	// set the following environment variables for the New Relic
