@@ -1,13 +1,16 @@
 /*
 ########################################################################################
-#  _______  _______  _______             _______     _______     _______               #
-# (  ____ \(       )(  ___  )           (  ____ \   (  __   )   (  __   )              #
-# | (    \/| () () || (   ) |           | (    \/   | (  )  |   | (  )  |              #
-# | |      | || || || (___) |           | (____     | | /   |   | | /   |              #
-# | | ____ | |(_)| ||  ___  |           (_____ \    | (/ /) |   | (/ /) |              #
-# | | \_  )| |   | || (   ) | Game            ) )   |   / | |   |   / | |              #
-# | (___) || )   ( || )   ( | Master's  /\____) ) _ |  (__) | _ |  (__) |              #
-# (_______)|/     \||/     \| Assistant \______/ (_)(_______)(_)(_______)              #
+#  __                                                                                  #
+# /__ _                                                                                #
+# \_|(_)                                                                               #
+#  _______  _______  _______             _______      __                               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \                              #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) )                             #
+# | |      | || || || (___) | Assistant | (____        | |                             #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |                             #
+# | | \_  )| |   | || (   ) |                 ) )      | |                             #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_                            #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/                            #
 #                                                                                      #
 ########################################################################################
 #
@@ -51,7 +54,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GMAVersionNumber="5.0.0" //@@##@@
+const GMAVersionNumber="5.1" //@@##@@
 
 func main() {
 	fmt.Printf("GMA mapper console %s\n", GMAVersionNumber)
@@ -502,6 +505,7 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 
 	case mapper.AdjustViewMessagePayload:
 		printFields(mono, "AdjustView",
+			fieldDesc{"grid", m.Grid},
 			fieldDesc{"xview", fmt.Sprintf("%.2f%%", m.XView*100)},
 			fieldDesc{"yview", fmt.Sprintf("%.2f%%", m.YView*100)},
 		)
@@ -986,7 +990,7 @@ inputloop:
 AI <name> <size> <filename>             Upload image from local file
 AI? <name> <size>                       Ask for definition of image
 AI@ <name> <size> <serverid>            Advertise image stored on server
-AV <xfrac> <yfrac>                      Adjust view to fraction of each axis
+AV <grid> <xfrac> <yfrac>               Adjust view to grid label or fraction of each axis
 CC <silent?> <target>                   Clear chat history
 CLR <id>|*|E*|M*|P*|[<image>=]<name>    Clear specified element(s) from canvas
 CLR@ <serverid>                         Remove all elements from server file
@@ -1081,13 +1085,13 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 				}
 
 			case "AV":
-				// AV x y
-				v, err := tcllist.ConvertTypes(fields, "sff")
+				// AV label x y
+				v, err := tcllist.ConvertTypes(fields, "ssff")
 				if err != nil {
 					fmt.Println(colorize(fmt.Sprintf("usage ERROR: %v", err), "Red", mono))
 					break
 				}
-				if err := server.AdjustView(v[1].(float64), v[2].(float64)); err != nil {
+				if err := server.AdjustViewToGridLabel(v[2].(float64), v[3].(float64), v[1].(string)); err != nil {
 					fmt.Println(colorize(fmt.Sprintf("server ERROR: %v", err), "Red", mono))
 					break
 				}
@@ -1564,7 +1568,7 @@ func colorize(text, color string, mono bool) string {
 }
 
 /*
-# @[00]@| GMA 5.0.0
+# @[00]@| GMA 5.1
 # @[01]@|
 # @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

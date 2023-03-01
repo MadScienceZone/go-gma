@@ -1336,6 +1336,7 @@ func (a *Application) manageGameState() {
 	var isInCombatMode bool
 	var toolbarHidden bool
 	var viewx, viewy float64
+	var viewg string
 	var currentTurn *mapper.UpdateTurnMessagePayload
 	var currentInitiativeList *mapper.UpdateInitiativeMessagePayload
 	var currentTime *mapper.UpdateClockMessagePayload
@@ -1421,11 +1422,13 @@ func (a *Application) manageGameState() {
 			case mapper.AdjustViewMessagePayload:
 				viewx = p.XView
 				viewy = p.YView
+				viewg = p.Grid
 			case mapper.ClearMessagePayload:
 				switch p.ObjID {
 				case "*":
 					viewx = 0.0
 					viewy = 0.0
+					viewg = ""
 					eventHistory = make(map[string]*mapper.MessagePayload)
 
 				case "E*":
@@ -1609,7 +1612,7 @@ func (a *Application) manageGameState() {
 			a.Debugf(DebugState, "client %v requests SYNC", client.IdTag())
 			client.Conn.Send(mapper.CombatMode, mapper.CombatModeMessagePayload{Enabled: isInCombatMode})
 			client.Conn.Send(mapper.Toolbar, mapper.ToolbarMessagePayload{Enabled: !toolbarHidden})
-			client.Conn.Send(mapper.AdjustView, mapper.AdjustViewMessagePayload{XView: viewx, YView: viewy})
+			client.Conn.Send(mapper.AdjustView, mapper.AdjustViewMessagePayload{Grid: viewg, XView: viewx, YView: viewy})
 			if currentTurn == nil {
 				client.Conn.Send(mapper.Comment, "no current turn set")
 			} else {

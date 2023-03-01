@@ -1,13 +1,16 @@
 /*
 ########################################################################################
-#  _______  _______  _______             _______     _______     _______               #
-# (  ____ \(       )(  ___  )           (  ____ \   (  __   )   (  __   )              #
-# | (    \/| () () || (   ) |           | (    \/   | (  )  |   | (  )  |              #
-# | |      | || || || (___) |           | (____     | | /   |   | | /   |              #
-# | | ____ | |(_)| ||  ___  |           (_____ \    | (/ /) |   | (/ /) |              #
-# | | \_  )| |   | || (   ) | Game            ) )   |   / | |   |   / | |              #
-# | (___) || )   ( || )   ( | Master's  /\____) ) _ |  (__) | _ |  (__) |              #
-# (_______)|/     \||/     \| Assistant \______/ (_)(_______)(_)(_______)              #
+#  __                                                                                  #
+# /__ _                                                                                #
+# \_|(_)                                                                               #
+#  _______  _______  _______             _______      __                               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \                              #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) )                             #
+# | |      | || || || (___) | Assistant | (____        | |                             #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |                             #
+# | | \_  )| |   | || (   ) |                 ) )      | |                             #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_                            #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/                            #
 #                                                                                      #
 ########################################################################################
 */
@@ -946,6 +949,7 @@ func (c *Connection) AddObjAttributes(objID, attrName string, values []string) e
 type AdjustViewMessagePayload struct {
 	BaseMessagePayload
 	XView, YView float64 `json:",omitempty"`
+	Grid         string  `json:",omitempty"`
 }
 
 //
@@ -956,10 +960,22 @@ type AdjustViewMessagePayload struct {
 // each direction.
 //
 func (c *Connection) AdjustView(xview, yview float64) error {
+	return c.AdjustViewToGridLabel(xview, yview, "")
+}
+
+//
+// AdjustViewToGridLabel is just like AdjustView but also provides a
+// grid label (e.g., A0 for the very top-left of the map) that should be
+// made to be at the upper-left of the on-screen display. The xview
+// and yview values are also provided for clients who cannot use the grid
+// label value.
+//
+func (c *Connection) AdjustViewToGridLabel(xview, yview float64, gridLabel string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
 	}
 	return c.serverConn.Send(AdjustView, AdjustViewMessagePayload{
+		Grid:  gridLabel,
 		XView: xview,
 		YView: yview,
 	})
@@ -3401,7 +3417,7 @@ func (c *Connection) CheckVersionOf(packageName, myVersionNumber string) (*Packa
 	return availableVersion, nil
 }
 
-// @[00]@| GMA 5.0.0
+// @[00]@| GMA 5.1
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
