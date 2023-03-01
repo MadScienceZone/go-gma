@@ -187,12 +187,12 @@ func (a *Application) GetClientPreamble() *mapper.ClientPreamble {
 }
 
 //
-// AddClient adds the given client connection to our liset of active
+// AddClient adds the given client connection to our list of active
 // connections.
 //
 func (a *Application) AddClient(c *mapper.ClientConnection) {
 	a.clientData.add <- c
-	a.SendPeerListToAll()
+	//	a.SendPeerListToAll()
 }
 
 //
@@ -200,7 +200,7 @@ func (a *Application) AddClient(c *mapper.ClientConnection) {
 //
 func (a *Application) RemoveClient(c *mapper.ClientConnection) {
 	a.clientData.remove <- c
-	a.SendPeerListToAll()
+	//	a.SendPeerListToAll()
 }
 
 //
@@ -253,6 +253,7 @@ func (a *Application) manageClientList() {
 			}
 			clientListCopy = newClientListCopy()
 			refreshChannel()
+			a.SendPeerListToAll()
 
 		case c := <-a.clientData.remove:
 			if c == nil {
@@ -269,6 +270,7 @@ func (a *Application) manageClientList() {
 			clients = slices.Delete[[]*mapper.ClientConnection, *mapper.ClientConnection](clients, pos, pos+1)
 			clientListCopy = newClientListCopy()
 			refreshChannel()
+			a.SendPeerListToAll()
 		}
 	}
 }
