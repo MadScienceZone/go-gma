@@ -1,10 +1,13 @@
 # Changelog
 ## Current Version Information
- * GMA Core API Library Version: 5.1		<!-- @@##@@ -->
+ * GMA Core API Library Version: 5.1.1		<!-- @@##@@ --> (Go port)
  * Supported GMA Mapper Version: 4.2		<!-- @@##@@ -->
  * Supported GMA Mapper Protocol: 401		<!-- @@##@@ -->
  * Supported GMA Mapper File Format: 20		<!-- @@##@@ -->
- * Effective Date: 28-Feb-2023			<!-- @@##@@ -->
+ * Effective Date: 01-Mar-2023			<!-- @@##@@ -->
+
+## v5.1.1
+ * Changed how peer connections and disconnections are announced (removed race condition).
 
 ## v5.1
  * Moved to server protocol version 401.

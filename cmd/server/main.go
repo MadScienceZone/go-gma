@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __                               #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \                              #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) )                             #
-# | |      | || || || (___) | Assistant | (____        | |                             #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |                             #
-# | | \_  )| |   | || (   ) |                 ) )      | |                             #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_                            #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/                            #
+#  _______  _______  _______             _______      __        __                     #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \      /  \                    #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) )     \/) )                   #
+# | |      | || || || (___) | Assistant | (____        | |       | |                   #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |       | |                   #
+# | | \_  )| |   | || (   ) |                 ) )      | |       | |                   #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_ _  __) (_                  #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/(_) \____/                  #
 #                                                                                      #
 ########################################################################################
 */
@@ -49,7 +49,7 @@ import (
 // Auto-configured values
 //
 
-const GMAVersionNumber = "5.1" // @@##@@
+const GMAVersionNumber="5.1.1" // @@##@@
 
 //
 // eventMonitor responds to signals and timers that affect our overall operation
@@ -270,7 +270,7 @@ func acceptIncomingConnections(incoming net.Listener, app *Application) {
 	}
 }
 
-// @[00]@| GMA 5.1
+// @[00]@| GMA 5.1.1
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
