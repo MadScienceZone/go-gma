@@ -54,7 +54,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GMAVersionNumber="5.1.1" //@@##@@
+const GMAVersionNumber = "5.1.1" //@@##@@
 
 func main() {
 	fmt.Printf("GMA mapper console %s\n", GMAVersionNumber)
@@ -169,7 +169,7 @@ func main() {
 	}
 	fmt.Println(colorize("Connected to server.", "Green", mono))
 
-	update, err := server.CheckVersionOf("core", GMAVersionNumber)
+	update, err := server.CheckVersionOf("go-gma", GMAVersionNumber)
 	if err != nil {
 		log.Printf("Error checking for version updates: %v", err)
 	} else if update != nil {
@@ -178,12 +178,12 @@ func main() {
 			log.Printf("Error comparing version information: %v", err)
 			log.Printf("Version %v is available for %v on %v.", update.Version, sDefault(update.OS, "any OS"), sDefault(update.Arch, "any architecture"))
 		} else if cmp > 0 {
-			log.Printf("UPDATE AVAILABLE! You are running version %v of GMA.", GMAVersionNumber)
+			log.Printf("UPDATE AVAILABLE! You are running version %v of Go-GMA.", GMAVersionNumber)
 			log.Printf("UPDATE AVAILABLE! Version %v is available for %v on %v.", update.Version, sDefault(update.OS, "any OS"), sDefault(update.Arch, "any architecture"))
 		} else if cmp < 0 {
-			log.Printf("Your GMA version %v is ahead of the advertised version %v for %v on %v.", GMAVersionNumber, update.Version, sDefault(update.OS, "any OS"), sDefault(update.Arch, "any architecture"))
+			log.Printf("Your Go-GMA version %v is ahead of the advertised version %v for %v on %v.", GMAVersionNumber, update.Version, sDefault(update.OS, "any OS"), sDefault(update.Arch, "any architecture"))
 		} else {
-			log.Printf("Your GMA version %s is up to date.", GMAVersionNumber)
+			log.Printf("Your Go-GMA version %s is up to date.", GMAVersionNumber)
 		}
 	}
 
