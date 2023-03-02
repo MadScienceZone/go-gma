@@ -676,20 +676,25 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 
 			receiptMessageID := 0
 			if p.ToGM {
-				receiptMessageID <- a.MessageIDGenerator
+				receiptMessageID = <- a.MessageIDGenerator
 			}
 
 			for _, peer := range a.GetClients() {
 				if p.ToGM {
 					if peer.Auth == nil || !peer.Auth.GmMode {
 						// Note that the die roll was made but don't reveal the result except to the GM
+						receiptMessageText := fmt.Sprintf("[roll to GM] %s", p.RollSpec)
+						if requester.Auth.GmMode {
+							receiptMessageText = "[rolls behind screen]"
+						}
+
 						peer.Conn.Send(mapper.ChatMessage, mapper.ChatMessageMessagePayload{
 							ChatCommon: mapper.ChatCommon{
 								MessageID: receiptMessageID,
 								Sender:    requester.Auth.Username,
 								ToAll:     true,
 							},
-							Text: fmt.Sprintf("%s (die-roll result sent only to GM)", p.RollSpec),
+							Text: receiptMessageText,
 						})
 						continue // skip the code below which would have sent results out since we're not supposed to see them
 					}
