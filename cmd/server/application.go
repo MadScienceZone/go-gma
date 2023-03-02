@@ -132,7 +132,9 @@ type Application struct {
 	// Logger is whatever device or file we're writing logs to.
 	Logger *log.Logger
 
-	// If DebugLevel is 0, no extra debugging output will be logged.
+	NrLogFile *os.File
+
+	// If DeLugLevel is 0, no extra debugging output will be logged.
 	// Otherwise, it gives a set of debugging topics to report.
 	DebugLevel DebugFlags
 
@@ -341,6 +343,7 @@ func (a *Application) GetAppOptions() error {
 	//	var saveInterval = flag.String("save-interval", "10m", "Save internal state this often")
 	var sqlDbName = flag.String("sqlite", "", "Specify filename for sqlite database to use")
 	var debugFlags = flag.String("debug", "", "List the debugging trace types to enable")
+	var nrLogger = flag.String("telemetry-log", "", "Debugging log for telemetry collection (default: stdout)")
 	flag.Parse()
 
 	if *debugFlags != "" {
@@ -364,6 +367,20 @@ func (a *Application) GetAppOptions() error {
 				a.Logger.SetOutput(f)
 			}
 			a.Debugf(DebugInit, "Logging to %v", path)
+		}
+	}
+
+	if *nrLogger == "" {
+		a.NrLogFile = os.Stdout
+	} else {
+		var err error
+		path, err := util.FancyFileName(*nrLogger, nil)
+		if err != nil {
+			return fmt.Errorf("unable to understand telemetry log file path \"%s\": %v", *nrLogger, err)
+		}
+		a.NrLogFile, err = os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return fmt.Errorf("unable to open telemetry log file: %v", err)
 		}
 	}
 
@@ -657,19 +674,29 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				a.Logf("unable to add RollResult event to chat history: %v", err)
 			}
 
+			receiptMessageID := 0
+			if p.ToGM {
+				receiptMessageID = <- a.MessageIDGenerator
+			}
+
 			for _, peer := range a.GetClients() {
 				if p.ToGM {
-					if peer == requester {
+					if peer.Auth == nil || !peer.Auth.GmMode {
+						// Note that the die roll was made but don't reveal the result except to the GM
+						receiptMessageText := fmt.Sprintf("[roll to GM] %s", p.RollSpec)
+						if requester.Auth.GmMode {
+							receiptMessageText = "[rolls behind screen]"
+						}
+
 						peer.Conn.Send(mapper.ChatMessage, mapper.ChatMessageMessagePayload{
 							ChatCommon: mapper.ChatCommon{
-								MessageID: <-a.MessageIDGenerator,
+								MessageID: receiptMessageID,
+								Sender:    requester.Auth.Username,
+								ToAll:     true,
 							},
-							Text: "(die-roll result sent to GM)",
+							Text: receiptMessageText,
 						})
-					}
-					if peer.Auth == nil || !peer.Auth.GmMode {
-						a.Debugf(DebugIO, "sending to GM and %v isn't the GM (skipped)", peer.IdTag())
-						continue
+						continue // skip the code below which would have sent results out since we're not supposed to see them
 					}
 				} else if !p.ToAll {
 					if peer.Auth == nil || peer.Auth.Username == "" {

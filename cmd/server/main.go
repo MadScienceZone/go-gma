@@ -49,15 +49,12 @@ import (
 // Auto-configured values
 //
 
-const GMAVersionNumber="5.1.1" // @@##@@
+const GMAVersionNumber = "5.1.1" // @@##@@
 
 //
 // eventMonitor responds to signals and timers that affect our overall operation
 // independent of client requests.
 //
-/*
-func eventMonitor(sig_chan chan os.Signal, stop_chan chan int, ms *mapservice.MapService, saveInterval int) {
-*/
 func eventMonitor(sigChan chan os.Signal, stopChan chan int, app *Application) {
 	ping_signal := time.NewTicker(1 * time.Minute)
 
@@ -77,8 +74,6 @@ func eventMonitor(sigChan chan os.Signal, stopChan chan int, app *Application) {
 					app.Logf("WARNING: authenticator initialization file reload failed: %v", err)
 					app.Log("WARNING: client credentials may be incomplete or incorrect now")
 				}
-
-				//				ms.DumpState()
 
 			case syscall.SIGUSR2:
 				app.Debug(DebugEvents, "SIGUSR2 (dump database out to logfile)")
@@ -102,24 +97,6 @@ func eventMonitor(sigChan chan os.Signal, stopChan chan int, app *Application) {
 		case <-ping_signal.C:
 			app.Debug(DebugEvents, "ping timer expired")
 			app.SendToAll(mapper.Marco, nil)
-			//			any_connections := ms.PingAll()
-			//			if any_connections {
-			//				if report_interval > 1 {
-			//					report_interval = 1
-			//					log.Printf("Activity detected; reset ping timer to 1 minute")
-			//					ping_signal.Reset(1 * time.Minute)
-			//				}
-			//			} else {
-			//				new_interval := report_interval * 2
-			//				if new_interval > 60 {
-			//					new_interval = 60
-			//				}
-			//				if new_interval != report_interval {
-			//					report_interval = new_interval
-			//					log.Printf("No connections; backing off ping timer to %d minutes", new_interval)
-			//					ping_signal.Reset(time.Duration(new_interval) * time.Minute)
-			//				}
-			//			}
 		}
 	}
 }
@@ -169,13 +146,20 @@ func main() {
 	// Go Agent:
 	//    NEW_RELIC_APP_NAME = the name you want to appear in the datasets
 	//    NEW_RELIC_LICENSE_KEY = your license key
+	//    NEW_RELIC_METADATA_RELEASE_TAG = application release
 	//
 	if InstrumentCode {
 		app.Log("application performance metrics telemetry reporting enabled")
+		if err = os.Setenv("NEW_RELIC_METADATA_SERVICE_VERSION", GMAVersionNumber); err != nil {
+			app.Logf("unable to set version metadata: %v", err)
+		}
 		nrApp, err = newrelic.NewApplication(
-			newrelic.ConfigAppName("go-gma-server"),
+			newrelic.ConfigAppName("gma-server"),
 			newrelic.ConfigFromEnvironment(),
-			newrelic.ConfigDebugLogger(os.Stdout),
+			newrelic.ConfigCodeLevelMetricsEnabled(true),
+			newrelic.ConfigCodeLevelMetricsPathPrefixes("go-gma/"),
+			newrelic.ConfigCodeLevelMetricsRedactPathPrefixes(false),
+			newrelic.ConfigDebugLogger(app.NrLogFile),
 		)
 		if err != nil {
 			app.Logf("unable to start instrumentation: %v", err)
