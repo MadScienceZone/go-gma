@@ -657,19 +657,24 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				a.Logf("unable to add RollResult event to chat history: %v", err)
 			}
 
+			receiptMessageID := 0
+			if p.ToGM {
+				receiptMessageID <- a.MessageIDGenerator
+			}
+
 			for _, peer := range a.GetClients() {
 				if p.ToGM {
-					if peer == requester {
+					if peer.Auth == nil || !peer.Auth.GmMode {
+						// Note that the die roll was made but don't reveal the result except to the GM
 						peer.Conn.Send(mapper.ChatMessage, mapper.ChatMessageMessagePayload{
 							ChatCommon: mapper.ChatCommon{
-								MessageID: <-a.MessageIDGenerator,
+								MessageID: receiptMessageID,
+								Sender:    requester.Auth.Username,
+								ToAll:     true,
 							},
-							Text: "(die-roll result sent to GM)",
+							Text: fmt.Sprintf("%s (die-roll result sent only to GM)", p.RollSpec),
 						})
-					}
-					if peer.Auth == nil || !peer.Auth.GmMode {
-						a.Debugf(DebugIO, "sending to GM and %v isn't the GM (skipped)", peer.IdTag())
-						continue
+						continue // skip the code below which would have sent results out since we're not supposed to see them
 					}
 				} else if !p.ToAll {
 					if peer.Auth == nil || peer.Auth.Username == "" {
