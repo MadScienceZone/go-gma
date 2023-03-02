@@ -132,7 +132,9 @@ type Application struct {
 	// Logger is whatever device or file we're writing logs to.
 	Logger *log.Logger
 
-	// If DebugLevel is 0, no extra debugging output will be logged.
+	NrLogFile *os.File
+
+	// If DeLugLevel is 0, no extra debugging output will be logged.
 	// Otherwise, it gives a set of debugging topics to report.
 	DebugLevel DebugFlags
 
@@ -341,6 +343,7 @@ func (a *Application) GetAppOptions() error {
 	//	var saveInterval = flag.String("save-interval", "10m", "Save internal state this often")
 	var sqlDbName = flag.String("sqlite", "", "Specify filename for sqlite database to use")
 	var debugFlags = flag.String("debug", "", "List the debugging trace types to enable")
+	var nrLogger = flag.String("telemetry-log", "", "Debugging log for telemetry collection (default: stdout)")
 	flag.Parse()
 
 	if *debugFlags != "" {
@@ -364,6 +367,20 @@ func (a *Application) GetAppOptions() error {
 				a.Logger.SetOutput(f)
 			}
 			a.Debugf(DebugInit, "Logging to %v", path)
+		}
+	}
+
+	if *nrLogger == "" {
+		a.NrLogFile = os.Stdout
+	} else {
+		var err error
+		path, err := util.FancyFileName(*nrLogger, nil)
+		if err != nil {
+			return fmt.Errorf("unable to understand telemetry log file path \"%s\": %v", *nrLogger, err)
+		}
+		a.NrLogFile, err = os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return fmt.Errorf("unable to open telemetry log file: %v", err)
 		}
 	}
 

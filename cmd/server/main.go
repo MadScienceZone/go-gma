@@ -150,13 +150,16 @@ func main() {
 	//
 	if InstrumentCode {
 		app.Log("application performance metrics telemetry reporting enabled")
-		if err = os.Setenv("NEW_RELIC_METADATA_RELEASE_TAG", GMAVersionNumber); err != nil {
+		if err = os.Setenv("NEW_RELIC_METADATA_SERVICE_VERSION", GMAVersionNumber); err != nil {
 			app.Logf("unable to set version metadata: %v", err)
 		}
 		nrApp, err = newrelic.NewApplication(
 			newrelic.ConfigAppName("gma-server"),
 			newrelic.ConfigFromEnvironment(),
-			newrelic.ConfigDebugLogger(os.Stdout),
+			newrelic.ConfigCodeLevelMetricsEnabled(true),
+			newrelic.ConfigCodeLevelMetricsPathPrefixes("go-gma/"),
+			newrelic.ConfigCodeLevelMetricsRedactPathPrefixes(false),
+			newrelic.ConfigDebugLogger(app.NrLogFile),
 		)
 		if err != nil {
 			app.Logf("unable to start instrumentation: %v", err)
