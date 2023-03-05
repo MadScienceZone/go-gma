@@ -2001,6 +2001,22 @@ func (c *Connection) RollDiceToAll(rollspec string) error {
 }
 
 //
+// RollDiceToAllWithID is equivalent to RollDiceWithID, sending the results to all users.
+//
+func (c *Connection) RollDiceToAllWithID(rollspec, requestID string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(RollDice, RollDiceMessagePayload{
+		ChatCommon: ChatCommon{
+			ToAll: true,
+		},
+		RollSpec:  rollspec,
+		RequestID: requestID,
+	})
+}
+
+//
 // RollDiceToGM is equivalent to RollDice, sending the results only to the GM.
 //
 func (c *Connection) RollDiceToGM(rollspec string) error {
@@ -2012,6 +2028,22 @@ func (c *Connection) RollDiceToGM(rollspec string) error {
 			ToGM: true,
 		},
 		RollSpec: rollspec,
+	})
+}
+
+//
+// RollDiceToGMWithID is equivalent to RollDiceWithID, sending the results only to the GM.
+//
+func (c *Connection) RollDiceToGMWithID(rollspec, requestID string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(RollDice, RollDiceMessagePayload{
+		ChatCommon: ChatCommon{
+			ToGM: true,
+		},
+		RollSpec:  rollspec,
+		RequestID: requestID,
 	})
 }
 

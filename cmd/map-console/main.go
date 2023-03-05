@@ -54,7 +54,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GMAVersionNumber="5.2.0" //@@##@@
+const GMAVersionNumber = "5.2.0" //@@##@@
 
 func main() {
 	fmt.Printf("GMA mapper console %s\n", GMAVersionNumber)
@@ -636,6 +636,12 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 		)
 
 	case mapper.RollResultMessagePayload:
+		if m.Result.InvalidRequest {
+			if m.Result.Details != nil && len(m.Result.Details) >= 1 && m.Result.Details[0].Type == "error" {
+				fmt.Print(colorize(fmt.Sprintf("ERROR in die roll request: %v; ", m.Result.Details[0].Value), "Red", mono))
+			}
+		}
+
 		printFields(mono, "RollResult",
 			fieldDesc{"from", m.Sender},
 			fieldDesc{"to", m.Recipients},
@@ -646,6 +652,8 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"result", m.Result},
 			fieldDesc{"more?", m.MoreResults},
 			fieldDesc{"requestID", m.RequestID},
+			fieldDesc{"invalid?", m.Result.InvalidRequest},
+			fieldDesc{"suppressed?", m.Result.ResultSuppressed},
 		)
 
 	case mapper.ToolbarMessagePayload:
@@ -996,7 +1004,7 @@ CLR <id>|*|E*|M*|P*|[<image>=]<name>    Clear specified element(s) from canvas
 CLR@ <serverid>                         Remove all elements from server file
 CO <bool>                               Enable/disable combat mode
 CS <abs> <rel>                          Set game clock
-D {<recip>|@|*|% ...} <dice>            Roll dice to users (*=all, %=GM)
+D {<recip>|*|% ...} <dice>              Roll dice to users (*=all, %=GM)
 DD {{<name> <desc> <dice>} ...}         Replace dice preset list
 DD+ {{<name> <desc> <dice>} ...}        Add to dice preset list
 DD/ <regex>                             Delete all presets whose names match RE
@@ -1161,9 +1169,21 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 					fmt.Println(colorize(fmt.Sprintf("ERROR in recipient list: %v", err), "Red", mono))
 					break
 				}
-				if err := server.RollDiceWithID(recips, fields[2], requestID); err != nil {
-					fmt.Println(colorize(fmt.Sprintf("server ERROR: %v", err), "Red", mono))
-					break
+				if len(recips) == 1 && recips[0] == "%" {
+					if err := server.RollDiceToGMWithID(fields[2], requestID); err != nil {
+						fmt.Println(colorize(fmt.Sprintf("server ERROR: %v", err), "Red", mono))
+						break
+					}
+				} else if len(recips) == 1 && recips[0] == "*" {
+					if err := server.RollDiceToAllWithID(fields[2], requestID); err != nil {
+						fmt.Println(colorize(fmt.Sprintf("server ERROR: %v", err), "Red", mono))
+						break
+					}
+				} else {
+					if err := server.RollDiceWithID(recips, fields[2], requestID); err != nil {
+						fmt.Println(colorize(fmt.Sprintf("server ERROR: %v", err), "Red", mono))
+						break
+					}
 				}
 
 			case "DD", "DD+":
