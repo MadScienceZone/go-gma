@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __        __                     #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \      /  \                    #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) )     \/) )                   #
-# | |      | || || || (___) | Assistant | (____        | |       | |                   #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |       | |                   #
-# | | \_  )| |   | || (   ) |                 ) )      | |       | |                   #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_ _  __) (_                  #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/(_) \____/                  #
+#  _______  _______  _______             _______     _______     _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )   (  __   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |   | (  )  |              #
+# | |      | || || || (___) | Assistant | (____         /   )   | | /   |              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    | (/ /) |              #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/     |   / | |              #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _ |  (__) |              #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_)(_______)              #
 #                                                                                      #
 ########################################################################################
 */
@@ -345,6 +345,12 @@ type StructuredDescriptionSet []StructuredDescription
 //  }}
 //
 type StructuredResult struct {
+	// True if there is no actual result generated (and the Result field should be ignored)
+	ResultSuppressed bool
+
+	// True if the die-roll request was invalid.
+	InvalidRequest bool
+
 	// Total final result of the expression.
 	Result int
 
@@ -384,7 +390,7 @@ type dieComponent interface {
 	description() string
 
 	// Describe the die-roll component as explicit elements.
-	structuredDescribeRoll() []StructuredDescription
+	structuredDescribeRoll(bool) []StructuredDescription
 
 	// Returns the natural roll value of the component. This must be a single
 	// die; otherwise -1 is returned. If the component isn't a die to be rolled,
@@ -461,7 +467,7 @@ func (d *dieConstant) description() string {
 //        {"constant", "3"},
 //        {"label", "int"}
 //    }
-func (d *dieConstant) structuredDescribeRoll() []StructuredDescription {
+func (d *dieConstant) structuredDescribeRoll(resultSuppressed bool) []StructuredDescription {
 	var desc []StructuredDescription
 	if d.Operator != "" {
 		desc = append(desc, StructuredDescription{Type: "operator", Value: d.Operator})
@@ -738,7 +744,7 @@ func (d *dieSpec) isMaxRoll() bool {
 // returns a detailed description of that component of the roll,
 // as a number of StructuredDescription values.
 //
-func (d *dieSpec) structuredDescribeRoll() []StructuredDescription {
+func (d *dieSpec) structuredDescribeRoll(resultSuppressed bool) []StructuredDescription {
 	var desc []StructuredDescription
 	var rollType string
 	if d.WasMaximized {
@@ -762,33 +768,41 @@ func (d *dieSpec) structuredDescribeRoll() []StructuredDescription {
 		desc = append(desc, StructuredDescription{Type: "diebonus", Value: fmt.Sprintf("%+d", d.DieBonus)})
 	}
 
-	if len(d.History[0]) > 1 {
+	if !resultSuppressed && len(d.History[0]) > 1 {
 		desc = append(desc, StructuredDescription{Type: "subtotal", Value: strconv.Itoa(d.Value)})
 	}
 
 	if d.Rerolls > 0 {
-		if d.BestReroll {
-			desc = append(desc, StructuredDescription{Type: "best", Value: strconv.Itoa(d.Rerolls + 1)})
-			_, choice := maxOf(reduceSums(d.History))
-			for i, roll := range d.History {
-				if i == choice {
-					desc = append(desc, StructuredDescription{Type: rollType, Value: strings.Join(intToStrings(roll), ",")})
-				} else {
-					desc = append(desc, StructuredDescription{Type: "discarded", Value: strings.Join(intToStrings(roll), ",")})
-				}
+		if resultSuppressed {
+			if d.BestReroll {
+				desc = append(desc, StructuredDescription{Type: "best", Value: strconv.Itoa(d.Rerolls + 1)})
+			} else {
+				desc = append(desc, StructuredDescription{Type: "worst", Value: strconv.Itoa(d.Rerolls + 1)})
 			}
 		} else {
-			desc = append(desc, StructuredDescription{Type: "worst", Value: strconv.Itoa(d.Rerolls + 1)})
-			_, choice := minOf(reduceSums(d.History))
-			for i, roll := range d.History {
-				if i == choice {
-					desc = append(desc, StructuredDescription{Type: rollType, Value: strings.Join(intToStrings(roll), ",")})
-				} else {
-					desc = append(desc, StructuredDescription{Type: "discarded", Value: strings.Join(intToStrings(roll), ",")})
+			if d.BestReroll {
+				desc = append(desc, StructuredDescription{Type: "best", Value: strconv.Itoa(d.Rerolls + 1)})
+				_, choice := maxOf(reduceSums(d.History))
+				for i, roll := range d.History {
+					if i == choice {
+						desc = append(desc, StructuredDescription{Type: rollType, Value: strings.Join(intToStrings(roll), ",")})
+					} else {
+						desc = append(desc, StructuredDescription{Type: "discarded", Value: strings.Join(intToStrings(roll), ",")})
+					}
+				}
+			} else {
+				desc = append(desc, StructuredDescription{Type: "worst", Value: strconv.Itoa(d.Rerolls + 1)})
+				_, choice := minOf(reduceSums(d.History))
+				for i, roll := range d.History {
+					if i == choice {
+						desc = append(desc, StructuredDescription{Type: rollType, Value: strings.Join(intToStrings(roll), ",")})
+					} else {
+						desc = append(desc, StructuredDescription{Type: "discarded", Value: strings.Join(intToStrings(roll), ",")})
+					}
 				}
 			}
 		}
-	} else {
+	} else if !resultSuppressed {
 		desc = append(desc, StructuredDescription{Type: rollType, Value: strings.Join(intToStrings(d.History[0]), ",")})
 	}
 
@@ -1220,10 +1234,11 @@ func (d *Dice) Description() (desc string) {
 }
 
 type sdrOptions struct {
-	autoSF         bool
-	rollBonus      int
-	successMessage string
-	failureMessage string
+	autoSF           bool
+	resultSuppressed bool
+	rollBonus        int
+	successMessage   string
+	failureMessage   string
 }
 
 //
@@ -1259,6 +1274,16 @@ func WithAutoSF(enabled bool, successMessage, failureMessage string) func(*sdrOp
 }
 
 //
+// WithNoResults tells StructuredDescribeRoll to assume that no actual die roll was
+// made, and report only the request itself, ignoring results.
+//
+func WithNoResults() func(*sdrOptions) {
+	return func(o *sdrOptions) {
+		o.resultSuppressed = true
+	}
+}
+
+//
 // StructuredDescribeRoll produces a detailed structured description of the result of rolling
 // the Dice, in a way that a caller can format as they see fit.
 //
@@ -1279,26 +1304,28 @@ func (d *Dice) StructuredDescribeRoll(options ...func(*sdrOptions)) ([]Structure
 		o(&opts)
 	}
 
-	if !d.Rolled {
+	if !d.Rolled && !opts.resultSuppressed {
 		return nil, nil
 	}
-	if opts.autoSF {
-		if d._onlydie == nil || d._onlydie.Numerator != 1 {
-			return nil, fmt.Errorf("you can't indicate auto-success/fail (|sf option) because it involves multiple dice")
+	if !opts.resultSuppressed {
+		if opts.autoSF {
+			if d._onlydie == nil || d._onlydie.Numerator != 1 {
+				return nil, fmt.Errorf("you can't indicate auto-success/fail (|sf option) because it involves multiple dice")
+			}
+			if d._onlydie.isMinRoll() {
+				desc = append(desc, StructuredDescription{Type: "fail", Value: opts.failureMessage})
+			} else if d._onlydie.isMaxRoll() {
+				desc = append(desc, StructuredDescription{Type: "success", Value: opts.successMessage})
+			}
 		}
-		if d._onlydie.isMinRoll() {
-			desc = append(desc, StructuredDescription{Type: "fail", Value: opts.failureMessage})
-		} else if d._onlydie.isMaxRoll() {
-			desc = append(desc, StructuredDescription{Type: "success", Value: opts.successMessage})
-		}
-	}
 
-	desc = append(desc,
-		StructuredDescription{Type: "result", Value: strconv.Itoa(d.LastValue)},
-		StructuredDescription{Type: "separator", Value: "="},
-	)
+		desc = append(desc,
+			StructuredDescription{Type: "result", Value: strconv.Itoa(d.LastValue)},
+			StructuredDescription{Type: "separator", Value: "="},
+		)
+	}
 	for _, die := range d.multiDice {
-		desc = append(desc, die.structuredDescribeRoll()...)
+		desc = append(desc, die.structuredDescribeRoll(opts.resultSuppressed)...)
 	}
 	if opts.rollBonus != 0 {
 		desc = append(desc, StructuredDescription{Type: "bonus", Value: fmt.Sprintf("%+d", opts.rollBonus)})
@@ -1892,6 +1919,150 @@ func (d *DieRoller) DoRoll(spec string) (string, []StructuredResult, error) {
 }
 
 //
+// ExplainSecretRoll takes a dieroll spec as DoRoll does, along with a string explaining
+// why the roll is secret. It returns the same result data as DoRoll, including a broken-out
+// description of the dieroll spec, except that no actual die roll is made and no results
+// are reported.
+//
+// The ResultSuppressed field of the returned StructuredResult value is set to true to indicate
+// that there is no actual result contained in the returned data.
+//
+// This is used to send a "receipt"
+// back to the requester of a die roll that their request for the roll was sent on to another party
+// (typically the GM) who will be the only person to see the actual results (which must be obtained
+// by a separate roll to the DoRoll method).
+//
+func (d *DieRoller) ExplainSecretRoll(spec, notice string) (string, StructuredResult, error) {
+	var thisResult []StructuredDescription
+
+	if spec != "" {
+		if err := d.setNewSpecification(spec); err != nil {
+			return "", StructuredResult{}, err
+		}
+	}
+	thisResult = append(thisResult, StructuredDescription{Type: "notice", Value: notice})
+
+	//
+	// How to report back on the options (aka modifiers) in play for the die roll.
+	// This updates the thisResult value in-place.
+	//
+	reportOptions := func() {
+		if d.Confirm {
+			thisResult = append(thisResult, StructuredDescription{
+				Type: "moddelim", Value: "|",
+			})
+			c := "c"
+			if d.critThreat != 0 {
+				c += strconv.Itoa(d.critThreat)
+			}
+			if d.critBonus != 0 {
+				c += fmt.Sprintf("%+d", d.critBonus)
+			}
+			thisResult = append(thisResult, StructuredDescription{
+				Type: "critspec", Value: c,
+			})
+		}
+		if d.RepeatFor > 1 {
+			thisResult = append(thisResult,
+				StructuredDescription{Type: "moddelim", Value: "|"},
+				StructuredDescription{Type: "repeat", Value: strconv.Itoa(d.RepeatFor)},
+			)
+		}
+		if d.RepeatUntil != 0 {
+			thisResult = append(thisResult,
+				StructuredDescription{Type: "moddelim", Value: "|"},
+				StructuredDescription{Type: "until", Value: strconv.Itoa(d.RepeatUntil)},
+			)
+		}
+		if d.DC != 0 {
+			thisResult = append(thisResult,
+				StructuredDescription{Type: "moddelim", Value: "|"},
+				StructuredDescription{Type: "dc", Value: strconv.Itoa(d.DC)},
+			)
+		}
+		if d.sfOpt != "" {
+			thisResult = append(thisResult,
+				StructuredDescription{Type: "moddelim", Value: "|"},
+				StructuredDescription{Type: "sf", Value: d.sfOpt},
+			)
+		}
+	}
+
+	//
+	// percentile rolls are reported specially.
+	// The result will be 0 or 1 and we'll describe the outcome in words
+	// like "hit" or "miss"
+	//
+	reportPctRoll := func(chance int, label string, maximized bool) {
+		thisResult = nil
+
+		thisResult = append(thisResult,
+			StructuredDescription{Type: "diespec", Value: fmt.Sprintf("%d%%", chance)},
+		)
+		if label != "" {
+			thisResult = append(thisResult,
+				StructuredDescription{Type: "label", Value: strings.TrimSpace(label)})
+		}
+		if maximized {
+			thisResult = append(thisResult,
+				StructuredDescription{Type: "moddelim", Value: "|"},
+				StructuredDescription{Type: "fullmax", Value: "maximized"},
+			)
+		}
+	}
+
+	//
+	// Enough of the preliminaries, let's get working.
+	//
+	if d.d == nil {
+		return "", StructuredResult{}, fmt.Errorf("no defined Dice object to consume")
+	}
+
+	// MAXIMIZED DIE ROLLS_____________________________________________________
+	//
+	// If we're maximizing rolls, we just assume every die came up at its
+	// maximum value instead of bothering to roll them.
+	//
+	sfo := d.sfOpt
+	if sfo == "" && d.Confirm {
+		sfo = "c"
+	}
+	if d.DoMax {
+		if d.PctChance >= 0 {
+			reportPctRoll(d.PctChance, d.PctLabel, true)
+		} else {
+			sdesc, err := d.d.StructuredDescribeRoll(WithNoResults(), WithAutoSF(sfo != "", d.SuccessMessage, d.FailMessage))
+			if err != nil {
+				return "", StructuredResult{}, err
+			}
+			thisResult = append(thisResult, sdesc...)
+			reportOptions()
+			thisResult = append(thisResult,
+				StructuredDescription{Type: "moddelim", Value: "|"},
+				StructuredDescription{Type: "fullmax", Value: "maximized"},
+			)
+		}
+	} else {
+		// NORMAL DIE ROLLS____________________________________________________
+		//
+		if d.PctChance >= 0 {
+			reportPctRoll(d.PctChance, d.PctLabel, false)
+		} else {
+			sdesc, err := d.d.StructuredDescribeRoll(
+				WithNoResults(),
+				WithAutoSF(sfo != "", d.SuccessMessage, d.FailMessage))
+			if err != nil {
+				return "", StructuredResult{}, err
+			}
+			thisResult = append(thisResult, sdesc...)
+			reportOptions()
+		}
+	}
+
+	return d.LabelText, StructuredResult{ResultSuppressed: true, Details: thisResult}, nil
+}
+
+//
 // utility function to replace placeholders {0}, {1}, {2}, ... in an input string
 // with corresponding values taken from a list of substitution values, returning
 // the resulting string.
@@ -2307,6 +2478,9 @@ func (sr StructuredDescriptionSet) Text() (string, error) {
 		case "min":
 			fmt.Fprintf(&t, " (min %s) ", r.Value)
 
+		case "notice":
+			fmt.Fprintf(&t, "[%s] ", r.Value)
+
 		case "repeat":
 			fmt.Fprintf(&t, "(x%s) ", r.Value)
 
@@ -2573,7 +2747,7 @@ func LoadDieRollPresetFile(input io.Reader) ([]DieRollPreset, DieRollPresetMetaD
 	return nil, meta, fmt.Errorf("invalid die-roll preset file format: unexpected end of file")
 }
 
-// @[00]@| GMA 5.1.1
+// @[00]@| GMA 5.2.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

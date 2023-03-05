@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __        __                     #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \      /  \                    #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) )     \/) )                   #
-# | |      | || || || (___) | Assistant | (____        | |       | |                   #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |       | |                   #
-# | | \_  )| |   | || (   ) |                 ) )      | |       | |                   #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_ _  __) (_                  #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/(_) \____/                  #
+#  _______  _______  _______             _______     _______     _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )   (  __   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |   | (  )  |              #
+# | |      | || || || (___) | Assistant | (____         /   )   | | /   |              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    | (/ /) |              #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/     |   / | |              #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _ |  (__) |              #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_)(_______)              #
 #                                                                                      #
 ########################################################################################
 */
@@ -305,16 +305,26 @@ func compareResults(a, b []StructuredResult) bool {
 		return false
 	}
 	for i := range a {
-		if a[i].Result != b[i].Result {
+		if !compareSingleResult(a[i], b[i]) {
 			return false
 		}
-		if len(a[i].Details) != len(b[i].Details) {
+	}
+	return true
+}
+
+func compareSingleResult(a, b StructuredResult) bool {
+	if a.Result != b.Result {
+		return false
+	}
+	if a.ResultSuppressed != b.ResultSuppressed {
+		return false
+	}
+	if len(a.Details) != len(b.Details) {
+		return false
+	}
+	for j := range a.Details {
+		if a.Details[j] != b.Details[j] {
 			return false
-		}
-		for j := range a[i].Details {
-			if a[i].Details[j] != b[i].Details[j] {
-				return false
-			}
 		}
 	}
 	return true
@@ -1840,7 +1850,55 @@ func TestDiceStructured(t *testing.T) {
 	}
 }
 
-// @[00]@| GMA 5.1.1
+func TestDicePrivateRolls(t *testing.T) {
+	//rand.Seed(12345) // static seed so our results will be the same every run
+	d, err := NewDieRoller(WithSeed(12345))
+	if err != nil {
+		t.Fatalf("Error creating new DieRoller: %v", err)
+	}
+
+	type testcase struct {
+		Roll    string
+		Notice  string
+		Label   string
+		Reslist StructuredResult
+	}
+
+	testcases := []testcase{
+		// 0
+		{Roll: "d20", Notice: "secret roll you can't see", Reslist: StructuredResult{
+			Result: 0, ResultSuppressed: true, Details: []StructuredDescription{
+				{Type: "notice", Value: "secret roll you can't see"},
+				{Type: "diespec", Value: "1d20"},
+			},
+		}},
+		// 1
+		{Roll: "tpk=60d12+1024 bludgeoning", Notice: "rocks fall", Label: "tpk", Reslist: StructuredResult{
+			Result: 0, ResultSuppressed: true, Details: []StructuredDescription{
+				{Type: "notice", Value: "rocks fall"},
+				{Type: "diespec", Value: "60d12"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "1024"},
+				{Type: "label", Value: "bludgeoning"},
+			},
+		}},
+	}
+
+	for i, test := range testcases {
+		label, results, err := d.ExplainSecretRoll(test.Roll, test.Notice)
+		if err != nil {
+			t.Fatalf("test #%d error %v", i, err)
+		}
+		if !compareSingleResult(results, test.Reslist) {
+			t.Fatalf("test #%d result %v, expected %v", i, results, test.Reslist)
+		}
+		if label != test.Label {
+			t.Fatalf("test #%d label was %v, expected it to be %v", i, label, test.Label)
+		}
+	}
+}
+
+// @[00]@| GMA 5.2.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

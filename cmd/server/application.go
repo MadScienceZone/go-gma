@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/MadScienceZone/go-gma/v5/auth"
+	"github.com/MadScienceZone/go-gma/v5/dice"
 	"github.com/MadScienceZone/go-gma/v5/mapper"
 	"github.com/MadScienceZone/go-gma/v5/util"
 	"golang.org/x/exp/slices"
@@ -626,22 +627,36 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 	case mapper.RollDiceMessagePayload:
 		if requester.Auth == nil {
 			a.Logf("refusing to accept die roll from unauthenticated user")
-			requester.Conn.Send(mapper.ChatMessage, mapper.ChatMessageMessagePayload{
+			requester.Conn.Send(mapper.RollResult, mapper.RollResultMessagePayload{
 				ChatCommon: mapper.ChatCommon{
 					MessageID: <-a.MessageIDGenerator,
 				},
-				Text: "I can't accept your die roll request. I don't know who you even are.",
+				RequestID: p.RequestID,
+				Result: dice.StructuredResult{
+					InvalidRequest: true,
+					Details: dice.StructuredDescriptionSet{
+						{Type: "error", Value: "I can't accept your die roll request. I don't know who you even are."},
+					},
+				},
 			})
 			return
 		}
 
 		label, results, err := requester.D.DoRoll(p.RollSpec)
 		if err != nil {
-			requester.Conn.Send(mapper.ChatMessage, mapper.ChatMessageMessagePayload{
+			// Bad request. Notify the requester
+			requester.Conn.Send(mapper.RollResult, mapper.RollResultMessagePayload{
 				ChatCommon: mapper.ChatCommon{
-					MessageID: <-a.MessageIDGenerator,
+					MessageID:  <-a.MessageIDGenerator,
+					Recipients: []string{requester.Auth.Username},
 				},
-				Text: fmt.Sprintf("Unable to understand your die-roll request: %v", err),
+				RequestID: p.RequestID,
+				Result: dice.StructuredResult{
+					InvalidRequest: true,
+					Details: dice.StructuredDescriptionSet{
+						{Type: "error", Value: fmt.Sprintf("Unable to understand your die-roll request: %v", err)},
+					},
+				},
 			})
 			return
 		}
@@ -665,6 +680,51 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			Title:     label,
 			RequestID: p.RequestID,
 		}
+
+		if p.ToGM {
+			receiptMessageID := <-a.MessageIDGenerator
+			notice := "roll to GM"
+			if requester.Auth.GmMode {
+				notice = "rolls behind screen"
+			}
+
+			receiptLabel, receiptResult, err := requester.D.ExplainSecretRoll(p.RollSpec, notice)
+			if err != nil {
+				receiptResult = dice.StructuredResult{
+					ResultSuppressed: true,
+					Details: dice.StructuredDescriptionSet{
+						{Type: "notice", Value: "roll to GM"},
+						{Type: "notice", Value: fmt.Sprintf("error preparing receipt message: %v", err)},
+					},
+				}
+			}
+
+			receiptPayload := mapper.RollResultMessagePayload{
+				ChatCommon: mapper.ChatCommon{
+					MessageID: receiptMessageID,
+					Sender:    requester.Auth.Username,
+					ToAll:     true,
+				},
+				RequestID: p.RequestID,
+				Title:     receiptLabel,
+				Result:    receiptResult,
+			}
+			if err := a.AddToChatHistory(receiptMessageID, mapper.RollResult, receiptPayload); err != nil {
+				a.Logf("unable to add RollResult receipt to chat history: %v", err)
+			}
+			for _, peer := range a.GetClients() {
+				if peer.Auth == nil || !peer.Auth.GmMode {
+					if !peer.Features.DiceColorBoxes {
+						receiptPayload.Title = genericLabel
+					} else {
+						receiptPayload.Title = receiptLabel
+					}
+
+					peer.Conn.Send(mapper.RollResult, receiptPayload)
+				}
+			}
+		}
+
 		for seq, r := range results {
 			response.MessageID = <-a.MessageIDGenerator
 			response.Result = r
@@ -674,29 +734,11 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				a.Logf("unable to add RollResult event to chat history: %v", err)
 			}
 
-			receiptMessageID := 0
-			if p.ToGM {
-				receiptMessageID = <- a.MessageIDGenerator
-			}
-
 			for _, peer := range a.GetClients() {
 				if p.ToGM {
 					if peer.Auth == nil || !peer.Auth.GmMode {
-						// Note that the die roll was made but don't reveal the result except to the GM
-						receiptMessageText := fmt.Sprintf("[roll to GM] %s", p.RollSpec)
-						if requester.Auth.GmMode {
-							receiptMessageText = "[rolls behind screen]"
-						}
-
-						peer.Conn.Send(mapper.ChatMessage, mapper.ChatMessageMessagePayload{
-							ChatCommon: mapper.ChatCommon{
-								MessageID: receiptMessageID,
-								Sender:    requester.Auth.Username,
-								ToAll:     true,
-							},
-							Text: receiptMessageText,
-						})
-						continue // skip the code below which would have sent results out since we're not supposed to see them
+						// we already handled this case above
+						continue
 					}
 				} else if !p.ToAll {
 					if peer.Auth == nil || peer.Auth.Username == "" {

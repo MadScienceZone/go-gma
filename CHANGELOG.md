@@ -1,10 +1,14 @@
 # Changelog
 ## Current Version Information
- * GMA Core API Library Version: 5.1.1		<!-- @@##@@ --> (Go port)
- * Supported GMA Mapper Version: 4.2		<!-- @@##@@ -->
- * Supported GMA Mapper Protocol: 401		<!-- @@##@@ -->
+ * GMA Core API Library Version: 5.2.0		<!-- @@##@@ --> (Go port)
+ * Supported GMA Mapper Version: 4.2.5		<!-- @@##@@ -->
+ * Supported GMA Mapper Protocol: 402		<!-- @@##@@ -->
  * Supported GMA Mapper File Format: 20		<!-- @@##@@ -->
- * Effective Date: 01-Mar-2023			<!-- @@##@@ -->
+ * Effective Date: 05-Mar-2023			<!-- @@##@@ -->
+
+## v5.2
+ * Updated to server protocol version 402.
+ * Reports "to-GM-only" die rolls with more explicit details for clients to display.
 
 ## v5.1.1
  * Changed how peer connections and disconnections are announced (removed race condition).

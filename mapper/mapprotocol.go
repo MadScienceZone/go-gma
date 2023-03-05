@@ -34,10 +34,10 @@ import (
 // and protocol versions supported by this code.
 //
 const (
-	GMAMapperProtocol=401     // @@##@@ auto-configured
-	GMAVersionNumber="5.1.1" // @@##@@ auto-configured
+	GMAMapperProtocol=402     // @@##@@ auto-configured
+	GMAVersionNumber="5.2.0" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
-	MaximumSupportedMapProtocol = 401
+	MaximumSupportedMapProtocol = 402
 )
 
 func init() {
