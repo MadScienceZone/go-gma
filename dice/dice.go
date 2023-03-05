@@ -346,10 +346,10 @@ type StructuredDescriptionSet []StructuredDescription
 //
 type StructuredResult struct {
 	// True if there is no actual result generated (and the Result field should be ignored)
-	ResultSuppressed bool
+	ResultSuppressed bool `json:",omitempty"`
 
 	// True if the die-roll request was invalid.
-	InvalidRequest bool
+	InvalidRequest bool `json:",omitempty"`
 
 	// Total final result of the expression.
 	Result int
