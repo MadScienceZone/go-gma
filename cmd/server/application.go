@@ -683,19 +683,28 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 
 		if p.ToGM {
 			receiptMessageID := <-a.MessageIDGenerator
-			notice := "roll to GM"
+			receiptGenericLabel := genericLabel
+			var receiptLabel string
+			var receiptResult dice.StructuredResult
+			var err error
 			if requester.Auth.GmMode {
-				notice = "rolls behind screen"
-			}
-
-			receiptLabel, receiptResult, err := requester.D.ExplainSecretRoll(p.RollSpec, notice)
-			if err != nil {
+				receiptGenericLabel = ""
 				receiptResult = dice.StructuredResult{
 					ResultSuppressed: true,
 					Details: dice.StructuredDescriptionSet{
-						{Type: "notice", Value: "roll to GM"},
-						{Type: "notice", Value: fmt.Sprintf("error preparing receipt message: %v", err)},
+						{Type: "notice", Value: "rolls behind screen"},
 					},
+				}
+			} else {
+				receiptLabel, receiptResult, err = requester.D.ExplainSecretRoll(p.RollSpec, "roll to GM")
+				if err != nil {
+					receiptResult = dice.StructuredResult{
+						ResultSuppressed: true,
+						Details: dice.StructuredDescriptionSet{
+							{Type: "notice", Value: "roll to GM"},
+							{Type: "error", Value: fmt.Sprintf("error preparing receipt message: %v", err)},
+						},
+					}
 				}
 			}
 
@@ -715,7 +724,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			for _, peer := range a.GetClients() {
 				if peer.Auth == nil || !peer.Auth.GmMode {
 					if !peer.Features.DiceColorBoxes {
-						receiptPayload.Title = genericLabel
+						receiptPayload.Title = receiptGenericLabel
 					} else {
 						receiptPayload.Title = receiptLabel
 					}
