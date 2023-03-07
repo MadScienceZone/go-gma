@@ -648,7 +648,10 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			requester.Conn.Send(mapper.RollResult, mapper.RollResultMessagePayload{
 				ChatCommon: mapper.ChatCommon{
 					MessageID:  <-a.MessageIDGenerator,
-					Recipients: []string{requester.Auth.Username},
+					Recipients: p.Recipients,
+					ToAll:      p.ToAll,
+					ToGM:       p.ToGM,
+					Sender:     p.Sender,
 				},
 				RequestID: p.RequestID,
 				Result: dice.StructuredResult{
