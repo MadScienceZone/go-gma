@@ -329,8 +329,7 @@ func (a *Application) AddToChatHistory(id int, chatType mapper.ServerMessage, ch
 }
 
 func (a *Application) LogDatabaseContents() error {
-	a.Log("Datbase Contents:")
-	a.Log("-dice presets (user, name, description, rollspec):")
+	a.Log("Database Contents:")
 
 	dumpTable := func(title, table string, fields ...string) error {
 		queryString := "select " + strings.Join(fields, ",") + " from " + table
