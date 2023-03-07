@@ -571,33 +571,3 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error) {
 		}
 	}
 }
-
-//	go app.ioRunner(&client)
-//	app.Debugf(DebugIO, "serveToClient from %v, conn=%q", client.Address, client.Conn)
-//	client.Debug(DebugIO, "starting session for client")
-//	client.Conn.Send(mapper.Protocol, mapper.GMAMapperProtocol)
-//	client.Debug(DebugIO, "end of session")
-//}
-//
-//func (app *Application) ioRunner(client *ClientConnection) {
-//	for {
-//		select {
-//		case packet := <-client.Conn.sendChan:
-//			client.Conn.sendBuf = append(client.Conn.sendBuf, packet)
-//		default:
-//			if client.Conn.writer != nil && len(client.Conn.sendBuf) > 0 {
-//				client.Debug(DebugIO, util.Hexdump([]byte(client.Conn.sendBuf[0])))
-//				client.Debugf(DebugIO, "client->%q (%d)", client.Conn.sendBuf[0], len(client.Conn.sendBuf))
-//				if written, err := client.Conn.writer.WriteString(client.Conn.sendBuf[0]); err != nil {
-//					client.Logf("only wrote %d of %d bytes: %v", written, len(client.Conn.sendBuf[0]), err)
-//					// TODO abort?
-//				}
-//				if err := client.Conn.writer.Flush(); err != nil {
-//					client.Logf("ioRunner: unable to flush: %v", err)
-//					// TODO abort?
-//				}
-//				client.Conn.sendBuf = client.Conn.sendBuf[1:]
-//			}
-//		}
-//	}
-//}

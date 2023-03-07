@@ -27,12 +27,12 @@
 // BACKGROUND AND SECURITY NOTES
 //
 // This authentication system is designed for validating connections between clients
-// and servers in our game system and nothing else. This is an extremely casual, low-risk
-// situation where the main intent is to deflect nuisance connections. It would not be
-// suitable for use in most other situations where there is more sensitive information
+// and servers in our game system and NOTHING ELSE. This is an extremely casual, low-risk
+// situation where the main intent is to deflect nuisance connections. It would NOT BE
+// SUITABLE for use in most other situations where there is more sensitive information
 // to be protected.
 //
-// In this case, there are two passwords configured into the system. One is shared
+// In this system, there are two passwords configured into the server. One is shared
 // among all players, and is configured into their clients so they may automatically
 // connect to the server when playing the game. The other is for the GM's use, and
 // serves only to identify his or her clients to the system as being GM clients for
@@ -40,11 +40,16 @@
 //
 // If desired, individual passwords may be given to some users which they can use
 // to authenticate in order to avoid confusion between players in the game.
+// This will reserve their name and prevent other players from impersonating them, since
+// their personal password will be required.
 //
 // While this scheme protects passwords from observation and replay in transit (but not
 // man-in-the-middle or other more sophisticated attacks unless further protections are
 // placed on the connection itself), the passwords themselves are handled on both client
 // and server in plaintext form.
+//
+// In case you missed it above, DO NOT USE this authenticator for ANYTHING that is worth
+// protecting. We only use it to play a game together.
 //
 // CLIENT-SIDE OPERATION
 //

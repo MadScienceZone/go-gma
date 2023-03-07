@@ -16,14 +16,6 @@
 */
 
 //
-// EXPERIMENTAL CODE
-//
-// THIS PACKAGE IS STILL A WORK IN PROGRESS and has not been
-// completely tested yet. Although GMA generally is a stable
-// product, this module of it is new, and is not.
-//
-
-//
 // MapObject describes the elements that may appear on the map.
 //
 
@@ -1088,33 +1080,33 @@ func objCoordinateList(objDef map[string][]string, i int, fldName string, requir
 type MapMetaData struct {
 	// Timestamp is the generation or modification time of the map file
 	// as a 64-bit integer Unix timestamp value.
-	Timestamp   int64  `json:",omitempty"`
+	Timestamp int64 `json:",omitempty"`
 
 	// DateTime is a human-readable string which gives the same information
 	// as Timestamp. The software only uses Timestamp. DateTime is provided
 	// only for convenience and is not guaranteed to match Timestamp's time
 	// value or even any valid value at all. The format is this string is
 	// arbitrary.
-	DateTime    string `json:",omitempty"`
+	DateTime string `json:",omitempty"`
 
 	// Comment is any brief comment the map author wishes to leave in the file
 	// about this map.
-	Comment     string `json:",omitempty"`
+	Comment string `json:",omitempty"`
 
 	// Location is a string describing the locale within the adventure area or
 	// world which is represented by this file.
-	Location    string `json:",omitempty"`
+	Location string `json:",omitempty"`
 
 	// FileVersion is the file format version number detected when reading in
 	// the data from this file. This is for informational purposes only and does
 	// not control the format used to write the data to a new file.
-	FileVersion uint   `json:"-"`
+	FileVersion uint `json:"-"`
 }
 
 //
 // WriteMapFile writes mapper data from a slice of map object values and
 // MapMetaData struct into the named file.  It is identical to
-// SaveMapFile other than the fact that it creates and opens the requested 
+// SaveMapFile other than the fact that it creates and opens the requested
 // file to be written into.
 //
 func WriteMapFile(path string, objList []any, meta MapMetaData) error {
@@ -1329,7 +1321,7 @@ func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta stri
 			return nil, meta, fmt.Errorf("legacy map file has invalid record: %v", err)
 		}
 		switch f[0] {
-		case "M":	// M <attr>:<id> <value>	-> rawMonsters[<id>][<attr>] = []<value>
+		case "M": // M <attr>:<id> <value>	-> rawMonsters[<id>][<attr>] = []<value>
 			attr, objID, ok := strings.Cut(f[1], ":")
 			if !ok {
 				return nil, meta, fmt.Errorf("legacy map file has improperly formed M record (can't parse <attr>:<id> from \"%s\")", f[1])
@@ -1339,7 +1331,7 @@ func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta stri
 			}
 			rawMonsters[objID][attr] = f[2:]
 
-		case "P":	// P <attr>:<id> <value>	-> rawPlayers[<id>][<attr>] = []<value>
+		case "P": // P <attr>:<id> <value>	-> rawPlayers[<id>][<attr>] = []<value>
 			attr, objID, ok := strings.Cut(f[1], ":")
 			if !ok {
 				return nil, meta, fmt.Errorf("legacy map file has improperly formed P record (can't parse <attr>:<id> from \"%s\")", f[1])
@@ -1349,14 +1341,14 @@ func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta stri
 			}
 			rawPlayers[objID][attr] = f[2:]
 
-		case "F":	// F <serverID>		-> rawFiles[] = <serverID>
+		case "F": // F <serverID>		-> rawFiles[] = <serverID>
 			if len(f) != 2 {
 				return nil, meta, fmt.Errorf("legacy map file has improperly formed F record (%d fields)", len(f))
 			}
 			rawFiles = append(rawFiles, f[1])
 
-		case "I":	// I <name> <zoom> <serverID>	-> rawImages[<name>] = ImageDefinition struct (with multiple sizes)
-					// interprets @<serverID> notation
+		case "I": // I <name> <zoom> <serverID>	-> rawImages[<name>] = ImageDefinition struct (with multiple sizes)
+			// interprets @<serverID> notation
 			ff, err := tcllist.ConvertTypes(f, "ssfs")
 			if err != nil {
 				return nil, meta, fmt.Errorf("legacy map file has improperly formed I record: %v", err)
@@ -1386,7 +1378,7 @@ func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta stri
 			}
 			rawImages[ff[1].(string)] = def
 
-		default:	// <attr>:<id> <value>	-> rawData[<id>][<attr>] = []<value>
+		default: // <attr>:<id> <value>	-> rawData[<id>][<attr>] = []<value>
 			attr, objID, ok := strings.Cut(f[0], ":")
 			if !ok {
 				return nil, meta, fmt.Errorf("legacy map file has improperly formed record (can't parse <attr>:<id> from \"%s\")", f[0])
@@ -1809,7 +1801,7 @@ func loadMapFile(input io.Reader, metaDataOnly bool) ([]any, MapMetaData, error)
 	// separated from <version> by a space; older file formats used this
 	// for metadata but newer versions ignore the extra text if present).
 	//
-	// For versions >= 20, this is followed by zero or more object 
+	// For versions >= 20, this is followed by zero or more object
 	// definitions which are of the form
 	//    «<type>» <json>
 	// where <json> may be a multi-line structure. The start of each

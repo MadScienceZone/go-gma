@@ -4,7 +4,7 @@
  * Supported GMA Mapper Version: 4.3		<!-- @@##@@ -->
  * Supported GMA Mapper Protocol: 402		<!-- @@##@@ -->
  * Supported GMA Mapper File Format: 20		<!-- @@##@@ -->
- * Effective Date: 05-Mar-2023			<!-- @@##@@ -->
+ * Effective Date: 06-Mar-2023			<!-- @@##@@ -->
 
 ## v5.2.0
  * Updated to server protocol version 402.

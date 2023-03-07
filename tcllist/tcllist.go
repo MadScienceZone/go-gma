@@ -523,15 +523,15 @@ func ParseTclList(tclString string) ([]string, error) {
 //
 // The types string controls this conversion. Each character indicates
 // the required type for the corresponding element in the input slice, as follows:
-//    -  do not convert this element.
-//    s  copy the element as a string.
-//    b  copy the element as a []byte slice.
-//    r  copy the element as a []rune slice.
-//    f  convert the element to a float value.
-//    i  convert the element to an int value.
-//    I  as i, but an empty string is equivalent to 0.
-//    ?  copy the element as a bool value.
-//    *  stop processing here, ignoring any remaining slice elements.
+//    "-"  do not convert this element.
+//    "s"  copy the element as a string.
+//    "b"  copy the element as a []byte slice.
+//    "r"  copy the element as a []rune slice.
+//    "f"  convert the element to a float value.
+//    "i"  convert the element to an int value.
+//    "I"  as i, but an empty string is equivalent to 0.
+//    "?"  copy the element as a bool value.
+//    "*"  stop processing here, ignoring any remaining slice elements.
 // If the value cannot be converted as requested, an error is returned.
 //
 // This provides a simple way to validate the types for all values in

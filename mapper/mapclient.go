@@ -18,12 +18,6 @@
 //
 // Package mapper implements a standard client interface for the mapper service.
 //
-// EXPERIMENTAL CODE
-//
-// THIS PACKAGE IS STILL A WORK IN PROGRESS and has not been
-// completely tested yet. Although GMA generally is a stable
-// product, this module of it is new, and is not.
-//
 // This package handles the details of communicating with the
 // GMA mapper service communication channel used to keep the mapper
 // clients in sync with each other and with the other GMA tools.
@@ -95,9 +89,8 @@ const (
 )
 
 //
-// DebugFlagNames returns a string representation of
-// the debugging flags (topics) stored in the DebugFlags
-// value passed in.
+// DebugFlagNameSlice returns a slice of debug flat names
+// corresponding to the bit-encoded flags parameter.
 //
 func DebugFlagNameSlice(flags DebugFlags) []string {
 	if flags == 0 {
@@ -126,6 +119,11 @@ func DebugFlagNameSlice(flags DebugFlags) []string {
 	return list
 }
 
+//
+// DebugFlagNames returns a string representation of
+// the debugging flags (topics) stored in the DebugFlags
+// value passed in.
+//
 func DebugFlagNames(flags DebugFlags) string {
 	list := DebugFlagNameSlice(flags)
 	if list == nil {
