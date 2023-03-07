@@ -651,7 +651,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 					Recipients: p.Recipients,
 					ToAll:      p.ToAll,
 					ToGM:       p.ToGM,
-					Sender:     p.Sender,
+					Sender:     requester.Auth.Username,
 				},
 				RequestID: p.RequestID,
 				Result: dice.StructuredResult{
