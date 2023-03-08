@@ -6,6 +6,11 @@
  * Supported GMA Mapper File Format: 20		<!-- @@##@@ -->
  * Effective Date: 06-Mar-2023			<!-- @@##@@ -->
 
+## unreleased
+### Enhancements
+ * Added shorter CLI options to `map-console`
+ * Added doc comments for commands
+
 ## v5.2.0
  * Updated to server protocol version 402.
  * Reports "to-GM-only" die rolls with more explicit details for clients to display.
