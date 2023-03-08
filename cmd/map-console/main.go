@@ -29,15 +29,12 @@
 */
 
 /*
-Map-console provides a way to  interact	directly  with	the  GMA  game
-server.	 It  will print any server messages it receives in a colorized
-text representation. Commands typed into map-console are sent to the
-server as described in detail below.
+Map-console provides a way to  interact directly  with  the  GMA  game server.
+It  will print any server messages it receives in a colorized text representation.
+Commands typed into map-console are sent to the server as described in detail below.
 
-This tool is designed primarily for debugging the server. Its input and
-output is not designed to be user-friendly, but rather to make it  possible
-for someone familiar with the server's operation and network protocol
-to manually manipulate it.
+This tool is designed primarily for debugging the server.
+Its input and output is not designed to be user-friendly, but rather to make it possible for someone familiar with the server's operation and network protocol to manually manipulate it.
 
 # SYNOPSIS
 
@@ -46,338 +43,127 @@ to manually manipulate it.
 
 (Otherwise)
    map-console -h
-
    map-console -help
-
    map-console [-Dm] [-C configfile] [-c calendar] [-H host] [-l logfile] [-P password] [-p port] [-u user]
-
    map-console [-calendar calendar] [-config configfile] [-debug] [-help] [-host host] [-log logfile] [-mono] [-password password] [-port port] [-username user]
 
 # OPTIONS
 
-The command-line options described below have a long form (e.g., -port)
-and  a  short form (e.g., -p) which are equivalent. In either case, the
-option may be introduced with either one or two hyphens (e.g., -port or
---port).
-
-Options which take parameter values may have the value separated
-from the option  name  by	a  space  or  an  equals  sign	(e.g.,
--port=2323  or  -port2323), except for boolean flags which may be given
-alone (e.g., -D) to indicate that the option is set to “true” or may be
-given  an  explicit  value which must be attached to the option with an
-equals sign (e.g., -D=true or -D=false).
-
-You may not combine multiple single-letter options into a  single  composite
-argument, (e.g., the options -r and -m would need to be entered
-as two separate options, not as -rm).
-
-  -calendar name
-	  (-c) This specifies the name of the calendar system in  use  for
-	  the campaign. If not specified, it defaults to “golarion”.  Nor‐
-	  mally, the server should be configured to tell all clients  (in‐
-	  cluding  map-client)  what  calendar is in use, in which case if
-	  you also provide this option it will override the	 server's  ad‐
-	  vertised calendar in favor of the one you are explicitly setting
-	  here.
-
-  -config file
-	  (-C) The named file is read to set the  same  options  as	 docu‐
-	  mented  here for command-line parameters. The only difference is
-	  that the long name of the option must be used  with  no  leading
-	  hyphens,	and  with  equals  signs  between  the option name and
-	  value, one option per line. For example, the file could  contain
-	  a line reading
-
-	  host=example.com
-
-	  but not lines like
-
-	  -host=example.com
-	  --host example.com
-	  h=example.com
-
-	  Any options set on the command line override those read from the
-	  configuration file. To set a boolean flag	 to  be	 true,	simply
-	  name it on a line of the file. For example:
-
-	  mono
-
-	  Lines  beginning	with  an  octothorpe (“#”) are ignored as com‐
-	  ments.
-
-  -debug flags
-	  (-D) This adds debugging messages to map-console's  output.  The
-	  flags value is a comma-separated list of debug flag names, which
-	  may be any of the following:
-
-	  all
-		Enable all possible debugging flags.
-
-	  none
-		If you want to explicitly disable debugging (e.g.,  if
-		debugging  is  enabled	in your configuration file but
-		you want to turn it off via command-line option),  you
-		can  specify  none for the flags value to override the
-		previous flag list and effectively disable  debugging.
-		If  none  appears  in  a comma-separated flag list, it
-		cancels all the previously-set flags,  but  any	 other
-		flag names which occur after it will be set.
-
-	  auth
-	    Authentication operations
-
-	  binary
-	    When  printing certain values such as data transmitted
-		over the network, include a hex dump of the actual bi‐
-		nary data in addition to other debugging messages.
-
-  events	Show background events such as expiring timers and re‐
-	ceived process signals.
-
-  i/o	Show input/output operations used to get data  in  and
-	out of the client.
-
-  messages	Show the server messages sent and received.
-
-  misc	Show miscellaneous debugging messages
-
--host host
-  (-H) Specifies the server's hostname.
-
--log file
-  (-l)  Directs  log  messages (including any debugging output) to
-  the named file instead of the standard output. You  may  explic‐
-  itly specify the standard output by using a single hyphen as the
-  file name (e.g., “-log=-”).
-
--mono  (-m) Prevent map-console from using ANSI escape  codes  to  col‐
-  orize  the  output.  With	 this flag set, only plain text output
-  will be emitted.
-
--password password
-  (-P) If the server has authentication  enabled,  this  specifies
-  the  password to be sent to log in. If the GM password is given,
-  then the map-console user will have GM privileges on the server;
-  otherwise	 normal player privileges will be granted, as with any
-  client.
-
--port port
-  (-p) Specifies  the  server's  TCP  port	number.	 The  GMA  map
-  server's default port, 2323, will be assumed by default.
-
--username user
-  (-u)  This specifies the user name by which the server will know
-  you.  If you log in with the GM credentials, the server will as‐
-  sign  you	 the name “GM” regardless of what you request here. If
-  you don't use the GM credentials, you may not ask for  the  name
-  “GM”.  If you do not specify a username, it will default to your
-  local system username if possible.
-
-COMMANDS
-Commands typed into the standard input of map-console are sent  to  the
-server as described here.
-
-Obviously,  this	 should be done with caution by someone intimately fa‐
-miliar with the protocol and who understands the	 implications  of  in‐
-jecting commands into the working system like this.
-
-Pre-Defined Commands
-The  following  commands	 are  recognized with a simple interface which
-should be easier to type than a full JSON string would  be.   They  may
-not  suffice for every possible set of operations; they are designed to
-handle common cases conveniently.
-
-Note that the command names may be typed in  either  upper-  or	lower-
-case, but the values are taken exactly as typed.	 The entire input line
-must conform to the syntax of a Tcl list string. This means, in a  nut‐
-shell,  that the command and its arguments are separated by spaces, and
-that multi-word values need to be enclosed in curly braces so they  are
-interpreted as a single value. Braces must be balanced. An empty string
-value may be typed as “{}”.
-
-AI name size file
-  Upload an image from a local named file, for clients  to	access
-  with  the	 given name and zoom factor size (the latter expressed
-  as a real number with 1.0 meaning the normal zoom setting).
-
-  This is deprecated.  Instead, images should  be  prepared	 using
-  the  gma	rendersizes(6)	program and uploaded to the server di‐
-  rectly.
-
-AI? name size
-  Ask the server and/or other connected clients if they know where
-  an  image	 file  with the given name and zoom factor size may be
-  found.
-
-AI@ name size id
-  Inform the server that it should advertise  the  location	 of  a
-  stored  image  file  with	 the given name and size as the server
-  storage name id.	(Refer to the full documentation for an expla‐
-  nation of what that actually means.)
-
-AV label x y
-  Adjust  the  view of all clients so that grid label label, or if
-  that is empty or unable to be understood,	 scroll	 so  that  the
-  display  is  the fraction x of the way to the right and y of the
-  way down, where x and y are numbers ranging from 0.0  (far  left
-  or top) to 1.0 (far right or bottom).
-
-CC silent? target
-  Tell  the server to clear the chat history. If silent?  is true,
-  do so without announcement. The target is negative, all messages
-  are  deleted except for the most recent -target messages. Other‐
-  wise, all messages with IDs less that target are deleted.
-
-CLR id Remove the specified object from the map clients. The id may  be
-  an object ID number, name as known to the mapper (e.g., “Bob” or
-  “goblinMimg=Goblin”), or the values *, E*, M*, or P*, to	remove
-  all  objects,  all map elements, all monsters, or all player to‐
-  kens, respectively.
-
-CLR@ id
-  Clears all elements that are mentioned in	 the  server-side  map
-  file with the specified id.
-
-CO enabled?
-  Enter combat mode if enabled?  is true, otherwise exit to normal
-  play mode.
-
-D recipients rollspec [id]
-  Ask the server to roll the dice as specified  in	rollspec  with
-  the results being sent to the list of names in recipients (which
-  is itself a brace-enclosed, space separated Tcl list).  The spe‐
-  cial  recipient names * and % may be used to send the results to
-  all clients, or blindly send them only to the GM,	 respectively.
-  In  this case the * or % must be the only thing in the recipient
-  list.  You may optionally provide an arbitrary id which will  be
-  sent back with the die-roll results from the server.
-
-DD list
-  Set  your	 server-side  die-roll preset list to list, which is a
-  brace-enclosed list of presets, each of  which  is  a  brace-en‐
-  closed  list  of three values: preset name, description, and the
-  die-roll spec for that roll.
-
-DD+ list
-  Just like DD but adds the contents of list to your existing  set
-  of presets rather than replacing them.
-
-DD/ re Delete all the die-roll presets stored for you whose names match
-  the regular expression re.
-
-DR     Request that the server send you all your die-roll presets.
-
-EXIT   Exit the map-console program.
-
-HELP   Prints out a command summary.
-
-L filename
-  Load the map file stored in a local file onto all the  connected
-  map  clients.   This  replaces  any existing elements on the map
-  previously.
-
-L@ id  Load the map file stored on the server under the given  id  onto
-  all  the connected map clients.  This replaces any existing ele‐
-  ments on the map previously.
-
-M filename
-  Like L but merges the contents of the map with the existing con‐
-  tents of the map instead of replacing them.
-
-M? id  Tells  clients to pre-fetch and cache a copy of the server's map
-  file stored under the given id.
-
-M@ id  Like L@ but merges the map contents with the  existing  contents
-  of the map.
-
-MARK x y
-  Visibly  mark  the given (x,y) coordinates on the map for a sec‐
-  ond.
-
-OA id kvlist
-  Set one or more attributes of the object with the	 given	id  to
-  those  in	 kvlist.   The latter is a brace-enclosed, space-sepa‐
-  rated Tcl list where the first value is the name	of  an	attri‐
-  bute,  the  next	is the value for that attribute, and so on for
-  each pair of attribute names and values you need to change.
-
-OA+ id attribute list
-  For object attributes whose values are a list of	strings,  this
-  command adds one or more values to that object's attribute.
-
-OA- id attribute list
-  Like  OA+	 but removes each of the values in list from the named
-  attribute.
-
-POLO   Sends a client response to  the  server's	 MARCO	ping  message.
-  Map-client automatically sends these every time the server pings
-  it.
-
-PS id color name area size player|monster x y reach
-  Place a creature token on the map.
-
-QUIT   Synonymous with EXIT.
-
-SYNC   Request that the server send a full dump of the  game  state  to
-  you.
-
-SYNC CHAT [target]
-  Request that the server send a full dump of all chat messages in
-  its history to you.  If target is given, it limits the number of
-  requested	 chat message. If it is negative, only the most recent
-  -target messages are sent. Otherwise,  only  any	messages  with
-  message IDs greater than target are sent.
-
-TO recipients message
-  Send  a  chat message to the users named in the recipients list.
-  The latter value may be given as described above for the D  com‐
-  mand.
-
-/CONN  Request a list of all connected clients.
-
-?      Synonymous with HELP.
-
-Generalized Command Entry
-You may also type a full command with options by typing “!command” fol‐
-lowed by a number of parameters in the following forms.	The same rules
-apply as above, so values which contain spaces will need to be enclosed
-in braces.
-
-key=val
-  Include parameter key in the JSON payload for the command,  with
-  the value val as a character string.
-
-key#val
-  As  above,  but  don't quote val as a string. Thus, val may be a
-  number, true, false, or null.
-
-key:val
-  As key=val except that any underscore characters in val are con‐
-  verted  to  spaces,  making  it unnecessary to put braces around
-  this parameter.
-
-For example, typing the command:
-
-!d RequestID=abc123 ToAll#true RollSpec:d20+2_acid
-
-will send this command to the server:
-
-D {"RequestID":"abc123","ToAll":true,"RollSpec":"d20+2 acid"}
-
-The command name may be typed in any case but the  parameters  must  be
-typed exactly as expected by the server protocol.
-
-Raw Message Entry
-Finally, it is also possible to simply type a literal string of charac‐
-ters which will be sent to the server AS-IS without further interpreta‐
-tion.
-
-This is done by prefixing the string with a backquote character.	 Thus,
-the previous server command could have been typed into map-console lit‐
-erally as:
-
-`D {"RequestID":"abc123","ToAll":true,"RollSpec":"d20+2 acid"}
+The command-line options described below have a long form (e.g., -port) and a  short form (e.g., -p) which are equivalent.
+In either case, the option may be introduced with either one or two hyphens (e.g., -port or --port).
+
+Options which take parameter values may have the value separated from the option name by a space or an equals sign (e.g., -port=2323 or -port 2323), except for boolean flags which may be given alone (e.g., -D) to indicate that the option is set to ``true'' or may be given an explicit value which must be attached to the option with an equals sign (e.g., -D=true or -D=false).
+
+You may not combine multiple single-letter options into a single composite argument, (e.g., the options -D and -m would need to be entered as two separate options, not as -Dm).
+
+  -c, -calendar name
+      Override server's advertised campaign calendar name.
+
+  -C, -config file
+      The named file is read to set the same options as documented here
+      for command-line parameters as option=value pairs, one per line.
+      For example:
+
+      host=example.com
+      mono
+      debug=i/o
+
+  -D, -debug flags
+      Adds debugging messages to map-console's output. The flags
+      value is a comma-separated list of debug flag names, which
+      may be any of the following:
+
+      all      Enable all debugging messages
+      none     Disable all debugging messages
+      auth     Authentication operations
+      binary   Add hexdump output of network data
+      events   Show background events such as expiring timers and signals
+      i/o      Input/output operations used to get data in and out of the client
+      messages Server messages sent and received
+      misc     Miscellaneous debugging messages
+
+  -H, -host host
+      Specifies the server's hostname.
+
+  -h, -help
+      Print a command summary and exit.
+
+  -l, -log file
+      Write log messages to the named file instead of stdout.
+      Use "-" for the file to explicitly send to stdout.
+
+  -m, -mono
+      Don't send ANSI color codes in the terminal output.
+
+  -P, -password password
+      Authenticate to the server using the specified password.
+
+  -p, -port port
+      Specifies the server's TCP port number.
+
+  -u, -username user
+      Authenticate to the server using the specified user name.
+
+# COMMANDS
+
+Commands typed into the standard input of map-console are sent to the server as described here.
+
+Obviously, this should be done with caution by someone intimately familiar with the protocol and who understands the implications of injecting commands into the working system like this.
+
+Each typed command line must conform to the Tcl list syntax (space-separated list of strings, curly braces around a string which contains spaces (including sub-lists)).
+
+  AI name size file         Deprecated: upload image file
+  AI? name size             Ask for location of image file
+  AI@ name size id          Advertise image file location
+  AV label x y              Scroll to map label or (x,y)
+  CC silent? target         Clear chat history
+  CLR id|*|E*|M*|P*|name    Remove object(s) from map
+  CLR@ id                   Remove contents of a map file
+  CO enabled?               Enter/exit combat mode
+  D recips|*|% roll [id]    Make a die roll (*=to all, %=to GM)
+  DD {{name desc roll} ...} Replace your die-roll presets
+  DD+ ...                   Same as DD but append to presets
+  DD/ regex                 Delete presets matching regex
+  DR                        Retrieve die-roll presets
+  EXIT|QUIT                 Exit map-console
+  HELP|?                    Prints out a command summary
+  L filename                Load contents of local map file
+  L@ id                     Load contents of server map file
+  M filename                As L but merge contents with existing map
+  M? id                     Tell clients to cache server map file
+  M@ id                     As M but using a server map file
+  MARK x y                  Show visible marker at (x,y)
+  OA id {k1 v1 k2 v2 ...}   Set object attributes to new values
+  OA+ id k {v1 v2 v3 ...}   Add values to a list-valued object attribute
+  OA- id k {v1 v2 v3 ...}   Remove values from a list-valued object attribute
+  POLO                      Send POLO packet to server
+  PS id color name area size player|monster x y reach
+                            Place a creature token on the map
+  SYNC                      Retrieve full game state
+  SYNC CHAT [target]        Retrieve chat message history
+  TO recips|*|% message     Send chat message (*=to all, %=to GM)
+  /CONN                     Retrieve list of connected clients
+
+You may also type any arbitrary server command with its JSON parameter payload using the syntax
+   !cmd k1=v1 k2=v2 ...
+This is translated to
+   CMD {"k1":"v1", "k2":"v2", ...}
+and sent directly to the server. The values v1, v2, etc. are assumed to be string values and are appropriately quoted for JSON.
+
+If the syntax k#v is used (# instead of = between key and value), then the value is NOT quoted.
+This may be used to enter numeric or boolean values, as well as to type objects directly. Thus,
+   !cmd {foo#["bar","hello world"]} qty#42 retries#false
+would be sent as
+   CMD {"foo":["bar","hello world"], "qty":42, "retries":false}
 
+For convenience, the syntax k:v may be used. This is identical to the k=v form except that any underscores (_) in the value are translated to spaces in the string value sent to the server.
+
+To send a completely unprocessed string directly to the server, just prefix it with a backquote (`) as in
+   `ECHO {"s":"Hello, world", "i":42}
+
+See the full documentation in the accompanying manual file man/man6/map-console.6.pdf (or run ``gma man go map-console'' if you have the GMA Core package installed as well as Go-GMA).
+
+See also the server protocol specification in the man/man6/mapper.6.pdf of the GMA-Mapper package (or run ``gma man 6 mapper'').
 */
 package main
 
