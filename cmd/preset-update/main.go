@@ -28,6 +28,15 @@
 ########################################################################
 */
 
+/*
+Preset-update reads each file named on the command line and rewrites the file in the current die-roll preset file format.
+A copy of the original is kept with the same name plus a .bak suffix.
+
+If no files are named, preset-update reads from its standard input and writes to its standard output.
+
+The file format changed significantly between format versions 1 and 2.
+The preset-update program can read format 1 files, so this provides a way to update existing map files to the newer format.
+*/
 package main
 
 import (
@@ -38,7 +47,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GMAVersionNumber="5.2.0"    //@@##@@
+const GMAVersionNumber="5.2.0"     //@@##@@
 const GMADieRollPresetFileFormat = 2 //@@##@@
 
 func main() {

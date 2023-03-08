@@ -1,0 +1,603 @@
+'\" <<ital-is-var>>
+'\" <<bold-is-fixed>>
+.TH MAP-CONSOLE 6 "Go-GMA 5.2.0" 08-Mar-2023 "Games" \" @@mp@@
+.SH NAME
+map-console \- GMA map service console (Go version)
+.SH SYNOPSIS
+'\" <<usage>>
+(If using the full GMA core tool suite)
+.LP
+.na
+.B gma
+.B go
+.B map-console
+\&...
+.ad
+.LP
+(Otherwise)
+.LP
+.na
+.B map-console
+.B \-h
+.LP
+.B map-console
+.B \-help
+.LP
+.B map-console
+.RB [ \-Dm ]
+.RB [ \-C
+.IR configfile ]
+.RB [ \-c
+.IR calendar ]
+.RB [ \-H
+.IR host ]
+.RB [ \-l
+.IR logfile ]
+.RB [ \-P
+.IR password ]
+.RB [ \-p
+.IR port ]
+.RB [ \-u
+.IR user ]
+.LP
+.B map-console
+.RB [ \-calendar
+.IR calendar ]
+.RB [ \-config
+.IR configfile ]
+.RB [ \-debug ]
+.RB [ \-help ]
+.RB [ \-host
+.IR host ]
+.RB [ \-log
+.IR logfile ]
+.RB [ \-mono ]
+.RB [ \-password
+.IR password ]
+.RB [ \-port
+.IR port ]
+.RB [ \-username
+.IR user ]
+.ad
+'\" <</usage>>
+.SH DESCRIPTION
+.LP
+.B Map-console
+provides a way to interact directly with the GMA game server.
+It will print any server messages it receives in a colorized
+text representation. Commands typed into
+.B map-console
+are sent to the server as described in detail below.
+.LP
+This tool is designed primarily for debugging the server. Its
+input and output is not designed to be user-friendly, but rather
+to make it possible for someone familiar with the server's operation
+and network protocol to manually manipulate it.
+.SH OPTIONS
+.LP
+The command-line options described below have a long form
+(e.g.,
+.BR \-port )
+and a short form
+(e.g.,
+.BR \-p )
+which are equivalent. In either case, the option may be
+introduced with either one or two hyphens (e.g.,
+.B \-port
+or
+.BR \-\-port ).
+Options which take parameter values may have the value separated
+from the option name by a space or an equals sign (e.g.,
+.B \-port=2323
+or
+.BR \-port 2323 ), 
+except for boolean flags which may be given
+alone (e.g.,
+.BR \-D )
+to indicate that the option is set to \*(lqtrue\*(rq or may be given
+an explicit value which must be attached to the option with an
+equals sign (e.g.,
+.B \-D=true
+or
+.BR \-D=false ).
+.LP
+You 
+.B "may not"
+combine multiple single-letter options into a single composite
+argument, (e.g., the options
+.B \-r
+and
+.B \-m
+would need to be entered as two separate options, not as
+.BR \-rm ).
+'\" <<list>>
+.TP 
+.BI "\-calendar " name
+.RB ( \-c )
+This specifies the name of the calendar system in use for the
+campaign. If not specified, it defaults to
+.RB \*(lq golarion \*(rq.
+Normally, the server should be configured to tell all clients
+(including
+.BR map-client )
+what calendar is in use, in which case if you also provide
+this option it will override the server's advertised calendar
+in favor of the one you are explicitly setting here.
+.TP 
+.BI "\-config " file
+.RB ( \-C )
+The named
+.I file
+is read to set the same options as documented here for command-line
+parameters. The only difference is that the long name of the option
+must be used with no leading hyphens, and with equals signs between
+the option name and value, one option per line. For example, the file 
+could contain a line reading
+.RS
+.LP
+.B "host=example.com"
+.LP
+but not lines like
+.LP
+.nf
+.B "-host=example.com"
+.B "--host example.com"
+.B "h=example.com"
+.fi
+.LP
+Any options set on the command line override those read from
+the configuration file. To set a boolean flag to be true,
+simply name it on a line of the file. For example:
+.LP
+.B "mono"
+.LP
+Lines beginning with an octothorpe 
+.RB (\*(lq # \*(rq)
+are ignored as comments.
+.RE
+.TP
+.BI "\-debug " flags
+.RB ( \-D )
+This adds debugging messages to
+.BR map-console 's
+output. The
+.I flags
+value is a comma-separated list of debug flag names, which
+may be any of the following:
+.RS
+'\" <<list>>
+.TP 10
+.B all
+Enable all possible debugging flags.
+.TP
+.B none
+If you want to explicitly disable debugging (e.g., if debugging
+is enabled in your configuration file but you want to turn it off
+via command-line option), you can specify
+.B none
+for the
+.I flags
+value to override the previous flag list and effectively disable
+debugging.
+If
+.B none
+appears in a comma-separated flag list, it cancels all the
+previously-set flags, but any other flag names which occur after
+it will be set.
+.TP
+.B auth
+Authentication operations
+.TP
+.B binary
+When printing certain values such as data transmitted over the 
+network, include a hex dump of the actual binary data in addition
+to other debugging messages.
+.TP
+.B events
+Show background events such as expiring timers and received 
+process signals.
+.TP
+.B i/o
+Show input/output operations used to get data in and out of the
+client.
+.TP
+.B messages
+Show the server messages sent and received.
+.TP
+.B misc
+Show miscellaneous debugging messages
+.RE
+'\" <</>>
+.TP
+.BI "\-host " host
+.RB ( \-H )
+Specifies the server's hostname.
+.TP
+.BI "\-log file"
+.RB ( \-l )
+Directs log messages (including any debugging output) to
+the named
+.I file
+instead of the standard output. You may explicitly specify
+the standard output by using a single hyphen as the file name
+(e.g.,
+.RB \*(lq \-log=\- \*(rq).
+.TP
+.BI \-mono
+.RB ( \-m )
+Prevent
+.B map-console
+from using ANSI escape codes to colorize the output. With this
+flag set, only plain text output will be emitted.
+.TP
+.BI "\-password " password
+.RB ( \-P )
+If the server has authentication enabled, this specifies the
+password to be sent to log in. If the GM password is given,
+then the
+.B map-console
+user will have GM privileges on the server; otherwise normal
+player privileges will be granted, as with any client.
+.TP
+.BI "\-port " port
+.RB ( \-p )
+Specifies the server's TCP port number. The GMA map server's default port, 2323, will be assumed by default.
+.TP
+.BI "\-username " user
+.RB ( \-u )
+This specifies the user name by which the server will know you.
+If you log in with the GM credentials, the server will assign
+you the name
+.RB \*(lq GM \*(rq
+regardless of what you request here. If you don't use the GM
+credentials, you may not ask for the name
+.RB \*(lq GM \*(rq.
+If you do not specify a username, it will default to your local
+system username if possible.
+'\" <</>>
+.SH COMMANDS
+.LP
+Commands typed into the standard input of
+.B map-console
+are sent to the server as described here.
+.LP
+'\" <</bold-is-fixed>>
+.B "Obviously, this should be done with caution by someone intimately familiar with the"
+.B "protocol and who understands the implications of injecting commands into the working system like this."
+'\" <<bold-is-fixed>>
+.SS "Pre-Defined Commands"
+.LP
+The following commands are recognized with a simple interface
+which should be easier to type than a full JSON string would be.
+They may not suffice for every possible set of operations; they
+are designed to handle common cases conveniently.
+.LP
+Note that the command names may be typed in either upper- or lower-case,
+but the values are taken exactly as typed.
+The entire input line must conform to the syntax of a Tcl
+list string. This means, in a nutshell, that the command and its
+arguments are separated by spaces, and that multi-word values
+need to be enclosed in curly braces so they are interpreted
+as a single value. Braces must be balanced. An empty string
+value may be typed as
+.RB \*(lq {} \*(rq.
+'\" <<list>>
+.TP
+.BI "AI " name " " size " " file
+Upload an image from a local named file, for clients to
+access with the given
+.I name
+and zoom factor
+.I size
+(the latter expressed as a real number with 1.0 meaning the
+normal zoom setting).
+.RS
+.LP
+'\" <</bold-is-fixed>>
+.B "This is deprecated."
+'\" <<bold-is-fixed>>
+Instead, images should be prepared using the
+.B gma
+.BR rendersizes (6)
+program and uploaded to the server directly.
+.RE
+.TP
+.BI "AI? " name " " size
+Ask the server and/or other connected clients if they know
+where an image file with the given
+.I name
+and zoom factor
+.I size
+may be found.
+.TP
+.BI "AI@ " name " " size " " id
+Inform the server that it should advertise the location of
+a stored image file with the given
+.I name
+and
+.I size
+as the server storage name
+.IR id .
+(Refer to the full documentation for an explanation of what
+that actually means.)
+.TP
+.BI "AV " label " " x " " y
+Adjust the view of all clients so that grid label
+.IR label ,
+or if that is empty or unable to be understood, scroll so that
+the display is the fraction
+.I x
+of the way to the right and
+.I y
+of the way down, where
+.I x
+and
+.I y
+are numbers ranging from 0.0 (far left or top) to 1.0 (far right
+or bottom).
+.TP
+.BI "CC " silent? " " target
+Tell the server to clear the chat history. If
+.I silent?
+is true, do so without announcement. The
+.I target
+is negative, all messages are deleted except for the
+most recent
+.I \-target
+messages. Otherwise, all messages with IDs less that
+.I target
+are deleted.
+.TP
+.BI "CLR " id
+Remove the specified object from the map clients. The
+.I id
+may be an object ID number, name as known to the mapper
+(e.g.,
+.RB \*(lq Bob \*(rq
+or
+.RB \*(lq goblinMimg=Goblin \*(rq),
+or the values
+.BR * ,
+.BR E* ,
+.BR M* ,
+or
+.BR P* ,
+to remove all objects, all map elements, all monsters, or all
+player tokens, respectively.
+.TP
+.BI "CLR@ " id
+Clears all elements that are mentioned in the server-side
+map file with the specified
+.IR id .
+.TP
+.BI "CO " enabled?
+Enter combat mode if
+.I enabled?
+is true, otherwise exit to normal play mode.
+.TP
+.BI "D " recipients " " rollspec " " \fR[\fPid\fR]\fP
+Ask the server to roll the dice as specified in
+.I rollspec
+with the results being sent to the list of names in
+.I recipients
+(which is itself a brace-enclosed, space separated Tcl list).
+The special recipient names
+.B *
+and
+.B %
+may be used to send the results to all clients, or blindly
+send them only to the GM, respectively. In this case the
+.B *
+or
+.B %
+must be the only thing in the recipient list.
+You may optionally provide an arbitrary
+.I id
+which will be sent back with the die-roll results from the server.
+.TP
+.BI "DD " list
+Set your server-side die-roll preset list to
+.IR list ,
+which is a brace-enclosed list of presets, each of which
+is a brace-enclosed list of three values: preset name, description, and the die-roll spec for that roll.
+.TP
+.BI "DD+ " list
+Just like
+.B DD
+but adds the contents of
+.I list
+to your existing set of presets rather than replacing them.
+.TP
+.BI "DD/ " re
+Delete all the die-roll presets stored for you whose names
+match the regular expression
+.IR re .
+.TP
+.BI "DR"
+Request that the server send you all your die-roll presets.
+.TP
+.B EXIT
+Exit the
+.B map-console
+program.
+.TP
+.B HELP
+Prints out a command summary.
+.TP
+.BI "L " filename
+Load the map file stored in a local file
+onto all the connected map clients.
+This replaces any existing elements on the map previously.
+.TP
+.BI "L@ " id
+Load the map file stored on the server under the given
+.I id
+onto all the connected map clients.
+This replaces any existing elements on the map previously.
+.TP
+.BI "M " filename
+Like
+.B L
+but merges the contents of the map with the existing contents
+of the map instead of replacing them.
+.TP
+.BI "M? " id
+Tells clients to pre-fetch and cache a copy of the server's
+map file stored under the given
+.IR id .
+.TP
+.BI "M@ " id
+Like
+.B L@
+but merges the map contents with the existing contents of the
+map.
+.TP
+.BI "MARK " x " " y
+Visibly mark the given
+.RI ( x , y )
+coordinates on the map for a second.
+.TP
+.BI "OA " id " " kvlist
+Set one or more attributes of the object with the given
+.I id
+to those in
+.IR kvlist .
+The latter is a brace-enclosed, space-separated Tcl list
+where the first value is the name of an attribute, the next
+is the value for that attribute, and so on for each pair
+of attribute names and values you need to change.
+.TP
+.BI "OA+ " id " " attribute " " list
+For object attributes whose values are a list of strings,
+this command adds one or more values to that object's
+attribute.
+.TP
+.BI "OA\- " id " " attribute " " list
+Like
+.B OA+
+but removes each of the values in
+.I list
+from the named attribute.
+.TP
+.BI "POLO"
+Sends a client response to the server's 
+.B MARCO
+ping message. 
+.B Map-client
+automatically sends these every time the server pings it.
+.TP
+.BI "PS " id " " color " " name " " area " " size " player\fR|\fPmonster " x " " y " " reach
+Place a creature token on the map.
+.TP
+.B QUIT
+Synonymous with
+.BR EXIT .
+.TP
+.B SYNC
+Request that the server send a full dump of the game state to you.
+.TP
+.BI "SYNC CHAT " \fR[\fPtarget\fR]\fP
+Request that the server send a full dump of all chat messages in its history to you.
+If
+.I target
+is given, it limits the number of requested chat message. If it is negative, only the most recent
+.I \-target
+messages are sent. Otherwise, only any messages with message IDs
+greater than
+.I target
+are sent.
+.TP
+.BI "TO " recipients " " message
+Send a chat
+.I message
+to the users named in the
+.I recipients
+list. The latter value may be given as described above
+for the
+.B D
+command.
+.TP
+.BI "/CONN"
+Request a list of all connected clients.
+.TP
+.B ?
+Synonymous with
+.BR HELP .
+'\" <</>>
+.SS "Generalized Command Entry"
+.LP
+You may also type a full command with options by typing
+.RB \*(lq !\fIcommand\fP \*(rq
+followed by a number of parameters in the following forms.
+The same rules apply as above, so values which contain spaces
+will need to be enclosed in braces.
+'\" <<list>>
+.TP
+.IB key = val
+Include parameter
+.I key
+in the JSON payload for the command, with the value
+.I val
+as a character string.
+.TP
+.IB key # val
+As above, but don't quote
+.I val
+as a string. Thus,
+.I val
+may be a number, 
+.BR true ,
+.BR false ,
+or
+.BR null .
+.TP
+.IB key : val
+As
+.IB key = val
+except that any underscore characters in
+.I val
+are converted to spaces, making it unnecessary to
+put braces around this parameter.
+'\" <</>>
+.LP
+For example, typing the command:
+.LP
+.B "!d RequestID=abc123 ToAll#true RollSpec:d20+2_acid"
+.LP
+will send this command to the server:
+.LP
+.B "D {\[dq]RequestID\[dq]:\[dq]abc123\[dq],\[dq]ToAll\[dq]:true,\[dq]RollSpec\[dq]:\[dq]d20+2 acid\[dq]}"
+.LP
+The
+.I command
+name may be typed in any case but the parameters must be typed
+exactly as expected by the server protocol.
+.SS "Raw Message Entry"
+.LP
+Finally, it is also possible to simply type a literal string
+of characters which will be sent to the server AS-IS without
+further interpretation.
+.LP
+This is done by prefixing the string with a backquote character.
+Thus, the previous server command could have been typed into
+.B map-console
+literally as:
+.LP
+.B "`D {\[dq]RequestID\[dq]:\[dq]abc123\[dq],\[dq]ToAll\[dq]:true,\[dq]RollSpec\[dq]:\[dq]d20+2 acid\[dq]}"
+.SH "SEE ALSO"
+.LP
+.BR gma (6),
+.BR mapper (5),
+.BR mapper (6).
+.SH AUTHOR
+.LP
+Steve Willoughby / steve@madscience.zone.
+.SH BUGS
+.LP
+This program blindly assumes that the user's terminal understands ANSI
+standard escape codes to produce colored text (although
+the
+.B \-mono
+option will stop it from doing so.)
+.SH COPYRGHT
+Part of the GMA software suite, copyright \(co 1992\-2023 by Steven L. Willoughby, Aloha, Oregon, USA. All Rights Reserved. Distributed under BSD-3-Clause License. \"@m(c)@

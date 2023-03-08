@@ -1,10 +1,10 @@
 # Changelog
 ## Current Version Information
  * GMA Core API Library Version: 5.2.0		<!-- @@##@@ --> (Go port)
- * Supported GMA Mapper Version: 4.3		<!-- @@##@@ -->
+ * Supported GMA Mapper Version: 4.3.1		<!-- @@##@@ -->
  * Supported GMA Mapper Protocol: 402		<!-- @@##@@ -->
  * Supported GMA Mapper File Format: 20		<!-- @@##@@ -->
- * Effective Date: 06-Mar-2023			<!-- @@##@@ -->
+ * Effective Date: 08-Mar-2023			<!-- @@##@@ -->
 
 ## unreleased
 ### Enhancements

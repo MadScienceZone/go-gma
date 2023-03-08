@@ -30,6 +30,77 @@
 //                                                                                    //
 ////////////////////////////////////////////////////////////////////////////////////////
 
+/*
+Server coordinates the actions of connected mappers, the
+GM console, and other clients.
+
+The individual mapper(6) clients used by players in a game may keep in contact with one another so that they all display the same contents.
+A change made on one client (moving a creature token or adding a room, say) appears on all the others.
+This is accomplished by starting a server process and having all of the mapper clients connect to it via their −−host and −−port options.
+
+Once connected, the server will send an initial greeting that may define a list of player character tokens to appear on the mapper context menus, or any other useful information the clients need to have at startup time.
+It may, at the GM’s option, even initialize the client to show the full current game state.
+
+From that point forward, the server relays traffic between the clients, so they communicate with each other via the service.
+The server also tracks the commands it sees, so that it maintains a notion of the current state of the game.
+Clients may re-sync with the server in case they restart or otherwise miss any updates so they match the server’s state.
+The server may respond directly to some client queries if it knows the answer rather than referring the query to the other clients.
+
+To guard against nuisance or malicious port scans and other superfluous connections, the server will automatically drop any clients which don’t authenticate within a short time.
+(In actual production use, we have observed some automated agents which connected and then sat idle for hours, if we didn’t terminate their connections. This prevents that.)
+
+Options:
+   server [−debug flags] [−endpoint [hostname]:port] [−init−file path] [−log−file path] [−password−file path] −sqlite path [−telemetry−log path]
+
+   -debug flags
+      Add debugging information to the log file. The flags value is a comma-separated
+      list of debugging information to be included, from the following list:
+         all      All possible debugging information.
+         none     No debugging information (this cancels any previously-specified
+                  debug flags, but more may be added after this).
+         auth     Authentication operations.
+         db       Database operations.
+         events   Background events.
+         i/o      Input/output operations.
+         init     Client initialization.
+         messages Message traffic between the server and clients.
+         misc     Miscellaneous debugging.
+         state    Changes to the game state.
+
+   -endpoint [hostname]:port
+      Accept incoming client connections on the specified TCP port. (Default ":2323")
+
+   -init-file path
+      Initialization file which controls the initial client negotiation upon first
+      connection to the server.
+
+   -log-file path
+      Write a log of server actions to the specified file. (Default "-", which means
+      to send to standard output.)
+
+   -password-file path
+      Enable server authentication with the set of passwords in the specified file.
+      Each line of the file holds a plaintext password, in the following format:
+          general-user-password
+          gm-only-password
+          user1:password1
+          user2:password2
+          user3:password3
+      Only the first line is required.
+
+   -sqlite path
+      Specifies the file name of a sqlite database used to keep persistent data used
+      by the server. If path does not exist, server will create a new database with that
+      name.
+
+   -telemetry-log path
+      If server was compiled to send performance telemetry data, a debugging log of that
+      data is recorded in the specified file.
+
+See the full documentation in the accompanying manual file man/man6/server.6.pdf (or run “gma man go server” if you have the GMA Core package installed as well as Go-GMA).
+
+See also the server protocol specification in the man/man6/mapper.6.pdf of the GMA-Mapper package (or run “gma man 6 mapper”).
+*/
 package main
 
 import (

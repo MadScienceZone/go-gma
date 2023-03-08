@@ -28,6 +28,13 @@
 ########################################################################
 */
 
+/*
+Map-update reads each file named on the command line and rewrites the file in the current map file format.
+A copy of the original is kept with the same name plus a .bak suffix.
+
+The map file format changed significantly between format versions 17 and 20.
+The map-update program can read format 17 files, so this provides a way to update existing map files to the newer format.
+*/
 package main
 
 import (
@@ -39,7 +46,7 @@ import (
 )
 
 const GMAVersionNumber="5.2.0" //@@##@@
-const GMAMapperFileFormat = 20    //@@##@@
+const GMAMapperFileFormat = 20   //@@##@@
 
 func main() {
 	if len(os.Args) < 2 {

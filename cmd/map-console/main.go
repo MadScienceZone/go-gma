@@ -191,7 +191,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GMAVersionNumber = "5.2.0" //@@##@@
+const GMAVersionNumber="5.2.0" //@@##@@
 
 var Fhost string
 var Fport uint

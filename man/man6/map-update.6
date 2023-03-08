@@ -1,0 +1,51 @@
+'\" <<ital-is-var>>
+'\" <<bold-is-fixed>>
+.TH MAP-UPDATE 6 "Go-GMA 5.2.0" 08-Mar-2023 "Games" \" @@mp@@
+.SH NAME
+map-update \- update the format of a saved GMA map file
+.SH SYNOPSIS
+'\" <<usage>>
+(If using the full GMA core tool suite)
+.LP
+.na
+.B gma
+.B go
+.B map-update
+.I file
+\&...
+.ad
+.LP
+(Otherwise)
+.LP
+.na
+.B map-update
+.I file
+\&...
+.ad
+'\" <</usage>>
+.SH DESCRIPTION
+.LP
+.B Map-update
+reads each
+.I file
+named on the command line and rewrites the file in the
+current map file format. A copy of the original is kept
+with the same name plus a
+.B .bak
+suffix.
+.LP
+The map file format changed significantly between format version 17 and 20.
+The
+.B map-update
+program can read format 17 files, so this provides a way to update existing
+map files to the newer format.
+.SH "SEE ALSO"
+.LP
+.BR gma (6),
+.BR mapper (5),
+.BR mapper (6).
+.SH AUTHOR
+.LP
+Steve Willoughby / steve@madscience.zone.
+.SH COPYRGHT
+Part of the GMA software suite, copyright \(co 1992\-2023 by Steven L. Willoughby, Aloha, Oregon, USA. All Rights Reserved. Distributed under BSD-3-Clause License. \"@m(c)@

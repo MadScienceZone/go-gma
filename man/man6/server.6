@@ -1,0 +1,514 @@
+.\" vim:set syntax=nroff:
+'\" <<ital-is-var>>
+'\" <<bold-is-fixed>>
+.TH SERVER 6 "Go-GMA 5.2.0" 08-Mar-2023 "Games" \" @@mp@@
+.SH NAME
+server \- GMA battle grid map server (Go version)
+.SH SYNOPSIS
+'\" <<usage>>
+.LP
+(If using the full GMA core tool suite)
+.LP
+.na
+.B gma
+.B go
+.B server
+.RI [ args
+\&...]
+.ad
+.LP
+(Otherwise)
+.LP
+.na
+.B server
+.RB [ \-debug
+.IR flags ]
+.RB [ \-endpoint
+.RI [ hostname ] \fB:\fRport ]
+.RB [ \-init\-file
+.IR path ]
+.RB [ \-log\-file
+.IR path ]
+.RB [ \-password\-file
+.IR path ]
+.B \-sqlite
+.I path
+.RB [ \-telemetry\-log
+.IR path ]
+.ad
+'\" <</usage>>
+.SH DESCRIPTION
+.LP
+The individual
+.BR mapper (6)
+clients used by players in a game may keep in contact with one another so that they all
+display the same contents. A change made on one client (moving a creature token or
+adding a room, say) appears on all the others. This is accomplished by starting a
+.B server
+process and having all of the 
+.B mapper 
+clients connect to it via their 
+.B \-\-host
+and 
+.B \-\-port 
+options.
+.LP
+Once connected, the
+server
+will send an initial greeting that may define a list of player character tokens
+to appear on the 
+.B mapper
+context menus, or any other useful information the clients need to have
+at startup time. It may, at the GM's option, even initialize the client to
+show the full current game state.
+.LP
+From that point forward, the
+server
+relays traffic between the clients, so they communicate with each
+other via the service. The server also tracks the commands it sees, so that it maintains
+a notion of the current state of the game. Clients may re-sync with the server in case
+they restart or otherwise miss any updates so they match the server's state.  The server
+may respond directly to some client queries
+'\"(e.g., 
+'\".RB \*(lq AI? \*(rq)
+if it knows the answer rather than referring the query to the other clients.
+.LP
+To guard against nuisance or malicious port scans and other superfluous connections,
+the server will automatically drop
+any clients which don't authenticate within a short time. (In actual production
+use, we have observed some automated agents which connected and then sat idle for hours,
+if we didn't terminate their connections. This prevents that.)
+.SH OPTIONS
+.LP
+The following options control the behavior of
+.BR server .
+'\" <<list>>
+.TP
+.BI "\-debug " flags
+Add debugging information to the server log. The
+.I flags
+value is a comma-separated list of debugging options. The following
+options are available:
+.RS
+.TP 10
+.B all
+All possible debugging information.
+.TP
+.B none
+No debugging information (this cancels any previously-specified debug flags, but more may
+be added after this).
+.TP
+.B auth
+Authentication operations.
+.TP
+.B db
+Database operations.
+.TP
+.B events
+Background events.
+.TP
+.B i/o
+Input/output operations.
+.TP
+.B init
+Client initialization.
+.TP
+.B messages
+Message traffic between the server and clients.
+.TP
+.B misc
+Miscellaneous debugging.
+.TP
+.B state
+Changes to the game state.
+.RE
+.TP
+.BI "\-endpoint " \fR[\fPhostname\fR]\fP : port
+Accept incoming client connections on the specified
+.I hostname
+and TCP
+.I port
+number.
+If
+.I hostname
+is omitted, connections are accepted on all the machine's network interfaces.
+If the entire option
+is omitted, it defaults to port 2323.
+.TP
+.BR \-h ", " \-help
+Print a usage summary and exit.
+.TP
+.BI "\-init\-file " path
+The contents of this file are used to initialize the clients every time they connect. See the
+.B "CLIENT INITIALIZATION"
+section below for details.
+.TP
+.BI "\-log\-file " path
+Append a record of server actions to the specified file. If debugging is enabled, those
+messages will go to the log file as well. By default, the log is printed to the standard output,
+which may also be explicitly specified by a single hyphen 
+.RB (\*(lq \- \*(rq)
+as
+.IR path .
+.TP
+.BI "\-password\-file " path
+This enables client authentication. By default, the server will allow any client to
+connect and immediately interact with it. However, if this option is given, the server
+will require a valid user credential before allowing the client to operate. The contents
+of the password file are stored in plaintext, one password per line. 
+.RS
+.LP
+The first line is the general player password. Any client connecting with this credential
+will be admitted with any username they request other than
+.RB \*(lq GM \*(rq.
+.LP
+The next line, if present, gives the privileged GM password. Any client connecting with this
+credential will be granted with game master privileges 
+under the username
+.RB \*(lq GM \*(rq.
+.LP
+Any subsequent lines have the format
+.RI \*(lq username\fB:\fPpassword \*(rq.
+This assigns a specific
+.I password
+for the given
+.IR username ,
+such that any client wishing to sign on with that specific username
+must present this specific credential.
+.LP
+.B N.B.
+This is an extremely trivial challenge-response authentication mechanism used solely to
+protect a game server from revealing in-game spoilers and rejecting nuisance connections.
+It should
+.B not
+be relied upon to secure any sensitive information. No passwords used here should be the
+same as passwords used for anything else of consequence.
+.RE
+.TP
+.BI "\-sqlite " path
+Specifies the filename of a sqlite database the server will use to maintain persistent
+state. This includes such things as stored die-roll presets, known image locations, and
+the chat history. If
+.I path
+does not exist, a new empty database will automatically be created by the server.
+.TP
+.BI "\-telemetry\-log " path
+If the server is configured to send telemetry metrics,
+this provides the name of a file into which to write
+telemetry debugging information.
+'\" <</>>
+.SH "CLIENT INITIALIZATION"
+.LP
+When a client connects, the server begins by sending a number of messages 
+up front, before and/or after successfully authenticating. The initial negotiation
+with the client goes through the following stages:
+'\" <<desc>>
+.TP 15
+.B Connection
+The server declares the protocol version it is using.
+.TP
+.B Preamble
+The server sends a number of messages to the client, which may include
+comments, declaring party members, notice of software
+updates, and campaign information.
+We recommend limiting the preamble to comments.
+.TP
+.B Authentication
+If configured to do so, the server will demand a valid
+credential from the client before proceeding any further.
+.TP
+.B Post-auth
+After successful authentication (or unconditionally if
+no authentication is required), the server sends a number
+of messages just as described for the preamble stage.
+.TP
+.B Ready
+The server then signals to the client that the negotion
+is completed and the client is then free to issue any
+commands to the server, and may receive any messages from
+the server. (Before this point, the server won't even
+consider receiving commands from the client that aren't
+part of this negotiation, and won't be sending normal
+traffic to the client yet.)
+.TP
+.B Sync
+Finally, the server may send additional data to the client
+(typically this is synchronization data to catch the
+client up to the server's current notion of the game
+state).
+'\" <</>>
+.LP
+By default, the preamble, post-auth, and sync stages are
+effectively nil. However, the presence of a client initialization
+file via the
+.B \-init\-file
+option specifies what to send to the client during
+negotiation.
+.LP
+Each line of the file is a server message to be sent to
+the client, formatted as documented in the server protocol
+specification. (I.e., a command word followed by a space and
+a JSON parameter object.) Long commands may be continued
+over multiple lines of the file, as long as the brace
+.RB (\*(lq { \*(rq)
+that begins the JSON data appears on the line with the
+command name, and all subsequent lines are indented
+by any amount of whitespace. The final brace
+.RB (\*(lq } \*(rq)
+that ends the JSON data may appear at the end of the
+last line or on a line by itself (in which case it need
+not be indented itself).
+.LP
+The commands which may appear in the initialization file
+include the following:
+'\" <<desc>>
+.TP 11
+.B //
+This line is transmitted AS-IS to the client. This
+command does not requre JSON data to follow it. All text
+from the
+.RB \*(lq // \*(rq
+to the end of the line are considered a comment and are
+sent verbatim. This is useful to provide a human-readable
+message to anyone connecting to the game port.
+.TP
+.B AC
+Add a character to the client's quick-access context
+menu. Typically this is the party of player characters.
+Any JSON parameters accepted by the server
+.B AC
+message may be given, but for the purposes of the client
+initialization, the important ones are
+.BR ID ,
+.BR Name ,
+.BR Color ,
+.BR Size ,
+.BR Area ,
+and
+.BR CreatureType ,
+providing a unique ID for the character, their name
+as it appears on the map, the color of their threat
+zone, creature size category, threatened area size
+catetory, and creature type (1 for monsters or 2 for players).
+.TP
+.B DSM
+Defines a condition status marker that may be placed
+on creature tokens. This will update an existing marker
+already known to the mapper, or add new ones to the set
+of condition markers. The parameters are
+.B Condition
+(providing the name of the condition),
+.B Shape
+(which describes the shape of the marker drawn over
+the token\(emsee the protocol documentation),
+.B Color
+(the color of the marker),
+and 
+.B Description
+(a sentence or paragraph describing the effects of
+that condition).
+.TP
+.B UPDATES
+Advertises to the client the version of each software
+package you recommend for them to use. The JSON
+data has a single parameter called
+.B Packages
+which is a list of objects with the following
+parameters:
+.RS
+'\" <<list>>
+.TP
+.B Name
+The name of the package, such as
+.BR mapper ,
+.BR go-gma ,
+or
+.BR core .
+.TP
+.B Instances
+A list of available versions of the package. If multiple
+versions are listed here, they should each be for a different
+platform. 
+Each instance value is an object with the following fields:
+.RS
+'\" <<list>>
+.TP
+.B OS
+The target operating system for this version of the
+package. If omitted or blank, it is OS-independent.
+Values are
+.BR freebsd ,
+.BR linux ,
+.BR darwin ,
+.BR windows ,
+etc.
+.TP
+.B Arch
+The target hardware architecture for this version.
+Values are
+.BR amd64 ,
+etc.
+.TP
+.B Version
+The recommended version you want players to use.
+.TP
+.B Token
+If you provide a downloadable copy of the software on your server for players
+to get, specify the download token here. The mapper tool currently has the
+capability to self-upgrade based on this token. The mapper is configured with
+the option
+.BI \-\-update\-url= base
+which is combined with the
+.I token
+value to get the filename to be downloaded from your
+server. The URLs retrieved will be
+.IB base / token .tar.gz
+and
+.IB base / token .tar.gz.sig\fR.\fP
+'\" <</>>
+.RE
+'\" <</>>
+.RE
+.TP
+.B WORLD
+Sends campaign information. Currently the JSON field
+recognized is
+.B Calendar
+which names the calendar in play.
+.TP
+.B AUTH
+This command word (without JSON data) in the initialization
+file causes the server to perform the authentication step before
+continuing. Thus, it marks the end of the preamble stage. Following
+lines will be sent as part of the post-auth stage.
+.TP
+.B READY
+This command word (without JSON data) in the initialization file
+causes the server to signal to the client that the negotiation is
+complete and normal client/server interaction may begin. Thus
+it marks the end of the post-auth stage. Anything after this 
+point is for the sync stage.
+.RS
+.LP
+In this final part of the file (after the
+.B READY
+command), any of the following server messages may be
+included to be sent to the client:
+.BR // ,
+.BR AC ,
+.BR AI ,
+.BR AI? ,
+.BR AV ,
+.BR CC ,
+.BR CLR ,
+.BR CLR@ ,
+.BR CO ,
+.BR CS ,
+.BR DD= ,
+.BR DSM ,
+.BR I ,
+.BR IL ,
+.BR L ,
+.BR LS\-ARC ,
+.BR LS\-CIRC ,
+.BR LS\-LINE ,
+.BR LS\-POLY ,
+.BR LS\-RECT ,
+.BR LS\-SAOE ,
+.BR LS\-TEXT ,
+.BR LS\-TILE ,
+.BR MARK ,
+.BR OA ,
+.BR OA+ ,
+.BR OA\- ,
+.BR PROGRESS ,
+.BR PS ,
+.BR ROLL ,
+.BR TB ,
+.BR TO ,
+.BR UPDATES ,
+or
+.BR WORLD .
+(Technically, any of these commands can appear anywhere in the initialization file, but we
+strongly recommend limiting commands to
+.BR // ,
+.BR AC ,
+.BR DSM ,
+.BR UPDATES ,
+and
+.BR WORLD
+in all stages except the final (sync) stage.
+'\" <</>>
+.RE
+.TP
+.B SYNC
+This command word (without JSON data) in the
+initialization file will cause the server to
+behave as if the client sent a
+.B SYNC
+command to it after the negotiation is complete.
+This sends the full game state to the client, so that
+a newly connected mapper will display the current map
+contents the other players see.
+'\" <</>>
+.RE
+.TP
+.SH SECURITY
+.LP
+The authentication system employed here is simplisitic and not ideal for general
+use, but is considered to be good enough for our purposes here, since the stakes
+are so low. It is intended just to discourage cheating at the game by looking
+at spoilers or direct messages intended for other users, not for any more rigorous
+protection.
+.LP
+The main weakness of the system is that passwords are stored in plaintext on the
+server, which means it is critical to secure the password file and the system itself.
+Caution your players to use a password for the mapper that is different from any other
+passwords they use (which should be the password practice people observe anyway). A
+breach that reveals passwords from the server's file would then only allow an imposter
+to log in to your map service, which admittedly is more of an inconvenience than a serious security issue, assuming you use your map server just for playing a game and not for
+the communication of any sensitive information. 
+.LP
+Don't use the GMA mapper server for the communication of sensitive information. It's
+part of a game. Just play a game with it.
+.SH "SIGNALS"
+.LP
+The map service responds to the following signals while running.
+These actions may not be taken immediately but should happen within a few seconds.
+'\" <<desc>>
+.TP 8
+.B HUP
+This signal causes the server to gracefully exit.
+.TP
+.B INT
+Currently equivalent to the
+.B HUP
+signal.
+.TP
+.B USR1
+Causes the server to re-read its initialization file. Clients which connect after this
+will see the new initialization information.
+.TP
+.B USR2
+This signal causes the server to dump a human-readable description of the current game state
+database to the log file.
+'\" <</>>
+.SH "SEE ALSO"
+.LP
+.BR gma (6),
+.BR mapper (5),
+.BR mapper (6).
+.LP
+The server communications protocol is definitively documented in the
+.B mapper (6)
+manpage which comes with the GMA-Mapper package.
+.SH AUTHOR
+.LP
+Steve Willoughby / steve@madscience.zone.
+.SH BUGS
+.LP
+If the server is not configured to require authentication, that means it won't drop
+nuisance connections either, since it's accepting all connections as valid, even if
+it never sends any valid data to the server.
+.SH COPYRGHT
+Part of the GMA software suite, copyright \(co 1992\-2023 by Steven L. Willoughby, Aloha, Oregon, USA. All Rights Reserved. Distributed under BSD-3-Clause License. \"@m(c)@
