@@ -1,15 +1,19 @@
 # Changelog
 ## Current Version Information
- * GMA Core API Library Version: 5.2.0		<!-- @@##@@ --> (Go port)
- * Supported GMA Mapper Version: 4.3.1		<!-- @@##@@ -->
- * Supported GMA Mapper Protocol: 402		<!-- @@##@@ -->
- * Supported GMA Mapper File Format: 20		<!-- @@##@@ -->
+ * This Package Version: 5.2.1                <!-- @@##@@ -->
  * Effective Date: 08-Mar-2023			<!-- @@##@@ -->
 
-## unreleased
+## Compatibility
+ * GMA Core API Library Version: 5.2		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.3.1		<!-- @@##@@ -->
+ * GMA Mapper Protocol: 402		<!-- @@##@@ -->
+ * GMA Mapper File Format: 20		<!-- @@##@@ -->
+
+## v5.2.1
 ### Enhancements
- * Added shorter CLI options to `map-console`
- * Added doc comments for commands
+ * Added shorter CLI options to `map-console`.
+ * Added doc comments for commands.
+ * Added `Makefile` to make building command binaries easier.
 
 ## v5.2.0
  * Updated to server protocol version 402.
