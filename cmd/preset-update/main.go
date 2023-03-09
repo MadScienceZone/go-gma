@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______     _______               #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )   (  __   )              #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |   | (  )  |              #
-# | |      | || || || (___) | Assistant | (____         /   )   | | /   |              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    | (/ /) |              #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/     |   / | |              #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _ |  (__) |              #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_)(_______)              #
+#  _______  _______  _______             _______     _______      __                   #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )    /  \                  #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |    \/) )                 #
+# | |      | || || || (___) | Assistant | (____         /   )      | |                 #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /       | |                 #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/        | |                 #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _  __) (_                #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_) \____/                #
 #                                                                                      #
 ########################################################################################
 #
@@ -28,6 +28,15 @@
 ########################################################################
 */
 
+/*
+Preset-update reads each file named on the command line and rewrites the file in the current die-roll preset file format.
+A copy of the original is kept with the same name plus a .bak suffix.
+
+If no files are named, preset-update reads from its standard input and writes to its standard output.
+
+The file format changed significantly between format versions 1 and 2.
+The preset-update program can read format 1 files, so this provides a way to update existing map files to the newer format.
+*/
 package main
 
 import (
@@ -38,7 +47,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GMAVersionNumber="5.2.0"    //@@##@@
+const GoVersionNumber="5.2.1"      //@@##@@
 const GMADieRollPresetFileFormat = 2 //@@##@@
 
 func main() {
@@ -53,7 +62,7 @@ func main() {
 			panic(err)
 		}
 	} else {
-		fmt.Printf("GMA map-update tool %s for die-roll preset file format %d\n", GMAVersionNumber, GMADieRollPresetFileFormat)
+		fmt.Printf("GMA map-update tool %s for die-roll preset file format %d\n", GoVersionNumber, GMADieRollPresetFileFormat)
 
 		for _, filename := range os.Args[1:] {
 			fmt.Printf("Converting %s ", filename)
@@ -78,7 +87,7 @@ func main() {
 }
 
 /*
-# @[00]@| GMA 5.2.0
+# @[00]@| Go-GMA 5.2.1
 # @[01]@|
 # @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

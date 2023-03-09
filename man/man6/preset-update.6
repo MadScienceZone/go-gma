@@ -1,0 +1,54 @@
+'\" <<ital-is-var>>
+'\" <<bold-is-fixed>>
+.TH PRESET-UPDATE 6 "Go-GMA 5.2.1" 08-Mar-2023 "Games" \" @@mp@@
+.SH NAME
+preset-update \- update the format of a saved GMA map file
+.SH SYNOPSIS
+'\" <<usage>>
+(If using the full GMA core tool suite)
+.LP
+.na
+.B gma
+.B go
+.B preset-update
+.RI [ file
+\&...]
+.ad
+.LP
+(Otherwise)
+.LP
+.na
+.B preset-update
+.RI [ file
+\&...]
+.ad
+'\" <</usage>>
+.SH DESCRIPTION
+.LP
+.B Preset-update
+reads each
+.I file
+named on the command line and rewrites the file in the
+current die-roll preset file format. A copy of the original is kept
+with the same name plus a
+.B .bak
+suffix.
+.LP
+If no files are named,
+.B preset-update
+reads from its standard input and writes to its standard output.
+.LP
+The file format changed significantly between format versions 1 and 2.
+The
+.B preset-update
+program can read format 1 files, so this provides a way to update existing
+map files to the newer format.
+.SH "SEE ALSO"
+.LP
+.BR dice (5),
+.BR gma (6).
+.SH AUTHOR
+.LP
+Steve Willoughby / steve@madscience.zone.
+.SH COPYRGHT
+Part of the GMA software suite, copyright \(co 1992\-2023 by Steven L. Willoughby, Aloha, Oregon, USA. All Rights Reserved. Distributed under BSD-3-Clause License. \"@m(c)@

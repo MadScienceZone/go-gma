@@ -35,7 +35,7 @@ import (
 //
 const (
 	GMAMapperProtocol=402     // @@##@@ auto-configured
-	GMAVersionNumber="5.2.0" // @@##@@ auto-configured
+	GoVersionNumber="5.2.1" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
 	MaximumSupportedMapProtocol = 402
 )

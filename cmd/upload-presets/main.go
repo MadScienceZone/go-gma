@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______     _______               #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )   (  __   )              #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |   | (  )  |              #
-# | |      | || || || (___) | Assistant | (____         /   )   | | /   |              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    | (/ /) |              #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/     |   / | |              #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _ |  (__) |              #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_)(_______)              #
+#  _______  _______  _______             _______     _______      __                   #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )    /  \                  #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |    \/) )                 #
+# | |      | || || || (___) | Assistant | (____         /   )      | |                 #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /       | |                 #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/        | |                 #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _  __) (_                #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_) \____/                #
 #                                                                                      #
 ########################################################################################
 #
@@ -28,6 +28,31 @@
 ########################################################################
 */
 
+/*
+Upload-presets connects to a GMA server and uploads the die-roll presets from one or more files, so they are stored in the server for use during game play.
+
+The files must be in the format documented by dice(5), in either format version 1 or 2.
+
+OPTIONS
+
+The following options control the action of upload-presets.
+
+   −endpoint [hostname]: port
+      Connect to the server at the specified TCP port.
+
+   −for username
+      Store the presets for username instead of the user you are logged in as.
+
+   −pass password
+      Log in to the server with the specified password
+
+   −replace
+      Replace the user’s entire set of presets with the uploaded data.
+      By default the uploaded presets will be added to any that already exist for that user.
+
+   −user username
+      Log in to the server with the specified username (default “GM”).
+*/
 package main
 
 import (

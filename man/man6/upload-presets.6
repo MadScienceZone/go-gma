@@ -1,0 +1,86 @@
+.\" vim:set syntax=nroff:
+'\" <<ital-is-var>>
+'\" <<bold-is-fixed>>
+.TH UPLOAD-PRESETS 6 "Go-GMA 5.2.1" 08-Mar-2023 "Games" \" @@mp@@
+.SH NAME
+upload-presets \- Upload die-roll presets to a GMA server
+.SH SYNOPSIS
+'\" <<usage>>
+.LP
+(If using the full GMA core tool suite)
+.LP
+.na
+.B gma
+.B go
+.B upload\-presets
+.RI [ args
+\&...]
+.ad
+.LP
+(Otherwise)
+.LP
+.na
+.B upload\-presets
+.B \-endpoint
+.RI [ hostname ] \fB:\fRport
+.RB [ \-for
+.IR username ]
+.RB [ \-pass
+.IR password ]
+.RB [ \-replace ]
+.RB [ \-user
+.IR username ]
+.I file
+\&...
+.ad
+'\" <</usage>>
+.SH DESCRIPTION
+.LP
+.B Upload-presets
+connects to a GMA server and uploads the die-roll
+presets from one or more files, so they are stored
+in the server for use during game play.
+.LP
+The files must be in the format documented by
+.BR dice (5),
+in either format version 1 or 2.
+.SH OPTIONS
+.LP
+The following options control the action of
+.BR upload-presets .
+'\" <<list>>
+.TP
+.BI "\-endpoint " \fR[\fPhostname\fR]\fP : port
+Connect to the server at the specified TCP port.
+.TP
+.BI "\-for " username
+Store the presets for
+.I username
+instead of the user you are logged in as.
+.TP
+.BI "\-pass " password
+Log in to the server with the specified
+.I password
+.TP
+.B \-replace
+Replace the user's entire set of presets with the uploaded data. By
+default the uploaded presets will be added to any that already exist
+for that user.
+.TP
+.BI "\-user " username
+Log in to the server with the specified
+.I username
+(default
+.RB \*(lq GM \*(rq).
+'\" <</>>
+.SH "SEE ALSO"
+.LP
+.BR gma (6),
+.BR mapper (5),
+.BR mapper (6),
+.BR server (6).
+.SH AUTHOR
+.LP
+Steve Willoughby / steve@madscience.zone.
+.SH COPYRGHT
+Part of the GMA software suite, copyright \(co 1992\-2023 by Steven L. Willoughby, Aloha, Oregon, USA. All Rights Reserved. Distributed under BSD-3-Clause License. \"@m(c)@

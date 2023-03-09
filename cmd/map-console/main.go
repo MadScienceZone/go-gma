@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______     _______               #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )   (  __   )              #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |   | (  )  |              #
-# | |      | || || || (___) | Assistant | (____         /   )   | | /   |              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    | (/ /) |              #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/     |   / | |              #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _ |  (__) |              #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_)(_______)              #
+#  _______  _______  _______             _______     _______      __                   #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )    /  \                  #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |    \/) )                 #
+# | |      | || || || (___) | Assistant | (____         /   )      | |                 #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /       | |                 #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/        | |                 #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _  __) (_                #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_) \____/                #
 #                                                                                      #
 ########################################################################################
 #
@@ -28,6 +28,143 @@
 ########################################################################
 */
 
+/*
+Map-console provides a way to  interact directly  with  the  GMA  game server.
+It  will print any server messages it receives in a colorized text representation.
+Commands typed into map-console are sent to the server as described in detail below.
+
+This tool is designed primarily for debugging the server.
+Its input and output is not designed to be user-friendly, but rather to make it possible for someone familiar with the server's operation and network protocol to manually manipulate it.
+
+# SYNOPSIS
+
+(If using the full GMA core tool suite)
+   gma go map-console ...
+
+(Otherwise)
+   map-console -h
+   map-console -help
+   map-console [-Dm] [-C configfile] [-c calendar] [-H host] [-l logfile] [-P password] [-p port] [-u user]
+   map-console [-calendar calendar] [-config configfile] [-debug] [-help] [-host host] [-log logfile] [-mono] [-password password] [-port port] [-username user]
+
+# OPTIONS
+
+The command-line options described below have a long form (e.g., -port) and a  short form (e.g., -p) which are equivalent.
+In either case, the option may be introduced with either one or two hyphens (e.g., -port or --port).
+
+Options which take parameter values may have the value separated from the option name by a space or an equals sign (e.g., -port=2323 or -port 2323), except for boolean flags which may be given alone (e.g., -D) to indicate that the option is set to ``true'' or may be given an explicit value which must be attached to the option with an equals sign (e.g., -D=true or -D=false).
+
+You may not combine multiple single-letter options into a single composite argument, (e.g., the options -D and -m would need to be entered as two separate options, not as -Dm).
+
+  -c, -calendar name
+      Override server's advertised campaign calendar name.
+
+  -C, -config file
+      The named file is read to set the same options as documented here
+      for command-line parameters as option=value pairs, one per line.
+      For example:
+
+      host=example.com
+      mono
+      debug=i/o
+
+  -D, -debug flags
+      Adds debugging messages to map-console's output. The flags
+      value is a comma-separated list of debug flag names, which
+      may be any of the following:
+
+      all      Enable all debugging messages
+      none     Disable all debugging messages
+      auth     Authentication operations
+      binary   Add hexdump output of network data
+      events   Show background events such as expiring timers and signals
+      i/o      Input/output operations used to get data in and out of the client
+      messages Server messages sent and received
+      misc     Miscellaneous debugging messages
+
+  -H, -host host
+      Specifies the server's hostname.
+
+  -h, -help
+      Print a command summary and exit.
+
+  -l, -log file
+      Write log messages to the named file instead of stdout.
+      Use "-" for the file to explicitly send to stdout.
+
+  -m, -mono
+      Don't send ANSI color codes in the terminal output.
+
+  -P, -password password
+      Authenticate to the server using the specified password.
+
+  -p, -port port
+      Specifies the server's TCP port number.
+
+  -u, -username user
+      Authenticate to the server using the specified user name.
+
+# COMMANDS
+
+Commands typed into the standard input of map-console are sent to the server as described here.
+
+Obviously, this should be done with caution by someone intimately familiar with the protocol and who understands the implications of injecting commands into the working system like this.
+
+Each typed command line must conform to the Tcl list syntax (space-separated list of strings, curly braces around a string which contains spaces (including sub-lists)).
+
+  AI name size file         Deprecated: upload image file
+  AI? name size             Ask for location of image file
+  AI@ name size id          Advertise image file location
+  AV label x y              Scroll to map label or (x,y)
+  CC silent? target         Clear chat history
+  CLR id|*|E*|M*|P*|name    Remove object(s) from map
+  CLR@ id                   Remove contents of a map file
+  CO enabled?               Enter/exit combat mode
+  D recips|*|% roll [id]    Make a die roll (*=to all, %=to GM)
+  DD {{name desc roll} ...} Replace your die-roll presets
+  DD+ ...                   Same as DD but append to presets
+  DD/ regex                 Delete presets matching regex
+  DR                        Retrieve die-roll presets
+  EXIT|QUIT                 Exit map-console
+  HELP|?                    Prints out a command summary
+  L filename                Load contents of local map file
+  L@ id                     Load contents of server map file
+  M filename                As L but merge contents with existing map
+  M? id                     Tell clients to cache server map file
+  M@ id                     As M but using a server map file
+  MARK x y                  Show visible marker at (x,y)
+  OA id {k1 v1 k2 v2 ...}   Set object attributes to new values
+  OA+ id k {v1 v2 v3 ...}   Add values to a list-valued object attribute
+  OA- id k {v1 v2 v3 ...}   Remove values from a list-valued object attribute
+  POLO                      Send POLO packet to server
+  PS id color name area size player|monster x y reach
+                            Place a creature token on the map
+  SYNC                      Retrieve full game state
+  SYNC CHAT [target]        Retrieve chat message history
+  TO recips|*|% message     Send chat message (*=to all, %=to GM)
+  /CONN                     Retrieve list of connected clients
+
+You may also type any arbitrary server command with its JSON parameter payload using the syntax
+   !cmd k1=v1 k2=v2 ...
+This is translated to
+   CMD {"k1":"v1", "k2":"v2", ...}
+and sent directly to the server. The values v1, v2, etc. are assumed to be string values and are appropriately quoted for JSON.
+
+If the syntax k#v is used (# instead of = between key and value), then the value is NOT quoted.
+This may be used to enter numeric or boolean values, as well as to type objects directly. Thus,
+   !cmd {foo#["bar","hello world"]} qty#42 retries#false
+would be sent as
+   CMD {"foo":["bar","hello world"], "qty":42, "retries":false}
+
+For convenience, the syntax k:v may be used. This is identical to the k=v form except that any underscores (_) in the value are translated to spaces in the string value sent to the server.
+
+To send a completely unprocessed string directly to the server, just prefix it with a backquote (`) as in
+   `ECHO {"s":"Hello, world", "i":42}
+
+See the full documentation in the accompanying manual file man/man6/map-console.6.pdf (or run ``gma man go map-console'' if you have the GMA Core package installed as well as Go-GMA).
+
+See also the server protocol specification in the man/man6/mapper.6.pdf of the GMA-Mapper package (or run ``gma man 6 mapper'').
+*/
 package main
 
 import (
@@ -54,10 +191,70 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GMAVersionNumber="5.2.0" //@@##@@
+const GoVersionNumber="5.2.1" //@@##@@
+
+var Fhost string
+var Fport uint
+var Fpass string
+var Fuser string
+var Fconf string
+var Fmono bool
+var Fcals string
+var Fdebug string
+var Flog string
+
+func init() {
+	const (
+		defaultHost     = ""
+		defaultPassword = ""
+		defaultPort     = 0
+		defaultRaw      = false
+		defaultUser     = ""
+		defaultConfig   = ""
+		defaultMono     = false
+		defaultVerbose  = false
+		defaultCalendar = "golarion"
+		defaultDebug    = ""
+		defaultLog      = ""
+	)
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: %s [-Dhm] [-C configfile] [-c calendar] [-H host] [-l logfile] [-P password] [-p port] [-u user]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "  An option 'x' with a value may be set by '-x value', '-x=value', '--x value', or '--x=value'.\n")
+		fmt.Fprintf(os.Stderr, "  A flag 'x' may be set by '-x', '--x', '-x=true|false' or '--x=true|false'\n")
+		fmt.Fprintf(os.Stderr, "  Options may NOT be combined into a single argument (use '-D -m', not '-Dm').\n")
+		fmt.Fprintf(os.Stderr, "\n")
+		flag.PrintDefaults()
+	}
+	flag.StringVar(&Fhost, "host", defaultHost, "hostname of mapper service")
+	flag.StringVar(&Fhost, "H", defaultHost, "(same as -host)")
+
+	flag.UintVar(&Fport, "port", defaultPort, "TCP port of mapper service (default 2323)")
+	flag.UintVar(&Fport, "p", defaultPort, "(same as -port)")
+
+	flag.StringVar(&Fpass, "password", defaultPassword, "Server password (if required)")
+	flag.StringVar(&Fpass, "P", defaultPassword, "(same as -password)")
+
+	flag.StringVar(&Fuser, "username", defaultUser, "Username on server or \"GM\" (default is local username)")
+	flag.StringVar(&Fuser, "u", defaultUser, "(same as -username)")
+
+	flag.StringVar(&Fconf, "config", defaultConfig, "Configuration file")
+	flag.StringVar(&Fconf, "C", defaultConfig, "(same as -config)")
+
+	flag.BoolVar(&Fmono, "mono", defaultMono, "Suppress the output of ANSI color codes")
+	flag.BoolVar(&Fmono, "m", defaultMono, "(same as -mono)")
+
+	flag.StringVar(&Fcals, "calendar", defaultCalendar, "Calendar system in use")
+	flag.StringVar(&Fcals, "c", defaultCalendar, "(same as -calendar)")
+
+	flag.StringVar(&Fdebug, "debug", defaultDebug, "Comma-separated list of debugging topics to print")
+	flag.StringVar(&Fdebug, "D", defaultDebug, "(same as -debug)")
+
+	flag.StringVar(&Flog, "log", defaultLog, "Logfile ('-' is standard output)")
+	flag.StringVar(&Flog, "l", defaultLog, "(same as -log)")
+}
 
 func main() {
-	fmt.Printf("GMA mapper console %s\n", GMAVersionNumber)
+	fmt.Printf("GMA mapper console %s\n", GoVersionNumber)
 	log.SetPrefix("map-console: ")
 
 	conf, err := configureApp()
@@ -141,7 +338,7 @@ func main() {
 
 	if pass != "" {
 		a := auth.NewClientAuthenticator(user, []byte(pass),
-			fmt.Sprintf("map-console %s", GMAVersionNumber))
+			fmt.Sprintf("map-console %s", GoVersionNumber))
 		conOpts = append(conOpts, mapper.WithAuthenticator(a))
 	}
 	server, conerr := mapper.NewConnection(host+":"+port, conOpts...)
@@ -169,21 +366,21 @@ func main() {
 	}
 	fmt.Println(colorize("Connected to server.", "Green", mono))
 
-	update, err := server.CheckVersionOf("go-gma", GMAVersionNumber)
+	update, err := server.CheckVersionOf("go-gma", GoVersionNumber)
 	if err != nil {
 		log.Printf("Error checking for version updates: %v", err)
 	} else if update != nil {
-		cmp, err := util.VersionCompare(update.Version, GMAVersionNumber)
+		cmp, err := util.VersionCompare(update.Version, GoVersionNumber)
 		if err != nil {
 			log.Printf("Error comparing version information: %v", err)
 			log.Printf("Version %v is available for %v on %v.", update.Version, sDefault(update.OS, "any OS"), sDefault(update.Arch, "any architecture"))
 		} else if cmp > 0 {
-			log.Printf("UPDATE AVAILABLE! You are running version %v of Go-GMA.", GMAVersionNumber)
+			log.Printf("UPDATE AVAILABLE! You are running version %v of Go-GMA.", GoVersionNumber)
 			log.Printf("UPDATE AVAILABLE! Version %v is available for %v on %v.", update.Version, sDefault(update.OS, "any OS"), sDefault(update.Arch, "any architecture"))
 		} else if cmp < 0 {
-			log.Printf("Your Go-GMA version %v is ahead of the advertised version %v for %v on %v.", GMAVersionNumber, update.Version, sDefault(update.OS, "any OS"), sDefault(update.Arch, "any architecture"))
+			log.Printf("Your Go-GMA version %v is ahead of the advertised version %v for %v on %v.", GoVersionNumber, update.Version, sDefault(update.OS, "any OS"), sDefault(update.Arch, "any architecture"))
 		} else {
-			log.Printf("Your Go-GMA version %s is up to date.", GMAVersionNumber)
+			log.Printf("Your Go-GMA version %s is up to date.", GoVersionNumber)
 		}
 	}
 
@@ -795,31 +992,23 @@ func configureApp() (util.SimpleConfigurationData, error) {
 	// command-line parameters
 	//
 	defConfigPath := filepath.Join(homeDir, ".gma", "mapper", "mapper.conf")
-	var Fhost = flag.String("host", "", "hostname of mapper service")
-	var Fport = flag.Uint("port", 0, "TCP port of mapper service (default 2323)")
-	var Fpass = flag.String("password", "", "Server password (if required)")
-	var Frawd = flag.Bool("raw", false, "Report raw data only")
-	var Fuser = flag.String("username", "", "Username on server or \"GM\" (default \""+defUserName+"\")")
-	var Fconf = flag.String("config", defConfigPath, "Configuration file")
-	var Fmono = flag.Bool("mono", false, "Suppress the output of ANSI color codes")
-	var Fverb = flag.Bool("verbose", false, "Print extra output about connection")
-	var Fcals = flag.String("calendar", "golarion", "Calendar system in use")
-	var Fdebug = flag.String("debug", "", "Comma-separated list of debugging topics to print")
-	var Flog = flag.String("log", "", "Logfile ('-' is standard output)")
 	flag.Parse()
+	if Fconf == "" {
+		Fconf = defConfigPath
+	}
 
 	//
 	// read in configuration
 	//
 	var conf util.SimpleConfigurationData
-	if *Fconf != "" {
-		configFile, err := os.Open(*Fconf)
+	if Fconf != "" {
+		configFile, err := os.Open(Fconf)
 		if err != nil {
-			if *Fconf == defConfigPath && errors.Is(err, fs.ErrNotExist) {
-				log.Printf("warning: default configuration file \"%s\" does not exist", *Fconf)
+			if Fconf == defConfigPath && errors.Is(err, fs.ErrNotExist) {
+				log.Printf("warning: default configuration file \"%s\" does not exist", Fconf)
 				conf = util.NewSimpleConfigurationData()
 			} else {
-				return nil, fmt.Errorf("%s: %v", *Fconf, err)
+				return nil, fmt.Errorf("%s: %v", Fconf, err)
 			}
 		} else {
 			defer configFile.Close()
@@ -834,35 +1023,29 @@ func configureApp() (util.SimpleConfigurationData, error) {
 
 	// Override configuration file settings from command-line
 	// options
-	if *Fhost != "" {
-		conf.Set("host", *Fhost)
+	if Fhost != "" {
+		conf.Set("host", Fhost)
 	}
-	if *Fport != 0 {
-		conf.SetInt("port", int(*Fport))
+	if Fport != 0 {
+		conf.SetInt("port", int(Fport))
 	}
-	if *Fpass != "" {
-		conf.Set("password", *Fpass)
+	if Fpass != "" {
+		conf.Set("password", Fpass)
 	}
-	if *Fuser != "" {
-		conf.Set("username", *Fuser)
+	if Fuser != "" {
+		conf.Set("username", Fuser)
 	}
-	if *Frawd {
-		conf.Set("raw", "1")
-	}
-	if *Fverb {
-		conf.Set("verbose", "1")
-	}
-	if *Fmono {
+	if Fmono {
 		conf.Set("mono", "1")
 	}
-	if *Fcals != "" {
-		conf.Set("calendar", *Fcals)
+	if Fcals != "" {
+		conf.Set("calendar", Fcals)
 	}
-	if *Flog != "" {
-		conf.Set("logfile", *Flog)
+	if Flog != "" {
+		conf.Set("logfile", Flog)
 	}
-	if *Fdebug != "" {
-		conf.Set("debug", *Fdebug)
+	if Fdebug != "" {
+		conf.Set("debug", Fdebug)
 	}
 
 	// Sanity check and defaults
@@ -1588,7 +1771,7 @@ func colorize(text, color string, mono bool) string {
 }
 
 /*
-# @[00]@| GMA 5.2.0
+# @[00]@| Go-GMA 5.2.1
 # @[01]@|
 # @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
