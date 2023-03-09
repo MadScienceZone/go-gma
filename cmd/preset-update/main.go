@@ -47,7 +47,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GMAVersionNumber="5.2.0"     //@@##@@
+const GoVersionNumber = "5.2.0"      //@@##@@
 const GMADieRollPresetFileFormat = 2 //@@##@@
 
 func main() {
@@ -62,7 +62,7 @@ func main() {
 			panic(err)
 		}
 	} else {
-		fmt.Printf("GMA map-update tool %s for die-roll preset file format %d\n", GMAVersionNumber, GMADieRollPresetFileFormat)
+		fmt.Printf("GMA map-update tool %s for die-roll preset file format %d\n", GoVersionNumber, GMADieRollPresetFileFormat)
 
 		for _, filename := range os.Args[1:] {
 			fmt.Printf("Converting %s ", filename)

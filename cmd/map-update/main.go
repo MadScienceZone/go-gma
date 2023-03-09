@@ -45,8 +45,8 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GMAVersionNumber="5.2.0" //@@##@@
-const GMAMapperFileFormat = 20   //@@##@@
+const GoVersionNumber = "5.2.0" //@@##@@
+const GMAMapperFileFormat = 20  //@@##@@
 
 func main() {
 	if len(os.Args) < 2 {
@@ -61,7 +61,7 @@ func main() {
 			os.Exit(1)
 		}
 	} else {
-		fmt.Printf("GMA map-update tool %s for map file format %d\n", GMAVersionNumber, GMAMapperFileFormat)
+		fmt.Printf("GMA map-update tool %s for map file format %d\n", GoVersionNumber, GMAMapperFileFormat)
 
 		for _, filename := range os.Args[1:] {
 			fmt.Printf("Converting %s ", filename)

@@ -120,7 +120,7 @@ import (
 // Auto-configured values
 //
 
-const GMAVersionNumber="5.2.0" // @@##@@
+const GoVersionNumber = "5.2.0" // @@##@@
 
 //
 // eventMonitor responds to signals and timers that affect our overall operation
@@ -200,7 +200,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "fatal error: %v\n", err)
 		os.Exit(1)
 	}
-	app.Logf("Server %s started", GMAVersionNumber)
+	app.Logf("Server %s started", GoVersionNumber)
 	app.Logf("Implements protocol %d (library supports minimum %d, maximum %d)",
 		mapper.GMAMapperProtocol,
 		mapper.MinimumSupportedMapProtocol,
@@ -221,7 +221,7 @@ func main() {
 	//
 	if InstrumentCode {
 		app.Log("application performance metrics telemetry reporting enabled")
-		if err = os.Setenv("NEW_RELIC_METADATA_SERVICE_VERSION", GMAVersionNumber); err != nil {
+		if err = os.Setenv("NEW_RELIC_METADATA_SERVICE_VERSION", GoVersionNumber); err != nil {
 			app.Logf("unable to set version metadata: %v", err)
 		}
 		nrApp, err = newrelic.NewApplication(

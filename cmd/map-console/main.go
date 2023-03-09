@@ -191,7 +191,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GMAVersionNumber="5.2.0" //@@##@@
+const GoVersionNumber = "5.2.0" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -254,7 +254,7 @@ func init() {
 }
 
 func main() {
-	fmt.Printf("GMA mapper console %s\n", GMAVersionNumber)
+	fmt.Printf("GMA mapper console %s\n", GoVersionNumber)
 	log.SetPrefix("map-console: ")
 
 	conf, err := configureApp()
@@ -338,7 +338,7 @@ func main() {
 
 	if pass != "" {
 		a := auth.NewClientAuthenticator(user, []byte(pass),
-			fmt.Sprintf("map-console %s", GMAVersionNumber))
+			fmt.Sprintf("map-console %s", GoVersionNumber))
 		conOpts = append(conOpts, mapper.WithAuthenticator(a))
 	}
 	server, conerr := mapper.NewConnection(host+":"+port, conOpts...)
@@ -366,21 +366,21 @@ func main() {
 	}
 	fmt.Println(colorize("Connected to server.", "Green", mono))
 
-	update, err := server.CheckVersionOf("go-gma", GMAVersionNumber)
+	update, err := server.CheckVersionOf("go-gma", GoVersionNumber)
 	if err != nil {
 		log.Printf("Error checking for version updates: %v", err)
 	} else if update != nil {
-		cmp, err := util.VersionCompare(update.Version, GMAVersionNumber)
+		cmp, err := util.VersionCompare(update.Version, GoVersionNumber)
 		if err != nil {
 			log.Printf("Error comparing version information: %v", err)
 			log.Printf("Version %v is available for %v on %v.", update.Version, sDefault(update.OS, "any OS"), sDefault(update.Arch, "any architecture"))
 		} else if cmp > 0 {
-			log.Printf("UPDATE AVAILABLE! You are running version %v of Go-GMA.", GMAVersionNumber)
+			log.Printf("UPDATE AVAILABLE! You are running version %v of Go-GMA.", GoVersionNumber)
 			log.Printf("UPDATE AVAILABLE! Version %v is available for %v on %v.", update.Version, sDefault(update.OS, "any OS"), sDefault(update.Arch, "any architecture"))
 		} else if cmp < 0 {
-			log.Printf("Your Go-GMA version %v is ahead of the advertised version %v for %v on %v.", GMAVersionNumber, update.Version, sDefault(update.OS, "any OS"), sDefault(update.Arch, "any architecture"))
+			log.Printf("Your Go-GMA version %v is ahead of the advertised version %v for %v on %v.", GoVersionNumber, update.Version, sDefault(update.OS, "any OS"), sDefault(update.Arch, "any architecture"))
 		} else {
-			log.Printf("Your Go-GMA version %s is up to date.", GMAVersionNumber)
+			log.Printf("Your Go-GMA version %s is up to date.", GoVersionNumber)
 		}
 	}
 

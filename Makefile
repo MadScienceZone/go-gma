@@ -8,3 +8,8 @@ all:
 
 test:
 	go test ./...
+
+telemetry:
+	@echo "Building server with telemetry instrumentation enabled..."
+	@echo "WARNING: This feature is not fully implemented yet and is not ready for production use."
+	(cd cmd/server && go build -tags instrumentation)

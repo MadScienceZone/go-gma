@@ -29,9 +29,15 @@ of the generalization issues that are gating the release of GMA.
 To support this, the `go-gma` repository holds parts of the core GMA API
 needed by the map server.
 
-
 ## Documentation
 API docs may be viewed at [pkg.go.dev](https://pkg.go.dev/github.com/MadScienceZone/go-gma/v5).
+
+## Building
+Running `make` in the top-level directory will build all the program binaries
+under the `cmd` directory.
+
+By default, this will build the server without instrumentation to collect runtime performance metrics.
+If you wish to compile the server with telemetry instrumentation enabled, run `make telemetry`.
 
 ## Versioning
 We are keeping the version numbers for this project in sync with
