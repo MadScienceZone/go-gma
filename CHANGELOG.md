@@ -1,4 +1,5 @@
-# Changelog
+# Game Master's Assistant / Go Utilities
+# Release Notes
 ## Current Version Information
  * This Package Version: 5.2.1                <!-- @@##@@ -->
  * Effective Date: 08-Mar-2023			<!-- @@##@@ -->
