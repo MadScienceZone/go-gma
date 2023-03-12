@@ -24,7 +24,7 @@ server \- GMA battle grid map server (Go version)
 .RB [ \-debug
 .IR flags ]
 .RB [ \-endpoint
-.RI [ hostname ] \fB:\fPport ]
+.RI [ hostname ]\fB:\fP port ]
 .RB [ \-init\-file
 .IR path ]
 .RB [ \-log\-file
@@ -125,7 +125,7 @@ Changes to the game state.
 .RE
 '\" <</>>
 .TP
-.BI "\-endpoint " \fR[\fPhostname\fR]\fP : port
+.BI "\-endpoint \fR[\fP" hostname \fR]\fP: port
 Accept incoming client connections on the specified
 .I hostname
 and TCP
@@ -170,7 +170,7 @@ under the username
 .RB \*(lq GM \*(rq.
 .LP
 Any subsequent lines have the format
-.RI \*(lq username\fB:\fPpassword \*(rq.
+.RI \*(lq username \fB:\fP password \*(rq.
 This assigns a specific
 .I password
 for the given
