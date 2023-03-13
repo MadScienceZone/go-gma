@@ -37,7 +37,8 @@
 //
 // If you need to keep the die roller itself around after the dice are rolled,
 // to query its status, or to produce a repeatable string of die rolls given
-// a custom seed or number generator, create a new DieRoller value and reuse // that as needed:
+// a custom seed or number generator, create a new DieRoller value and reuse
+// that as needed:
 //
 //    dr, err := NewDieRoller()
 //    label, results, err := dr.DoRoll("d20+16 | c")

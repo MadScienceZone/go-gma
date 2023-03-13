@@ -852,6 +852,21 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			a.Logf("error sending die-roll presets after filtering them: %v", err)
 		}
 
+	case mapper.FilterImagesMessagePayload:
+		if requester.Auth == nil {
+			a.Logf("Unable to filter images for unauthenticated user")
+			return
+		}
+
+		if !requester.Auth.GmMode {
+			a.Logf("Rejecting unauthorized AI/ command from user %s", requester.Auth.Username)
+			return
+		}
+
+		if err := a.FilterImages(p); err != nil {
+			a.Logf("error filtering images with /%s/: %v", p.Filter, err)
+		}
+
 	case mapper.QueryDicePresetsMessagePayload:
 		if requester.Auth == nil {
 			a.Logf("Unable to query die-roll preset for unauthenticated user")
