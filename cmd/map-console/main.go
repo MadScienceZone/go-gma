@@ -191,7 +191,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.2.1" //@@##@@
+const GoVersionNumber = "5.2.1" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -912,7 +912,6 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 		)
 
 	case mapper.UpdatePeerListMessagePayload:
-		fmt.Printf("peerlist len=%v\n", len(m.PeerList))
 		printFields(mono, "UpdatePeerList")
 		printFields(mono, "",
 			fieldDesc{"       USERNAME------------ ADDRESS-------------- CLIENT------------------- AU ME PING--", nil})
