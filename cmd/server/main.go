@@ -99,7 +99,7 @@ Options:
 
 See the full documentation in the accompanying manual file man/man6/server.6.pdf (or run “gma man go server” if you have the GMA Core package installed as well as Go-GMA).
 
-See also the server protocol specification in the man/man6/mapper.6.pdf of the GMA-Mapper package (or run “gma man 6 mapper”).
+See also the server protocol specification in the man/man7/mapper-protocol.7.pdf of the GMA-Mapper package (or run “gma man mapper-protocol”). This is also printed in Appendix F of the GMA Game Master's Guide.
 */
 package main
 
@@ -120,7 +120,7 @@ import (
 // Auto-configured values
 //
 
-const GoVersionNumber="5.2.1" // @@##@@
+const GoVersionNumber = "5.2.1" // @@##@@
 
 //
 // eventMonitor responds to signals and timers that affect our overall operation
