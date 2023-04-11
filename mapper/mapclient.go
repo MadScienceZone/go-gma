@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______      __                   #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )    /  \                  #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |    \/) )                 #
-# | |      | || || || (___) | Assistant | (____         /   )      | |                 #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /       | |                 #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/        | |                 #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _  __) (_                #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_) \____/                #
+#  _______  _______  _______             _______     _______     _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )   / ___   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |   \/   )  |              #
+# | |      | || || || (___) | Assistant | (____         /   )       /   )              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /      _/   /               #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/      /   _/                #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _ (   (__/\              #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_)\_______/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -250,6 +250,12 @@ type Connection struct {
 
 	// Our signal that we're ready for the client to talk.
 	ReadySignal chan byte
+
+	// Some statistics we know about the server
+	ServerStats struct {
+		Started time.Time // server startup time
+		Active  time.Time // time of last ping (at connect-time, this is time of last ping sent by server)
+	}
 }
 
 //
@@ -1084,8 +1090,10 @@ func (c *Connection) CacheFile(serverID string) error {
 
 type ChallengeMessagePayload struct {
 	BaseMessagePayload
-	Protocol  int
-	Challenge []byte `json:",omitempty"`
+	Protocol      int
+	Challenge     []byte    `json:",omitempty"`
+	ServerStarted time.Time `json:",omitempty"`
+	ServerActive  time.Time `json:",omitempty"`
 }
 
 //   ____ _           _   __  __
@@ -2779,12 +2787,15 @@ func (c *Connection) login(done chan error) {
 
 		switch response := incomingPacket.(type) {
 		case ChallengeMessagePayload:
-			// OK Protocol=v [Challenge=data]
+			// OK Protocol=v [Challenge=data] [ServerUptime=time] [ServerActive=time]
 			if response.Protocol != c.Protocol {
 				c.Logf("server advertised protocol %v initially but then claimed version %v", c.Protocol, response.Protocol)
 				done <- fmt.Errorf("server can't make up its mind whether it uses protocol %v or %v", c.Protocol, response.Protocol)
 				return
 			}
+
+			c.ServerStats.Started = response.ServerStarted
+			c.ServerStats.Active = response.ServerActive
 
 			if response.Challenge != nil {
 				if c.Authenticator == nil {
@@ -3447,7 +3458,7 @@ func (c *Connection) CheckVersionOf(packageName, myVersionNumber string) (*Packa
 	return availableVersion, nil
 }
 
-// @[00]@| Go-GMA 5.2.1
+// @[00]@| Go-GMA 5.2.2
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

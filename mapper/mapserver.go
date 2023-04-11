@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______      __                   #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )    /  \                  #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |    \/) )                 #
-# | |      | || || || (___) | Assistant | (____         /   )      | |                 #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /       | |                 #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/        | |                 #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _  __) (_                #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_) \____/                #
+#  _______  _______  _______             _______     _______     _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )   / ___   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |   \/   )  |              #
+# | |      | || || || (___) | Assistant | (____         /   )       /   )              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /      _/   /               #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/      /   _/                #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _ (   (__/\              #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_)\_______/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -192,7 +192,7 @@ func (c *ClientConnection) Close() {
 // ServeToClient is intended to be run in its own thread,
 // and speaks to one client for the duration of its session.
 //
-func (c *ClientConnection) ServeToClient(ctx context.Context) {
+func (c *ClientConnection) ServeToClient(ctx context.Context, serverStarted, lastPing time.Time) {
 	if c == nil {
 		return
 	}
@@ -205,7 +205,7 @@ func (c *ClientConnection) ServeToClient(ctx context.Context) {
 	loginctx, loginCancel := context.WithTimeout(ctx, 1*time.Minute)
 	defer loginCancel()
 	c.LastPoloTime = time.Now()
-	go c.loginClient(loginctx, loginDone)
+	go c.loginClient(loginctx, loginDone, serverStarted, lastPing)
 
 syncloop:
 	for {
@@ -418,7 +418,7 @@ mainloop:
 
 }
 
-func (c *ClientConnection) loginClient(ctx context.Context, done chan error) {
+func (c *ClientConnection) loginClient(ctx context.Context, done chan error, serverStarted, lastPing time.Time) {
 	defer close(done)
 	if c == nil {
 		done <- fmt.Errorf("loginClient called on nil connection")
@@ -457,8 +457,10 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error) {
 			return
 		}
 		c.Conn.Send(Challenge, ChallengeMessagePayload{
-			Protocol:  GMAMapperProtocol,
-			Challenge: challenge,
+			Protocol:      GMAMapperProtocol,
+			Challenge:     challenge,
+			ServerStarted: serverStarted,
+			ServerActive:  lastPing,
 		})
 		if err := c.Conn.Flush(); err != nil {
 			done <- err
@@ -536,7 +538,9 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error) {
 	} else {
 		c.debug(DebugIO, "proceeding without authentication")
 		c.Conn.Send(Challenge, ChallengeMessagePayload{
-			Protocol: GMAMapperProtocol,
+			Protocol:      GMAMapperProtocol,
+			ServerStarted: serverStarted,
+			ServerActive:  lastPing,
 		})
 		if err := c.Conn.Flush(); err != nil {
 			done <- err

@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______      __                   #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )    /  \                  #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |    \/) )                 #
-# | |      | || || || (___) | Assistant | (____         /   )      | |                 #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /       | |                 #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/        | |                 #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _  __) (_                #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_) \____/                #
+#  _______  _______  _______             _______     _______     _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )   / ___   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |   \/   )  |              #
+# | |      | || || || (___) | Assistant | (____         /   )       /   )              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /      _/   /               #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/      /   _/                #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _ (   (__/\              #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_)\_______/              #
 #                                                                                      #
 ########################################################################################
 #
@@ -191,7 +191,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber = "5.2.1" //@@##@@
+const GoVersionNumber="5.2.2" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -365,6 +365,21 @@ func main() {
 		time.Sleep(100 * time.Millisecond)
 	}
 	fmt.Println(colorize("Connected to server.", "Green", mono))
+
+	if server.ServerStats.Started.IsZero() {
+		fmt.Println(colorize("Server did not send uptime data.", "Red", mono))
+	} else {
+		fmt.Println(colorize(fmt.Sprintf("Server up since %v", server.ServerStats.Started), "Green", mono))
+		if server.ServerStats.Active.IsZero() {
+			fmt.Println(colorize("Server did not send activity timing data.", "Red", mono))
+		} else {
+			if time.Since(server.ServerStats.Active) >= time.Minute*5 {
+				fmt.Println(colorize(fmt.Sprintf("Server may be deadlocked! Last ping event was %s ago.", time.Since(server.ServerStats.Active)), "Red", mono))
+			} else {
+				fmt.Println(colorize(fmt.Sprintf("Server active; last ping event was %s ago.", time.Since(server.ServerStats.Active)), "Green", mono))
+			}
+		}
+	}
 
 	update, err := server.CheckVersionOf("go-gma", GoVersionNumber)
 	if err != nil {
@@ -1770,7 +1785,7 @@ func colorize(text, color string, mono bool) string {
 }
 
 /*
-# @[00]@| Go-GMA 5.2.1
+# @[00]@| Go-GMA 5.2.2
 # @[01]@|
 # @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
