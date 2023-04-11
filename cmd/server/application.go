@@ -183,6 +183,14 @@ type Application struct {
 		sync   chan *mapper.ClientConnection
 		update chan *mapper.MessagePayload
 	}
+
+	// Last time we sent out a ping to all clients.
+	// If this goes too long, it may indicate that the server
+	// has become deadlocked.
+	LastPing time.Time
+
+	// Time the server was started.
+	ServerStarted time.Time
 }
 
 func (a *Application) GetClientPreamble() *mapper.ClientPreamble {
