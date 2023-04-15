@@ -461,6 +461,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 			Challenge:     challenge,
 			ServerStarted: serverStarted,
 			ServerActive:  lastPing,
+			ServerTime:    time.Now(),
 		})
 		if err := c.Conn.Flush(); err != nil {
 			done <- err

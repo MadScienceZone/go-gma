@@ -253,8 +253,9 @@ type Connection struct {
 
 	// Some statistics we know about the server
 	ServerStats struct {
-		Started time.Time // server startup time
-		Active  time.Time // time of last ping (at connect-time, this is time of last ping sent by server)
+		Started     time.Time // server startup time
+		Active      time.Time // time of last ping (at connect-time, this is time of last ping sent by server)
+		ConnectTime time.Time // time server connected (time on the server, for comparison with other server times)
 	}
 }
 
@@ -1094,6 +1095,7 @@ type ChallengeMessagePayload struct {
 	Challenge     []byte    `json:",omitempty"`
 	ServerStarted time.Time `json:",omitempty"`
 	ServerActive  time.Time `json:",omitempty"`
+	ServerTime    time.Time `json:",omitempty"`
 }
 
 //   ____ _           _   __  __
@@ -2796,6 +2798,7 @@ func (c *Connection) login(done chan error) {
 
 			c.ServerStats.Started = response.ServerStarted
 			c.ServerStats.Active = response.ServerActive
+			c.ServerStats.ConnectTime = response.ServerTime
 
 			if response.Challenge != nil {
 				if c.Authenticator == nil {
