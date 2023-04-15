@@ -2015,7 +2015,9 @@ func (d *DieRoller) ExplainSecretRoll(spec, notice string) (string, StructuredRe
 	// Enough of the preliminaries, let's get working.
 	//
 	if d.d == nil {
-		return "", StructuredResult{}, fmt.Errorf("no defined Dice object to consume")
+		// Since this can happen if the die-roll had multiple results, let's fall
+		// back to just reporting the raw die-roll spec as-sent.
+		return "", append(thisResult, StructuredDescription{Type: "diespec", Value: spec}), nil
 	}
 
 	// MAXIMIZED DIE ROLLS_____________________________________________________
