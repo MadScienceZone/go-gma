@@ -115,6 +115,7 @@ Each typed command line must conform to the Tcl list syntax (space-separated lis
   AI name size file         Deprecated: upload image file
   AI? name size             Ask for location of image file
   AI@ name size id          Advertise image file location
+  AI/ regex [-keep]         Filter out stored images
   AV label x y              Scroll to map label or (x,y)
   CC silent? target         Clear chat history
   CLR id|*|E*|M*|P*|name    Remove object(s) from map
@@ -191,7 +192,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.2.2" //@@##@@
+const GoVersionNumber = "5.2.2" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -368,15 +369,20 @@ func main() {
 
 	if server.ServerStats.Started.IsZero() {
 		fmt.Println(colorize("Server did not send uptime data.", "Red", mono))
+	} else if server.ServerStats.ConnectTime.IsZero() {
+		fmt.Println(colorize("Server did not send it's local time data.", "Red", mono))
 	} else {
-		fmt.Println(colorize(fmt.Sprintf("Server up since %v", server.ServerStats.Started), "Green", mono))
+		fmt.Println(colorize(fmt.Sprintf("Server up since %v (%v ago)",
+			server.ServerStats.Started, server.ServerStats.ConnectTime.Sub(server.ServerStats.Started)),
+			"Green", mono))
 		if server.ServerStats.Active.IsZero() {
 			fmt.Println(colorize("Server did not send activity timing data.", "Red", mono))
 		} else {
-			if time.Since(server.ServerStats.Active) >= time.Minute*5 {
-				fmt.Println(colorize(fmt.Sprintf("Server may be deadlocked! Last ping event was %s ago.", time.Since(server.ServerStats.Active)), "Red", mono))
+			activeSince := server.ServerStats.ConnectTime.Sub(server.ServerStats.Active)
+			if activeSince >= time.Minute*5 {
+				fmt.Println(colorize(fmt.Sprintf("Server may be deadlocked! Last ping event was %s ago.", activeSince), "Red", mono))
 			} else {
-				fmt.Println(colorize(fmt.Sprintf("Server active; last ping event was %s ago.", time.Since(server.ServerStats.Active)), "Green", mono))
+				fmt.Println(colorize(fmt.Sprintf("Server active; last ping event was %s ago.", activeSince), "Green", mono))
 			}
 		}
 	}
@@ -1195,6 +1201,7 @@ inputloop:
 AI <name> <size> <filename>             Upload image from local file
 AI? <name> <size>                       Ask for definition of image
 AI@ <name> <size> <serverid>            Advertise image stored on server
+AI/ <regex> [-keep]                     Filter out/keep some server-side image definitions
 AV <grid> <xfrac> <yfrac>               Adjust view to grid label or fraction of each axis
 CC <silent?> <target>                   Clear chat history
 CLR <id>|*|E*|M*|P*|[<image>=]<name>    Clear specified element(s) from canvas
@@ -1287,6 +1294,32 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 				}); err != nil {
 					fmt.Println(colorize(fmt.Sprintf("server ERROR: %v", err), "Red", mono))
 					break
+				}
+
+			case "AI/":
+				// AI/ regex [-keep]
+				v, err := tcllist.ConvertTypes(fields, "sss")
+				if err != nil {
+					v, err = tcllist.ConvertTypes(fields, "ss*")
+					if err != nil {
+						fmt.Println(colorize(fmt.Sprintf("usage ERROR: %v", err), "Red", mono))
+						break
+					}
+				}
+				if len(v) == 3 {
+					if v[2].(string) != "-keep" {
+						fmt.Println(colorize("Argument #2 must be nothing or \"-keep\".", "Red", mono))
+						break
+					}
+					if err := server.FilterImagesExcept(v[1].(string)); err != nil {
+						fmt.Println(colorize(fmt.Sprintf("server ERROR: %v", err), "Red", mono))
+						break
+					}
+				} else {
+					if err := server.FilterImages(v[1].(string)); err != nil {
+						fmt.Println(colorize(fmt.Sprintf("server ERROR: %v", err), "Red", mono))
+						break
+					}
 				}
 
 			case "AV":
