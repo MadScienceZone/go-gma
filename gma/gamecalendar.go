@@ -3,18 +3,28 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______      __                   #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )    /  \                  #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |    \/) )                 #
-# | |      | || || || (___) | Assistant | (____         /   )      | |                 #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /       | |                 #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/        | |                 #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _  __) (_                #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_) \____/                #
+#  _______  _______  _______             _______     _______     _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )   / ___   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |   \/   )  |              #
+# | |      | || || || (___) | Assistant | (____         /   )       /   )              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /      _/   /               #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/      /   _/                #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _ (   (__/\              #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_)\_______/              #
 #                                                                                      #
 ########################################################################################
 */
 
+//
+// Package gma is the main port of the GMA Core API into the Go language.
+// Parts of the API which don't necessarily belong in their own individual packages (e.g., dice, mapper, etc.) will go here.
+// Currently, the game calendar is implemented here.
+//
+// # Game Calendar
+//
+// Call NewCalendar(calSystem) to create a new game calendar which is set up for the particular calendaring system applicable for your world.
+// Then you can set the time and date, advance the time as needed, etc. by calling the various methods described below.
+//
 package gma
 
 import (
@@ -568,6 +578,7 @@ func (c *Calendar) TicksToInterval(unitName string) (int64, error) {
 //   "gregorian"  The calendar used in most of Earth.
 //
 func NewCalendar(calSystem string, options ...CalendarOption) (Calendar, error) {
+	// The code in here needs some refactoring (for one thing, it fails the open/close principle).
 	const (
 		s  = 10
 		r  = 6 * s
@@ -878,7 +889,7 @@ func (c *Calendar) recalc() {
 
 /*
 #
-# @[00]@| Go-GMA 5.2.1
+# @[00]@| Go-GMA 5.2.2
 # @[01]@|
 # @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

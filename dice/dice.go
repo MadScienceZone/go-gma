@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______      __                   #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )    /  \                  #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |    \/) )                 #
-# | |      | || || || (___) | Assistant | (____         /   )      | |                 #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /       | |                 #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/        | |                 #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _  __) (_                #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_) \____/                #
+#  _______  _______  _______             _______     _______     _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )   / ___   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |   \/   )  |              #
+# | |      | || || || (___) | Assistant | (____         /   )       /   )              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /      _/   /               #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/      /   _/                #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _ (   (__/\              #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_)\_______/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -37,7 +37,8 @@
 //
 // If you need to keep the die roller itself around after the dice are rolled,
 // to query its status, or to produce a repeatable string of die rolls given
-// a custom seed or number generator, create a new DieRoller value and reuse // that as needed:
+// a custom seed or number generator, create a new DieRoller value and reuse
+// that as needed:
 //
 //    dr, err := NewDieRoller()
 //    label, results, err := dr.DoRoll("d20+16 | c")
@@ -2015,7 +2016,10 @@ func (d *DieRoller) ExplainSecretRoll(spec, notice string) (string, StructuredRe
 	// Enough of the preliminaries, let's get working.
 	//
 	if d.d == nil {
-		return "", StructuredResult{}, fmt.Errorf("no defined Dice object to consume")
+		// Since this can happen if the die-roll had multiple results, let's fall
+		// back to just reporting the raw die-roll spec as-sent.
+		thisResult = append(thisResult, StructuredDescription{Type: "diespec", Value: spec})
+		return "", StructuredResult{ResultSuppressed: true, Details: thisResult}, nil
 	}
 
 	// MAXIMIZED DIE ROLLS_____________________________________________________
@@ -2747,7 +2751,7 @@ func LoadDieRollPresetFile(input io.Reader) ([]DieRollPreset, DieRollPresetMetaD
 	return nil, meta, fmt.Errorf("invalid die-roll preset file format: unexpected end of file")
 }
 
-// @[00]@| Go-GMA 5.2.1
+// @[00]@| Go-GMA 5.2.2
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

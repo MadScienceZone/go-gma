@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______      __                   #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )    /  \                  #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |    \/) )                 #
-# | |      | || || || (___) | Assistant | (____         /   )      | |                 #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /       | |                 #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/        | |                 #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _  __) (_                #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_) \____/                #
+#  _______  _______  _______             _______     _______     _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )   / ___   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |   \/   )  |              #
+# | |      | || || || (___) | Assistant | (____         /   )       /   )              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /      _/   /               #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/      /   _/                #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _ (   (__/\              #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_)\_______/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -250,6 +250,13 @@ type Connection struct {
 
 	// Our signal that we're ready for the client to talk.
 	ReadySignal chan byte
+
+	// Some statistics we know about the server
+	ServerStats struct {
+		Started     time.Time // server startup time
+		Active      time.Time // time of last ping (at connect-time, this is time of last ping sent by server)
+		ConnectTime time.Time // time server connected (time on the server, for comparison with other server times)
+	}
 }
 
 //
@@ -640,6 +647,7 @@ const (
 	Denied
 	Echo
 	FilterDicePresets
+	FilterImages
 	Granted
 	LoadFrom
 	LoadArcObject
@@ -701,6 +709,7 @@ var ServerMessageByName = map[string]ServerMessage{
 	"Denied":                      Denied,
 	"Echo":                        Echo,
 	"FilterDicePresets":           FilterDicePresets,
+	"FilterImages":                FilterImages,
 	"Granted":                     Granted,
 	"LoadFrom":                    LoadFrom,
 	"LoadArcObject":               LoadArcObject,
@@ -1084,8 +1093,11 @@ func (c *Connection) CacheFile(serverID string) error {
 
 type ChallengeMessagePayload struct {
 	BaseMessagePayload
-	Protocol  int
-	Challenge []byte `json:",omitempty"`
+	Protocol      int
+	Challenge     []byte    `json:",omitempty"`
+	ServerStarted time.Time `json:",omitempty"`
+	ServerActive  time.Time `json:",omitempty"`
+	ServerTime    time.Time `json:",omitempty"`
 }
 
 //   ____ _           _   __  __
@@ -1494,6 +1506,50 @@ type FilterDicePresetsMessagePayload struct {
 	BaseMessagePayload
 	Filter string `json:",omitempty"`
 	For    string `json:",omitempty"`
+}
+
+//  _____ _ _ _           ___
+// |  ___(_) | |_ ___ _ _|_ _|_ __ ___   __ _  __ _  ___  ___
+// | |_  | | | __/ _ \ '__| || '_ ` _ \ / _` |/ _` |/ _ \/ __|
+// |  _| | | | ||  __/ |  | || | | | | | (_| | (_| |  __/\__ \
+// |_|   |_|_|\__\___|_| |___|_| |_| |_|\__,_|\__, |\___||___/
+//                                           |___/
+//
+
+//
+// FilterImages asks the server to remove all of your defined images that match
+// a regular expression.
+//
+func (c *Connection) FilterImages(re string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(FilterImages, FilterImagesMessagePayload{
+		Filter: re,
+	})
+}
+
+//
+// FilterImagesExcept asks the server to remove all of your defined images that don't match
+// a regular expression.
+//
+func (c *Connection) FilterImagesExcept(re string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(FilterImages, FilterImagesMessagePayload{
+		KeepMatching: true,
+		Filter:       re,
+	})
+}
+
+//
+// FilterImagesMessagePayload holds the filter expression the client sends to the server.
+//
+type FilterImagesMessagePayload struct {
+	BaseMessagePayload
+	KeepMatching bool   `json:",omitempty"`
+	Filter       string `json:",omitempty"`
 }
 
 //
@@ -2779,12 +2835,16 @@ func (c *Connection) login(done chan error) {
 
 		switch response := incomingPacket.(type) {
 		case ChallengeMessagePayload:
-			// OK Protocol=v [Challenge=data]
+			// OK Protocol=v [Challenge=data] [ServerUptime=time] [ServerActive=time]
 			if response.Protocol != c.Protocol {
 				c.Logf("server advertised protocol %v initially but then claimed version %v", c.Protocol, response.Protocol)
 				done <- fmt.Errorf("server can't make up its mind whether it uses protocol %v or %v", c.Protocol, response.Protocol)
 				return
 			}
+
+			c.ServerStats.Started = response.ServerStarted
+			c.ServerStats.Active = response.ServerActive
+			c.ServerStats.ConnectTime = response.ServerTime
 
 			if response.Challenge != nil {
 				if c.Authenticator == nil {
@@ -3196,7 +3256,7 @@ func (c *Connection) listen(done chan error) {
 
 		case AcceptMessagePayload, AddDicePresetsMessagePayload, AllowMessagePayload,
 			AuthMessagePayload, DefineDicePresetsMessagePayload,
-			FilterDicePresetsMessagePayload, PoloMessagePayload,
+			FilterDicePresetsMessagePayload, FilterImagesMessagePayload, PoloMessagePayload,
 			QueryDicePresetsMessagePayload, QueryPeersMessagePayload,
 			RollDiceMessagePayload, SyncMessagePayload, SyncChatMessagePayload:
 
@@ -3319,6 +3379,7 @@ func (c *Connection) filterSubscriptions() error {
 		//DefineDicePresets (client)
 		//Denied (forbidden)
 		//FilterDicePresets (client)
+		//FilterImages (client)
 		//Granted (forbidden)
 		//Marco (mandatory)
 		//Polo (client)
@@ -3447,7 +3508,7 @@ func (c *Connection) CheckVersionOf(packageName, myVersionNumber string) (*Packa
 	return availableVersion, nil
 }
 
-// @[00]@| Go-GMA 5.2.1
+// @[00]@| Go-GMA 5.2.2
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______      __                   #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )    /  \                  #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |    \/) )                 #
-# | |      | || || || (___) | Assistant | (____         /   )      | |                 #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /       | |                 #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/        | |                 #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _  __) (_                #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_) \____/                #
+#  _______  _______  _______             _______     _______     _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )   / ___   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |   \/   )  |              #
+# | |      | || || || (___) | Assistant | (____         /   )       /   )              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /      _/   /               #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/      /   _/                #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _ (   (__/\              #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_)\_______/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -365,7 +365,55 @@ func (a *Application) LogDatabaseContents() error {
 	return nil
 }
 
-// @[00]@| Go-GMA 5.2.1
+//
+// Remove all stored image definitions matching a regular expression
+//
+func (a *Application) FilterImages(f mapper.FilterImagesMessagePayload) error {
+	var namesToDelete []string
+
+	if f.KeepMatching {
+		a.Debugf(DebugDB, "removing existing images NOT matching /%s/", f.Filter)
+	} else {
+		a.Debugf(DebugDB, "removing existing images matching /%s/", f.Filter)
+	}
+
+	filter, err := regexp.Compile(f.Filter)
+	if err != nil {
+		return err
+	}
+
+	rows, err := a.sqldb.Query(`select name from images`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var thisName string
+		if err := rows.Scan(&thisName); err != nil {
+			return err
+		}
+		matches := filter.MatchString(thisName)
+		if (f.KeepMatching && !matches) || (!f.KeepMatching && matches) {
+			namesToDelete = append(namesToDelete, thisName)
+		}
+	}
+	if len(namesToDelete) > 0 {
+		a.Debugf(DebugDB, "--filter pattern matches %v row(s) to be deleted", len(namesToDelete))
+
+		for _, name := range namesToDelete {
+			_, err := a.sqldb.Exec(`delete from images where name = ?`, name)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		a.Debugf(DebugDB, "--filter matched no images")
+	}
+	return nil
+}
+
+// @[00]@| Go-GMA 5.2.2
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

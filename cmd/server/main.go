@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______      __                   #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )    /  \                  #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |    \/) )                 #
-# | |      | || || || (___) | Assistant | (____         /   )      | |                 #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /       | |                 #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/        | |                 #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _  __) (_                #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_) \____/                #
+#  _______  _______  _______             _______     _______     _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )   / ___   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |   \/   )  |              #
+# | |      | || || || (___) | Assistant | (____         /   )       /   )              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /      _/   /               #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/      /   _/                #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _ (   (__/\              #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_)\_______/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -99,7 +99,7 @@ Options:
 
 See the full documentation in the accompanying manual file man/man6/server.6.pdf (or run “gma man go server” if you have the GMA Core package installed as well as Go-GMA).
 
-See also the server protocol specification in the man/man6/mapper.6.pdf of the GMA-Mapper package (or run “gma man 6 mapper”).
+See also the server protocol specification in the man/man7/mapper-protocol.7.pdf of the GMA-Mapper package (or run “gma man mapper-protocol”). This is also printed in Appendix F of the GMA Game Master's Guide.
 */
 package main
 
@@ -120,7 +120,7 @@ import (
 // Auto-configured values
 //
 
-const GoVersionNumber="5.2.1" // @@##@@
+const GoVersionNumber="5.2.2" // @@##@@
 
 //
 // eventMonitor responds to signals and timers that affect our overall operation
@@ -128,6 +128,7 @@ const GoVersionNumber="5.2.1" // @@##@@
 //
 func eventMonitor(sigChan chan os.Signal, stopChan chan int, app *Application) {
 	ping_signal := time.NewTicker(1 * time.Minute)
+	app.LastPing = time.Now()
 
 	for {
 		select {
@@ -167,6 +168,7 @@ func eventMonitor(sigChan chan os.Signal, stopChan chan int, app *Application) {
 
 		case <-ping_signal.C:
 			app.Debug(DebugEvents, "ping timer expired")
+			app.LastPing = time.Now()
 			app.SendToAll(mapper.Marco, nil)
 		}
 	}
@@ -195,6 +197,8 @@ func main() {
 	var err error
 
 	app := *NewApplication()
+	app.ServerStarted = time.Now()
+	app.LastPing = time.Now()
 	app.Logger.SetPrefix("go-gma-server: ")
 	if err := app.GetAppOptions(); err != nil {
 		fmt.Fprintf(os.Stderr, "fatal error: %v\n", err)
@@ -321,11 +325,11 @@ func acceptIncomingConnections(incoming net.Listener, app *Application) {
 			client.Close()
 			continue
 		}
-		go newConnection.ServeToClient(context.Background())
+		go newConnection.ServeToClient(context.Background(), app.ServerStarted, app.LastPing)
 	}
 }
 
-// @[00]@| Go-GMA 5.2.1
+// @[00]@| Go-GMA 5.2.2
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

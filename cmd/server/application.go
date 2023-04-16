@@ -183,6 +183,14 @@ type Application struct {
 		sync   chan *mapper.ClientConnection
 		update chan *mapper.MessagePayload
 	}
+
+	// Last time we sent out a ping to all clients.
+	// If this goes too long, it may indicate that the server
+	// has become deadlocked.
+	LastPing time.Time
+
+	// Time the server was started.
+	ServerStarted time.Time
 }
 
 func (a *Application) GetClientPreamble() *mapper.ClientPreamble {
@@ -850,6 +858,21 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		}
 		if err := a.SendDicePresets(target); err != nil {
 			a.Logf("error sending die-roll presets after filtering them: %v", err)
+		}
+
+	case mapper.FilterImagesMessagePayload:
+		if requester.Auth == nil {
+			a.Logf("Unable to filter images for unauthenticated user")
+			return
+		}
+
+		if !requester.Auth.GmMode {
+			a.Logf("Rejecting unauthorized AI/ command from user %s", requester.Auth.Username)
+			return
+		}
+
+		if err := a.FilterImages(p); err != nil {
+			a.Logf("error filtering images with /%s/: %v", p.Filter, err)
 		}
 
 	case mapper.QueryDicePresetsMessagePayload:

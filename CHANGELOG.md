@@ -1,13 +1,21 @@
-# Changelog
+# Game Master's Assistant / Go Utilities
+# Release Notes
 ## Current Version Information
- * This Package Version: 5.2.1                <!-- @@##@@ -->
- * Effective Date: 08-Mar-2023			<!-- @@##@@ -->
+ * This Package Version: 5.2.2                <!-- @@##@@ -->
+ * Effective Date: 15-Apr-2023			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 5.2		<!-- @@##@@ -->
- * GMA Mapper Version: 4.3.1		<!-- @@##@@ -->
- * GMA Mapper Protocol: 402		<!-- @@##@@ -->
+ * GMA Core API Library Version: 5.3		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.4		<!-- @@##@@ -->
+ * GMA Mapper Protocol: 403		<!-- @@##@@ -->
  * GMA Mapper File Format: 20		<!-- @@##@@ -->
+
+## v5.2.2
+### Enchancements
+ * Implemented protocol 403 which expands the OK message and adds AI/.
+
+### Fixes
+ * Corrected a bug where receipts weren't sent when a player make a die roll to GM only with multiple results, such as with a permutation.
 
 ## v5.2.1
 ### Enhancements

@@ -1,7 +1,7 @@
 .\" vim:set syntax=nroff:
 '\" <<ital-is-var>>
 '\" <<bold-is-fixed>>
-.TH SERVER 6 "Go-GMA 5.2.1" 08-Mar-2023 "Games" \" @@mp@@
+.TH SERVER 6 "Go-GMA 5.2.2" 15-Apr-2023 "Games" \" @@mp@@
 .SH NAME
 server \- GMA battle grid map server (Go version)
 .SH SYNOPSIS
@@ -24,7 +24,7 @@ server \- GMA battle grid map server (Go version)
 .RB [ \-debug
 .IR flags ]
 .RB [ \-endpoint
-.RI [ hostname ] \fB:\fRport ]
+.RI [ hostname ]\fB:\fP port ]
 .RB [ \-init\-file
 .IR path ]
 .RB [ \-log\-file
@@ -83,13 +83,14 @@ if we didn't terminate their connections. This prevents that.)
 The following options control the behavior of
 .BR server .
 '\" <<list>>
-.TP
+.TP 8
 .BI "\-debug " flags
 Add debugging information to the server log. The
 .I flags
 value is a comma-separated list of debugging options. The following
 options are available:
 .RS
+'\" <<desc>>
 .TP 10
 .B all
 All possible debugging information.
@@ -122,8 +123,9 @@ Miscellaneous debugging.
 .B state
 Changes to the game state.
 .RE
+'\" <</>>
 .TP
-.BI "\-endpoint " \fR[\fPhostname\fR]\fP : port
+.BI "\-endpoint \fR[\fP" hostname \fR]\fP: port
 Accept incoming client connections on the specified
 .I hostname
 and TCP
@@ -140,7 +142,9 @@ Print a usage summary and exit.
 .TP
 .BI "\-init\-file " path
 The contents of this file are used to initialize the clients every time they connect. See the
+'\" <</bold-is-fixed>>
 .B "CLIENT INITIALIZATION"
+'\" <<bold-is-fixed>>
 section below for details.
 .TP
 .BI "\-log\-file " path
@@ -168,7 +172,7 @@ under the username
 .RB \*(lq GM \*(rq.
 .LP
 Any subsequent lines have the format
-.RI \*(lq username\fB:\fPpassword \*(rq.
+.RI \*(lq username \fB:\fP password \*(rq.
 This assigns a specific
 .I password
 for the given
@@ -176,7 +180,9 @@ for the given
 such that any client wishing to sign on with that specific username
 must present this specific credential.
 .LP
+'\" <</bold-is-fixed>>
 .B N.B.
+'\" <<bold-is-fixed>>
 This is an extremely trivial challenge-response authentication mechanism used solely to
 protect a game server from revealing in-game spoilers and rejecting nuisance connections.
 It should
@@ -203,6 +209,7 @@ When a client connects, the server begins by sending a number of messages
 up front, before and/or after successfully authenticating. The initial negotiation
 with the client goes through the following stages:
 '\" <<desc>>
+'\" <</bold-is-fixed>>
 .TP 15
 .B Connection
 The server declares the protocol version it is using.
@@ -236,6 +243,7 @@ Finally, the server may send additional data to the client
 (typically this is synchronization data to catch the
 client up to the server's current notion of the game
 state).
+'\" <<bold-is-fixed>>
 '\" <</>>
 .LP
 By default, the preamble, post-auth, and sync stages are
@@ -331,8 +339,8 @@ versions are listed here, they should each be for a different
 platform. 
 Each instance value is an object with the following fields:
 .RS
-'\" <<list>>
-.TP
+'\" <<desc>>
+.TP 8
 .B OS
 The target operating system for this version of the
 package. If omitted or blank, it is OS-independent.
@@ -438,7 +446,6 @@ strongly recommend limiting commands to
 and
 .BR WORLD
 in all stages except the final (sync) stage.
-'\" <</>>
 .RE
 .TP
 .B SYNC
@@ -452,7 +459,6 @@ a newly connected mapper will display the current map
 contents the other players see.
 '\" <</>>
 .RE
-.TP
 .SH SECURITY
 .LP
 The authentication system employed here is simplisitic and not ideal for general
@@ -500,7 +506,7 @@ database to the log file.
 .BR mapper (6).
 .LP
 The server communications protocol is definitively documented in the
-.B mapper (6)
+.BR mapper (6)
 manpage which comes with the GMA-Mapper package.
 .SH AUTHOR
 .LP

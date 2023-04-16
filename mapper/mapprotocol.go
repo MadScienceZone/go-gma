@@ -34,10 +34,10 @@ import (
 // and protocol versions supported by this code.
 //
 const (
-	GMAMapperProtocol=402     // @@##@@ auto-configured
-	GoVersionNumber="5.2.1" // @@##@@ auto-configured
+	GMAMapperProtocol=403     // @@##@@ auto-configured
+	GoVersionNumber="5.2.2" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
-	MaximumSupportedMapProtocol = 402
+	MaximumSupportedMapProtocol = 403
 )
 
 func init() {
@@ -173,6 +173,10 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 	case FilterDicePresets:
 		if fi, ok := data.(FilterDicePresetsMessagePayload); ok {
 			return c.sendJSON("DD/", fi)
+		}
+	case FilterImages:
+		if fi, ok := data.(FilterImagesMessagePayload); ok {
+			return c.sendJSON("AI/", fi)
 		}
 	case Granted:
 		if reason, ok := data.(GrantedMessagePayload); ok {
@@ -488,6 +492,16 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = QueryImage
+		return p, nil
+
+	case "AI/":
+		p := FilterImagesMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
+		p.messageType = FilterImages
 		return p, nil
 
 	case "ALLOW":

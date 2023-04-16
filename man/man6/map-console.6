@@ -1,10 +1,11 @@
 '\" <<ital-is-var>>
 '\" <<bold-is-fixed>>
-.TH MAP-CONSOLE 6 "Go-GMA 5.2.1" 08-Mar-2023 "Games" \" @@mp@@
+.TH MAP-CONSOLE 6 "Go-GMA 5.2.2" 15-Apr-2023 "Games" \" @@mp@@
 .SH NAME
 map-console \- GMA map service console (Go version)
 .SH SYNOPSIS
 '\" <<usage>>
+.LP
 (If using the full GMA core tool suite)
 .LP
 .na
@@ -90,7 +91,7 @@ Options which take parameter values may have the value separated
 from the option name by a space or an equals sign (e.g.,
 .B \-port=2323
 or
-.BR \-port 2323 ), 
+.BR "\-port 2323" ), 
 except for boolean flags which may be given
 alone (e.g.,
 .BR \-D )
@@ -112,8 +113,7 @@ would need to be entered as two separate options, not as
 .BR \-rm ).
 '\" <<list>>
 .TP 
-.BI "\-calendar " name
-.RB ( \-c )
+.BI "\-c\fR, \fP\-calendar " name
 This specifies the name of the calendar system in use for the
 campaign. If not specified, it defaults to
 .RB \*(lq golarion \*(rq.
@@ -124,8 +124,7 @@ what calendar is in use, in which case if you also provide
 this option it will override the server's advertised calendar
 in favor of the one you are explicitly setting here.
 .TP 
-.BI "\-config " file
-.RB ( \-C )
+.BI "\-C\fR, \fP\-config " file
 The named
 .I file
 is read to set the same options as documented here for command-line
@@ -139,11 +138,11 @@ could contain a line reading
 .LP
 but not lines like
 .LP
-.nf
 .B "-host=example.com"
+.br
 .B "--host example.com"
+.br
 .B "h=example.com"
-.fi
 .LP
 Any options set on the command line override those read from
 the configuration file. To set a boolean flag to be true,
@@ -156,16 +155,15 @@ Lines beginning with an octothorpe
 are ignored as comments.
 .RE
 .TP
-.BI "\-debug " flags
-.RB ( \-D )
+.BI "\-D\fR, \fP\-debug " flags
 This adds debugging messages to
-.BR map-console 's
+.BR map-console "'s"
 output. The
 .I flags
 value is a comma-separated list of debug flag names, which
 may be any of the following:
 .RS
-'\" <<list>>
+'\" <<desc>>
 .TP 10
 .B all
 Enable all possible debugging flags.
@@ -209,12 +207,10 @@ Show miscellaneous debugging messages
 .RE
 '\" <</>>
 .TP
-.BI "\-host " host
-.RB ( \-H )
+.BI "\-H\fR, \fP\-host " host
 Specifies the server's hostname.
 .TP
-.BI "\-log file"
-.RB ( \-l )
+.BI "\-l\fR, \fP\-log " file
 Directs log messages (including any debugging output) to
 the named
 .I file
@@ -223,15 +219,13 @@ the standard output by using a single hyphen as the file name
 (e.g.,
 .RB \*(lq \-log=\- \*(rq).
 .TP
-.BI \-mono
-.RB ( \-m )
+.BR \-m ", " \-mono
 Prevent
 .B map-console
 from using ANSI escape codes to colorize the output. With this
 flag set, only plain text output will be emitted.
 .TP
-.BI "\-password " password
-.RB ( \-P )
+.BI "\-P\fR, \fP\-password " password
 If the server has authentication enabled, this specifies the
 password to be sent to log in. If the GM password is given,
 then the
@@ -239,12 +233,10 @@ then the
 user will have GM privileges on the server; otherwise normal
 player privileges will be granted, as with any client.
 .TP
-.BI "\-port " port
-.RB ( \-p )
+.BI "\-p\fR, \fP\-port " port
 Specifies the server's TCP port number. The GMA map server's default port, 2323, will be assumed by default.
 .TP
-.BI "\-username " user
-.RB ( \-u )
+.BI "\-u\fR, \fP\-username " user
 This specifies the user name by which the server will know you.
 If you log in with the GM credentials, the server will assign
 you the name
@@ -343,7 +335,7 @@ is true, do so without announcement. The
 .I target
 is negative, all messages are deleted except for the
 most recent
-.I \-target
+.RI \- target
 messages. Otherwise, all messages with IDs less that
 .I target
 are deleted.
@@ -375,7 +367,7 @@ Enter combat mode if
 .I enabled?
 is true, otherwise exit to normal play mode.
 .TP
-.BI "D " recipients " " rollspec " " \fR[\fPid\fR]\fP
+.BI "D " recipients " " rollspec " \fR[\fP" id \fR]\fP
 Ask the server to roll the dice as specified in
 .I rollspec
 with the results being sent to the list of names in
@@ -496,12 +488,12 @@ Synonymous with
 .B SYNC
 Request that the server send a full dump of the game state to you.
 .TP
-.BI "SYNC CHAT " \fR[\fPtarget\fR]\fP
+.BI "SYNC CHAT \fR[\fP" target \fR]\fP
 Request that the server send a full dump of all chat messages in its history to you.
 If
 .I target
 is given, it limits the number of requested chat message. If it is negative, only the most recent
-.I \-target
+.RI \- target
 messages are sent. Otherwise, only any messages with message IDs
 greater than
 .I target
@@ -562,7 +554,9 @@ put braces around this parameter.
 .LP
 For example, typing the command:
 .LP
+'\" <<usage>>
 .B "!d RequestID=abc123 ToAll#true RollSpec:d20+2_acid"
+'\" <</usage>>
 .LP
 will send this command to the server:
 .LP
@@ -583,7 +577,12 @@ Thus, the previous server command could have been typed into
 .B map-console
 literally as:
 .LP
+'\" <<TeX>>
+'\" \begin{Coding*}\begin{flushleft}
+'\" \codetype{`D \{"RequestID":"abc123","ToAll":true,"RollSpec":"d20+2 acid"\}}
+'\" \end{flushleft}\end{Coding*}
 .B "`D {\[dq]RequestID\[dq]:\[dq]abc123\[dq],\[dq]ToAll\[dq]:true,\[dq]RollSpec\[dq]:\[dq]d20+2 acid\[dq]}"
+'\" <</TeX>>
 .SH "SEE ALSO"
 .LP
 .BR gma (6),

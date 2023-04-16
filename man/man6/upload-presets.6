@@ -1,7 +1,7 @@
 .\" vim:set syntax=nroff:
 '\" <<ital-is-var>>
 '\" <<bold-is-fixed>>
-.TH UPLOAD-PRESETS 6 "Go-GMA 5.2.1" 08-Mar-2023 "Games" \" @@mp@@
+.TH UPLOAD-PRESETS 6 "Go-GMA 5.2.2" 15-Apr-2023 "Games" \" @@mp@@
 .SH NAME
 upload-presets \- Upload die-roll presets to a GMA server
 .SH SYNOPSIS
@@ -22,7 +22,7 @@ upload-presets \- Upload die-roll presets to a GMA server
 .na
 .B upload\-presets
 .B \-endpoint
-.RI [ hostname ] \fB:\fRport
+.RI [ hostname ]\fB:\fP port
 .RB [ \-for
 .IR username ]
 .RB [ \-pass
@@ -50,7 +50,7 @@ The following options control the action of
 .BR upload-presets .
 '\" <<list>>
 .TP
-.BI "\-endpoint " \fR[\fPhostname\fR]\fP : port
+.BI "\-endpoint \fR[\fP" hostname \fR]\fP: port
 Connect to the server at the specified TCP port.
 .TP
 .BI "\-for " username
