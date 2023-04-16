@@ -647,6 +647,7 @@ const (
 	Denied
 	Echo
 	FilterDicePresets
+	FilterImages
 	Granted
 	LoadFrom
 	LoadArcObject
@@ -708,6 +709,7 @@ var ServerMessageByName = map[string]ServerMessage{
 	"Denied":                      Denied,
 	"Echo":                        Echo,
 	"FilterDicePresets":           FilterDicePresets,
+	"FilterImages":                FilterImages,
 	"Granted":                     Granted,
 	"LoadFrom":                    LoadFrom,
 	"LoadArcObject":               LoadArcObject,
@@ -1504,6 +1506,50 @@ type FilterDicePresetsMessagePayload struct {
 	BaseMessagePayload
 	Filter string `json:",omitempty"`
 	For    string `json:",omitempty"`
+}
+
+//  _____ _ _ _           ___
+// |  ___(_) | |_ ___ _ _|_ _|_ __ ___   __ _  __ _  ___  ___
+// | |_  | | | __/ _ \ '__| || '_ ` _ \ / _` |/ _` |/ _ \/ __|
+// |  _| | | | ||  __/ |  | || | | | | | (_| | (_| |  __/\__ \
+// |_|   |_|_|\__\___|_| |___|_| |_| |_|\__,_|\__, |\___||___/
+//                                           |___/
+//
+
+//
+// FilterImages asks the server to remove all of your defined images that match
+// a regular expression.
+//
+func (c *Connection) FilterImages(re string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(FilterImages, FilterImagesMessagePayload{
+		Filter: re,
+	})
+}
+
+//
+// FilterImagesExcept asks the server to remove all of your defined images that don't match
+// a regular expression.
+//
+func (c *Connection) FilterImagesExcept(re string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(FilterImages, FilterImagesMessagePayload{
+		KeepMatching: true,
+		Filter:       re,
+	})
+}
+
+//
+// FilterImagesMessagePayload holds the filter expression the client sends to the server.
+//
+type FilterImagesMessagePayload struct {
+	BaseMessagePayload
+	KeepMatching bool   `json:",omitempty"`
+	Filter       string `json:",omitempty"`
 }
 
 //
@@ -3210,7 +3256,7 @@ func (c *Connection) listen(done chan error) {
 
 		case AcceptMessagePayload, AddDicePresetsMessagePayload, AllowMessagePayload,
 			AuthMessagePayload, DefineDicePresetsMessagePayload,
-			FilterDicePresetsMessagePayload, PoloMessagePayload,
+			FilterDicePresetsMessagePayload, FilterImagesMessagePayload, PoloMessagePayload,
 			QueryDicePresetsMessagePayload, QueryPeersMessagePayload,
 			RollDiceMessagePayload, SyncMessagePayload, SyncChatMessagePayload:
 
@@ -3333,6 +3379,7 @@ func (c *Connection) filterSubscriptions() error {
 		//DefineDicePresets (client)
 		//Denied (forbidden)
 		//FilterDicePresets (client)
+		//FilterImages (client)
 		//Granted (forbidden)
 		//Marco (mandatory)
 		//Polo (client)
