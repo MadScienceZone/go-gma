@@ -20,8 +20,11 @@ package util
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
+	"path"
 	"strconv"
+	"strings"
 )
 
 //
@@ -55,12 +58,12 @@ func (bs *ButtonSize) MarshalJSON() ([]byte, error) {
 	if bs != nil {
 		switch *bs {
 		case MediumButtons:
-			return json.Marshal("medium"), nil
+			return json.Marshal("medium")
 		case LargeButtons:
-			return json.Marshal("large"), nil
+			return json.Marshal("large")
 		}
 	}
-	return json.Marshal("small"), nil
+	return json.Marshal("small")
 }
 
 func (bs *ButtonSize) UnmarshalJSON(b []byte) error {
@@ -71,11 +74,11 @@ func (bs *ButtonSize) UnmarshalJSON(b []byte) error {
 
 	switch s {
 	case "medium":
-		*bs = MediumButton
+		*bs = MediumButtons
 	case "large":
-		*bs = LargeButton
+		*bs = LargeButtons
 	default:
-		*bs = SmallButton
+		*bs = SmallButtons
 	}
 	return nil
 }
@@ -92,9 +95,9 @@ const (
 
 func (i *ImageType) MarshalJSON() ([]byte, error) {
 	if i != nil && *i == GIF {
-		return json.Marshal("gif"), nil
+		return json.Marshal("gif")
 	}
-	return json.Marshal("png"), nil
+	return json.Marshal("png")
 }
 
 func (i *ImageType) UnmarshalJSON(b []byte) error {
@@ -104,9 +107,9 @@ func (i *ImageType) UnmarshalJSON(b []byte) error {
 	}
 
 	if s == "gif" || s == "GIF" {
-		*bs = GIF
+		*i = GIF
 	} else {
-		*bs = PNG
+		*i = PNG
 	}
 	return nil
 }
@@ -149,11 +152,12 @@ const (
 	Bold
 )
 
+/*
 func (x *FontWeight) MarshalJSON() ([]byte, error) {
 	if x != nil && *x == Bold {
-		return json.Marshal("bold"), nil
+		return json.Marshal("bold")
 	}
-	return json.Marshal("regular"), nil
+	return json.Marshal("regular")
 }
 
 func (x *FontWeight) UnmarshalJSON(b []byte) error {
@@ -169,6 +173,7 @@ func (x *FontWeight) UnmarshalJSON(b []byte) error {
 	}
 	return nil
 }
+*/
 
 //
 // FontSlant is the set of valid font slant values
@@ -180,11 +185,12 @@ const (
 	Italic
 )
 
+/*
 func (x *FontSlant) MarshalJSON() ([]byte, error) {
 	if x != nil && *x == Italic {
-		return json.Marshal("italic"), nil
+		return json.Marshal("italic")
 	}
-	return json.Marshal("roman"), nil
+	return json.Marshal("roman")
 }
 
 func (x *FontSlant) UnmarshalJSON(b []byte) error {
@@ -200,7 +206,7 @@ func (x *FontSlant) UnmarshalJSON(b []byte) error {
 	}
 	return nil
 }
-
+*/
 //
 // UserFont describes a user-defined font.
 //
@@ -222,20 +228,22 @@ type ColorSet struct {
 }
 
 const (
-	DefaultFGColorDark      = ""
-	DefaultFGColorLight     = ""
-	DefaultCheckSelectDark  = ""
-	DefaultCheckSelectLight = ""
-	DefaultCheckMenuDark    = ""
-	DefaultCheckMenuLight   = ""
-	DefaultBrightFGDark     = ""
-	DefaultBrightFGLight    = ""
-	DefaultGridDark         = ""
-	DefaultGridLight        = ""
-	DefaultGridMajorDark    = ""
-	DefaultGridMajorLight   = ""
-	DefaultGridMinorDark    = ""
-	DefaultGridMinorLight   = ""
+	DefaultFGColorDark      = "#aaaaaa"
+	DefaultFGColorLight     = "#000000"
+	DefaultBGColorDark      = "#232323"
+	DefaultBGColorLight     = "#cccccc"
+	DefaultCheckSelectDark  = "#ffffff"
+	DefaultCheckSelectLight = "#000000"
+	DefaultCheckMenuDark    = "#ffffff"
+	DefaultCheckMenuLight   = "#000000"
+	DefaultBrightFGDark     = "#ffffff"
+	DefaultBrightFGLight    = "#000000"
+	DefaultGridDark         = "#aaaaaa"
+	DefaultGridLight        = "blue"
+	DefaultGridMajorDark    = "#345f12"
+	DefaultGridMajorLight   = "#345f12"
+	DefaultGridMinorDark    = "#b00b03"
+	DefaultGridMinorLight   = "#b00b03"
 )
 
 //
@@ -263,7 +271,7 @@ type UserPreferences struct {
 	CurrentProfile              string     `json:"current_profile,omitempty"`
 	DarkMode                    bool       `json:"dark,omitempty"`
 	DebugLevel                  int        `json:"debug_level,omitempty"`
-	DebugProtocol               int        `json:"debug_proto,omitempty"`
+	DebugProtocol               bool       `json:"debug_proto,omitempty"`
 	GuideLines                  struct {
 		Major GridGuide `json:"major,omitempty"`
 		Minor GridGuide `json:"minor,omitempty"`
@@ -309,37 +317,35 @@ type DialogStyles struct {
 // reasonable set of default values.
 //
 func DefaultPreferences() UserPreferences {
+
+	curlPath, err := SearchInPath("curl")
+	if err != nil {
+		curlPath = ""
+	}
+	ncPath, err := SearchInPath("nc")
+	if err != nil {
+		ncPath = ""
+	}
+	scpPath, err := SearchInPath("scp")
+	if err != nil {
+		scpPath = ""
+	}
+	sshPath, err := SearchInPath("ssh")
+	if err != nil {
+		sshPath = ""
+	}
+
 	return UserPreferences{
-		GMAMapperPreferencesVersion: 1,
-		ButtonSize:                  SmallButtons,
-		CurlPath:                    SearchInPath("curl"),
-		CurrentProfile:              "offline",
-		GuideLines: struct {
-			Major GridGuide
-			Minor GridGuide
-		}{
-			Major: GridGuide{
-				Interval: 0,
-				Offsets: GridOffsets{
-					X: 0,
-					Y: 0,
-				},
-			},
-			Minor: GridGuide{
-				Interval: 0,
-				Offsets: GridOffsets{
-					X: 0,
-					Y: 0,
-				},
-			},
-		},
+		ButtonSize:     SmallButtons,
+		CurlPath:       curlPath,
+		CurrentProfile: "offline",
 		Profiles: []ServerProfile{
 			ServerProfile{
 				Name:    "offline",
 				Port:    2323,
-				NcPath:  SearchInPath("nc"),
-				ScpPath: SearchInPath("scp"),
-				SshPath: SearchInPath("ssh"),
+				NcPath:  ncPath,
+				ScpPath: scpPath,
+				SshPath: sshPath,
 			},
 		},
 		Fonts: map[string]UserFont{
@@ -377,7 +383,7 @@ func DefaultPreferences() UserPreferences {
 				HeadingFG:        ColorSet{Dark: "cyan", Light: "blue"},
 				NormalFG:         ColorSet{Dark: DefaultFGColorDark, Light: DefaultFGColorLight},
 				NormalBG:         ColorSet{Dark: DefaultBGColorDark, Light: DefaultBGColorLight},
-				HightlightFG:     ColorSet{Dark: "yellow", Light: "red"},
+				HighlightFG:      ColorSet{Dark: "yellow", Light: "red"},
 				OddRowBG:         ColorSet{Dark: DefaultBGColorDark, Light: DefaultBGColorLight},
 				EvenRowBG:        ColorSet{Dark: "blue", Light: "#bbbbff"},
 				CheckSelectColor: ColorSet{Dark: DefaultCheckSelectDark, Light: DefaultCheckSelectLight},
@@ -391,183 +397,183 @@ func DefaultPreferences() UserPreferences {
 				CompactRecents: false,
 				Components: map[string]DieRollComponent{
 					"best": DieRollComponent{
-						FG:     ColorSet{Dark: "#aaaaaa", Light: "#888888"},
-						Font:   "Special",
-						Format: " best of %s",
+						FG:       ColorSet{Dark: "#aaaaaa", Light: "#888888"},
+						FontName: "Special",
+						Format:   " best of %s",
 					},
 					"bonus": DieRollComponent{
-						FG:   ColorSet{Dark: "#fffb00", Light: "#f05b00"},
-						Font: "Normal",
+						FG:       ColorSet{Dark: "#fffb00", Light: "#f05b00"},
+						FontName: "Normal",
 					},
 					"constant": DieRollComponent{
-						Font: "Normal",
+						FontName: "Normal",
 					},
 					"critlabel": DieRollComponent{
-						FG:     ColorSet{Dark: "#fffb00", Light: "#f05b00"},
-						Font:   "Special",
-						Format: "Confirm: ",
+						FG:       ColorSet{Dark: "#fffb00", Light: "#f05b00"},
+						FontName: "Special",
+						Format:   "Confirm: ",
 					},
 					"critspec": DieRollComponent{
-						FG:   ColorSet{Dark: "#fffb00", Light: "#f05b00"},
-						Font: "Special",
+						FG:       ColorSet{Dark: "#fffb00", Light: "#f05b00"},
+						FontName: "Special",
 					},
 					"dc": DieRollComponent{
-						FG:     ColorSet{Dark: "#aaaaaa", Light: "#888888"},
-						Font:   "Special",
-						Format: "DC %s: ",
+						FG:       ColorSet{Dark: "#aaaaaa", Light: "#888888"},
+						FontName: "Special",
+						Format:   "DC %s: ",
 					},
 					"diebonus": DieRollComponent{
-						FG:     ColorSet{Dark: "red", Light: "red"},
-						Font:   "Special",
-						Format: "(%s per die)",
+						FG:       ColorSet{Dark: "red", Light: "red"},
+						FontName: "Special",
+						Format:   "(%s per die)",
 					},
 					"diespec": DieRollComponent{
-						Font: "Normal",
+						FontName: "Normal",
 					},
 					"discarded": DieRollComponent{
-						FG:     ColorSet{Dark: "#aaaaaa", Light: "#888888"},
-						Font:   "Normal",
-						Format: "{%s}",
+						FG:       ColorSet{Dark: "#aaaaaa", Light: "#888888"},
+						FontName: "Normal",
+						Format:   "{%s}",
 					},
 					"error": DieRollComponent{
 						FG:         ColorSet{Dark: "red", Light: "red"},
-						Font:       "Normal",
+						FontName:   "Normal",
 						Format:     "(%s per die)",
 						Overstrike: true,
 					},
 					"exceeded": DieRollComponent{
-						FG:     ColorSet{Dark: "#00fa92", Light: "green"},
-						Font:   "Special",
-						Format: " exceeded DC by %s",
+						FG:       ColorSet{Dark: "#00fa92", Light: "green"},
+						FontName: "Special",
+						Format:   " exceeded DC by %s",
 					},
 					"fail": DieRollComponent{
-						FG:     ColorSet{Dark: "red", Light: "red"},
-						Font:   "Important",
-						Format: "(%s)",
+						FG:       ColorSet{Dark: "red", Light: "red"},
+						FontName: "Important",
+						Format:   "(%s)",
 					},
 					"from": DieRollComponent{
-						FG:   ColorSet{Dark: "cyan", Light: "blue"},
-						Font: "Normal",
+						FG:       ColorSet{Dark: "cyan", Light: "blue"},
+						FontName: "Normal",
 					},
 					"fullmax": DieRollComponent{
-						FG:     ColorSet{Dark: "red", Light: "red"},
-						Font:   "Important",
-						Format: "maximized",
+						FG:       ColorSet{Dark: "red", Light: "red"},
+						FontName: "Important",
+						Format:   "maximized",
 					},
 					"fullresult": DieRollComponent{
-						FG:   ColorSet{Dark: "blue", Light: "white"},
-						BG:   ColorSet{Dark: "white", Light: "blue"},
-						Font: "FullResult",
+						FG:       ColorSet{Dark: "blue", Light: "white"},
+						BG:       ColorSet{Dark: "white", Light: "blue"},
+						FontName: "FullResult",
 					},
 					"iteration": DieRollComponent{
-						FG:     ColorSet{Dark: "#aaaaaa", Light: "#888888"},
-						Font:   "Special",
-						Format: " (roll #%s)",
+						FG:       ColorSet{Dark: "#aaaaaa", Light: "#888888"},
+						FontName: "Special",
+						Format:   " (roll #%s)",
 					},
 					"label": DieRollComponent{
-						FG:     ColorSet{Dark: "cyan", Light: "blue"},
-						Font:   "Special",
-						Format: " %s",
+						FG:       ColorSet{Dark: "cyan", Light: "blue"},
+						FontName: "Special",
+						Format:   " %s",
 					},
 					"max": DieRollComponent{
-						FG:     ColorSet{Dark: "#aaaaaa", Light: "#888888"},
-						Font:   "Special",
-						Format: "max %s",
+						FG:       ColorSet{Dark: "#aaaaaa", Light: "#888888"},
+						FontName: "Special",
+						Format:   "max %s",
 					},
 					"maximized": DieRollComponent{
-						FG:     ColorSet{Dark: "red", Light: "red"},
-						Font:   "Important",
-						Format: ">",
+						FG:       ColorSet{Dark: "red", Light: "red"},
+						FontName: "Important",
+						Format:   ">",
 					},
 					"maxroll": DieRollComponent{
-						FG:     ColorSet{Dark: "red", Light: "red"},
-						Font:   "Important",
-						Format: "{%s}",
+						FG:       ColorSet{Dark: "red", Light: "red"},
+						FontName: "Important",
+						Format:   "{%s}",
 					},
 					"met": DieRollComponent{
-						FG:     ColorSet{Dark: "#00fa92", Light: "green"},
-						Font:   "Special",
-						Format: "successful",
+						FG:       ColorSet{Dark: "#00fa92", Light: "green"},
+						FontName: "Special",
+						Format:   "successful",
 					},
 					"min": DieRollComponent{
-						FG:     ColorSet{Dark: "#aaaaaa", Light: "#888888"},
-						Font:   "Special",
-						Format: "min %s",
+						FG:       ColorSet{Dark: "#aaaaaa", Light: "#888888"},
+						FontName: "Special",
+						Format:   "min %s",
 					},
 					"moddelim": DieRollComponent{
-						FG:     ColorSet{Dark: "#fffb00", Light: "#f05b00"},
-						Font:   "Normal",
-						Format: " | ",
+						FG:       ColorSet{Dark: "#fffb00", Light: "#f05b00"},
+						FontName: "Normal",
+						Format:   " | ",
 					},
 					"normal": DieRollComponent{
-						Font: "Normal",
+						FontName: "Normal",
 					},
 					"notice": DieRollComponent{
-						FG:     ColorSet{Dark: "yellow", Light: "red"},
-						Font:   "Special",
-						Format: "[%s] ",
+						FG:       ColorSet{Dark: "yellow", Light: "red"},
+						FontName: "Special",
+						Format:   "[%s] ",
 					},
 					"operator": DieRollComponent{
-						Font: "Normal",
+						FontName: "Normal",
 					},
 					"repeat": DieRollComponent{
-						FG:     ColorSet{Dark: "#aaaaaa", Light: "#888888"},
-						Font:   "Special",
-						Format: "repeat %s",
+						FG:       ColorSet{Dark: "#aaaaaa", Light: "#888888"},
+						FontName: "Special",
+						Format:   "repeat %s",
 					},
 					"result": DieRollComponent{
-						Font: "Result",
+						FontName: "Result",
 					},
 					"roll": DieRollComponent{
-						FG:     ColorSet{Dark: "#00fa92", Light: "green"},
-						Font:   "Normal",
-						Format: "{%s}",
+						FG:       ColorSet{Dark: "#00fa92", Light: "green"},
+						FontName: "Normal",
+						Format:   "{%s}",
 					},
 					"separator": DieRollComponent{
-						Font:   "Normal",
-						Format: "=",
+						FontName: "Normal",
+						Format:   "=",
 					},
 					"sf": DieRollComponent{
-						FG:   ColorSet{Dark: "#aaaaaa", Light: "#888888"},
-						Font: "Special",
+						FG:       ColorSet{Dark: "#aaaaaa", Light: "#888888"},
+						FontName: "Special",
 					},
 					"short": DieRollComponent{
-						FG:     ColorSet{Dark: "red", Light: "red"},
-						Font:   "Special",
-						Format: " missed DC by %s",
+						FG:       ColorSet{Dark: "red", Light: "red"},
+						FontName: "Special",
+						Format:   " missed DC by %s",
 					},
 					"subtotal": DieRollComponent{
-						FG:     ColorSet{Dark: "#00fa92", Light: "green"},
-						Font:   "Normal",
-						Format: "(%s)",
+						FG:       ColorSet{Dark: "#00fa92", Light: "green"},
+						FontName: "Normal",
+						Format:   "(%s)",
 					},
 					"success": DieRollComponent{
-						FG:     ColorSet{Dark: "#00fa92", Light: "green"},
-						Font:   "Important",
-						Format: "(%s) ",
+						FG:       ColorSet{Dark: "#00fa92", Light: "green"},
+						FontName: "Important",
+						Format:   "(%s) ",
 					},
 					"system": DieRollComponent{
-						FG:   ColorSet{Dark: "cyan", Light: "blue"},
-						Font: "System",
+						FG:       ColorSet{Dark: "cyan", Light: "blue"},
+						FontName: "System",
 					},
 					"title": DieRollComponent{
-						FG:   ColorSet{Dark: "#aaaaaa", Light: "#ffffff"},
-						BG:   ColorSet{Dark: "#000044", Light: "#c7c0ae"},
-						Font: "Normal",
+						FG:       ColorSet{Dark: "#aaaaaa", Light: "#ffffff"},
+						BG:       ColorSet{Dark: "#000044", Light: "#c7c0ae"},
+						FontName: "Normal",
 					},
 					"to": DieRollComponent{
-						FG:   ColorSet{Dark: "red", Light: "red"},
-						Font: "Special",
+						FG:       ColorSet{Dark: "red", Light: "red"},
+						FontName: "Special",
 					},
 					"until": DieRollComponent{
-						FG:     ColorSet{Dark: "#aaaaaa", Light: "#888888"},
-						Font:   "Special",
-						Format: "until %s",
+						FG:       ColorSet{Dark: "#aaaaaa", Light: "#888888"},
+						FontName: "Special",
+						Format:   "until %s",
 					},
 					"worst": DieRollComponent{
-						FG:     ColorSet{Dark: "#aaaaaa", Light: "#888888"},
-						Font:   "Special",
-						Format: " worst of %s",
+						FG:       ColorSet{Dark: "#aaaaaa", Light: "#888888"},
+						FontName: "Special",
+						Format:   " worst of %s",
 					},
 				},
 			},
@@ -576,27 +582,53 @@ func DefaultPreferences() UserPreferences {
 }
 
 //
-// LoadPreferences reads a set of saved preferences from disk file.
+// LoadPreferencesWithDefaults reads a set of saved preferences from an open file
+// or other io.Reader object. It provides default values for fields not specified in
+// the input data.
 //
-func LoadPreferences(filename string) (UserPreferences, error) {
-	var prefs UserPreferences
-
-	f, err := os.Open(filename)
-	defer func(filename string) {
-		if err := f.Close(); err != nil {
-			// TODO do something better here
-			fmt.Printf("error closing \"%s\": %v", filename, err)
-		}
-	}(filename)
-
+func LoadPreferencesWithDefaults(stream io.Reader) (UserPreferences, error) {
+	prefs := DefaultPreferences()
+	err := prefs.Update(stream)
 	if err != nil {
 		return prefs, err
 	}
-	decoder := json.NewDecoder(f)
-	if err = decoder.Decode(&prefs); err != nil {
-		return prefs, err
+	if prefs.GMAMapperPreferencesVersion != 1 {
+		return prefs, fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAMapperPreferencesVersion)
 	}
 	return prefs, nil
+}
+
+//
+// LoadPreferences reads a set of saved preferences from an io.Reader,
+// returning a new UserPreferences value from that data. Any fields not specified
+// in the input data will have zero values.
+//
+func LoadPreferences(stream io.Reader) (UserPreferences, error) {
+	var prefs UserPreferences
+	err := prefs.Update(stream)
+	if err != nil {
+		return prefs, err
+	}
+	if prefs.GMAMapperPreferencesVersion != 1 {
+		return prefs, fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAMapperPreferencesVersion)
+	}
+	return prefs, nil
+}
+
+//
+// Update reads a set of saved preferences as LoadPreferences does, but
+// rather than returning a new UserPreferences value, it updates the
+// values of an existing UserPreferences value with the input data.
+//
+func (prefs *UserPreferences) Update(stream io.Reader) error {
+	err := json.NewDecoder(stream).Decode(prefs)
+	if err != nil {
+		return err
+	}
+	if prefs.GMAMapperPreferencesVersion != 1 {
+		return fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAMapperPreferencesVersion)
+	}
+	return nil
 }
 
 //
@@ -604,19 +636,20 @@ func LoadPreferences(filename string) (UserPreferences, error) {
 // configuration values in a UserPreferences value from a set of
 // key=value pairs read from a simple config file.
 //
-func (prefs *UserPrefs) UpdateFromSimpleConfig(profileName string, cfg SimpleConfigurationData) error {
+func (prefs *UserPreferences) UpdateFromSimpleConfig(profileName string, cfg SimpleConfigurationData) error {
 	var profile int = -1
+	var err error
 
 	if cfg == nil {
 		return nil
 	}
-	for i, profile := range prefs.Profiles {
-		if profile.Name == profileName {
+	for i, p := range prefs.Profiles {
+		if p.Name == profileName {
 			profile = i
 			break
 		}
 	}
-	if i < 0 {
+	if profile < 0 {
 		return fmt.Errorf("requested profile \"%s\" not found in preferences data", profileName)
 	}
 
@@ -718,6 +751,25 @@ func (prefs *UserPrefs) UpdateFromSimpleConfig(profileName string, cfg SimpleCon
 		}
 	}
 	return nil
+}
+
+//
+// SearchInPath looks for an executable program name by searching
+// the user's execution path ($PATH environment variable)
+//
+func SearchInPath(program string) (string, error) {
+	PATH, isValid := os.LookupEnv("PATH")
+	if !isValid {
+		return "", fmt.Errorf("no PATH environment variable")
+	}
+	for _, dir := range strings.Split(PATH, ":") {
+		progpath := path.Join(dir, program)
+		info, err := os.Stat(progpath)
+		if err == nil && (info.Mode().Perm()&0o111) != 0 {
+			return progpath, nil
+		}
+	}
+	return "", fmt.Errorf("file not found in PATH")
 }
 
 // @[00]@| Go-GMA 5.2.2
