@@ -1038,8 +1038,14 @@ func configureApp() (AppPreferences, error) {
 	}
 	if Fselect == "" {
 		// Pick the first profile if the user didn't specify one.
-		Fselect = prefs.Prefs.Profiles[0].Name
-		log.Printf("Defaulting to profile #%d, \"%s\"\n", 0, Fselect)
+		if prefs.Prefs.CurrentProfile != "" {
+			Fselect = prefs.Prefs.CurrentProfile
+		} else if len(prefs.Prefs.Profiles) > 0 {
+			Fselect = prefs.Prefs.Profiles[0].Name
+		} else {
+			return prefs, fmt.Errorf("preferences data contains no server profiles")
+		}
+		log.Printf("defaulting to profile \"%s\"\n", Fselect)
 	}
 
 	//
