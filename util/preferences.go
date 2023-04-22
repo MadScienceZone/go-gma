@@ -32,7 +32,7 @@ import (
 //
 type GridOffsets struct {
 	X int `json:"x,omitempty"`
-	Y int `json:"x,omitempty"`
+	Y int `json:"y,omitempty"`
 }
 
 //
@@ -244,6 +244,34 @@ const (
 	DefaultGridMajorLight   = "#345f12"
 	DefaultGridMinorDark    = "#b00b03"
 	DefaultGridMinorLight   = "#b00b03"
+	DefaultHandColorLight   = "black"
+	DefaultHandColorDark    = "#aaaaaa"
+	DefaultTickColorLight   = "blue"
+	DefaultTickColorDark    = "#aaaaaa"
+	DefaultFListFGLight     = "black"
+	DefaultFListFGDark      = "white"
+	DefaultFListBGLight     = "white"
+	DefaultFListBGDark      = "#232323"
+	DefaultNextFGLight      = "white"
+	DefaultNextFGDark       = "white"
+	DefaultNextBGLight      = "black"
+	DefaultNextBGDark       = "#cc0000"
+	DefaultCurBGLight       = "#ffff00"
+	DefaultCurBGDark        = "#267800"
+	DefaultReadyBGLight     = "#ff0000"
+	DefaultReadyBGDark      = "#ff0000"
+	DefaultHoldBGLight      = "#ffaaaa"
+	DefaultHoldBGDark       = "#ff8e51"
+	DefaultZeroHPLight      = "#ff0000"
+	DefaultZeroHPDark       = "#ff0000"
+	DefaultNegativeHPLight  = "#000000"
+	DefaultNegativeHPDark   = "#000000"
+	DefaultSlotFGLight      = "#000000"
+	DefaultSlotFGDark       = "#aaaaaa"
+	DefaultSlotBGLight      = "#cccccc"
+	DefaultSlotBGDark       = "#232323"
+	DefaultFlatFootedLight  = "#3333ff"
+	DefaultFlatFootedDark   = "#3333ff"
 )
 
 //
@@ -288,8 +316,29 @@ type UserPreferences struct {
 // StyleDescription describes the different kinds of style settings.
 //
 type StyleDescription struct {
+	Clocks   ClockStyles   `json:"clocks,omitempty"`
 	Dialogs  DialogStyles  `json:"dialogs,omitempty"`
 	DieRolls DieRollStyles `json:"dierolls,omitempty"`
+}
+
+type ClockStyles struct {
+	HandColor       ColorSet `json:"hand_color,omitempty"`
+	TickColor       ColorSet `json:"tick_color,omitempty"`
+	FListFGColor    ColorSet `json:"flist_fg,omitempty"`
+	FListBGColor    ColorSet `json:"flist_bg,omitempty"`
+	NextFGColor     ColorSet `json:"next_fg,omitempty"`
+	NextBGColor     ColorSet `json:"next_bg,omitempty"`
+	CurrentBGColor  ColorSet `json:"cur_bg,omitempty"`
+	ReadyBGColor    ColorSet `json:"ready_bg,omitempty"`
+	HoldBGColor     ColorSet `json:"hold_bg,omitempty"`
+	ZeroHPColor     ColorSet `json:"zero_hp,omitempty"`
+	NegativeHPColor ColorSet `json:"negative_hp,omitempty"`
+	SlotFGColor     ColorSet `json:"slot_fg,omitempty"`
+	SlotBGColor     ColorSet `json:"slot_bg,omitempty"`
+	FlatFootedColor ColorSet `json:"flat_footed,omitempty"`
+	TimeDispFont    string   `json:"timedisp_font,omitempty"`
+	TurnDispFont    string   `json:"turndisp_font,omitempty"`
+	DefaultFont     string   `json:"default_font,omitempty"`
 }
 
 type DieRollStyles struct {
@@ -377,8 +426,35 @@ func DefaultPreferences() UserPreferences {
 				Size:   10,
 				Slant:  Italic,
 			},
+			"ClockTime": UserFont{
+				Family: "Helvetica",
+				Size:   16,
+			},
+			"ClockList": UserFont{
+				Family: "Helvetica",
+				Size:   24,
+			},
 		},
 		Styles: StyleDescription{
+			Clocks: ClockStyles{
+				HandColor:       ColorSet{Dark: DefaultHandColorDark, Light: DefaultHandColorLight},
+				TickColor:       ColorSet{Dark: DefaultTickColorDark, Light: DefaultTickColorLight},
+				FListFGColor:    ColorSet{Dark: DefaultFListFGDark, Light: DefaultFListFGLight},
+				FListBGColor:    ColorSet{Dark: DefaultFListBGDark, Light: DefaultFListBGLight},
+				NextFGColor:     ColorSet{Dark: DefaultNextFGDark, Light: DefaultNextFGLight},
+				NextBGColor:     ColorSet{Dark: DefaultNextBGDark, Light: DefaultNextBGLight},
+				CurrentBGColor:  ColorSet{Dark: DefaultCurBGDark, Light: DefaultCurBGLight},
+				ReadyBGColor:    ColorSet{Dark: DefaultReadyBGDark, Light: DefaultReadyBGLight},
+				HoldBGColor:     ColorSet{Dark: DefaultHoldBGDark, Light: DefaultHoldBGLight},
+				ZeroHPColor:     ColorSet{Dark: DefaultZeroHPDark, Light: DefaultZeroHPLight},
+				NegativeHPColor: ColorSet{Dark: DefaultNegativeHPDark, Light: DefaultNegativeHPLight},
+				SlotFGColor:     ColorSet{Dark: DefaultSlotFGDark, Light: DefaultSlotFGLight},
+				SlotBGColor:     ColorSet{Dark: DefaultSlotBGDark, Light: DefaultSlotBGLight},
+				FlatFootedColor: ColorSet{Dark: DefaultFlatFootedDark, Light: DefaultFlatFootedLight},
+				TimeDispFont:    "ClockTime",
+				TurnDispFont:    "ClockTime",
+				DefaultFont:     "ClockList",
+			},
 			Dialogs: DialogStyles{
 				HeadingFG:        ColorSet{Dark: "cyan", Light: "blue"},
 				NormalFG:         ColorSet{Dark: DefaultFGColorDark, Light: DefaultFGColorLight},
