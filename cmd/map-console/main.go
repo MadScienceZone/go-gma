@@ -44,8 +44,8 @@ Its input and output is not designed to be user-friendly, but rather to make it 
 (Otherwise)
    map-console -h
    map-console -help
-   map-console [-Dm] [-C configfile] [-c calendar] [-H host] [-l logfile] [-P password] [-p port] [-u user]
-   map-console [-calendar calendar] [-config configfile] [-debug] [-help] [-host host] [-log logfile] [-mono] [-password password] [-port port] [-username user]
+   map-console [-Dm] [-C configfile] [-c calendar] [-H host] [-l logfile] [-P password] [-p port] [-S profile] [-u user]
+   map-console [-calendar calendar] [-config configfile] [-debug] [-help] [-host host] [-log logfile] [-mono] [-password password] [-port port] [-select profile] [-username user]
 
 # OPTIONS
 
@@ -100,6 +100,9 @@ You may not combine multiple single-letter options into a single composite argum
 
   -p, -port port
       Specifies the server's TCP port number.
+
+  -S, -select profile
+      Selects a server profile to use from the user's saved mapper preferences.
 
   -u, -username user
       Authenticate to the server using the specified user name.
