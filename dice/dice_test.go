@@ -28,6 +28,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"golang.org/x/exp/slices"
 )
 
 const verbose = false // set to true if you want debugging output
@@ -1846,6 +1848,129 @@ func TestDiceStructured(t *testing.T) {
 		}
 		if label != "" {
 			t.Fatalf("test #%d label was %v, expected it to be empty", i, label)
+		}
+	}
+}
+
+func TestDiceOrderOfOperations(t *testing.T) {
+	//rand.Seed(12345) // static seed so our results will be the same every run
+	d, err := NewDieRoller(WithSeed(12345))
+	if err != nil {
+		t.Fatalf("Error creating new DieRoller: %v", err)
+	}
+
+	type testcase struct {
+		Roll    string
+		Reslist []StructuredResult
+		Error   bool
+		Postfix []string
+	}
+
+	// new types: bracket
+	// new Details field: Postfix
+	// §CL;e;001|caster level
+	// 002|fireball 6d6+<CL>
+	// §cl|e|001|caster level
+	// ⊠ ⊕ ⊙ ⊘ ∗−-
+	testcases := []testcase{
+		// 0  3+4*2//(1-5) -> 3 4 2 * 1 5 - ÷ +  -> 3+((4*2)÷(1-5)) -> 1
+		{Roll: "3+4*2//(1-5)", Reslist: []StructuredResult{
+			{Result: 1, Postfix: []string{"3 4 2*1 5-÷+"}, Details: []StructuredDescription{
+				{Type: "result", Value: 1},
+				{Type: "separator", Value: "="},
+				{Type: "constant", Value: "3"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "4"},
+				{Type: "operator", Value: "*"},
+				{Type: "constant", Value: "2"},
+				{Type: "operator", Value: "÷"},
+				{Type: "bracket", Value: "("},
+				{Type: "constant", Value: "1"},
+				{Type: "operator", Value: "-"},
+				{Type: "constant", Value: "5"},
+				{Type: "bracket", Value: ")"},
+			}},
+		}},
+		// 1 (d20+5*2)÷2 -> d20 5 2*+2÷ -> 4 5 2*+2÷ -> 7
+
+		{Roll: "(d20+5*2)÷2", Postfix: []string{"d20 5 2*+2÷"}, Reslist: []StructuredResult{
+			{Result: 4, Details: []StructuredDescription{
+				{Type: "result", Value: "7"},
+				{Type: "separator", Value: "="},
+				{Type: "bracket", Value: "("},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "4"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "5"},
+				{Type: "operator", Value: "*"},
+				{Type: "constant", Value: "2"},
+				{Type: "bracket", Value: ")"},
+				{Type: "operator", Value: "÷"},
+				{Type: "constant", Value: "2"},
+			}},
+		}},
+
+		// 2  trailing operator
+		{Roll: "12+", Error: true},
+
+		// 3  leading operator other than + or /
+		{Roll: "*42", Error: true},
+
+		// 4  15++10 -> 15 + (+10) -> 15 ﹢10+  -> 25
+		{Roll: "15++10", Postfix: []string{"15 ﹢10+"}, Reslist: []StructuredResult{
+			{Result: 25, Details: []StructuredDescription{
+				{Type: "result", Value: "25"},
+				{Type: "separator", Value: "="},
+				{Type: "constant", Value: "15"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "+10"},
+			}},
+		}},
+
+		// 5  15+-10 -> 15 + (-10) -> 15 ‾10+ -> 5
+		{Roll: "15+-10", Postfix: []string{"15 ‾10+"}, Reslist: []StructuredResult{
+			{Result: 5, Details: []StructuredDescription{
+				{Type: "result", "5"},
+				{Type: "separator", Value: "="},
+				{Type: "constant", Value: "15"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "-10"},
+			}},
+		}},
+
+		// 6  15+*10
+		{Roll: "15+*10", Error: true},
+
+		// 7  ((((((4(((((
+		{Roll: "((((((4(((((", Error: true},
+
+		// 8 15+3)
+		{Roll: "15+3)", Error: true},
+
+		// 9  (15*2)//3)
+		{Roll: "(15*2)//3)", Error: true},
+
+		// 10  ((15*2)//3
+		{Roll: "((15*2)//3", Error: true},
+	}
+
+	for i, test := range testcases {
+		label, results, err := d.DoRoll(test.Roll)
+		if err != nil {
+			if !test.Error {
+				t.Fatalf("test #%d error %v", i, err)
+			}
+		} else if test.Error {
+			t.Fatalf("test #%d should have raised an error but didn't", i)
+		}
+		if !compareResults(results, test.Reslist) {
+			t.Fatalf("test #%d result %v, expected %v", i, results, test.Reslist)
+		}
+		if label != "" {
+			t.Fatalf("test #%d label was %v, expected it to be empty", i, label)
+		}
+		if slices.Compare[string](d.Postfix, test.Postfix) != 0 {
+			t.Fatalf("test #%d postfix should be \"%v\" but was \"%v\"", i, test.Postfix, d.PostFix)
 		}
 	}
 }
