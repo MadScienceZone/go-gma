@@ -528,11 +528,6 @@ type dieComponent interface {
 	naturalRoll() (int, int)
 }
 
-//getOperator() string
-// applyOp(x, y int) (int, error)
-// evaluate(x int) (int, error)
-//maxValue(x int) (int, error)
-
 //
 // dieOperator represents an algebraic operator in our expression.
 //
