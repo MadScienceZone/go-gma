@@ -92,6 +92,10 @@ You may not combine multiple single-letter options into a single composite argum
       Write log messages to the named file instead of stdout.
       Use "-" for the file to explicitly send to stdout.
 
+  -list-profiles
+      Write a list of profiles that are defined in the mapper preferences file
+	  and exit.
+
   -m, -mono
       Don't send ANSI color codes in the terminal output.
 
@@ -207,6 +211,7 @@ var Fcals string
 var Fdebug string
 var Flog string
 var Fselect string
+var Flist bool
 
 func init() {
 	const (
@@ -223,13 +228,15 @@ func init() {
 		defaultLog      = ""
 	)
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s [-Dhm] [-C configfile] [-c calendar] [-H host] [-l logfile] [-P password] [-p port] [-S profile] [-u user]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s [-Dhm] [-C configfile] [-c calendar] [-H host] [-l logfile] [-P password] [-p port] [-S profile] [-u user] [-list-profiles]\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "  An option 'x' with a value may be set by '-x value', '-x=value', '--x value', or '--x=value'.\n")
 		fmt.Fprintf(os.Stderr, "  A flag 'x' may be set by '-x', '--x', '-x=true|false' or '--x=true|false'\n")
 		fmt.Fprintf(os.Stderr, "  Options may NOT be combined into a single argument (use '-D -m', not '-Dm').\n")
 		fmt.Fprintf(os.Stderr, "\n")
 		flag.PrintDefaults()
 	}
+	flag.BoolVar(&Flist, "list-profiles", false, "list all defined profile names and exit")
+
 	flag.StringVar(&Fselect, "select", "", "profile to select from mapper preferences")
 	flag.StringVar(&Fselect, "S", "", "(same as -select)")
 
@@ -268,6 +275,17 @@ func main() {
 	prefs, err := configureApp()
 	if err != nil {
 		log.Fatalf("unable to set up: %v", err)
+	}
+	if Flist {
+		fmt.Printf("Profiles defined (for use with -select options)\n")
+		for _, prof := range prefs.Prefs.Profiles {
+			if prof.Host == "" {
+				fmt.Printf("  %s  (no host)\n", prof.Name)
+			} else {
+				fmt.Printf("  %s  (%s)\n", prof.Name, prof.Host)
+			}
+		}
+		os.Exit(0)
 	}
 	if prefs.LogFile != "" && prefs.LogFile != "-" {
 		f, err := os.OpenFile(prefs.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -1112,10 +1130,6 @@ func configureApp() (AppPreferences, error) {
 	// Sanity check and defaults
 	if prefs.Prefs.Profiles[prefs.SelectedIdx].UserName == "" {
 		prefs.Prefs.Profiles[prefs.SelectedIdx].UserName = defUserName
-	}
-
-	if prefs.Prefs.Profiles[prefs.SelectedIdx].Host == "" {
-		return prefs, fmt.Errorf("host value is required")
 	}
 
 	return prefs, nil

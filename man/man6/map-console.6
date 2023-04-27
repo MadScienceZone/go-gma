@@ -34,6 +34,7 @@ map-console \- GMA map service console (Go version)
 .IR host ]
 .RB [ \-l
 .IR logfile ]
+.RB [ \-list\-profiles ]
 .RB [ \-P
 .IR password ]
 .RB [ \-p
@@ -52,6 +53,7 @@ map-console \- GMA map service console (Go version)
 .RB [ \-help ]
 .RB [ \-host
 .IR host ]
+.RB [ \-list\-profiles ]
 .RB [ \-log
 .IR logfile ]
 .RB [ \-mono ]
@@ -243,6 +245,10 @@ instead of the standard output. You may explicitly specify
 the standard output by using a single hyphen as the file name
 (e.g.,
 .RB \*(lq \-log=\- \*(rq).
+.TP
+.B \-list\-profiles
+Prints a list of all the profiles defined in the mapper preferences
+and exits.
 .TP
 .BR \-m ", " \-mono
 Prevent
