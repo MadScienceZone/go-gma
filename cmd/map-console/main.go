@@ -44,8 +44,8 @@ Its input and output is not designed to be user-friendly, but rather to make it 
 (Otherwise)
    map-console -h
    map-console -help
-   map-console [-Dm] [-C configfile] [-c calendar] [-H host] [-l logfile] [-P password] [-p port] [-u user]
-   map-console [-calendar calendar] [-config configfile] [-debug] [-help] [-host host] [-log logfile] [-mono] [-password password] [-port port] [-username user]
+   map-console [-Dm] [-C configfile] [-c calendar] [-H host] [-l logfile] [-P password] [-p port] [-S profile] [-u user]
+   map-console [-calendar calendar] [-config configfile] [-debug] [-help] [-host host] [-log logfile] [-mono] [-password password] [-port port] [-select profile] [-username user]
 
 # OPTIONS
 
@@ -92,6 +92,10 @@ You may not combine multiple single-letter options into a single composite argum
       Write log messages to the named file instead of stdout.
       Use "-" for the file to explicitly send to stdout.
 
+  -list-profiles
+      Write a list of profiles that are defined in the mapper preferences file
+	  and exit.
+
   -m, -mono
       Don't send ANSI color codes in the terminal output.
 
@@ -100,6 +104,9 @@ You may not combine multiple single-letter options into a single composite argum
 
   -p, -port port
       Specifies the server's TCP port number.
+
+  -S, -select profile
+      Selects a server profile to use from the user's saved mapper preferences.
 
   -u, -username user
       Authenticate to the server using the specified user name.
@@ -203,6 +210,8 @@ var Fmono bool
 var Fcals string
 var Fdebug string
 var Flog string
+var Fselect string
+var Flist bool
 
 func init() {
 	const (
@@ -219,13 +228,18 @@ func init() {
 		defaultLog      = ""
 	)
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s [-Dhm] [-C configfile] [-c calendar] [-H host] [-l logfile] [-P password] [-p port] [-u user]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s [-Dhm] [-C configfile] [-c calendar] [-H host] [-l logfile] [-P password] [-p port] [-S profile] [-u user] [-list-profiles]\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "  An option 'x' with a value may be set by '-x value', '-x=value', '--x value', or '--x=value'.\n")
 		fmt.Fprintf(os.Stderr, "  A flag 'x' may be set by '-x', '--x', '-x=true|false' or '--x=true|false'\n")
 		fmt.Fprintf(os.Stderr, "  Options may NOT be combined into a single argument (use '-D -m', not '-Dm').\n")
 		fmt.Fprintf(os.Stderr, "\n")
 		flag.PrintDefaults()
 	}
+	flag.BoolVar(&Flist, "list-profiles", false, "list all defined profile names and exit")
+
+	flag.StringVar(&Fselect, "select", "", "profile to select from mapper preferences")
+	flag.StringVar(&Fselect, "S", "", "(same as -select)")
+
 	flag.StringVar(&Fhost, "host", defaultHost, "hostname of mapper service")
 	flag.StringVar(&Fhost, "H", defaultHost, "(same as -host)")
 
@@ -258,29 +272,37 @@ func main() {
 	fmt.Printf("GMA mapper console %s\n", GoVersionNumber)
 	log.SetPrefix("map-console: ")
 
-	conf, err := configureApp()
+	prefs, err := configureApp()
 	if err != nil {
 		log.Fatalf("unable to set up: %v", err)
 	}
-	logfile, _ := conf.GetDefault("logfile", "")
-	if logfile != "" && logfile != "-" {
-		f, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if Flist {
+		fmt.Printf("Profiles defined (for use with -select options)\n")
+		for _, prof := range prefs.Prefs.Profiles {
+			if prof.Host == "" {
+				fmt.Printf("  %s  (no host)\n", prof.Name)
+			} else {
+				fmt.Printf("  %s  (%s)\n", prof.Name, prof.Host)
+			}
+		}
+		os.Exit(0)
+	}
+	if prefs.LogFile != "" && prefs.LogFile != "-" {
+		f, err := os.OpenFile(prefs.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			log.Fatalf("unable to open log file \"%s\": %v", logfile, err)
+			log.Fatalf("unable to open log file \"%s\": %v", prefs.LogFile, err)
 		}
 		log.SetOutput(f)
 	}
 
-	host, ok := conf.Get("host")
-	if !ok {
+	if prefs.Prefs.Profiles[prefs.SelectedIdx].Host == "" {
 		log.Fatalf("-host is required")
 	}
-	port, ok := conf.Get("port")
-	if !ok {
+	if prefs.Prefs.Profiles[prefs.SelectedIdx].Port <= 0 {
 		log.Fatalf("-port is required")
 	}
-	user, _ := conf.GetDefault("username", "")
-	pass, _ := conf.GetDefault("password", "")
+	user := prefs.Prefs.Profiles[prefs.SelectedIdx].UserName
+	pass := prefs.Prefs.Profiles[prefs.SelectedIdx].Password
 
 	problems := make(chan mapper.MessagePayload, 10)
 	messages := make(chan mapper.MessagePayload, 10)
@@ -288,7 +310,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	debugFlagList, _ := conf.GetDefault("debug", "")
+	debugFlagList := prefs.DebugFlags
 	debugFlags, err := mapper.NamedDebugFlags(debugFlagList)
 	if err != nil {
 		log.Fatalf("-debug: %v", err)
@@ -342,7 +364,10 @@ func main() {
 			fmt.Sprintf("map-console %s", GoVersionNumber))
 		conOpts = append(conOpts, mapper.WithAuthenticator(a))
 	}
-	server, conerr := mapper.NewConnection(host+":"+port, conOpts...)
+	server, conerr := mapper.NewConnection(fmt.Sprintf("%s:%d",
+		prefs.Prefs.Profiles[prefs.SelectedIdx].Host,
+		prefs.Prefs.Profiles[prefs.SelectedIdx].Port),
+		conOpts...)
 	if conerr != nil {
 		log.Fatalf("unable to contact mapper server: %v", conerr)
 	}
@@ -351,11 +376,7 @@ func main() {
 		done <- 1
 	}(done)
 
-	mono, err := conf.GetBool("mono")
-	if err != nil {
-		log.Printf("Error in -mono value: %v (assuming true)", err)
-		mono = true
-	}
+	mono := prefs.Mono
 
 	waitCounter := 0
 	for !server.IsReady() {
@@ -430,7 +451,7 @@ func main() {
 
 	if server.CalendarSystem == "" {
 		// default to command-line argument if server didn't set the calendar
-		server.CalendarSystem, _ = conf.GetDefault("calendar", "golarion")
+		server.CalendarSystem = prefs.Calendar
 	}
 	cal, err := gma.NewCalendar(server.CalendarSystem)
 	if err != nil {
@@ -993,8 +1014,19 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 	}
 }
 
-func configureApp() (util.SimpleConfigurationData, error) {
+type AppPreferences struct {
+	Prefs       util.UserPreferences
+	Mono        bool
+	Calendar    string
+	LogFile     string
+	DebugFlags  string
+	SelectedIdx int
+}
+
+func configureApp() (AppPreferences, error) {
 	var defUserName string
+	var prefs AppPreferences
+	var err error
 
 	defUser, err := user.Current()
 	if err != nil {
@@ -1005,89 +1037,102 @@ func configureApp() (util.SimpleConfigurationData, error) {
 
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return nil, fmt.Errorf("unable to determine user's home directory: %v", err)
+		return prefs, fmt.Errorf("unable to determine user's home directory: %v", err)
 	}
 
 	//
 	// command-line parameters
 	//
+	preferencesPath := filepath.Join(homeDir, ".gma", "mapper", "preferences.json")
 	defConfigPath := filepath.Join(homeDir, ".gma", "mapper", "mapper.conf")
 	flag.Parse()
-	if Fconf == "" {
+
+	if prefsFile, err := os.Open(preferencesPath); err == nil {
+		log.Println("Loading user preferences from", preferencesPath)
+		prefs.Prefs, err = util.LoadPreferencesWithDefaults(prefsFile)
+		if err != nil {
+			return prefs, err
+		}
+	} else if Fconf == "" {
+		log.Println("No user preferences found; trying old-style config file")
 		Fconf = defConfigPath
+	}
+	if Fselect == "" {
+		// Pick the first profile if the user didn't specify one.
+		if prefs.Prefs.CurrentProfile != "" {
+			Fselect = prefs.Prefs.CurrentProfile
+		} else if len(prefs.Prefs.Profiles) > 0 {
+			Fselect = prefs.Prefs.Profiles[0].Name
+		} else {
+			return prefs, fmt.Errorf("preferences data contains no server profiles")
+		}
+		log.Printf("defaulting to profile \"%s\"\n", Fselect)
 	}
 
 	//
 	// read in configuration
 	//
-	var conf util.SimpleConfigurationData
 	if Fconf != "" {
 		configFile, err := os.Open(Fconf)
 		if err != nil {
 			if Fconf == defConfigPath && errors.Is(err, fs.ErrNotExist) {
-				log.Printf("warning: default configuration file \"%s\" does not exist", Fconf)
-				conf = util.NewSimpleConfigurationData()
+				log.Printf("warning: configuration file \"%s\" does not exist", Fconf)
 			} else {
-				return nil, fmt.Errorf("%s: %v", Fconf, err)
+				return prefs, fmt.Errorf("%s: %v", Fconf, err)
 			}
 		} else {
 			defer configFile.Close()
-			conf, err = util.ParseSimpleConfig(configFile)
+			conf, err := util.ParseSimpleConfig(configFile)
 			if err != nil {
-				return nil, err
+				return prefs, err
+			}
+			if err = prefs.Prefs.UpdateFromSimpleConfig(Fselect, conf); err != nil {
+				return prefs, err
 			}
 		}
-	} else {
-		conf = util.NewSimpleConfigurationData()
 	}
 
 	// Override configuration file settings from command-line
 	// options
+	for idx, pro := range prefs.Prefs.Profiles {
+		if pro.Name == Fselect {
+			prefs.SelectedIdx = idx
+			break
+		}
+	}
+	log.Printf("using profile #%d, \"%s\"\n", prefs.SelectedIdx, prefs.Prefs.Profiles[prefs.SelectedIdx].Name)
+
 	if Fhost != "" {
-		conf.Set("host", Fhost)
+		prefs.Prefs.Profiles[prefs.SelectedIdx].Host = Fhost
 	}
 	if Fport != 0 {
-		conf.SetInt("port", int(Fport))
+		prefs.Prefs.Profiles[prefs.SelectedIdx].Port = int(Fport)
 	}
 	if Fpass != "" {
-		conf.Set("password", Fpass)
+		prefs.Prefs.Profiles[prefs.SelectedIdx].Password = Fpass
 	}
 	if Fuser != "" {
-		conf.Set("username", Fuser)
+		prefs.Prefs.Profiles[prefs.SelectedIdx].UserName = Fuser
 	}
 	if Fmono {
-		conf.Set("mono", "1")
+		prefs.Mono = true
 	}
 	if Fcals != "" {
-		conf.Set("calendar", Fcals)
+		prefs.Calendar = Fcals
 	}
 	if Flog != "" {
-		conf.Set("logfile", Flog)
+		prefs.LogFile = Flog
 	}
 	if Fdebug != "" {
-		conf.Set("debug", Fdebug)
+		prefs.DebugFlags = Fdebug
 	}
 
 	// Sanity check and defaults
-	u, ok := conf.Get("username")
-	if !ok || u == "" {
-		conf.Set("username", defUserName)
+	if prefs.Prefs.Profiles[prefs.SelectedIdx].UserName == "" {
+		prefs.Prefs.Profiles[prefs.SelectedIdx].UserName = defUserName
 	}
 
-	p, err := conf.GetIntDefault("port", 0)
-	if err != nil {
-		return nil, fmt.Errorf("port value: %v", err)
-	}
-	if p <= 0 {
-		conf.SetInt("port", 2323)
-	}
-
-	u, ok = conf.Get("host")
-	if !ok {
-		return nil, fmt.Errorf("host value is required")
-	}
-
-	return conf, nil
+	return prefs, nil
 }
 
 func readLines(filename string) ([]string, error) {

@@ -34,10 +34,13 @@ map-console \- GMA map service console (Go version)
 .IR host ]
 .RB [ \-l
 .IR logfile ]
+.RB [ \-list\-profiles ]
 .RB [ \-P
 .IR password ]
 .RB [ \-p
 .IR port ]
+.RB [ \-S
+.IR profile ]
 .RB [ \-u
 .IR user ]
 .LP
@@ -50,6 +53,7 @@ map-console \- GMA map service console (Go version)
 .RB [ \-help ]
 .RB [ \-host
 .IR host ]
+.RB [ \-list\-profiles ]
 .RB [ \-log
 .IR logfile ]
 .RB [ \-mono ]
@@ -57,6 +61,8 @@ map-console \- GMA map service console (Go version)
 .IR password ]
 .RB [ \-port
 .IR port ]
+.RB [ \-select
+.IR profile ]
 .RB [ \-username
 .IR user ]
 .ad
@@ -74,6 +80,22 @@ This tool is designed primarily for debugging the server. Its
 input and output is not designed to be user-friendly, but rather
 to make it possible for someone familiar with the server's operation
 and network protocol to manually manipulate it.
+.LP
+When
+.B map-console
+starts, it will look for a GMA Mapper preferences file at
+.BR ~/.gma/mapper/preferences.json .
+If present, that file will be loaded to obtain the connection
+information. If no such file was found, it will fall back to
+the legacy behavior by reading an old-style Mapper configuration
+file at 
+.BR ~/.gma/mapper/mapper.conf .
+.LP
+If an old-style configuration file is named explicitly via the
+.B \-config
+CLI option, it will be loaded after
+.B preferences.json
+(such that its settings override the preferences file's information).
 .SH OPTIONS
 .LP
 The command-line options described below have a long form
@@ -111,6 +133,11 @@ and
 .B \-m
 would need to be entered as two separate options, not as
 .BR \-rm ).
+.LP
+Any of these options will override the settings read from
+.B preferences.json
+or
+.BR mapper.conf .
 '\" <<list>>
 .TP 
 .BI "\-c\fR, \fP\-calendar " name
@@ -138,9 +165,9 @@ could contain a line reading
 .LP
 but not lines like
 .LP
-.B "-host=example.com"
+.B "\-host=example.com"
 .br
-.B "--host example.com"
+.B "\-\-host example.com"
 .br
 .B "h=example.com"
 .LP
@@ -219,6 +246,10 @@ the standard output by using a single hyphen as the file name
 (e.g.,
 .RB \*(lq \-log=\- \*(rq).
 .TP
+.B \-list\-profiles
+Prints a list of all the profiles defined in the mapper preferences
+and exits.
+.TP
 .BR \-m ", " \-mono
 Prevent
 .B map-console
@@ -235,6 +266,12 @@ player privileges will be granted, as with any client.
 .TP
 .BI "\-p\fR, \fP\-port " port
 Specifies the server's TCP port number. The GMA map server's default port, 2323, will be assumed by default.
+.TP
+.BI "\-S\fR, \fP\-select " profile
+Use the named
+.I profile
+from the mapper preferences for the connection information instead
+of the one currently designated as the mapper's current profile.
 .TP
 .BI "\-u\fR, \fP\-username " user
 This specifies the user name by which the server will know you.
