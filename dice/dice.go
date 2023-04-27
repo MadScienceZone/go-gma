@@ -48,6 +48,10 @@
 // type, created by the New function, if for some reason the DieRoller
 // interface won't provide what is needed.
 //
+// NEW in version 5.3: The die-roll expressions now honor the usual algebraic
+// order of operations instead of simply evaluating left-to-right. Parentheses
+// (round brackets) can be used for grouping in the usual sense for math expressions.
+//
 package dice
 
 import (
@@ -150,10 +154,11 @@ type Dice struct {
 // value so far with the value that follows the operator.   Division performed
 // with the “//” operator is integer‐only (results are immediately truncated by
 // discarding any fractional part). Standard algebraic order of operations is
-// followed (multiplication and division are performed first, then addition
+// followed (unary + and - are performed first, then multiplication and division, and then addition
 // and subtraction, reading from left to right, and parentheses (brackets) ‘(’ and ‘)’ are
-// used to enclose sub-expressions).
-// Generally  speaking,  whitespace  is insignificant in the
+// used to enclose sub-expressions; strictly speaking, unary '+' is ignored and is actually
+// dropped out of the expression by the parser).
+// Generally, whitespace  is insignificant in the
 // description string.
 //
 // On  fully  Unicode‐aware  implementations (e.g., the Go version of this
@@ -997,7 +1002,6 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 		if err != nil {
 			return nil, err
 		}
-		// TODO Is this really a thing? I think it should be checked for in the options, not here.
 		if usedThreat {
 			return nil, fmt.Errorf("confirmation specifier (c[threat][±bonus]) not allowed in this location. It must be at the end of a full DieRoller description string only")
 		}
