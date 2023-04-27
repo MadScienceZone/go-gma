@@ -1,17 +1,23 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.2.2                <!-- @@##@@ -->
- * Effective Date: 15-Apr-2023			<!-- @@##@@ -->
+ * This Package Version: 5.3.0                <!-- @@##@@ -->
+ * Effective Date: 26-Apr-2023			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 5.3		<!-- @@##@@ -->
- * GMA Mapper Version: 4.4		<!-- @@##@@ -->
+ * GMA Core API Library Version: 5.3.2		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.4.1		<!-- @@##@@ -->
  * GMA Mapper Protocol: 403		<!-- @@##@@ -->
  * GMA Mapper File Format: 20		<!-- @@##@@ -->
 
+## v5.3.0
+### Enhancements
+ * The `dice` module now respects algebraic order of operations and use of parentheses in die-roll expressions.
+ * The `map-console` program now reads from mapper preferences settings as does the latest mapper version.
+ * Added code to the `util` module to parse mapper preferences files.
+
 ## v5.2.2
-### Enchancements
+### Enhancements
  * Implemented protocol 403 which expands the OK message and adds AI/.
 
 ### Fixes

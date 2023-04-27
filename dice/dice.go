@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______     _______               #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )   / ___   )              #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |   \/   )  |              #
-# | |      | || || || (___) | Assistant | (____         /   )       /   )              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /      _/   /               #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/      /   _/                #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _ (   (__/\              #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_)\_______/              #
+#  _______  _______  _______             _______     ______      _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \    (  __   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \   | (  )  |              #
+# | |      | || || || (___) | Assistant | (____        ___) /   | | /   |              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (    | (/ /) |              #
+# | | \_  )| |   | || (   ) |                 ) )         ) \   |   / | |              #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  / _ |  (__) |              #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_)(_______)              #
 #                                                                                      #
 ########################################################################################
 */
@@ -47,6 +47,10 @@
 // There is also a lower-level abstraction of dice available via the Dice
 // type, created by the New function, if for some reason the DieRoller
 // interface won't provide what is needed.
+//
+// NEW in version 5.3: The die-roll expressions now honor the usual algebraic
+// order of operations instead of simply evaluating left-to-right. Parentheses
+// (round brackets) can be used for grouping in the usual sense for math expressions.
 //
 package dice
 
@@ -144,19 +148,25 @@ type Dice struct {
 // specification which likely came from the user anyway. (Although
 // using DieRoller instead of Dice is even better.)
 //
-// This text description may contain any number of nonnegative integer values
+// This text description may contain any number of integer constants
 // and/or die‐roll expressions separated by the basic math operators “+”,  “−”,
 // “*”,  and “//”  which  respectively add, subtract, multiply, and divide the total
-// value so far with the value that follows the operator.   Division  performed
+// value so far with the value that follows the operator.   Division performed
 // with the “//” operator is integer‐only (results are immediately truncated by
-// discarding any fractional part).  There  is  no  order  of operations  or
-// parentheses supported. The expressions are simply evaluated left‐to‐right
-// as they appear. Generally  speaking,  whitespace  is insignificant in the
+// discarding any fractional part). Standard algebraic order of operations is
+// followed (unary + and - are performed first, then multiplication and division, and then addition
+// and subtraction, reading from left to right, and parentheses (brackets) ‘(’ and ‘)’ are
+// used to enclose sub-expressions; strictly speaking, unary '+' is ignored and is actually
+// dropped out of the expression by the parser).
+// Generally, whitespace  is insignificant in the
 // description string.
 //
 // On  fully  Unicode‐aware  implementations (e.g., the Go version of this
 // package), the character “×” (U+00D7) may be used in place of “*”,
-// and “÷” (U+00F7) in place of “//”.
+// and “÷” (U+00F7) in place of “//”. (Internally, the “//” operator is converted
+// to the rune ‘÷’, so that's the character that will appear in any output
+// details about the die roll. Likewise, the code will report ‘×’ for multiplication
+// in the output.)
 //
 // Each die‐roll expression has the general form
 //   [>] [<n>[/<div>]] d <sides> [best|worst of <r>] [<label>]
@@ -360,31 +370,149 @@ type StructuredResult struct {
 }
 
 //
+// An evalStack is used when parsing the die-roll expression's algebraic
+// operators using the standard order of operation and brackets.
+//
+type evalStack struct {
+	stack   []int
+	opStack []rune
+}
+
+func (s *evalStack) isOpEmpty() bool {
+	return len(s.opStack) == 0
+}
+
+func (s *evalStack) push(v int) {
+	s.stack = append(s.stack, v)
+}
+
+func (s *evalStack) pop() (int, error) {
+	stackLen := len(s.stack)
+	if stackLen == 0 {
+		return 0, fmt.Errorf("stack underflow")
+	}
+	poppedValue := s.stack[stackLen-1]
+	s.stack = s.stack[:stackLen-1]
+	return poppedValue, nil
+}
+
+func (s *evalStack) pushOp(v rune) {
+	s.opStack = append(s.opStack, v)
+}
+
+func (s *evalStack) popOp() (rune, error) {
+	stackLen := len(s.opStack)
+	if stackLen == 0 {
+		return 0, fmt.Errorf("operator stack underflow")
+	}
+	poppedValue := s.opStack[stackLen-1]
+	s.opStack = s.opStack[:stackLen-1]
+	return poppedValue, nil
+}
+
+func (s *evalStack) discardOp() {
+	if !s.isOpEmpty() {
+		_, _ = s.popOp()
+	}
+}
+
+func (s *evalStack) applyOp() error {
+	var x, y int
+
+	op, err := s.popOp()
+	if err != nil {
+		return err
+	}
+	if op == '(' || op == ')' {
+		return nil
+	}
+
+	if op == '‾' { // unary - (negation)
+		if x, err = s.pop(); err != nil {
+			return err
+		}
+		s.push(-x)
+		return nil
+	}
+
+	if y, err = s.pop(); err != nil {
+		return err
+	}
+	if x, err = s.pop(); err != nil {
+		return err
+	}
+
+	switch op {
+	case '+':
+		s.push(x + y)
+	case '-':
+		s.push(x - y)
+	case '*', '×':
+		s.push(x * y)
+	case '÷':
+		s.push(x / y)
+	default:
+		return fmt.Errorf("Unknown operator \"%v\"", op)
+	}
+	return nil
+}
+
+func (s *evalStack) nextOp() rune {
+	stackLen := len(s.opStack)
+	if stackLen == 0 {
+		return 0
+	}
+	return s.opStack[stackLen-1]
+}
+
+// complete the evaluation of the expression by applying all remaining operators
+func (s *evalStack) evaluate() (int, error) {
+	for !s.isOpEmpty() {
+		if s.nextOp() == '(' {
+			return 0, fmt.Errorf("'(' without matching ')' in die-roll expression")
+		}
+		if err := s.applyOp(); err != nil {
+			return 0, err
+		}
+	}
+	value, err := s.pop()
+	if err != nil {
+		return 0, err
+	}
+	if len(s.stack) > 0 {
+		return 0, fmt.Errorf("expression stack not empty at end of evaluation")
+	}
+	return value, nil
+}
+
+func (s *evalStack) reset() {
+	s.stack = nil
+	s.opStack = nil
+}
+
+//
 // A dieComponent is something that can be assembled with other dieComponents
-// to form a full die-roll spec expression. Each has an operator and a value,
-// such that for any accumulated overall total value x, this component's
-// contribution to the overall total x' will be x' = x <operator> <value>.
+// to form a full die-roll spec expression.
 //
 // E.g., if a die roll specification consists of the components
-//     diespec (operator +, value 1d20)
-//     constant (operator -, value 2)
-//     diespec (operator +, value 2d6)
-// then the evaluation of the overall die-roll spec ("1d20-2+2d6") is
-// performed by starting with the value 0, and then calling the applyOp
-// method of each of the components in turn:
-//   (((0 + 1d20) - 2) + 2d6)
+//     dieOperator +
+//     diespec 1d20
+//	   dieOperator -
+//     constant 2
+//	   dieOperator +
+//     diespec 2d6
+// then the evaluation of the overall die-roll spec ("+1d20-2+2d6") is
+// performed by evaluating the list of operators and values left to right
+// (with algebraic order of operations) resulting in the effective value
+// (1d20 - 2) + 2d6, with random values substituted for 1d20 and 2d6.
 //
 type dieComponent interface {
-	// Applies the component's operator to the values x and y, returning the result.
-	applyOp(x, y int) (int, error)
+	// Feed this value into the expression evaluation in progress.
+	compute(s *evalStack) error
+	computeMaxValue(s *evalStack) error
 
-	// Apply the component's operator to the accumulated total x and its value.
-	evaluate(x int) (int, error)
-
-	// Like evaluate but just assume the maximum possible value.
-	maxValue(x int) (int, error)
-
-	// Return the most recently calculated value.
+	// Return the most recently calculated value. (This can be used to
+	// get the random value rolled for diespecs.)
 	lastValue() int
 
 	// Describe the die-roll component as a string.
@@ -398,105 +526,168 @@ type dieComponent interface {
 	// 0 is returned. The second return value is the number of sides on the die.
 	// Thus, a natural 3 on a d20 would be returned as (3, 20).
 	naturalRoll() (int, int)
+}
 
-	// Return the operator for this component.
-	getOperator() string
+//
+// dieOperator represents an algebraic operator in our expression.
+//
+type dieOperator rune
+
+func precedence(op dieOperator) int {
+	switch op {
+	case '+', '-':
+		return 1
+	case '*', '×', '÷':
+		return 2
+	case '‾':
+		return 3
+	}
+	return 0
+}
+
+func (o dieOperator) compute(s *evalStack) error {
+	for !s.isOpEmpty() && s.nextOp() != '(' && precedence(dieOperator(s.nextOp())) >= precedence(o) {
+		if err := s.applyOp(); err != nil {
+			return err
+		}
+	}
+	s.pushOp(rune(o))
+	return nil
+}
+
+func (o dieOperator) computeMaxValue(s *evalStack) error {
+	return o.compute(s)
+}
+
+func (o dieOperator) lastValue() int {
+	return 0
+}
+
+func (o dieOperator) description() string {
+	if o == '‾' {
+		return "-"
+	}
+	return string(o)
+}
+
+func (o dieOperator) structuredDescribeRoll(suppressed bool) []StructuredDescription {
+	return []StructuredDescription{
+		StructuredDescription{Type: "operator", Value: o.description()},
+	}
+}
+
+func (o dieOperator) naturalRoll() (int, int) {
+	return 0, 0
+}
+
+//
+// dieBeginGroup and dieEndGroup start and end grouped sub-expressions.
+//
+type dieBeginGroup byte
+type dieEndGroup byte
+
+func (b dieBeginGroup) compute(s *evalStack) error {
+	s.pushOp('(')
+	return nil
+}
+
+func (b dieBeginGroup) computeMaxValue(s *evalStack) error {
+	return b.compute(s)
+}
+
+func (b dieBeginGroup) lastValue() int {
+	return 0
+}
+
+func (b dieBeginGroup) description() string {
+	return "("
+}
+
+func (b dieBeginGroup) structuredDescribeRoll(bool) []StructuredDescription {
+	return []StructuredDescription{
+		StructuredDescription{Type: "begingroup", Value: "("},
+	}
+}
+
+func (b dieBeginGroup) naturalRoll() (int, int) {
+	return 0, 0
+}
+
+func (b dieEndGroup) compute(s *evalStack) error {
+	for s.nextOp() != '(' {
+		if err := s.applyOp(); err != nil {
+			return err
+		}
+	}
+	if s.nextOp() != '(' {
+		return fmt.Errorf("')' with no matching '('")
+	}
+	s.discardOp()
+	return nil
+}
+
+func (b dieEndGroup) computeMaxValue(s *evalStack) error {
+	return b.compute(s)
+}
+
+func (b dieEndGroup) lastValue() int {
+	return 0
+}
+
+func (b dieEndGroup) description() string {
+	return ")"
+}
+
+func (b dieEndGroup) structuredDescribeRoll(bool) []StructuredDescription {
+	return []StructuredDescription{
+		StructuredDescription{Type: "endgroup", Value: ")"},
+	}
+}
+
+func (b dieEndGroup) naturalRoll() (int, int) {
+	return 0, 0
 }
 
 //
 // dieConstant is a kind of dieComponent that provides a constant
 // value that is part of an expression.
 //
-// For example, if the die roll includes a +2 bonus due to intelligence,
-// this would be represented by the value dieConstant{"+", 3, "INT"}.
 type dieConstant struct {
 	// The constant value itself.
 	Value int
-
-	// The operator with which this constant is integrated into the result.
-	Operator string
 
 	// An optional label to indicate what the constant actually represents.
 	Label string
 }
 
-// Return the operator for the constant.
-func (d *dieConstant) getOperator() string { return d.Operator }
-
-// Apply the operator to values x and y. Note that this satisfies the
-// dieComponent interface but ignores the constant value itself.
-func (d *dieConstant) applyOp(x, y int) (int, error) {
-	return _applyOp(d.Operator, x, y)
+func (d *dieConstant) compute(s *evalStack) error {
+	s.push(d.Value)
+	return nil
 }
 
-// Apply the operator to the value x. For example, for the constant
-// i := dieConstant{"+", 3, "INT"}, i.evaluate(10) would return
-// 13 (i.e., "10 + 3 INT").
-func (d *dieConstant) evaluate(x int) (int, error) {
-	return _applyOp(d.Operator, x, d.Value)
+func (d *dieConstant) computeMaxValue(s *evalStack) error {
+	return d.compute(s)
 }
 
-// For dieConstant values, this is the same evaluate(x),
-// since constants are... well... constant.
-func (d *dieConstant) maxValue(x int) (int, error) {
-	return _applyOp(d.Operator, x, d.Value)
-}
-
-// For dieConstant values, this simply returns the constant value itself.
 func (d *dieConstant) lastValue() int {
 	return d.Value
 }
 
-// For dieConstant values, this always returns (0, 0).
 func (d *dieConstant) naturalRoll() (int, int) {
 	return 0, 0
 }
 
-// Return a text description of this constant value.
 func (d *dieConstant) description() string {
-	return d.Operator + strconv.Itoa(d.Value) + d.Label
+	return strconv.Itoa(d.Value) + d.Label
 }
 
-// Returns a structured description of this constant value. The Type tags will
-// be "operator", "constant", and if the label for the constant is non-empty,
-// "label".
-//
-// For example, for c := dieConstant{"+", 3, "int"}, calling
-// c.StructuredDescribeRoll() returns the value
-//    []StructuredDescription{
-//        {"operator", "+"},
-//        {"constant", "3"},
-//        {"label", "int"}
-//    }
 func (d *dieConstant) structuredDescribeRoll(resultSuppressed bool) []StructuredDescription {
 	var desc []StructuredDescription
-	if d.Operator != "" {
-		desc = append(desc, StructuredDescription{Type: "operator", Value: d.Operator})
-	}
 	desc = append(desc, StructuredDescription{Type: "constant", Value: strconv.Itoa(d.Value)})
 	if d.Label != "" {
 		desc = append(desc, StructuredDescription{Type: "label", Value: d.Label})
 	}
 	return desc
-}
-
-func _applyOp(operator string, x, y int) (int, error) {
-	switch operator {
-	case "":
-		if x != 0 {
-			return 0, fmt.Errorf("applying nil operation to non-nil initial value %d", x)
-		}
-		return y, nil
-	case "+":
-		return x + y, nil
-	case "-":
-		return x - y, nil
-	case "*", "×":
-		return x * y, nil
-	case "//", "÷":
-		return x / y, nil
-	}
-	return 0, fmt.Errorf("unable to apply unknown operator %s", operator)
 }
 
 //
@@ -533,23 +724,6 @@ type dieSpec struct {
 
 	_natural  int
 	generator *rand.Rand
-
-	// The operator with which this component is integrated into the overall result.
-	// (Yes, these should be something more sophisticated than a string; this will
-	// quite probably change in the future).
-	Operator string
-}
-
-//
-// Get the operator for this component.
-//
-func (d *dieSpec) getOperator() string { return d.Operator }
-
-//
-// Apply the component's operator to the given values.
-//
-func (d *dieSpec) applyOp(x, y int) (int, error) {
-	return _applyOp(d.Operator, x, y)
 }
 
 //
@@ -602,13 +776,7 @@ func intToStrings(a []int) (as []string) {
 	return
 }
 
-//
-// Apply the component to the value x, returning the result.
-// For example, if the component represents a d20 roll with
-// operator "+", then calling its evaluate method with the value 10
-// will roll that d20, add its value to 10, and return the result.
-//
-func (d *dieSpec) evaluate(x int) (int, error) {
+func (d *dieSpec) compute(s *evalStack) error {
 	d.History = nil
 	d.WasMaximized = false
 	for i := 0; i <= d.Rerolls; i++ {
@@ -658,15 +826,11 @@ func (d *dieSpec) evaluate(x int) (int, error) {
 		}
 	}
 
-	return _applyOp(d.Operator, x, d.Value)
+	s.push(d.Value)
+	return nil
 }
 
-//
-// Like evaluate(x), but if the component involves
-// rolling dice, just assume they come up at their
-// maximum possible values rather than actually rolling.
-//
-func (d *dieSpec) maxValue(x int) (int, error) {
+func (d *dieSpec) computeMaxValue(s *evalStack) error {
 	d.WasMaximized = true
 	d.History = nil
 	this := []int{}
@@ -682,25 +846,16 @@ func (d *dieSpec) maxValue(x int) (int, error) {
 	}
 	d.History = append(d.History, this)
 	d.Value = reduceSums(d.History)[0]
-	return _applyOp(d.Operator, x, d.Value)
+	s.push(d.Value)
+	return nil
 }
 
-//
-// Return the last-generated value for this component
-// without (re-)rolling anything.
-//
 func (d *dieSpec) lastValue() int {
 	return d.Value
 }
 
-//
-// Returns a text description of the die-roll component
-// intended to be human-readable.
-//
-// The value will be prefixed by ">" if the first die is forced
-// to be maximum.
 func (d *dieSpec) description() string {
-	desc := d.Operator
+	desc := ""
 	if d.InitialMax {
 		desc += ">"
 	}
@@ -754,9 +909,6 @@ func (d *dieSpec) structuredDescribeRoll(resultSuppressed bool) []StructuredDesc
 		rollType = "roll"
 	}
 
-	if d.Operator != "" {
-		desc = append(desc, StructuredDescription{Type: "operator", Value: d.Operator})
-	}
 	if d.InitialMax {
 		desc = append(desc, StructuredDescription{Type: "maximized", Value: ">"})
 	}
@@ -854,8 +1006,8 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 		reMin := regexp.MustCompile(`^\s*min\s*([+-]?\d+)\s*$`)
 		reMax := regexp.MustCompile(`^\s*max\s*([+-]?\d+)\s*$`)
 		reMinmax := regexp.MustCompile(`\b(min|max)\s*[+-]?\d+`)
-		reOpSplit := regexp.MustCompile(`[-+*×÷]|[^-+*×÷]+`)
-		reIsOp := regexp.MustCompile(`^[-+*×÷]$`)
+		reOpSplit := regexp.MustCompile(`[-+*×÷()]|[^-+*×÷()]+`)
+		reIsOp := regexp.MustCompile(`^[-+*×÷()]$`)
 		reIsDie := regexp.MustCompile(`\d+\s*[dD]\d*\d+`)
 		reConstant := regexp.MustCompile(`^\s*(\d+)\s*(.*?)\s*$`)
 		//                                    max?    numerator    denominator       sides          best/worst         rerolls   label
@@ -906,49 +1058,65 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 		}
 
 		//
-		// exprParts is a list of alternating operators and values. We have an implied
-		// 0 in front if the list begins with an operator. We'll add that to the list
-		// now if necessary, then run through the list, building up a stack of dieComponents
+		// exprParts is a list of alternating operators and values.
+		// We'll run through the list, building up a sequence of dieComponents
 		// to represent the expression we were given.
 		//
-		op := "nil"
-		if reIsOp.MatchString(exprParts[0]) {
-			// We're starting with an operator. Push a 0 with no operator.
-			// then set up the operator to be applied to the next value.
-			d.multiDice = append(d.multiDice, &dieConstant{Value: 0})
-			op = exprParts[0]
-			if len(exprParts)%2 != 0 {
-				// we have a number of values after the split that suggests the expression
-				// ends with a dangling operator, which we aren't going to stand for.
-				return nil, fmt.Errorf("syntax error in die roll description \"%s\"; trailing operator not allowed", d.desc)
-			}
-		} else {
-			if len(exprParts)%2 == 0 {
-				// likewise, but here we detect that in the case of the expression starting
-				// with an operator
-				return nil, fmt.Errorf("syntax error in die roll description \"%s\"; trailing operator not allowed", d.desc)
-			}
-		}
-
-		//
-		// At this point the list of operations alternates between operators
-		// and values. If op is empty, we're expecting an operator. Otherwise,
-		// we take the next value from the list and apply the operator to it.
-		//
+		opExpected := false
 		diceCount := 0
 		for _, part := range exprParts {
-			if op == "" {
-				op = part
+			if opExpected {
+				// we are expecting an operator here; collect it and go to the next part
+				if !reIsOp.MatchString(part) {
+					return nil, fmt.Errorf("expected operator before \"%v\" in die-roll expression", part)
+				}
+
+				var thisOp rune
+				for _, r := range part {
+					if r == '*' {
+						thisOp = '×'
+					} else {
+						thisOp = r
+					}
+					break
+				}
+
+				switch thisOp {
+				case '(':
+					return nil, fmt.Errorf("expected operator before '(' in die-roll expression")
+				case ')':
+					d.multiDice = append(d.multiDice, new(dieEndGroup))
+					continue
+				default:
+					var do dieOperator = (dieOperator)(thisOp)
+					d.multiDice = append(d.multiDice, &do)
+				}
+				opExpected = false
 				continue
 			}
-
-			// op == "nil" means it's the
-			// empty (initial) operator, distinguished from
-			// op == "" which means we're waiting for an operator
-			// next in the sequence
-			if op == "nil" {
-				op = ""
+			// we're not expecting to see an operator here, so if we see a + or -, they must
+			// be a leading unary + or - to apply to what comes next.
+			if part == "+" {
+				// and a unary + is essentially a no-op, so we'll just ignore it.
+				continue
 			}
+			if part == "-" {
+				var do dieOperator = (dieOperator)('‾')
+				d.multiDice = append(d.multiDice, &do)
+				continue
+			}
+			if part == "(" {
+				// an open bracket is ok here as well
+				d.multiDice = append(d.multiDice, new(dieBeginGroup))
+				continue
+			}
+			// any other operator here is illegal
+			if reIsOp.MatchString(part) {
+				return nil, fmt.Errorf("unexpected operator \"%v\" in die-roll expression", part)
+			}
+
+			// whatever comes next is a value, so switch to looking for an operator after it.
+			opExpected = true
 
 			xValues := reDieSpec.FindStringSubmatch(part)
 			if xValues == nil {
@@ -957,18 +1125,11 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 				//
 				xValues = reConstant.FindStringSubmatch(part)
 				if xValues != nil {
-					dc := new(dieConstant)
-					dc.Operator = op
-					dc.Value, err = strconv.Atoi(xValues[1])
+					v, err := strconv.Atoi(xValues[1])
 					if err != nil {
 						return nil, fmt.Errorf("value error in die roll subexpression \"%s\" in \"%s\"; %v", part, d.desc, err)
 					}
-					if xValues[2] != "" {
-						dc.Label = xValues[2]
-					}
-
-					d.multiDice = append(d.multiDice, dc)
-					op = ""
+					d.multiDice = append(d.multiDice, &dieConstant{Value: v, Label: xValues[2]})
 					continue
 				}
 				//
@@ -1036,13 +1197,15 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 			}
 			if xValues[7] != "" {
 				if reIsDie.MatchString(xValues[7]) {
-					return nil, fmt.Errorf("comment following die roll in \"%s\" looks like another die roll--did you forget an operator?", part)
+					return nil, fmt.Errorf("label following die roll in \"%s\" looks like another die roll--did you forget an operator?", part)
 				}
 				ds.Label = xValues[7]
 			}
-			ds.Operator = op
 			d.multiDice = append(d.multiDice, ds)
-			op = ""
+		}
+
+		if !opExpected {
+			return nil, fmt.Errorf("missing value after last operator in die-roll expression \"%s\"", d.desc)
 		}
 		if diceCount != 1 {
 			d._onlydie = nil
@@ -1059,22 +1222,19 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 		})
 	}
 	if d.bonus < 0 {
-		d.multiDice = append(d.multiDice, &dieConstant{
-			Operator: "-",
-			Value:    -d.bonus,
-		})
+		var do dieOperator = (dieOperator)('-')
+		d.multiDice = append(d.multiDice, &do, &dieConstant{Value: -d.bonus})
 	} else if d.bonus > 0 {
-		d.multiDice = append(d.multiDice, &dieConstant{
-			Operator: "+",
-			Value:    d.bonus,
-		})
+		var do dieOperator = (dieOperator)('+')
+		d.multiDice = append(d.multiDice, &do, &dieConstant{Value: d.bonus})
 	}
 
 	if d.factor != 0 {
-		d.multiDice = append(d.multiDice, &dieConstant{
-			Operator: "*",
-			Value:    d.factor,
-		})
+		var do dieOperator = (dieOperator)('×')
+		var md []dieComponent
+		md = append(md, new(dieBeginGroup))
+		md = append(md, d.multiDice...)
+		d.multiDice = append(md, new(dieEndGroup), &do, &dieConstant{Value: d.factor})
 	}
 
 	return d, nil
@@ -1102,17 +1262,21 @@ func (d *Dice) MaxRoll() (int, error) {
 // dice come up with their maximum values rather than rolling anything.
 //
 func (d *Dice) MaxRollToConfirm(bonus int) (int, error) {
-	rollSum := 0
 	d._natural = 0
 	d.Rolled = false
 	var err error
+	stack := &evalStack{}
 
 	for _, die := range d.multiDice {
-		rollSum, err = die.maxValue(rollSum)
-		if err != nil {
+		if err := die.computeMaxValue(stack); err != nil {
 			return 0, err
 		}
 	}
+	rollSum, err := stack.evaluate()
+	if err != nil {
+		return 0, err
+	}
+
 	rollSum += bonus
 	if d.MaxValue > 0 && rollSum > d.MaxValue {
 		rollSum = d.MaxValue
@@ -1177,16 +1341,16 @@ func (d *Dice) RollToConfirm(confirm bool, threat int, bonus int) (int, error) {
 	// or trying to confirm a critical that we know needs to be
 	// confirmed.
 	//
-	rollSum := 0
 	d._natural = 0
 	d.Rolled = false
+	stack := &evalStack{}
 	var err error
 
 	for _, die := range d.multiDice {
-		rollSum, err = die.evaluate(rollSum)
-		if err != nil {
+		if err = die.compute(stack); err != nil {
 			return 0, err
 		}
+
 		// If we happen to be rolling for the first time, leave a
 		// note for the confirming roll as to the natural die value
 		// here.
@@ -1205,6 +1369,10 @@ func (d *Dice) RollToConfirm(confirm bool, threat int, bonus int) (int, error) {
 				d._natural, d._defthreat = -1, 0
 			}
 		}
+	}
+	rollSum, err := stack.evaluate()
+	if err != nil {
+		return 0, err
 	}
 	rollSum += bonus
 	if d.MaxValue > 0 && rollSum > d.MaxValue {
@@ -1404,6 +1572,9 @@ type DieRoller struct {
 
 	// Values to be substituted into the Template
 	Permutations [][]any
+
+	// Postfix expression(s) generated by the most recent roll
+	Postfix []string
 
 	generator *rand.Rand
 	d         *Dice // underlying Dice object
@@ -2751,7 +2922,34 @@ func LoadDieRollPresetFile(input io.Reader) ([]DieRollPreset, DieRollPresetMetaD
 	return nil, meta, fmt.Errorf("invalid die-roll preset file format: unexpected end of file")
 }
 
-// @[00]@| Go-GMA 5.2.2
+/*
+NewDieRoller -> dr.d Dice
+
+dr.DoRoll(spec) -> d.setNewSpecification(spec)
+							separate out title and trailing options
+							find and record permutations if any, set dr.Template = spec but change {...} with {0}, {1}, {2}, etc.
+							n% rolls	-> dr.d = d100; dr.PctChance=n
+							no permutations -> dr.d = new ByDescription(spec)
+					expand permutations
+					for each permutation
+						dr.d = New with permutation spec
+						dr.rollDice()
+						null out dr.d
+					(no permutations)
+						dr.rollDice()
+
+dr.rollDice() -> dr.d.MaxRoll() or dr.d.Roll(), dr.d.RollToConfirm()
+	breaks into pieces by option
+	breaks into pieces by operator
+
+	multiDice = [constant 0] (op+value) (op+value)...
+
+d representation:
+	look for c(\d+)?([-+]\d+)?   ????
+
+*/
+
+// @[00]@| Go-GMA 5.3.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

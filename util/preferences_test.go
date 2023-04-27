@@ -26,175 +26,20 @@ import (
 	"testing"
 )
 
-func TestSimpleConfig(t *testing.T) {
-	f := strings.NewReader(`
-#test data
-a=b
-
- c  =  d  
-x=12
-b=off
-bb=on
-bbb=1
-e
-`)
-	c, err := ParseSimpleConfig(f)
+func TestOverwriteMissingFields(t *testing.T) {
+	j := strings.NewReader(`{
+	"GMA_Mapper_preferences_version": 1,
+	"animate": true
+}`)
+	p, err := LoadPreferencesWithDefaults(j)
 	if err != nil {
-		t.Errorf("error unexpected: %v", err)
+		t.Errorf("LoadPreferencesWithDefaults: %v", err)
 	}
-	s, x := c.Get("a")
-	if !x {
-		t.Errorf("key not found")
+	if p.Animate != true {
+		t.Errorf("Animate %v", p.Animate)
 	}
-	if s != "b" {
-		t.Errorf("%v value %v, expected %v", "a", s, "b")
-	}
-
-	s, x = c.GetDefault("a", "xy")
-	if !x {
-		t.Errorf("key not found")
-	}
-	if s != "b" {
-		t.Errorf("%v value %v, expected %v", "a", s, "b")
-	}
-
-	s, x = c.Get("c")
-	if !x {
-		t.Errorf("key not found")
-	}
-	if s != "d" {
-		t.Errorf("%v value %v, expected %v", "c", s, "d")
-	}
-
-	s, x = c.Get("x")
-	if !x {
-		t.Errorf("key not found")
-	}
-	if s != "12" {
-		t.Errorf("%v value %v, expected %v", "c", s, "d")
-	}
-	i, err := c.GetInt("x")
-	if err != nil {
-		t.Errorf("key not found or error %v", err)
-	}
-	if i != 12 {
-		t.Errorf("%v value %v, expected %v", "x", i, 12)
-	}
-	b, err := c.GetBool("x")
-	if err != nil {
-		t.Errorf("err %v", err)
-	}
-	if !b {
-		t.Errorf("value not true")
-	}
-
-	s, x = c.Get("b")
-	if !x {
-		t.Errorf("key not found")
-	}
-	if s != "off" {
-		t.Errorf("%v value %v, expected %v", "b", s, "off")
-	}
-	i, err = c.GetInt("b")
-	if err == nil {
-		t.Errorf("err expected")
-	}
-	b, err = c.GetBool("b")
-	if err != nil {
-		t.Errorf("err %v", err)
-	}
-	if b {
-		t.Errorf("value not false")
-	}
-
-	s, x = c.Get("bb")
-	if !x {
-		t.Errorf("key not found")
-	}
-	if s != "on" {
-		t.Errorf("%v value %v, expected %v", "bb", s, "on")
-	}
-	i, err = c.GetInt("bb")
-	if err == nil {
-		t.Errorf("err expected")
-	}
-	b, err = c.GetBool("bb")
-	if err != nil {
-		t.Errorf("err %v", err)
-	}
-	if !b {
-		t.Errorf("value not true")
-	}
-
-	s, x = c.Get("bbb")
-	if !x {
-		t.Errorf("key not found")
-	}
-	if s != "1" {
-		t.Errorf("%v value %v, expected %v", "bbb", s, "1")
-	}
-	i, err = c.GetInt("bbb")
-	if err != nil {
-		t.Errorf("err %v", err)
-	}
-	b, err = c.GetBool("bbb")
-	if err != nil {
-		t.Errorf("err %v", err)
-	}
-	if !b {
-		t.Errorf("value not true")
-	}
-
-	s, x = c.Get("e")
-	if !x {
-		t.Errorf("key not found")
-	}
-	if s != "1" {
-		t.Errorf("%v value %v, expected %v", "e", s, "1")
-	}
-	i, err = c.GetInt("e")
-	if err != nil {
-		t.Errorf("err %v", err)
-	}
-	b, err = c.GetBool("e")
-	if err != nil {
-		t.Errorf("err %v", err)
-	}
-	if !b {
-		t.Errorf("value not true")
-	}
-
-	s, x = c.Get("ee")
-	if x {
-		t.Errorf("key should not be found")
-	}
-	if s != "" {
-		t.Errorf("%v value %v, expected %v", "ee", s, "")
-	}
-	i, err = c.GetInt("ee")
-	if err == nil {
-		t.Errorf("err expected")
-	}
-	b, err = c.GetBool("ee")
-	if err != nil {
-		t.Errorf("err %v", err)
-	}
-	if b {
-		t.Errorf("value true")
-	}
-	i, err = c.GetIntDefault("ee", 32)
-	if err != nil {
-		t.Errorf("err %v", err)
-	}
-	if i != 32 {
-		t.Errorf("%v value %v, expected %v", "ee", i, 32)
-	}
-	s, x = c.GetDefault("ee", "ff")
-	if x {
-		t.Errorf("ee should not exist")
-	}
-	if s != "ff" {
-		t.Errorf("%v value %v, expected %v", "ee", s, "ff")
+	if p.GuideLines.Major.Interval != 0 || p.GuideLines.Major.Offsets.X != 0 || p.GuideLines.Major.Offsets.Y != 0 {
+		t.Errorf("Major %v %v %v", p.GuideLines.Major.Interval, p.GuideLines.Major.Offsets.X, p.GuideLines.Major.Offsets.Y)
 	}
 }
 

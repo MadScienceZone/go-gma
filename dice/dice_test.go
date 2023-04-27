@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______     _______               #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )   / ___   )              #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |   \/   )  |              #
-# | |      | || || || (___) | Assistant | (____         /   )       /   )              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /      _/   /               #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/      /   _/                #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ _ (   (__/\              #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_)\_______/              #
+#  _______  _______  _______             _______     ______      _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \    (  __   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \   | (  )  |              #
+# | |      | || || || (___) | Assistant | (____        ___) /   | | /   |              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (    | (/ /) |              #
+# | | \_  )| |   | || (   ) |                 ) )         ) \   |   / | |              #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  / _ |  (__) |              #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_)(_______)              #
 #                                                                                      #
 ########################################################################################
 */
@@ -338,11 +338,8 @@ func TestDiceHistories(t *testing.T) {
 
 	d.Roll()
 	s := 0
-	for i, die := range d.multiDice {
+	for _, die := range d.multiDice {
 		s += die.lastValue()
-		if die.getOperator() != "" && die.getOperator() != "+" {
-			t.Fatalf("Die #%d operator is %s", i, die.getOperator())
-		}
 	}
 	if s != d.LastValue {
 		t.Fatalf("Sum %d, expected %d", s, d.LastValue)
@@ -1850,6 +1847,120 @@ func TestDiceStructured(t *testing.T) {
 	}
 }
 
+func TestDiceOrderOfOperations(t *testing.T) {
+	//rand.Seed(12345) // static seed so our results will be the same every run
+	d, err := NewDieRoller(WithSeed(12345))
+	if err != nil {
+		t.Fatalf("Error creating new DieRoller: %v", err)
+	}
+
+	type testcase struct {
+		Roll    string
+		Reslist []StructuredResult
+		Error   bool
+	}
+
+	testcases := []testcase{
+		// 0  3+4*2//(1-5) -> 3 4 2 * 1 5 - ÷ +  -> 3+((4*2)÷(1-5)) -> 1
+		{Roll: "3+4*2//(1-5)", Reslist: []StructuredResult{
+			{Result: 1, Details: []StructuredDescription{
+				{Type: "result", Value: "1"},
+				{Type: "separator", Value: "="},
+				{Type: "constant", Value: "3"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "4"},
+				{Type: "operator", Value: "×"},
+				{Type: "constant", Value: "2"},
+				{Type: "operator", Value: "÷"},
+				{Type: "begingroup", Value: "("},
+				{Type: "constant", Value: "1"},
+				{Type: "operator", Value: "-"},
+				{Type: "constant", Value: "5"},
+				{Type: "endgroup", Value: ")"},
+			}},
+		}},
+		// 1 (d20+5*2)÷2 -> d20 5 2*+2÷ -> 4 5 2*+2÷ -> 7
+
+		{Roll: "(d20+5*2)÷2", Reslist: []StructuredResult{
+			{Result: 7, Details: []StructuredDescription{
+				{Type: "result", Value: "7"},
+				{Type: "separator", Value: "="},
+				{Type: "begingroup", Value: "("},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "4"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "5"},
+				{Type: "operator", Value: "×"},
+				{Type: "constant", Value: "2"},
+				{Type: "endgroup", Value: ")"},
+				{Type: "operator", Value: "÷"},
+				{Type: "constant", Value: "2"},
+			}},
+		}},
+
+		// 2  trailing operator
+		{Roll: "12+", Error: true},
+
+		// 3  leading operator other than + or /
+		{Roll: "*42", Error: true},
+
+		// 4  15++10 -> 15 + (+10) -> 15 ﹢10+  -> 25
+		{Roll: "15++10", Reslist: []StructuredResult{
+			{Result: 25, Details: []StructuredDescription{
+				{Type: "result", Value: "25"},
+				{Type: "separator", Value: "="},
+				{Type: "constant", Value: "15"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "10"},
+			}},
+		}},
+
+		// 5  15+-10 -> 15 + (-10) -> 15 ‾10+ -> 5
+		{Roll: "15+-10", Reslist: []StructuredResult{
+			{Result: 5, Details: []StructuredDescription{
+				{Type: "result", Value: "5"},
+				{Type: "separator", Value: "="},
+				{Type: "constant", Value: "15"},
+				{Type: "operator", Value: "+"},
+				{Type: "operator", Value: "-"},
+				{Type: "constant", Value: "10"},
+			}},
+		}},
+
+		// 6  15+*10
+		{Roll: "15+*10", Error: true},
+
+		// 7  ((((((4(((((
+		{Roll: "((((((4(((((", Error: true},
+
+		// 8 15+3)
+		{Roll: "15+3)", Error: true},
+
+		// 9  (15*2)//3)
+		{Roll: "(15*2)//3)", Error: true},
+
+		// 10  ((15*2)//3
+		{Roll: "((15*2)//3", Error: true},
+	}
+
+	for i, test := range testcases {
+		label, results, err := d.DoRoll(test.Roll)
+		if err != nil {
+			if !test.Error {
+				t.Fatalf("test #%d error %v", i, err)
+			}
+		} else if test.Error {
+			t.Fatalf("test #%d should have raised an error but didn't", i)
+		}
+		if !compareResults(results, test.Reslist) {
+			t.Fatalf("test #%d result %v, expected %v", i, results, test.Reslist)
+		}
+		if label != "" {
+			t.Fatalf("test #%d label was %v, expected it to be empty", i, label)
+		}
+	}
+}
+
 func TestDicePrivateRolls(t *testing.T) {
 	//rand.Seed(12345) // static seed so our results will be the same every run
 	d, err := NewDieRoller(WithSeed(12345))
@@ -1898,7 +2009,7 @@ func TestDicePrivateRolls(t *testing.T) {
 	}
 }
 
-// @[00]@| Go-GMA 5.2.2
+// @[00]@| Go-GMA 5.3.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
