@@ -1,14 +1,18 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.3.0                <!-- @@##@@ -->
- * Effective Date: 26-Apr-2023			<!-- @@##@@ -->
+ * This Package Version: 5.3.1                <!-- @@##@@ -->
+ * Effective Date: 28-Apr-2023			<!-- @@##@@ -->
 
 ## Compatibility
  * GMA Core API Library Version: 5.3.2		<!-- @@##@@ -->
- * GMA Mapper Version: 4.4.1		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.5		<!-- @@##@@ -->
  * GMA Mapper Protocol: 403		<!-- @@##@@ -->
  * GMA Mapper File Format: 20		<!-- @@##@@ -->
+
+## v5.3.1
+### Fixes
+ * Die roll expressions got confused with spaces between parentheses and operators (e.g., `(d20 + 3) * 2`). Fixes [issue #19](https://github.com/MadScienceZone/go-gma/issues/19)
 
 ## v5.3.0
 ### Enhancements
