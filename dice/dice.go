@@ -161,12 +161,15 @@ type Dice struct {
 // Generally, whitespace  is insignificant in the
 // description string.
 //
-// On  fully  Unicode‐aware  implementations (e.g., the Go version of this
-// package), the character “×” (U+00D7) may be used in place of “*”,
-// and “÷” (U+00F7) in place of “//”. (Internally, the “//” operator is converted
-// to the rune ‘÷’, so that's the character that will appear in any output
-// details about the die roll. Likewise, the code will report ‘×’ for multiplication
-// in the output.)
+// Additionally, a pair of operators are available to constrain values within given
+// limits. The expression x<=y will have the value of x as long as it is less than
+// or equal to y; if x is greater than y, then y will be the value taken.  Likewise
+// with x>=y but this means to take the value of x as long as it is greater than
+// or equal to y. These operators have the highest precedence other than unary minus.
+//
+// On  fully  Unicode‐aware  implementations (e.g., the Go version of this package), the character “×” (U+00D7) may be used in place of “*”,
+// “÷” (U+00F7) in place of “//”, “≤” (U+2264) in place of "<=", and “≥” (U+2265) in place of ">=".
+// (Internally, these operators are converted to the non-ASCII Unicode runes, so ‘//‘ will appear as ‘÷’ in any output details about the die roll.)
 //
 // Each die‐roll expression has the general form
 //   [>] [<n>[/<div>]] d <sides> [best|worst of <r>] [<label>]
