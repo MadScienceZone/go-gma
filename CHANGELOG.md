@@ -10,6 +10,10 @@
  * GMA Mapper Protocol: 403		<!-- @@##@@ -->
  * GMA Mapper File Format: 20		<!-- @@##@@ -->
 
+## v5.4.0
+### Enhancements
+ * Added <= and >= operators for die rolls to constrain values to be within defined limits.
+
 ## v5.3.1
 ### Fixes
  * Die roll expressions got confused with spaces between parentheses and operators (e.g., `(d20 + 3) * 2`). Fixes [issue #19](https://github.com/MadScienceZone/go-gma/issues/19)
