@@ -1,14 +1,18 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.3.1                <!-- @@##@@ -->
- * Effective Date: 28-Apr-2023			<!-- @@##@@ -->
+ * This Package Version: 5.4.0                <!-- @@##@@ -->
+ * Effective Date: 29-Apr-2023			<!-- @@##@@ -->
 
 ## Compatibility
  * GMA Core API Library Version: 5.3.2		<!-- @@##@@ -->
  * GMA Mapper Version: 4.5		<!-- @@##@@ -->
  * GMA Mapper Protocol: 403		<!-- @@##@@ -->
  * GMA Mapper File Format: 20		<!-- @@##@@ -->
+
+## v5.4.0
+### Enhancements
+ * Added <= and >= operators for die rolls to constrain values to be within defined limits.
 
 ## v5.3.1
 ### Fixes

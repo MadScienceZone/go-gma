@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______       __                   #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \     /  \                  #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \    \/) )                 #
-# | |      | || || || (___) | Assistant | (____        ___) /      | |                 #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (       | |                 #
-# | | \_  )| |   | || (   ) |                 ) )         ) \      | |                 #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  / _  __) (_                #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_) \____/                #
+#  _______  _______  _______             _______        ___       _______              #
+# (  ____ \(       )(  ___  ) Game      (  ____ \      /   )     (  __   )             #
+# | (    \/| () () || (   ) | Master's  | (    \/     / /) |     | (  )  |             #
+# | |      | || || || (___) | Assistant | (____      / (_) (_    | | /   |             #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    (____   _)   | (/ /) |             #
+# | | \_  )| |   | || (   ) |                 ) )        ) (     |   / | |             #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _      | |   _ |  (__) |             #
+# (_______)|/     \||/     \| Client    \______/ (_)     (_)  (_)(_______)             #
 #                                                                                      #
 ########################################################################################
 */
@@ -1960,6 +1960,29 @@ func TestDiceOrderOfOperations(t *testing.T) {
 				{Type: "constant", Value: "12"},
 			}},
 		}},
+
+		// 12  15≤5*15≤30*2≥10*8≥3 = 5*15*10*8 = 6000
+		{Roll: "15<=5*15<=30*2>=10*8>=3", Reslist: []StructuredResult{
+			{Result: 6000, Details: []StructuredDescription{
+				{Type: "result", Value: "6000"},
+				{Type: "separator", Value: "="},
+				{Type: "constant", Value: "15"},
+				{Type: "operator", Value: "≤"},
+				{Type: "constant", Value: "5"},
+				{Type: "operator", Value: "×"},
+				{Type: "constant", Value: "15"},
+				{Type: "operator", Value: "≤"},
+				{Type: "constant", Value: "30"},
+				{Type: "operator", Value: "×"},
+				{Type: "constant", Value: "2"},
+				{Type: "operator", Value: "≥"},
+				{Type: "constant", Value: "10"},
+				{Type: "operator", Value: "×"},
+				{Type: "constant", Value: "8"},
+				{Type: "operator", Value: "≥"},
+				{Type: "constant", Value: "3"},
+			}},
+		}},
 	}
 
 	for i, test := range testcases {
@@ -2028,7 +2051,7 @@ func TestDicePrivateRolls(t *testing.T) {
 	}
 }
 
-// @[00]@| Go-GMA 5.3.1
+// @[00]@| Go-GMA 5.4.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

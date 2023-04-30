@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______       __                   #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \     /  \                  #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \    \/) )                 #
-# | |      | || || || (___) | Assistant | (____        ___) /      | |                 #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (       | |                 #
-# | | \_  )| |   | || (   ) |                 ) )         ) \      | |                 #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  / _  __) (_                #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_) \____/                #
+#  _______  _______  _______             _______        ___       _______              #
+# (  ____ \(       )(  ___  ) Game      (  ____ \      /   )     (  __   )             #
+# | (    \/| () () || (   ) | Master's  | (    \/     / /) |     | (  )  |             #
+# | |      | || || || (___) | Assistant | (____      / (_) (_    | | /   |             #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    (____   _)   | (/ /) |             #
+# | | \_  )| |   | || (   ) |                 ) )        ) (     |   / | |             #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _      | |   _ |  (__) |             #
+# (_______)|/     \||/     \| Client    \______/ (_)     (_)  (_)(_______)             #
 #                                                                                      #
 ########################################################################################
 */
@@ -161,12 +161,15 @@ type Dice struct {
 // Generally, whitespace  is insignificant in the
 // description string.
 //
-// On  fully  Unicode‐aware  implementations (e.g., the Go version of this
-// package), the character “×” (U+00D7) may be used in place of “*”,
-// and “÷” (U+00F7) in place of “//”. (Internally, the “//” operator is converted
-// to the rune ‘÷’, so that's the character that will appear in any output
-// details about the die roll. Likewise, the code will report ‘×’ for multiplication
-// in the output.)
+// Additionally, a pair of operators are available to constrain values within given
+// limits. The expression x<=y will have the value of x as long as it is less than
+// or equal to y; if x is greater than y, then y will be the value taken.  Likewise
+// with x>=y but this means to take the value of x as long as it is greater than
+// or equal to y. These operators have the highest precedence other than unary minus.
+//
+// On  fully  Unicode‐aware  implementations (e.g., the Go version of this package), the character “×” (U+00D7) may be used in place of “*”,
+// “÷” (U+00F7) in place of “//”, “≤” (U+2264) in place of "<=", and “≥” (U+2265) in place of ">=".
+// (Internally, these operators are converted to the non-ASCII Unicode runes, so ‘//‘ will appear as ‘÷’ in any output details about the die roll.)
 //
 // Each die‐roll expression has the general form
 //   [>] [<n>[/<div>]] d <sides> [best|worst of <r>] [<label>]
@@ -451,6 +454,18 @@ func (s *evalStack) applyOp() error {
 		s.push(x * y)
 	case '÷':
 		s.push(x / y)
+	case '≤':
+		if x > y {
+			s.push(y)
+		} else {
+			s.push(x)
+		}
+	case '≥':
+		if x < y {
+			s.push(y)
+		} else {
+			s.push(x)
+		}
 	default:
 		return fmt.Errorf("Unknown operator \"%v\"", op)
 	}
@@ -539,8 +554,10 @@ func precedence(op dieOperator) int {
 		return 1
 	case '*', '×', '÷':
 		return 2
-	case '‾':
+	case '≤', '≥':
 		return 3
+	case '‾':
+		return 4
 	}
 	return 0
 }
@@ -1006,8 +1023,8 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 		reMin := regexp.MustCompile(`^\s*min\s*([+-]?\d+)\s*$`)
 		reMax := regexp.MustCompile(`^\s*max\s*([+-]?\d+)\s*$`)
 		reMinmax := regexp.MustCompile(`\b(min|max)\s*[+-]?\d+`)
-		reOpSplit := regexp.MustCompile(`[-+*×÷()]|[^-+*×÷()]+`)
-		reIsOp := regexp.MustCompile(`^[-+*×÷()]$`)
+		reOpSplit := regexp.MustCompile(`[-+*×÷()≤≥]|[^-+*×÷()≤≥]+`)
+		reIsOp := regexp.MustCompile(`^[-+*×÷()≤≥]$`)
 		reIsDie := regexp.MustCompile(`\d+\s*[dD]\d*\d+`)
 		reIsWS := regexp.MustCompile(`\s+`)
 		reConstant := regexp.MustCompile(`^\s*(\d+)\s*(.*?)\s*$`)
@@ -1051,8 +1068,10 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 		// ASCII "//" operator as well.
 		//
 		expr := strings.Replace(d.desc, "//", "÷", -1)
+		expr = strings.Replace(expr, ">=", "≥", -1)
+		expr = strings.Replace(expr, "<=", "≤", -1)
 		exprParts := reOpSplit.FindAllString(expr, -1)
-		expectedSyntax := "[<n>[/<d>]] d [<sides>|%] [best|worst of <n>] [+|-|*|×|÷|// ...] ['|'min <n>] ['|'max <n>]"
+		expectedSyntax := "[<n>[/<d>]] d [<sides>|%] [best|worst of <n>] [+|-|*|×|÷|//|<=|>=|≤|≥ ...] ['|'min <n>] ['|'max <n>]"
 
 		if len(exprParts) == 0 {
 			return nil, fmt.Errorf("syntax error in die roll description \"%s\"; should be \"%s\"", d.desc, expectedSyntax)
@@ -1678,6 +1697,11 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 	rePermutations := regexp.MustCompile(`\{(.*?)\}`)
 	rePctRoll := regexp.MustCompile(`^\s*(\d+)%(.*)$`)
 
+	//
+	// Convert <= and >= so we don't confuse them with the = that indicates a title string
+	//
+	spec = strings.Replace(spec, ">=", "≥", -1)
+	spec = strings.Replace(spec, "<=", "≤", -1)
 	//
 	// Look for leading "<label>="
 	//
@@ -2955,7 +2979,7 @@ d representation:
 
 */
 
-// @[00]@| Go-GMA 5.3.1
+// @[00]@| Go-GMA 5.4.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
