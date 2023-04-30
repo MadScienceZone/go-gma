@@ -451,6 +451,18 @@ func (s *evalStack) applyOp() error {
 		s.push(x * y)
 	case '÷':
 		s.push(x / y)
+	case '≤':
+		if x > y {
+			s.push(y)
+		} else {
+			s.push(x)
+		}
+	case '≥':
+		if x < y {
+			s.push(y)
+		} else {
+			s.push(x)
+		}
 	default:
 		return fmt.Errorf("Unknown operator \"%v\"", op)
 	}
@@ -539,8 +551,10 @@ func precedence(op dieOperator) int {
 		return 1
 	case '*', '×', '÷':
 		return 2
-	case '‾':
+	case '≤', '≥':
 		return 3
+	case '‾':
+		return 4
 	}
 	return 0
 }
@@ -1006,8 +1020,8 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 		reMin := regexp.MustCompile(`^\s*min\s*([+-]?\d+)\s*$`)
 		reMax := regexp.MustCompile(`^\s*max\s*([+-]?\d+)\s*$`)
 		reMinmax := regexp.MustCompile(`\b(min|max)\s*[+-]?\d+`)
-		reOpSplit := regexp.MustCompile(`[-+*×÷()]|[^-+*×÷()]+`)
-		reIsOp := regexp.MustCompile(`^[-+*×÷()]$`)
+		reOpSplit := regexp.MustCompile(`[-+*×÷()≤≥]|[^-+*×÷()≤≥]+`)
+		reIsOp := regexp.MustCompile(`^[-+*×÷()≤≥]$`)
 		reIsDie := regexp.MustCompile(`\d+\s*[dD]\d*\d+`)
 		reIsWS := regexp.MustCompile(`\s+`)
 		reConstant := regexp.MustCompile(`^\s*(\d+)\s*(.*?)\s*$`)
@@ -1051,8 +1065,10 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 		// ASCII "//" operator as well.
 		//
 		expr := strings.Replace(d.desc, "//", "÷", -1)
+		expr = strings.Replace(expr, ">=", "≥", -1)
+		expr = strings.Replace(expr, "<=", "≤", -1)
 		exprParts := reOpSplit.FindAllString(expr, -1)
-		expectedSyntax := "[<n>[/<d>]] d [<sides>|%] [best|worst of <n>] [+|-|*|×|÷|// ...] ['|'min <n>] ['|'max <n>]"
+		expectedSyntax := "[<n>[/<d>]] d [<sides>|%] [best|worst of <n>] [+|-|*|×|÷|//|<=|>=|≤|≥ ...] ['|'min <n>] ['|'max <n>]"
 
 		if len(exprParts) == 0 {
 			return nil, fmt.Errorf("syntax error in die roll description \"%s\"; should be \"%s\"", d.desc, expectedSyntax)
@@ -1678,6 +1694,11 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 	rePermutations := regexp.MustCompile(`\{(.*?)\}`)
 	rePctRoll := regexp.MustCompile(`^\s*(\d+)%(.*)$`)
 
+	//
+	// Convert <= and >= so we don't confuse them with the = that indicates a title string
+	//
+	spec = strings.Replace(spec, ">=", "≥", -1)
+	spec = strings.Replace(spec, "<=", "≤", -1)
 	//
 	// Look for leading "<label>="
 	//

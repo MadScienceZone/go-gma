@@ -1960,6 +1960,29 @@ func TestDiceOrderOfOperations(t *testing.T) {
 				{Type: "constant", Value: "12"},
 			}},
 		}},
+
+		// 12  15≤5*15≤30*2≥10*8≥3 = 5*15*10*8 = 6000
+		{Roll: "15<=5*15<=30*2>=10*8>=3", Reslist: []StructuredResult{
+			{Result: 6000, Details: []StructuredDescription{
+				{Type: "result", Value: "6000"},
+				{Type: "separator", Value: "="},
+				{Type: "constant", Value: "15"},
+				{Type: "operator", Value: "≤"},
+				{Type: "constant", Value: "5"},
+				{Type: "operator", Value: "×"},
+				{Type: "constant", Value: "15"},
+				{Type: "operator", Value: "≤"},
+				{Type: "constant", Value: "30"},
+				{Type: "operator", Value: "×"},
+				{Type: "constant", Value: "2"},
+				{Type: "operator", Value: "≥"},
+				{Type: "constant", Value: "10"},
+				{Type: "operator", Value: "×"},
+				{Type: "constant", Value: "8"},
+				{Type: "operator", Value: "≥"},
+				{Type: "constant", Value: "3"},
+			}},
+		}},
 	}
 
 	for i, test := range testcases {
