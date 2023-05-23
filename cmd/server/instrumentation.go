@@ -17,4 +17,7 @@
 
 package main
 
+import _ "github.com/newrelic/go-agent/v3/integrations/nrsqlite3"
+
 const InstrumentCode = true
+const DatabaseDriver = "nrsqlite3"

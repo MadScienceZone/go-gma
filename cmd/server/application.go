@@ -134,6 +134,7 @@ type Application struct {
 	Logger *log.Logger
 
 	NrLogFile *os.File
+	NrAppName string
 
 	// If DeLugLevel is 0, no extra debugging output will be logged.
 	// Otherwise, it gives a set of debugging topics to report.
@@ -353,6 +354,7 @@ func (a *Application) GetAppOptions() error {
 	var sqlDbName = flag.String("sqlite", "", "Specify filename for sqlite database to use")
 	var debugFlags = flag.String("debug", "", "List the debugging trace types to enable")
 	var nrLogger = flag.String("telemetry-log", "", "Debugging log for telemetry collection (default: stdout)")
+	var nrAppName = flag.String("telemetry-name", "", "Application name for telemetry collection (default: \"gma-server\")")
 	flag.Parse()
 
 	if *debugFlags != "" {
@@ -390,6 +392,18 @@ func (a *Application) GetAppOptions() error {
 		a.NrLogFile, err = os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			return fmt.Errorf("unable to open telemetry log file: %v", err)
+		}
+		if !InstrumentCode {
+			a.Log("WARNING: -telemetry-log option given but the server is not compiled to enable telemetry!")
+		}
+	}
+
+	if *nrAppName == "" {
+		a.NrAppName = "gma-server"
+	} else {
+		a.NrAppName = *nrAppName
+		if !InstrumentCode {
+			a.Log("WARNING: -telemetry-name option given but the server is not compiled to enable telemetry!")
 		}
 	}
 

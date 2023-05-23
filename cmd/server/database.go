@@ -33,7 +33,6 @@ import (
 
 	"github.com/MadScienceZone/go-gma/v5/dice"
 	"github.com/MadScienceZone/go-gma/v5/mapper"
-	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/exp/slices"
 )
 
@@ -49,7 +48,7 @@ func (a *Application) dbOpen() error {
 		// database doesn't exist yet; create a new one
 
 		a.Logf("no existing sqlite3 database \"%s\" found--creating a new one", a.DatabaseName)
-		a.sqldb, err = sql.Open("sqlite3", "file:"+a.DatabaseName)
+		a.sqldb, err = sql.Open(DatabaseDriver, "file:"+a.DatabaseName)
 		if err != nil {
 			a.Logf("unable to create sqlite3 database %s: %v", a.DatabaseName, err)
 			return err

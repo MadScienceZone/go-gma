@@ -97,6 +97,10 @@ Options:
       If server was compiled to send performance telemetry data, a debugging log of that
       data is recorded in the specified file.
 
+   -telemetry-name string
+      If server was compiled to send performance telemetry data, this specifies a custom
+      application name to be reported for this instance of the server.
+
 See the full documentation in the accompanying manual file man/man6/server.6.pdf (or run “gma man go server” if you have the GMA Core package installed as well as Go-GMA).
 
 See also the server protocol specification in the man/man7/mapper-protocol.7.pdf of the GMA-Mapper package (or run “gma man mapper-protocol”). This is also printed in Appendix F of the GMA Game Master's Guide.
@@ -120,7 +124,7 @@ import (
 // Auto-configured values
 //
 
-const GoVersionNumber="5.4.0" // @@##@@
+const GoVersionNumber = "5.4.0" // @@##@@
 
 //
 // eventMonitor responds to signals and timers that affect our overall operation
@@ -219,9 +223,9 @@ func main() {
 	/* instrumentation */
 	// set the following environment variables for the New Relic
 	// Go Agent:
-	//    NEW_RELIC_APP_NAME = the name you want to appear in the datasets
+	//    NEW_RELIC_APP_NAME = the name you want to appear in the datasets (or use -telemetry-name option)
 	//    NEW_RELIC_LICENSE_KEY = your license key
-	//    NEW_RELIC_METADATA_RELEASE_TAG = application release
+	//    NEW_RELIC_METADATA_SERVICE_VERSION = application release
 	//
 	if InstrumentCode {
 		app.Log("application performance metrics telemetry reporting enabled")
@@ -229,7 +233,7 @@ func main() {
 			app.Logf("unable to set version metadata: %v", err)
 		}
 		nrApp, err = newrelic.NewApplication(
-			newrelic.ConfigAppName("gma-server"),
+			newrelic.ConfigAppName(app.NrAppName),
 			newrelic.ConfigFromEnvironment(),
 			newrelic.ConfigCodeLevelMetricsEnabled(true),
 			newrelic.ConfigCodeLevelMetricsPathPrefixes("go-gma/"),
