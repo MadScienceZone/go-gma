@@ -653,6 +653,9 @@ type CreatureToken struct {
 	// that it is not their turn to act.
 	Dim bool `json:",omitempty"`
 
+	// If true, this means the creature token is only visible to the GM.
+	Hidden bool `json:",omitempty"`
+
 	// The creature type.
 	CreatureType CreatureTypeCode
 

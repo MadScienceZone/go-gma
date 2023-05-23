@@ -2442,6 +2442,9 @@ func (c *Connection) UpdateStatusMarker(smd StatusMarkerDefinition) error {
 // that the map clients indicate.
 //
 type StatusMarkerDefinition struct {
+	// If the token should be transparent when this condition is in effect
+	Transparent bool `json:",omitempty"`
+
 	// The name of the condition
 	Condition string
 
