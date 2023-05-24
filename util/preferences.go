@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______     _______         _____ #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   (  ____ \   (  __   )       (  ___ #
-# | (    \/| () () || (   ) | Master's  | (    \/   | (    \/   | (  )  |       | (    #
-# | |      | || || || (___) | Assistant | (____     | (____     | | /   | _____ | (__/ #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    (_____ \    | (/ /) |(_____)|  __  #
-# | | \_  )| |   | || (   ) |                 ) )         ) )   |   / | |       | (  \ #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\____) ) _ |  (__) |       | )___ #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_)(_______)       |/ \__ #
+#  _______  _______  _______             _______     _______     _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   (  ____ \   (  __   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   | (    \/   | (  )  |              #
+# | |      | || || || (___) | Assistant | (____     | (____     | | /   |              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    (_____ \    | (/ /) |              #
+# | | \_  )| |   | || (   ) |                 ) )         ) )   |   / | |              #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\____) ) _ |  (__) |              #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_)(_______)              #
 #                                                                                      #
 ########################################################################################
 */
@@ -152,29 +152,6 @@ const (
 	Bold
 )
 
-/*
-func (x *FontWeight) MarshalJSON() ([]byte, error) {
-	if x != nil && *x == Bold {
-		return json.Marshal("bold")
-	}
-	return json.Marshal("regular")
-}
-
-func (x *FontWeight) UnmarshalJSON(b []byte) error {
-	var s string
-	if err := json.Unmarshal(b, &s); err != nil {
-		return err
-	}
-
-	if s == "bold" {
-		*x = Bold
-	} else {
-		*x = Regular
-	}
-	return nil
-}
-*/
-
 //
 // FontSlant is the set of valid font slant values
 //
@@ -185,28 +162,6 @@ const (
 	Italic
 )
 
-/*
-func (x *FontSlant) MarshalJSON() ([]byte, error) {
-	if x != nil && *x == Italic {
-		return json.Marshal("italic")
-	}
-	return json.Marshal("roman")
-}
-
-func (x *FontSlant) UnmarshalJSON(b []byte) error {
-	var s string
-	if err := json.Unmarshal(b, &s); err != nil {
-		return err
-	}
-
-	if s == "italic" {
-		*x = Italic
-	} else {
-		*x = Roman
-	}
-	return nil
-}
-*/
 //
 // UserFont describes a user-defined font.
 //
@@ -256,12 +211,12 @@ const (
 	DefaultNextFGDark       = "white"
 	DefaultNextBGLight      = "black"
 	DefaultNextBGDark       = "#cc0000"
-	DefaultCurBGLight       = "#ffff00"
-	DefaultCurBGDark        = "#267800"
-	DefaultReadyBGLight     = "#ff0000"
+	DefaultCurBGLight       = "#9cffb4"
+	DefaultCurBGDark        = "#003300"
+	DefaultReadyBGLight     = "#ff3333"
 	DefaultReadyBGDark      = "#ff0000"
 	DefaultHoldBGLight      = "#ffaaaa"
-	DefaultHoldBGDark       = "#ff8e51"
+	DefaultHoldBGDark       = "#610400"
 	DefaultZeroHPLight      = "#ff0000"
 	DefaultZeroHPDark       = "#ff0000"
 	DefaultNegativeHPLight  = "#000000"
@@ -272,6 +227,8 @@ const (
 	DefaultSlotBGDark       = "#232323"
 	DefaultFlatFootedLight  = "#3333ff"
 	DefaultFlatFootedDark   = "#3333ff"
+	DefaultPresetNameLight  = "blue"
+	DefaultPresetNameDark   = "cyan"
 )
 
 //
@@ -359,6 +316,7 @@ type DialogStyles struct {
 	GridColor        ColorSet `json:"grid,omitempty"`
 	MinorGridColor   ColorSet `json:"grid_minor,omitempty"`
 	MajorGridColor   ColorSet `json:"grid_major,omitempty"`
+	PresetNameColor  ColorSet `json:"preset_name,omitempty"`
 }
 
 //
@@ -468,6 +426,7 @@ func DefaultPreferences() UserPreferences {
 				GridColor:        ColorSet{Dark: DefaultGridDark, Light: DefaultGridLight},
 				MinorGridColor:   ColorSet{Dark: DefaultGridMinorDark, Light: DefaultGridMinorLight},
 				MajorGridColor:   ColorSet{Dark: DefaultGridMajorDark, Light: DefaultGridMajorLight},
+				PresetNameColor:  ColorSet{Dark: DefaultPresetNameDark, Light: DefaultPresetNameLight},
 			},
 			DieRolls: DieRollStyles{
 				CompactRecents: false,
@@ -848,7 +807,7 @@ func SearchInPath(program string) (string, error) {
 	return "", fmt.Errorf("file not found in PATH")
 }
 
-// @[00]@| Go-GMA 5.5.0-beta.0
+// @[00]@| Go-GMA 5.5.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
