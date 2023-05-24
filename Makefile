@@ -1,11 +1,17 @@
 DIRS=map-console map-update preset-update server upload-presets
 
-all: binaries manpages
-
 binaries:
 	for d in $(DIRS); do \
 		echo "building $$d"; \
 		(cd cmd/$$d && go build); \
+	done
+
+all: binaries manpages
+
+clean:
+	for d in $(DIRS); do \
+		echo "removing $$d binary"; \
+		(cd cmd/$$d && rm -f $$d); \
 	done
 
 manpages:
