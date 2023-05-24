@@ -10,6 +10,17 @@
  * GMA Mapper Protocol: 404		<!-- @@##@@ -->
  * GMA Mapper File Format: 20		<!-- @@##@@ -->
 
+## v5.5.0
+### Enhancements
+ * Updated `UserPreferences` structure.
+ * Improved `Makefile`
+ * Implements server protocol 404
+   * Adds `Transparent` attribute to status marker definitions
+   * Adds `Hidden` attribute to creatures
+
+### Fixed
+ * Typos in documentation
+
 ## v5.4.0
 ### Enhancements
  * Added <= and >= operators for die rolls to constrain values to be within defined limits.
