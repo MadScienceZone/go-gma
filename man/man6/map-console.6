@@ -1,6 +1,6 @@
 '\" <<ital-is-var>>
 '\" <<bold-is-fixed>>
-.TH MAP-CONSOLE 6 "Go-GMA 5.4.0" 29-Apr-2023 "Games" \" @@mp@@
+.TH MAP-CONSOLE 6 "Go-GMA 5.5.0" 24-May-2023 "Games" \" @@mp@@
 .SH NAME
 map-console \- GMA map service console (Go version)
 .SH SYNOPSIS
@@ -116,16 +116,18 @@ or
 .BR "\-port 2323" ), 
 except for boolean flags which may be given
 alone (e.g.,
-.BR \-D )
+.BR \-m )
 to indicate that the option is set to \*(lqtrue\*(rq or may be given
 an explicit value which must be attached to the option with an
 equals sign (e.g.,
-.B \-D=true
+.B \-m=true
 or
-.BR \-D=false ).
+.BR \-m=false ).
 .LP
 You 
+'\" <</bold-is-fixed>>
 .B "may not"
+'\" <<bold-is-fixed>>
 combine multiple single-letter options into a single composite
 argument, (e.g., the options
 .B \-r
@@ -556,7 +558,7 @@ Synonymous with
 .SS "Generalized Command Entry"
 .LP
 You may also type a full command with options by typing
-.RB \*(lq !\fIcommand\fP \*(rq
+.RB \*(lq ! \fIcommand\fP\*(rq
 followed by a number of parameters in the following forms.
 The same rules apply as above, so values which contain spaces
 will need to be enclosed in braces.

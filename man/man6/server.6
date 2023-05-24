@@ -1,7 +1,7 @@
 .\" vim:set syntax=nroff:
 '\" <<ital-is-var>>
 '\" <<bold-is-fixed>>
-.TH SERVER 6 "Go-GMA 5.4.0" 29-Apr-2023 "Games" \" @@mp@@
+.TH SERVER 6 "Go-GMA 5.5.0" 24-May-2023 "Games" \" @@mp@@
 .SH NAME
 server \- GMA battle grid map server (Go version)
 .SH SYNOPSIS
@@ -80,8 +80,38 @@ use, we have observed some automated agents which connected and then sat idle fo
 if we didn't terminate their connections. This prevents that.)
 .SH OPTIONS
 .LP
-The following options control the behavior of
-.BR server .
+The command-line options described below 
+may be
+introduced with either one or two hyphens (e.g.,
+.B \-endpoint
+or
+.BR \-\-endpoint ).
+Options which take parameter values may have the value separated
+from the option name by a space or an equals sign (e.g.,
+.B \-endpoint=:2323
+or
+.BR "\-endpoint :2323" ).
+'\" except for boolean flags which may be given
+'\" alone (e.g.,
+'\" .BR \-m )
+'\" to indicate that the option is set to \*(lqtrue\*(rq or may be given
+'\" an explicit value which must be attached to the option with an
+'\" equals sign (e.g.,
+'\" .B \-m=true
+'\" or
+'\" .BR \-m=false ).
+'\" .LP
+'\" You 
+'\" '\" <</bold-is-fixed>>
+'\" .B "may not"
+'\" '\" <<bold-is-fixed>>
+'\" combine multiple single-letter options into a single composite
+'\" argument, (e.g., the options
+'\" .B \-r
+'\" and
+'\" .B \-m
+'\" would need to be entered as two separate options, not as
+'\" .BR \-rm ).
 '\" <<list>>
 .TP 8
 .BI "\-debug " flags

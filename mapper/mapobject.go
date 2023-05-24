@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______        ___       _______              #
-# (  ____ \(       )(  ___  ) Game      (  ____ \      /   )     (  __   )             #
-# | (    \/| () () || (   ) | Master's  | (    \/     / /) |     | (  )  |             #
-# | |      | || || || (___) | Assistant | (____      / (_) (_    | | /   |             #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    (____   _)   | (/ /) |             #
-# | | \_  )| |   | || (   ) |                 ) )        ) (     |   / | |             #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _      | |   _ |  (__) |             #
-# (_______)|/     \||/     \| Client    \______/ (_)     (_)  (_)(_______)             #
+#  _______  _______  _______             _______     _______     _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   (  ____ \   (  __   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   | (    \/   | (  )  |              #
+# | |      | || || || (___) | Assistant | (____     | (____     | | /   |              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    (_____ \    | (/ /) |              #
+# | | \_  )| |   | || (   ) |                 ) )         ) )   |   / | |              #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\____) ) _ |  (__) |              #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_)(_______)              #
 #                                                                                      #
 ########################################################################################
 */
@@ -652,6 +652,9 @@ type CreatureToken struct {
 	// In combat, if this is true, the token is "dimmed" to indicate
 	// that it is not their turn to act.
 	Dim bool `json:",omitempty"`
+
+	// If true, this means the creature token is only visible to the GM.
+	Hidden bool `json:",omitempty"`
 
 	// The creature type.
 	CreatureType CreatureTypeCode
@@ -1956,7 +1959,7 @@ func loadMapFile(input io.Reader, metaDataOnly bool) ([]any, MapMetaData, error)
 	return nil, meta, fmt.Errorf("invalid map file format: unexpected end of file")
 }
 
-// @[00]@| Go-GMA 5.4.0
+// @[00]@| Go-GMA 5.5.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

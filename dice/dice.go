@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______        ___       _______              #
-# (  ____ \(       )(  ___  ) Game      (  ____ \      /   )     (  __   )             #
-# | (    \/| () () || (   ) | Master's  | (    \/     / /) |     | (  )  |             #
-# | |      | || || || (___) | Assistant | (____      / (_) (_    | | /   |             #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    (____   _)   | (/ /) |             #
-# | | \_  )| |   | || (   ) |                 ) )        ) (     |   / | |             #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _      | |   _ |  (__) |             #
-# (_______)|/     \||/     \| Client    \______/ (_)     (_)  (_)(_______)             #
+#  _______  _______  _______             _______     _______     _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   (  ____ \   (  __   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   | (    \/   | (  )  |              #
+# | |      | || || || (___) | Assistant | (____     | (____     | | /   |              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    (_____ \    | (/ /) |              #
+# | | \_  )| |   | || (   ) |                 ) )         ) )   |   / | |              #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\____) ) _ |  (__) |              #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_)(_______)              #
 #                                                                                      #
 ########################################################################################
 */
@@ -1935,13 +1935,6 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 // The <title> (which, if given, is separated from the rest of the spec with an
 // equals sign (“=”)) is optional and will be included as a comment in the result
 // list to indicate what the purpose of the die roll was for.
-// Note that this module does not interpret the <title> value further, but by
-// convention two special characters are significant to some clients:
-//   ‖ (U+2016) separates multiple titles in the <title> string
-//   ≡ (U+2261) separates the title text on the left with a color on the right.
-// This means that a <title> string of "monster≡blue‖damage≡red" will display
-// a title for the die roll as two separate title values, "monster" in blue
-// and "damage" in red.
 //
 // Note that this module does not interpret the <title> value further, but by
 // convention two special characters are significant to some clients:
@@ -2979,7 +2972,7 @@ d representation:
 
 */
 
-// @[00]@| Go-GMA 5.4.0
+// @[00]@| Go-GMA 5.5.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
