@@ -1,14 +1,19 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.5.0                <!-- @@##@@ -->
- * Effective Date: 24-May-2023			<!-- @@##@@ -->
+ * This Package Version: 5.5.1                <!-- @@##@@ -->
+ * Effective Date: 25-May-2023			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 5.5-beta.0-beta.0		<!-- @@##@@ -->
- * GMA Mapper Version: 4.7-beta.0-beta.0		<!-- @@##@@ -->
- * GMA Mapper Protocol: 404		<!-- @@##@@ -->
+ * GMA Core API Library Version: 5.6-beta.0-beta.0		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.8-beta.0-beta.0		<!-- @@##@@ -->
+ * GMA Mapper Protocol: 405		<!-- @@##@@ -->
  * GMA Mapper File Format: 20		<!-- @@##@@ -->
+
+## v5.5.1
+### Enhancements
+ * Implemented protocol 405.
+ * `map-console` shows server version number upon connect.
 
 ## v5.5.0
 ### Enhancements
