@@ -10,6 +10,11 @@
  * GMA Mapper Protocol: 404		<!-- @@##@@ -->
  * GMA Mapper File Format: 20		<!-- @@##@@ -->
 
+## Unreleased
+### Enhancements
+ * Implements server protocol 405
+   * Adds `ServerVersion` to challenge message
+
 ## v5.5.0
 ### Enhancements
  * Updated `UserPreferences` structure.

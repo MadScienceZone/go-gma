@@ -334,17 +334,34 @@ Defines a condition status marker that may be placed
 on creature tokens. This will update an existing marker
 already known to the mapper, or add new ones to the set
 of condition markers. The parameters are
+'\" <<list>>
+.RS
+.TP
 .B Condition
-(providing the name of the condition),
+The name of the condition. While this is arbitrary,
+it should be short, preferably a single word. It should
+not begin with an underscore to avoid conflicts with
+internal names used by the 
+GMA software.
+.TP
 .B Shape
-(which describes the shape of the marker drawn over
-the token\(emsee the protocol documentation),
+Describes the shape of the marker drawn over
+the token. See the protocol documentation
+in
+.BR mapper-protocol (7).
+.TP
 .B Color
-(the color of the marker),
-and 
+The color of the marker.
+.TP
+.B Transparent
+If present and true, this means to use a semi-transparent
+creature token when this condition is in effect.
+.TP
 .B Description
-(a sentence or paragraph describing the effects of
-that condition).
+A sentence or paragraph describing the effects of
+that condition.
+.RE
+'\" <</>>
 .TP
 .B UPDATES
 Advertises to the client the version of each software
