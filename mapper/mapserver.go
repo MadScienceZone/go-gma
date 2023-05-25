@@ -462,6 +462,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 			ServerStarted: serverStarted,
 			ServerActive:  lastPing,
 			ServerTime:    time.Now(),
+			ServerVersion: GoVersionNumber,
 		})
 		if err := c.Conn.Flush(); err != nil {
 			done <- err
@@ -542,6 +543,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 			Protocol:      GMAMapperProtocol,
 			ServerStarted: serverStarted,
 			ServerActive:  lastPing,
+			ServerVersion: GoVersionNumber,
 		})
 		if err := c.Conn.Flush(); err != nil {
 			done <- err

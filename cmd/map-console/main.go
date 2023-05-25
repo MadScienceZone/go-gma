@@ -199,7 +199,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.5.1" //@@##@@
+const GoVersionNumber = "5.5.1" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -386,7 +386,11 @@ func main() {
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	fmt.Println(colorize("Connected to server.", "Green", mono))
+	if server.ServerStats.ServerVersion == "" {
+		fmt.Println(colorize(fmt.Sprintf("Connected to server."), "Green", mono))
+	} else {
+		fmt.Println(colorize(fmt.Sprintf("Connected to server version %s.", server.ServerStats.ServerVersion), "Green", mono))
+	}
 
 	if server.ServerStats.Started.IsZero() {
 		fmt.Println(colorize("Server did not send uptime data.", "Red", mono))
