@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______        ___       _______              #
-# (  ____ \(       )(  ___  ) Game      (  ____ \      /   )     (  __   )             #
-# | (    \/| () () || (   ) | Master's  | (    \/     / /) |     | (  )  |             #
-# | |      | || || || (___) | Assistant | (____      / (_) (_    | | /   |             #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    (____   _)   | (/ /) |             #
-# | | \_  )| |   | || (   ) |                 ) )        ) (     |   / | |             #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _      | |   _ |  (__) |             #
-# (_______)|/     \||/     \| Client    \______/ (_)     (_)  (_)(_______)             #
+#  _______  _______  _______             _______     _______      __                   #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   (  ____ \    /  \                  #
+# | (    \/| () () || (   ) | Master's  | (    \/   | (    \/    \/) )                 #
+# | |      | || || || (___) | Assistant | (____     | (____        | |                 #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    (_____ \       | |                 #
+# | | \_  )| |   | || (   ) |                 ) )         ) )      | |                 #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\____) ) _  __) (_                #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_) \____/                #
 #                                                                                      #
 ########################################################################################
 */
@@ -253,9 +253,10 @@ type Connection struct {
 
 	// Some statistics we know about the server
 	ServerStats struct {
-		Started     time.Time // server startup time
-		Active      time.Time // time of last ping (at connect-time, this is time of last ping sent by server)
-		ConnectTime time.Time // time server connected (time on the server, for comparison with other server times)
+		Started       time.Time // server startup time
+		Active        time.Time // time of last ping (at connect-time, this is time of last ping sent by server)
+		ConnectTime   time.Time // time server connected (time on the server, for comparison with other server times)
+		ServerVersion string    // the server's version number
 	}
 }
 
@@ -1098,6 +1099,7 @@ type ChallengeMessagePayload struct {
 	ServerStarted time.Time `json:",omitempty"`
 	ServerActive  time.Time `json:",omitempty"`
 	ServerTime    time.Time `json:",omitempty"`
+	ServerVersion string    `json:",omitempty"`
 }
 
 //   ____ _           _   __  __
@@ -2442,6 +2444,9 @@ func (c *Connection) UpdateStatusMarker(smd StatusMarkerDefinition) error {
 // that the map clients indicate.
 //
 type StatusMarkerDefinition struct {
+	// If the token should be transparent when this condition is in effect
+	Transparent bool `json:",omitempty"`
+
 	// The name of the condition
 	Condition string
 
@@ -2845,6 +2850,7 @@ func (c *Connection) login(done chan error) {
 			c.ServerStats.Started = response.ServerStarted
 			c.ServerStats.Active = response.ServerActive
 			c.ServerStats.ConnectTime = response.ServerTime
+			c.ServerStats.ServerVersion = response.ServerVersion
 
 			if response.Challenge != nil {
 				if c.Authenticator == nil {
@@ -3508,7 +3514,7 @@ func (c *Connection) CheckVersionOf(packageName, myVersionNumber string) (*Packa
 	return availableVersion, nil
 }
 
-// @[00]@| Go-GMA 5.4.0
+// @[00]@| Go-GMA 5.5.1
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

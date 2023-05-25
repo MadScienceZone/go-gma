@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______        ___       _______              #
-# (  ____ \(       )(  ___  ) Game      (  ____ \      /   )     (  __   )             #
-# | (    \/| () () || (   ) | Master's  | (    \/     / /) |     | (  )  |             #
-# | |      | || || || (___) | Assistant | (____      / (_) (_    | | /   |             #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    (____   _)   | (/ /) |             #
-# | | \_  )| |   | || (   ) |                 ) )        ) (     |   / | |             #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _      | |   _ |  (__) |             #
-# (_______)|/     \||/     \| Client    \______/ (_)     (_)  (_)(_______)             #
+#  _______  _______  _______             _______     _______      __                   #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   (  ____ \    /  \                  #
+# | (    \/| () () || (   ) | Master's  | (    \/   | (    \/    \/) )                 #
+# | |      | || || || (___) | Assistant | (____     | (____        | |                 #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    (_____ \       | |                 #
+# | | \_  )| |   | || (   ) |                 ) )         ) )      | |                 #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\____) ) _  __) (_                #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_) \____/                #
 #                                                                                      #
 ########################################################################################
 */
@@ -462,6 +462,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 			ServerStarted: serverStarted,
 			ServerActive:  lastPing,
 			ServerTime:    time.Now(),
+			ServerVersion: GoVersionNumber,
 		})
 		if err := c.Conn.Flush(); err != nil {
 			done <- err
@@ -542,6 +543,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 			Protocol:      GMAMapperProtocol,
 			ServerStarted: serverStarted,
 			ServerActive:  lastPing,
+			ServerVersion: GoVersionNumber,
 		})
 		if err := c.Conn.Flush(); err != nil {
 			done <- err
