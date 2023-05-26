@@ -1,14 +1,20 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.5.1                <!-- @@##@@ -->
+ * This Package Version: 5.5.2                <!-- @@##@@ -->
  * Effective Date: 25-May-2023			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 5.6-beta.0-beta.0		<!-- @@##@@ -->
- * GMA Mapper Version: 4.8-beta.0-beta.0		<!-- @@##@@ -->
+ * GMA Core API Library Version: 5.6		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.8		<!-- @@##@@ -->
  * GMA Mapper Protocol: 405		<!-- @@##@@ -->
  * GMA Mapper File Format: 20		<!-- @@##@@ -->
+
+## v5.5.2
+### Fixes
+ * `map-console` didn't work if no `preferences.json` or `*.conf` file was found.
+ * clients didn't see `Transparency` attribute of status markers.
+ * `map-console` didn't list transparency attributes.
 
 ## v5.5.1
 ### Enhancements
