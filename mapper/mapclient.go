@@ -2492,7 +2492,7 @@ type StatusMarkerDefinition struct {
 // Text produces a simple text description of a StatusMarkerDefinition structure.
 //
 func (c StatusMarkerDefinition) Text() string {
-	return fmt.Sprintf("Condition %q: Shape=%q, Color=%q, Description=%q", c.Condition, c.Shape, c.Color, c.Description)
+	return fmt.Sprintf("Condition %q: Shape=%q, Color=%q, Description=%q, Transparent=%v", c.Condition, c.Shape, c.Color, c.Description, c.Transparent)
 }
 
 //
@@ -3016,6 +3016,7 @@ func (c *Connection) receiveDSM(d UpdateStatusMarkerMessagePayload) {
 			Shape:       d.Shape,
 			Color:       d.Color,
 			Description: d.Description,
+			Transparent: d.Transparent,
 		}
 	}
 }

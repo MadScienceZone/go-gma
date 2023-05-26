@@ -438,9 +438,13 @@ func main() {
 	}
 
 	fmt.Println("Condition Codes from Server:")
-	fmt.Println(colorize("CONDITION------ SHAPE COLOR----- DESCRIPTION-----------------------------------", "Blue", mono))
+	fmt.Println(colorize("CONDITION------ SHAPE T COLOR----- DESCRIPTION-----------------------------------", "Blue", mono))
 	for _, def := range server.Conditions {
-		fmt.Println(colorize(fmt.Sprintf("%-15s %-5s %-10s %.46s", def.Condition, def.Shape, def.Color, def.Description), "Yellow", mono))
+		t := "-"
+		if def.Transparent {
+			t = "T"
+		}
+		fmt.Println(colorize(fmt.Sprintf("%-15s %-5s %s %-10s %.46s", def.Condition, def.Shape, t, def.Color, def.Description), "Yellow", mono))
 	}
 
 	fmt.Println("Available Software Updates:")
@@ -1068,9 +1072,11 @@ func configureApp() (AppPreferences, error) {
 		} else if len(prefs.Prefs.Profiles) > 0 {
 			Fselect = prefs.Prefs.Profiles[0].Name
 		} else {
-			return prefs, fmt.Errorf("preferences data contains no server profiles")
+			log.Printf("preferences data contain no server profiles")
 		}
-		log.Printf("defaulting to profile \"%s\"\n", Fselect)
+		if Fselect != "" {
+			log.Printf("defaulting to profile \"%s\"\n", Fselect)
+		}
 	}
 
 	//
@@ -1098,13 +1104,18 @@ func configureApp() (AppPreferences, error) {
 
 	// Override configuration file settings from command-line
 	// options
-	for idx, pro := range prefs.Prefs.Profiles {
-		if pro.Name == Fselect {
-			prefs.SelectedIdx = idx
-			break
+	if Fselect != "" {
+		for idx, pro := range prefs.Prefs.Profiles {
+			if pro.Name == Fselect {
+				prefs.SelectedIdx = idx
+				break
+			}
 		}
+		log.Printf("using profile #%d, \"%s\"\n", prefs.SelectedIdx, prefs.Prefs.Profiles[prefs.SelectedIdx].Name)
+	} else {
+		prefs.Prefs.Profiles = make([]util.ServerProfile, 1)
+		prefs.SelectedIdx = 0
 	}
-	log.Printf("using profile #%d, \"%s\"\n", prefs.SelectedIdx, prefs.Prefs.Profiles[prefs.SelectedIdx].Name)
 
 	if Fhost != "" {
 		prefs.Prefs.Profiles[prefs.SelectedIdx].Host = Fhost
