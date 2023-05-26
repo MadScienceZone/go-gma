@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______      __                   #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   (  ____ \    /  \                  #
-# | (    \/| () () || (   ) | Master's  | (    \/   | (    \/    \/) )                 #
-# | |      | || || || (___) | Assistant | (____     | (____        | |                 #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    (_____ \       | |                 #
-# | | \_  )| |   | || (   ) |                 ) )         ) )      | |                 #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\____) ) _  __) (_                #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_) \____/                #
+#  _______  _______  _______             _______     _______     _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   (  ____ \   / ___   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   | (    \/   \/   )  |              #
+# | |      | || || || (___) | Assistant | (____     | (____         /   )              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    (_____ \      _/   /               #
+# | | \_  )| |   | || (   ) |                 ) )         ) )    /   _/                #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\____) ) _ (   (__/\              #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_)\_______/              #
 #                                                                                      #
 ########################################################################################
 #
@@ -199,7 +199,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber = "5.5.1" //@@##@@
+const GoVersionNumber="5.5.2" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -438,9 +438,13 @@ func main() {
 	}
 
 	fmt.Println("Condition Codes from Server:")
-	fmt.Println(colorize("CONDITION------ SHAPE COLOR----- DESCRIPTION-----------------------------------", "Blue", mono))
+	fmt.Println(colorize("CONDITION------ SHAPE T COLOR----- DESCRIPTION-----------------------------------", "Blue", mono))
 	for _, def := range server.Conditions {
-		fmt.Println(colorize(fmt.Sprintf("%-15s %-5s %-10s %.46s", def.Condition, def.Shape, def.Color, def.Description), "Yellow", mono))
+		t := "-"
+		if def.Transparent {
+			t = "T"
+		}
+		fmt.Println(colorize(fmt.Sprintf("%-15s %-5s %s %-10s %.46s", def.Condition, def.Shape, t, def.Color, def.Description), "Yellow", mono))
 	}
 
 	fmt.Println("Available Software Updates:")
@@ -1068,9 +1072,11 @@ func configureApp() (AppPreferences, error) {
 		} else if len(prefs.Prefs.Profiles) > 0 {
 			Fselect = prefs.Prefs.Profiles[0].Name
 		} else {
-			return prefs, fmt.Errorf("preferences data contains no server profiles")
+			log.Printf("preferences data contain no server profiles")
 		}
-		log.Printf("defaulting to profile \"%s\"\n", Fselect)
+		if Fselect != "" {
+			log.Printf("defaulting to profile \"%s\"\n", Fselect)
+		}
 	}
 
 	//
@@ -1098,13 +1104,18 @@ func configureApp() (AppPreferences, error) {
 
 	// Override configuration file settings from command-line
 	// options
-	for idx, pro := range prefs.Prefs.Profiles {
-		if pro.Name == Fselect {
-			prefs.SelectedIdx = idx
-			break
+	if Fselect != "" {
+		for idx, pro := range prefs.Prefs.Profiles {
+			if pro.Name == Fselect {
+				prefs.SelectedIdx = idx
+				break
+			}
 		}
+		log.Printf("using profile #%d, \"%s\"\n", prefs.SelectedIdx, prefs.Prefs.Profiles[prefs.SelectedIdx].Name)
+	} else {
+		prefs.Prefs.Profiles = make([]util.ServerProfile, 1)
+		prefs.SelectedIdx = 0
 	}
-	log.Printf("using profile #%d, \"%s\"\n", prefs.SelectedIdx, prefs.Prefs.Profiles[prefs.SelectedIdx].Name)
 
 	if Fhost != "" {
 		prefs.Prefs.Profiles[prefs.SelectedIdx].Host = Fhost
@@ -1867,7 +1878,7 @@ func colorize(text, color string, mono bool) string {
 }
 
 /*
-# @[00]@| Go-GMA 5.5.1
+# @[00]@| Go-GMA 5.5.2
 # @[01]@|
 # @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
