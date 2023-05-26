@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______      __                   #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   (  ____ \    /  \                  #
-# | (    \/| () () || (   ) | Master's  | (    \/   | (    \/    \/) )                 #
-# | |      | || || || (___) | Assistant | (____     | (____        | |                 #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    (_____ \       | |                 #
-# | | \_  )| |   | || (   ) |                 ) )         ) )      | |                 #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\____) ) _  __) (_                #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_) \____/                #
+#  _______  _______  _______             _______     _______     _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   (  ____ \   / ___   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   | (    \/   \/   )  |              #
+# | |      | || || || (___) | Assistant | (____     | (____         /   )              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    (_____ \      _/   /               #
+# | | \_  )| |   | || (   ) |                 ) )         ) )    /   _/                #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\____) ) _ (   (__/\              #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_)\_______/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -2492,7 +2492,7 @@ type StatusMarkerDefinition struct {
 // Text produces a simple text description of a StatusMarkerDefinition structure.
 //
 func (c StatusMarkerDefinition) Text() string {
-	return fmt.Sprintf("Condition %q: Shape=%q, Color=%q, Description=%q", c.Condition, c.Shape, c.Color, c.Description)
+	return fmt.Sprintf("Condition %q: Shape=%q, Color=%q, Description=%q, Transparent=%v", c.Condition, c.Shape, c.Color, c.Description, c.Transparent)
 }
 
 //
@@ -3016,6 +3016,7 @@ func (c *Connection) receiveDSM(d UpdateStatusMarkerMessagePayload) {
 			Shape:       d.Shape,
 			Color:       d.Color,
 			Description: d.Description,
+			Transparent: d.Transparent,
 		}
 	}
 }
@@ -3514,7 +3515,7 @@ func (c *Connection) CheckVersionOf(packageName, myVersionNumber string) (*Packa
 	return availableVersion, nil
 }
 
-// @[00]@| Go-GMA 5.5.1
+// @[00]@| Go-GMA 5.5.2
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
