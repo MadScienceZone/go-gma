@@ -167,7 +167,8 @@ func TestLegacyObjLoadOnePlayer(t *testing.T) {
     },
     "Color": "blue",
     "Size": "M",
-    "Area": "M"
+    "Area": "M",
+    "CustomReach": {}
 }
 «__EOF__»
 `
@@ -219,22 +220,23 @@ P SPAM:PC73 eggs
 				Condition:       "",
 				HPBlur:          10,
 			},
-			Name:       "Jigu",
-			Gx:         31.0,
-			Gy:         14.0,
-			Skin:       0,
-			SkinSize:   nil,
-			Elev:       0,
-			Color:      "blue",
-			Note:       "",
-			Size:       "M",
-			StatusList: nil,
-			AoE:        nil,
-			Area:       "M",
-			MoveMode:   MoveModeLand,
-			Reach:      0,
-			Killed:     false,
-			Dim:        true,
+			Name:        "Jigu",
+			Gx:          31.0,
+			Gy:          14.0,
+			Skin:        0,
+			SkinSize:    nil,
+			Elev:        0,
+			Color:       "blue",
+			Note:        "",
+			Size:        "M",
+			StatusList:  nil,
+			AoE:         nil,
+			Area:        "M",
+			MoveMode:    MoveModeLand,
+			Reach:       0,
+			Killed:      false,
+			Dim:         true,
+			CustomReach: CreatureCustomReach{},
 		}) {
 			t.Errorf("jigu %q", objs)
 		}
@@ -940,7 +942,8 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
     },
     "Color": "red",
     "Size": "S",
-    "Area": "S"
+    "Area": "S",
+    "CustomReach": {}
 }
 «LINE» {
     "ID": "38f633da2d6749467f5406f187b8cc3f",
@@ -993,7 +996,8 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
     "Area": "M",
     "StatusList": [
         "stable"
-    ]
+    ],
+    "CustomReach": {}
 }
 «CIRC» {
     "ID": "3f5b6a2655214928b868daad9a97db4d",
@@ -1108,7 +1112,8 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
     "AoE": {
         "Radius": 2,
         "Color": "black"
-    }
+    },
+    "CustomReach": {}
 }
 «CREATURE» {
     "ID": "PC73",
@@ -1134,7 +1139,8 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
     "Color": "blue",
     "Note": "Mirror Image 2",
     "Size": "M",
-    "Area": "M"
+    "Area": "M",
+    "CustomReach": {}
 }
 «SAOE» {
     "ID": "afd136735d7e400082f331485e73f7a1",

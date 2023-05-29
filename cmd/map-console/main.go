@@ -199,7 +199,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.5.2" //@@##@@
+const GoVersionNumber = "5.5.2" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -675,6 +675,7 @@ func describeObject(mono bool, obj any) string {
 			fieldDesc{"killed", o.Killed},
 			fieldDesc{"dim", o.Dim},
 			fieldDesc{"type", o.CreatureType},
+			fieldDesc{"customreach", o.CustomReach},
 		))
 
 	case mapper.MapElement:

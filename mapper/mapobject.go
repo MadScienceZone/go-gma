@@ -737,6 +737,23 @@ type CreatureToken struct {
 	// Currently only radius emanations are supported. In future, the
 	// type of this attribute may change to handle other shapes.
 	AoE *RadiusAoE `json:",omitempty"`
+
+	// If there is a custom reach/threat zone defined for this
+	// creature, it is detailed here.
+	CustomReach CreatureCustomReach `json:",omitempty"`
+}
+
+// CreatureCustomReach describes a creature's natural and extended
+// reach zones if they differ from the standard templates.
+type CreatureCustomReach struct {
+	// Enabled is true if this custom information should be used for the creature.
+	Enabled bool `json:",omitempty"`
+
+	// Natural and Extended give the distance in 5-foot grid squares
+	// away from the creature's PERIMETER to which their natural reach
+	// and extended (as with a reach weapon) reach extends.
+	Natural  int `json:",omitempty"`
+	Extended int `json:",omitempty"`
 }
 
 //
