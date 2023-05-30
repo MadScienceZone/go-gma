@@ -86,7 +86,7 @@ I #SimonKazar 0.25 @OoSmGY0XERJRrA8ZiK_igg_Firefly@12
 }
 
 func TestObjLoadImages(t *testing.T) {
-	objs, meta, err := LoadMapFile(strings.NewReader(`__MAPPER__:20
+	objs, meta, err := LoadMapFile(strings.NewReader(`__MAPPER__:21
 «__META__» {
     "Comment": "test",
     "Location": "somewhere",
@@ -145,7 +145,7 @@ func TestObjLoadImages(t *testing.T) {
 }
 
 func TestLegacyObjLoadOnePlayer(t *testing.T) {
-	expected := `__MAPPER__:20
+	expected := `__MAPPER__:21
 «__META__» {
     "Timestamp": 1,
     "DateTime": "n/a",
@@ -258,7 +258,7 @@ P SPAM:PC73 eggs
 
 	objs, meta, err = LoadMapFile(strings.NewReader(expected))
 	check()
-	uEq(meta.FileVersion, 20, "file version", t)
+	uEq(meta.FileVersion, 21, "file version", t)
 }
 
 func TestObjLoadSmallMap(t *testing.T) {
@@ -514,7 +514,7 @@ LAYER:e68d5354f175401582866a75d806d8d7 walls
 POINTS:e68d5354f175401582866a75d806d8d7 {450.0 800.0}
 DASH:e68d5354f175401582866a75d806d8d7 {}
 `))
-	expected_save := `__MAPPER__:20
+	expected_save := `__MAPPER__:21
 «__META__» {
     "Timestamp": 1,
     "DateTime": "n/a",
@@ -1922,7 +1922,7 @@ func CEq(a, b []Coordinates, msg string, t *testing.T) {
 	}
 }
 
-// @[00]@| Go-GMA 5.6.0-alpha.2
+// @[00]@| Go-GMA 5.6.0-alpha.3
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

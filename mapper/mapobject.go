@@ -41,7 +41,7 @@ import (
 // the GMA File Format version number current as of this build.
 // This is the format which will be used for saving map data.
 //
-const GMAMapperFileFormat = 20 // @@##@@ auto-configured
+const GMAMapperFileFormat = 21 // @@##@@ auto-configured
 //
 // MinimumSupportedMapFileFormat gives the lowest file format this package can
 // understand.
@@ -52,7 +52,7 @@ const MinimumSupportedMapFileFormat = 17
 // MaximumSupportedMapFileFormat gives the highest file format this package
 // can understand. Saved data will be in this format.
 //
-const MaximumSupportedMapFileFormat = 20
+const MaximumSupportedMapFileFormat = 21
 
 func init() {
 	if MinimumSupportedMapFileFormat > GMAMapperFileFormat || MaximumSupportedMapFileFormat < GMAMapperFileFormat {
@@ -1147,7 +1147,7 @@ func WriteMapFile(path string, objList []any, meta MapMetaData) error {
 //
 func SaveMapFile(output io.Writer, objList []any, meta MapMetaData) error {
 	writer := bufio.NewWriter(output)
-	writer.WriteString("__MAPPER__:20\n")
+	writer.WriteString("__MAPPER__:21\n")
 	if meta.Timestamp == 0 {
 		now := time.Now()
 		meta.Timestamp = now.Unix()
@@ -1971,7 +1971,7 @@ func loadMapFile(input io.Reader, metaDataOnly bool) ([]any, MapMetaData, error)
 	return nil, meta, fmt.Errorf("invalid map file format: unexpected end of file")
 }
 
-// @[00]@| Go-GMA 5.6.0-alpha.2
+// @[00]@| Go-GMA 5.6.0-alpha.3
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

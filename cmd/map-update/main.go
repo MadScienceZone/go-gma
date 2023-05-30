@@ -45,8 +45,8 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.6.0-alpha.2" //@@##@@
-const GMAMapperFileFormat = 20  //@@##@@
+const GoVersionNumber="5.6.0-alpha.3" //@@##@@
+const GMAMapperFileFormat = 21  //@@##@@
 
 func main() {
 	if len(os.Args) < 2 {
@@ -86,7 +86,7 @@ func main() {
 }
 
 /*
-# @[00]@| Go-GMA 5.6.0-alpha.2
+# @[00]@| Go-GMA 5.6.0-alpha.3
 # @[01]@|
 # @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

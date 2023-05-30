@@ -889,7 +889,7 @@ func (c *Calendar) recalc() {
 
 /*
 #
-# @[00]@| Go-GMA 5.6.0-alpha.2
+# @[00]@| Go-GMA 5.6.0-alpha.3
 # @[01]@|
 # @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
