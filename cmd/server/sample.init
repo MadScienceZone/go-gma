@@ -12,7 +12,7 @@ UPDATES {
 			{"Version": "4.2.2"}
 		]},
 		{"Name": "mapper", "Instances": [
-			{"Version": "4.1.2", "Token": "m412abcde"},
+			{"Version": "4.1.2", "Token": "mapper-4.1.2"},
 			{"Version": "4.1.2", "OS": "freebsd", "Arch": "amd64", "Token": "m412abcde"},
 			{"Version": "4.1.2", "OS": "linux",   "Arch": "amd64", "Token": "l412abcde"}
 		]}
