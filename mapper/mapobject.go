@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______     _______               #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   (  ____ \   / ___   )              #
-# | (    \/| () () || (   ) | Master's  | (    \/   | (    \/   \/   )  |              #
-# | |      | || || || (___) | Assistant | (____     | (____         /   )              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    (_____ \      _/   /               #
-# | | \_  )| |   | || (   ) |                 ) )         ) )    /   _/                #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\____) ) _ (   (__/\              #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_)\_______/              #
+#  _______  _______  _______             _______      ______     _______         _____ #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    / ____ \   (  __   )       (  ___ #
+# | (    \/| () () || (   ) | Master's  | (    \/   ( (    \/   | (  )  |       | (    #
+# | |      | || || || (___) | Assistant | (____     | (____     | | /   | _____ | (__/ #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    |  ___ \    | (/ /) |(_____)|  __  #
+# | | \_  )| |   | || (   ) |                 ) )   | (   ) )   |   / | |       | (  \ #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ |  (__) |       | )___ #
+# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)(_______)       |/ \__ #
 #                                                                                      #
 ########################################################################################
 */
@@ -41,7 +41,7 @@ import (
 // the GMA File Format version number current as of this build.
 // This is the format which will be used for saving map data.
 //
-const GMAMapperFileFormat = 20 // @@##@@ auto-configured
+const GMAMapperFileFormat = 21 // @@##@@ auto-configured
 //
 // MinimumSupportedMapFileFormat gives the lowest file format this package can
 // understand.
@@ -52,7 +52,7 @@ const MinimumSupportedMapFileFormat = 17
 // MaximumSupportedMapFileFormat gives the highest file format this package
 // can understand. Saved data will be in this format.
 //
-const MaximumSupportedMapFileFormat = 20
+const MaximumSupportedMapFileFormat = 21
 
 func init() {
 	if MinimumSupportedMapFileFormat > GMAMapperFileFormat || MaximumSupportedMapFileFormat < GMAMapperFileFormat {
@@ -720,10 +720,6 @@ type CreatureToken struct {
 	// May also be the size in feet (DEPRECATED USAGE).
 	Size string
 
-	// The tactical threat zone size of the creature, specified just
-	// as with Size.
-	Area string
-
 	// A list of condition codes which apply to the character. These
 	// are arbitrary and defined by the server according to the needs
 	// of the particular game, but may include things such
@@ -737,6 +733,23 @@ type CreatureToken struct {
 	// Currently only radius emanations are supported. In future, the
 	// type of this attribute may change to handle other shapes.
 	AoE *RadiusAoE `json:",omitempty"`
+
+	// If there is a custom reach/threat zone defined for this
+	// creature, it is detailed here.
+	CustomReach CreatureCustomReach `json:",omitempty"`
+}
+
+// CreatureCustomReach describes a creature's natural and extended
+// reach zones if they differ from the standard templates.
+type CreatureCustomReach struct {
+	// Enabled is true if this custom information should be used for the creature.
+	Enabled bool `json:",omitempty"`
+
+	// Natural and Extended give the distance in 5-foot grid squares
+	// away from the creature's PERIMETER to which their natural reach
+	// and extended (as with a reach weapon) reach extends.
+	Natural  int `json:",omitempty"`
+	Extended int `json:",omitempty"`
 }
 
 //
@@ -1134,7 +1147,7 @@ func WriteMapFile(path string, objList []any, meta MapMetaData) error {
 //
 func SaveMapFile(output io.Writer, objList []any, meta MapMetaData) error {
 	writer := bufio.NewWriter(output)
-	writer.WriteString("__MAPPER__:20\n")
+	writer.WriteString("__MAPPER__:21\n")
 	if meta.Timestamp == 0 {
 		now := time.Now()
 		meta.Timestamp = now.Unix()
@@ -1437,7 +1450,6 @@ func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta stri
 		m.Color, err = objString(mob, 0, "COLOR", false, err)
 		m.Note, err = objString(mob, 0, "NOTE", false, err)
 		m.Size, err = objString(mob, 0, "SIZE", false, err)
-		m.Area, err = objString(mob, 0, "AREA", false, err)
 		m.StatusList, err = objStrings(mob, 0, "STATUSLIST", false, err)
 		if aoeStruct, ok := mob["AOE"]; ok {
 			ss, err := tcllist.ParseTclList(aoeStruct[0])
@@ -1959,7 +1971,7 @@ func loadMapFile(input io.Reader, metaDataOnly bool) ([]any, MapMetaData, error)
 	return nil, meta, fmt.Errorf("invalid map file format: unexpected end of file")
 }
 
-// @[00]@| Go-GMA 5.5.2
+// @[00]@| Go-GMA 5.6.0-beta
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
