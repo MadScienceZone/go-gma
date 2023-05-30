@@ -2,10 +2,10 @@
 // Example game server
 //
 AUTH
-AC {"Name": "Alice",   "ID": "PC1", "Color": "blue", "Size": "M", "Area": "M"}
-AC {"Name": "Bob",     "ID": "PC2", "Color": "blue", "Size": "M", "Area": "M"}
-AC {"Name": "Charlie", "ID": "PC3", "Color": "blue", "Size": "M", "Area": "M"}
-AC {"Name": "Daria",   "ID": "PC4", "Color": "blue", "Size": "M", "Area": "M"}
+AC {"Name": "Alice",   "ID": "PC1", "Color": "blue", "Size": "M"}
+AC {"Name": "Bob",     "ID": "PC2", "Color": "blue", "Size": "M"}
+AC {"Name": "Charlie", "ID": "PC3", "Color": "blue", "Size": "M"}
+AC {"Name": "Daria",   "ID": "PC4", "Color": "blue", "Size": "M"}
 UPDATES {
 	"Packages": [
 		{"Name": "core", "Instances": [

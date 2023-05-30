@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______     _______               #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   (  ____ \   / ___   )              #
-# | (    \/| () () || (   ) | Master's  | (    \/   | (    \/   \/   )  |              #
-# | |      | || || || (___) | Assistant | (____     | (____         /   )              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    (_____ \      _/   /               #
-# | | \_  )| |   | || (   ) |                 ) )         ) )    /   _/                #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\____) ) _ (   (__/\              #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_)\_______/              #
+#  _______  _______  _______             _______      ______     _______         _____ #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    / ____ \   (  __   )       (  ___ #
+# | (    \/| () () || (   ) | Master's  | (    \/   ( (    \/   | (  )  |       | (    #
+# | |      | || || || (___) | Assistant | (____     | (____     | | /   | _____ | (___ #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    |  ___ \    | (/ /) |(_____)|  ___ #
+# | | \_  )| |   | || (   ) |                 ) )   | (   ) )   |   / | |       | (    #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ |  (__) |       | )    #
+# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)(_______)       |/     #
 #                                                                                      #
 ########################################################################################
 */
@@ -166,9 +166,7 @@ func TestLegacyObjLoadOnePlayer(t *testing.T) {
         "HPBlur": 10
     },
     "Color": "blue",
-    "Size": "M",
-    "Area": "M",
-    "CustomReach": {}
+    "Size": "M"
 }
 «__EOF__»
 `
@@ -231,7 +229,6 @@ P SPAM:PC73 eggs
 			Size:        "M",
 			StatusList:  nil,
 			AoE:         nil,
-			Area:        "M",
 			MoveMode:    MoveModeLand,
 			Reach:       0,
 			Killed:      false,
@@ -941,9 +938,8 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
         "Con": 15
     },
     "Color": "red",
-    "Size": "S",
-    "Area": "S",
     "CustomReach": {}
+    "Size": "S"
 }
 «LINE» {
     "ID": "38f633da2d6749467f5406f187b8cc3f",
@@ -993,7 +989,6 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
     },
     "Color": "red",
     "Size": "M",
-    "Area": "M",
     "StatusList": [
         "stable"
     ],
@@ -1103,7 +1098,6 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
     "Color": "green",
     "Note": "spam spam",
     "Size": "M",
-    "Area": "M",
     "StatusList": [
         "confused",
         "exhausted",
@@ -1139,7 +1133,6 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
     "Color": "blue",
     "Note": "Mirror Image 2",
     "Size": "M",
-    "Area": "M",
     "CustomReach": {}
 }
 «SAOE» {
@@ -1226,7 +1219,7 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
 					if obj.AoE != nil {
 						t.Errorf("AoE expected to be nil but wasn't")
 					}
-					sEq(obj.Area, "S", "Area", t)
+					//sEq(obj.Area, "S", "Area", t)
 					BEq(byte(obj.MoveMode), byte(MoveModeLand), "MoveMode", t)
 					iEq(obj.Reach, 0, "Reach", t)
 					bEq(obj.Killed, true, "Killed", t)
@@ -1258,7 +1251,7 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
 					if obj.AoE != nil {
 						t.Errorf("AoE expected to be nil but wasn't")
 					}
-					sEq(obj.Area, "M", "Area", t)
+					//sEq(obj.Area, "M", "Area", t)
 					BEq(byte(obj.MoveMode), byte(MoveModeLand), "MoveMode", t)
 					iEq(obj.Reach, 1, "Reach", t)
 					bEq(obj.Killed, false, "Killed", t)
@@ -1287,7 +1280,7 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
 					if obj.AoE != nil {
 						t.Errorf("AoE expected to be nil but wasn't")
 					}
-					sEq(obj.Area, "M", "Area", t)
+					//sEq(obj.Area, "M", "Area", t)
 					BEq(byte(obj.MoveMode), byte(MoveModeFly), "MoveMode", t)
 					iEq(obj.Reach, 0, "Reach", t)
 					bEq(obj.Killed, false, "Killed", t)
@@ -1310,7 +1303,7 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
 					SEq(obj.StatusList, []string{"confused", "exhausted", "nauseated"}, "StatusList", t)
 					fEq(obj.AoE.Radius, 2.0, "Radius", t)
 					sEq(obj.AoE.Color, "black", "Aoe Color", t)
-					sEq(obj.Area, "M", "Area", t)
+					//sEq(obj.Area, "M", "Area", t)
 					BEq(byte(obj.MoveMode), byte(MoveModeFly), "MoveMode", t)
 					iEq(obj.Reach, 0, "Reach", t)
 					bEq(obj.Killed, false, "Killed", t)
@@ -1928,7 +1921,7 @@ func CEq(a, b []Coordinates, msg string, t *testing.T) {
 	}
 }
 
-// @[00]@| Go-GMA 5.5.2
+// @[00]@| Go-GMA 5.6.0-alpha.2
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
