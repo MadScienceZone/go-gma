@@ -166,7 +166,8 @@ func TestLegacyObjLoadOnePlayer(t *testing.T) {
         "HPBlur": 10
     },
     "Color": "blue",
-    "Size": "M"
+    "Size": "M",
+    "CustomReach": {}
 }
 «__EOF__»
 `
@@ -938,8 +939,8 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
         "Con": 15
     },
     "Color": "red",
+    "Size": "S",
     "CustomReach": {}
-    "Size": "S"
 }
 «LINE» {
     "ID": "38f633da2d6749467f5406f187b8cc3f",
