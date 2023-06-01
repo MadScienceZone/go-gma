@@ -720,6 +720,10 @@ type CreatureToken struct {
 	// May also be the size in feet (DEPRECATED USAGE).
 	Size string
 
+	// If DispSize is nonempty, it holds the size category to display
+	// the creature (say, as a result of casting an enlarge person spell).
+	DispSize string `json:",omitempty"`
+
 	// A list of condition codes which apply to the character. These
 	// are arbitrary and defined by the server according to the needs
 	// of the particular game, but may include things such
@@ -1971,7 +1975,7 @@ func loadMapFile(input io.Reader, metaDataOnly bool) ([]any, MapMetaData, error)
 	return nil, meta, fmt.Errorf("invalid map file format: unexpected end of file")
 }
 
-// @[00]@| Go-GMA 5.6.0-beta
+// @[00]@| Go-GMA 5.6.0-beta.1
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

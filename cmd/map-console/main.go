@@ -199,7 +199,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.6.0-beta" //@@##@@
+const GoVersionNumber = "5.6.0-beta.1" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -667,6 +667,7 @@ func describeObject(mono bool, obj any) string {
 			fieldDesc{"color", o.Color},
 			fieldDesc{"note", o.Note},
 			fieldDesc{"size", o.Size},
+			fieldDesc{"dispsize", o.DispSize},
 			fieldDesc{"statuslist", o.StatusList},
 			fieldDesc{"aoe", describeObject(mono, o.AoE)},
 			fieldDesc{"movemode", o.MoveMode},
@@ -1877,7 +1878,7 @@ func colorize(text, color string, mono bool) string {
 }
 
 /*
-# @[00]@| Go-GMA 5.6.0-beta
+# @[00]@| Go-GMA 5.6.0-beta.1
 # @[01]@|
 # @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

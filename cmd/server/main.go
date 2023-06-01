@@ -120,7 +120,7 @@ import (
 // Auto-configured values
 //
 
-const GoVersionNumber="5.6.0-beta" // @@##@@
+const GoVersionNumber="5.6.0-beta.1" // @@##@@
 
 //
 // eventMonitor responds to signals and timers that affect our overall operation
@@ -329,7 +329,7 @@ func acceptIncomingConnections(incoming net.Listener, app *Application) {
 	}
 }
 
-// @[00]@| Go-GMA 5.6.0-beta
+// @[00]@| Go-GMA 5.6.0-beta.1
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
