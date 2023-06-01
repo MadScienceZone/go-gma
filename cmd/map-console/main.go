@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______     _______               #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   (  ____ \   / ___   )              #
-# | (    \/| () () || (   ) | Master's  | (    \/   | (    \/   \/   )  |              #
-# | |      | || || || (___) | Assistant | (____     | (____         /   )              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    (_____ \      _/   /               #
-# | | \_  )| |   | || (   ) |                 ) )         ) )    /   _/                #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\____) ) _ (   (__/\              #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_)\_______/              #
+#  _______  _______  _______             _______      ______     _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    / ____ \   (  __   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   ( (    \/   | (  )  |              #
+# | |      | || || || (___) | Assistant | (____     | (____     | | /   |              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    |  ___ \    | (/ /) |              #
+# | | \_  )| |   | || (   ) |                 ) )   | (   ) )   |   / | |              #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ |  (__) |              #
+# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)(_______)              #
 #                                                                                      #
 ########################################################################################
 #
@@ -199,7 +199,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.5.2" //@@##@@
+const GoVersionNumber="5.6.0" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -432,9 +432,9 @@ func main() {
 
 	fmt.Printf("Server protocol %d; using %s calendar.\n", server.Protocol, server.CalendarSystem)
 	fmt.Println("Characters Defined:")
-	fmt.Println(colorize("NAME----------- ID-------- COLOR----- AREA SIZE", "Blue", mono))
+	fmt.Println(colorize("NAME----------- ID-------- COLOR----- SIZE", "Blue", mono))
 	for _, def := range server.Characters {
-		fmt.Println(colorize(fmt.Sprintf("%-15s %-10s %-10s %4s %4s", def.Name, def.ObjID(), def.Color, def.Area, def.Size), "Yellow", mono))
+		fmt.Println(colorize(fmt.Sprintf("%-15s %-10s %-10s %4s", def.Name, def.ObjID(), def.Color, def.Size), "Yellow", mono))
 	}
 
 	fmt.Println("Condition Codes from Server:")
@@ -667,7 +667,7 @@ func describeObject(mono bool, obj any) string {
 			fieldDesc{"color", o.Color},
 			fieldDesc{"note", o.Note},
 			fieldDesc{"size", o.Size},
-			fieldDesc{"area", o.Area},
+			fieldDesc{"dispsize", o.DispSize},
 			fieldDesc{"statuslist", o.StatusList},
 			fieldDesc{"aoe", describeObject(mono, o.AoE)},
 			fieldDesc{"movemode", o.MoveMode},
@@ -675,6 +675,7 @@ func describeObject(mono bool, obj any) string {
 			fieldDesc{"killed", o.Killed},
 			fieldDesc{"dim", o.Dim},
 			fieldDesc{"type", o.CreatureType},
+			fieldDesc{"customreach", o.CustomReach},
 		))
 
 	case mapper.MapElement:
@@ -722,7 +723,6 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"name", m.Name},
 			fieldDesc{"id", m.ObjID()},
 			fieldDesc{"color", m.Color},
-			fieldDesc{"area", m.Area},
 			fieldDesc{"size", m.Size},
 		)
 	case mapper.AddImageMessagePayload:
@@ -1747,7 +1747,7 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 				c.ID = v[1].(string)
 				c.Color = v[2].(string)
 				c.Name = v[3].(string)
-				c.Area = v[4].(string)
+				//c.Area = v[4].(string)
 				c.Size = v[5].(string)
 				c.Gx = v[7].(float64)
 				c.Gy = v[8].(float64)
@@ -1878,7 +1878,7 @@ func colorize(text, color string, mono bool) string {
 }
 
 /*
-# @[00]@| Go-GMA 5.5.2
+# @[00]@| Go-GMA 5.6.0
 # @[01]@|
 # @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

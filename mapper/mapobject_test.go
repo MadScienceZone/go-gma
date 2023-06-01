@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______     _______               #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   (  ____ \   / ___   )              #
-# | (    \/| () () || (   ) | Master's  | (    \/   | (    \/   \/   )  |              #
-# | |      | || || || (___) | Assistant | (____     | (____         /   )              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    (_____ \      _/   /               #
-# | | \_  )| |   | || (   ) |                 ) )         ) )    /   _/                #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\____) ) _ (   (__/\              #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_)\_______/              #
+#  _______  _______  _______             _______      ______     _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    / ____ \   (  __   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   ( (    \/   | (  )  |              #
+# | |      | || || || (___) | Assistant | (____     | (____     | | /   |              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    |  ___ \    | (/ /) |              #
+# | | \_  )| |   | || (   ) |                 ) )   | (   ) )   |   / | |              #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ |  (__) |              #
+# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)(_______)              #
 #                                                                                      #
 ########################################################################################
 */
@@ -86,7 +86,7 @@ I #SimonKazar 0.25 @OoSmGY0XERJRrA8ZiK_igg_Firefly@12
 }
 
 func TestObjLoadImages(t *testing.T) {
-	objs, meta, err := LoadMapFile(strings.NewReader(`__MAPPER__:20
+	objs, meta, err := LoadMapFile(strings.NewReader(`__MAPPER__:21
 «__META__» {
     "Comment": "test",
     "Location": "somewhere",
@@ -145,7 +145,7 @@ func TestObjLoadImages(t *testing.T) {
 }
 
 func TestLegacyObjLoadOnePlayer(t *testing.T) {
-	expected := `__MAPPER__:20
+	expected := `__MAPPER__:21
 «__META__» {
     "Timestamp": 1,
     "DateTime": "n/a",
@@ -167,7 +167,7 @@ func TestLegacyObjLoadOnePlayer(t *testing.T) {
     },
     "Color": "blue",
     "Size": "M",
-    "Area": "M"
+    "CustomReach": {}
 }
 «__EOF__»
 `
@@ -219,22 +219,22 @@ P SPAM:PC73 eggs
 				Condition:       "",
 				HPBlur:          10,
 			},
-			Name:       "Jigu",
-			Gx:         31.0,
-			Gy:         14.0,
-			Skin:       0,
-			SkinSize:   nil,
-			Elev:       0,
-			Color:      "blue",
-			Note:       "",
-			Size:       "M",
-			StatusList: nil,
-			AoE:        nil,
-			Area:       "M",
-			MoveMode:   MoveModeLand,
-			Reach:      0,
-			Killed:     false,
-			Dim:        true,
+			Name:        "Jigu",
+			Gx:          31.0,
+			Gy:          14.0,
+			Skin:        0,
+			SkinSize:    nil,
+			Elev:        0,
+			Color:       "blue",
+			Note:        "",
+			Size:        "M",
+			StatusList:  nil,
+			AoE:         nil,
+			MoveMode:    MoveModeLand,
+			Reach:       0,
+			Killed:      false,
+			Dim:         true,
+			CustomReach: CreatureCustomReach{},
 		}) {
 			t.Errorf("jigu %q", objs)
 		}
@@ -258,7 +258,7 @@ P SPAM:PC73 eggs
 
 	objs, meta, err = LoadMapFile(strings.NewReader(expected))
 	check()
-	uEq(meta.FileVersion, 20, "file version", t)
+	uEq(meta.FileVersion, 21, "file version", t)
 }
 
 func TestObjLoadSmallMap(t *testing.T) {
@@ -514,7 +514,7 @@ LAYER:e68d5354f175401582866a75d806d8d7 walls
 POINTS:e68d5354f175401582866a75d806d8d7 {450.0 800.0}
 DASH:e68d5354f175401582866a75d806d8d7 {}
 `))
-	expected_save := `__MAPPER__:20
+	expected_save := `__MAPPER__:21
 «__META__» {
     "Timestamp": 1,
     "DateTime": "n/a",
@@ -940,7 +940,7 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
     },
     "Color": "red",
     "Size": "S",
-    "Area": "S"
+    "CustomReach": {}
 }
 «LINE» {
     "ID": "38f633da2d6749467f5406f187b8cc3f",
@@ -990,10 +990,10 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
     },
     "Color": "red",
     "Size": "M",
-    "Area": "M",
     "StatusList": [
         "stable"
-    ]
+    ],
+    "CustomReach": {}
 }
 «CIRC» {
     "ID": "3f5b6a2655214928b868daad9a97db4d",
@@ -1099,7 +1099,6 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
     "Color": "green",
     "Note": "spam spam",
     "Size": "M",
-    "Area": "M",
     "StatusList": [
         "confused",
         "exhausted",
@@ -1108,7 +1107,8 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
     "AoE": {
         "Radius": 2,
         "Color": "black"
-    }
+    },
+    "CustomReach": {}
 }
 «CREATURE» {
     "ID": "PC73",
@@ -1134,7 +1134,7 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
     "Color": "blue",
     "Note": "Mirror Image 2",
     "Size": "M",
-    "Area": "M"
+    "CustomReach": {}
 }
 «SAOE» {
     "ID": "afd136735d7e400082f331485e73f7a1",
@@ -1220,7 +1220,7 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
 					if obj.AoE != nil {
 						t.Errorf("AoE expected to be nil but wasn't")
 					}
-					sEq(obj.Area, "S", "Area", t)
+					//sEq(obj.Area, "S", "Area", t)
 					BEq(byte(obj.MoveMode), byte(MoveModeLand), "MoveMode", t)
 					iEq(obj.Reach, 0, "Reach", t)
 					bEq(obj.Killed, true, "Killed", t)
@@ -1252,7 +1252,7 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
 					if obj.AoE != nil {
 						t.Errorf("AoE expected to be nil but wasn't")
 					}
-					sEq(obj.Area, "M", "Area", t)
+					//sEq(obj.Area, "M", "Area", t)
 					BEq(byte(obj.MoveMode), byte(MoveModeLand), "MoveMode", t)
 					iEq(obj.Reach, 1, "Reach", t)
 					bEq(obj.Killed, false, "Killed", t)
@@ -1281,7 +1281,7 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
 					if obj.AoE != nil {
 						t.Errorf("AoE expected to be nil but wasn't")
 					}
-					sEq(obj.Area, "M", "Area", t)
+					//sEq(obj.Area, "M", "Area", t)
 					BEq(byte(obj.MoveMode), byte(MoveModeFly), "MoveMode", t)
 					iEq(obj.Reach, 0, "Reach", t)
 					bEq(obj.Killed, false, "Killed", t)
@@ -1304,7 +1304,7 @@ DASH:e68d5354f175401582866a75d806d8d7 {}
 					SEq(obj.StatusList, []string{"confused", "exhausted", "nauseated"}, "StatusList", t)
 					fEq(obj.AoE.Radius, 2.0, "Radius", t)
 					sEq(obj.AoE.Color, "black", "Aoe Color", t)
-					sEq(obj.Area, "M", "Area", t)
+					//sEq(obj.Area, "M", "Area", t)
 					BEq(byte(obj.MoveMode), byte(MoveModeFly), "MoveMode", t)
 					iEq(obj.Reach, 0, "Reach", t)
 					bEq(obj.Killed, false, "Killed", t)
@@ -1922,7 +1922,7 @@ func CEq(a, b []Coordinates, msg string, t *testing.T) {
 	}
 }
 
-// @[00]@| Go-GMA 5.5.2
+// @[00]@| Go-GMA 5.6.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
