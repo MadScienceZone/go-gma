@@ -1,16 +1,16 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.6.0-beta.1                <!-- @@##@@ -->
+ * This Package Version: 5.6.0                <!-- @@##@@ -->
  * Effective Date: 31-May-2023			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 6.3-beta.1		<!-- @@##@@ -->
- * GMA Mapper Version: 4.10-beta.4		<!-- @@##@@ -->
+ * GMA Core API Library Version: 6.3		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.10		<!-- @@##@@ -->
  * GMA Mapper Protocol: 406		<!-- @@##@@ -->
  * GMA Mapper File Format: 21		<!-- @@##@@ -->
 
-## v5.6.0-beta.1
+## v5.6.0
 ### Enhancements
  * Updated to file format version 21
  * Removed redundant `Area` field from creatures
