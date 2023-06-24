@@ -100,6 +100,8 @@ Options:
    -telemetry-name string
       If server was compiled to send performance telemetry data, this specifies a custom
       application name to be reported for this instance of the server.
+	  You can also accomplish this by setting the NEW_RELIC_APP_NAME
+	  environment variable.
 
 See the full documentation in the accompanying manual file man/man6/server.6.pdf (or run “gma man go server” if you have the GMA Core package installed as well as Go-GMA).
 
@@ -124,7 +126,7 @@ import (
 // Auto-configured values
 //
 
-const GoVersionNumber="5.6.0-alpha" // @@##@@
+const GoVersionNumber = "5.6.0-alpha" // @@##@@
 
 //
 // eventMonitor responds to signals and timers that affect our overall operation
@@ -197,7 +199,6 @@ func generateMessageIDs(logf func(format string, args ...any), c chan int) {
 }
 
 func main() {
-	var nrApp *newrelic.Application
 	var err error
 
 	app := *NewApplication()
@@ -232,7 +233,7 @@ func main() {
 		if err = os.Setenv("NEW_RELIC_METADATA_SERVICE_VERSION", GoVersionNumber); err != nil {
 			app.Logf("unable to set version metadata: %v", err)
 		}
-		nrApp, err = newrelic.NewApplication(
+		app.NrApp, err = newrelic.NewApplication(
 			newrelic.ConfigAppName(app.NrAppName),
 			newrelic.ConfigFromEnvironment(),
 			newrelic.ConfigCodeLevelMetricsEnabled(true),
@@ -246,32 +247,15 @@ func main() {
 		}
 		defer func() {
 			app.Logf("waiting for instrumentation to finish (max 30 sec) ...")
-			nrApp.Shutdown(30 * time.Second)
+			app.NrApp.Shutdown(30 * time.Second)
 		}()
 	}
-	/*
-		for {
-			func() {
-				if InstrumentCode {
-					defer nrApp.StartTransaction("testing").End()
-				}
-				time.Sleep(10 * time.Second)
-			}()
-		}
-	*/
 
 	if err := app.dbOpen(); err != nil {
 		app.Logf("unable to open database: %v", err)
 		os.Exit(1)
 	}
 	defer app.dbClose()
-
-	// TODO instrumentation
-	/*
-		txn := nrapp.StartTransaction("background")
-		defer txn.End()
-		// do stuff
-	*/
 
 	// start listening to incoming port
 	incoming, err := net.Listen("tcp", app.Endpoint)
@@ -329,7 +313,7 @@ func acceptIncomingConnections(incoming net.Listener, app *Application) {
 			client.Close()
 			continue
 		}
-		go newConnection.ServeToClient(context.Background(), app.ServerStarted, app.LastPing)
+		go newConnection.ServeToClient(context.Background(), app.ServerStarted, app.LastPing, app.NrApp)
 	}
 }
 

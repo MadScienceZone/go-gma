@@ -26,6 +26,7 @@ import (
 
 	"github.com/MadScienceZone/go-gma/v5/auth"
 	"github.com/MadScienceZone/go-gma/v5/dice"
+	"github.com/newrelic/go-agent/v3/newrelic"
 	"golang.org/x/exp/slices"
 )
 
@@ -192,7 +193,7 @@ func (c *ClientConnection) Close() {
 // ServeToClient is intended to be run in its own thread,
 // and speaks to one client for the duration of its session.
 //
-func (c *ClientConnection) ServeToClient(ctx context.Context, serverStarted, lastPing time.Time) {
+func (c *ClientConnection) ServeToClient(ctx context.Context, serverStarted, lastPing time.Time, nrApp *newrelic.Application) {
 	if c == nil {
 		return
 	}
@@ -367,6 +368,12 @@ mainloop:
 				break mainloop
 			}
 			c.debugf(DebugIO, "received packet %v", packet)
+			if InstrumentCode {
+				if nrApp != nil {
+					txn := nrApp.StartTransaction("handle_request")
+					txn.End()
+				}
+			}
 			switch p := packet.(type) {
 			case CommentMessagePayload:
 

@@ -34,6 +34,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/dice"
 	"github.com/MadScienceZone/go-gma/v5/mapper"
 	"github.com/MadScienceZone/go-gma/v5/util"
+	"github.com/newrelic/go-agent/v3/newrelic"
 	"golang.org/x/exp/slices"
 )
 
@@ -152,6 +153,7 @@ type Application struct {
 
 	NrLogFile *os.File
 	NrAppName string
+	NrApp     *newrelic.Application
 
 	// If DeLugLevel is 0, no extra debugging output will be logged.
 	// Otherwise, it gives a set of debugging topics to report.
