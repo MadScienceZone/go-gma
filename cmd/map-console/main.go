@@ -199,7 +199,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.6.0" //@@##@@
+const GoVersionNumber = "5.6.0" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -228,10 +228,10 @@ func init() {
 		defaultLog      = ""
 	)
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s [-Dhm] [-C configfile] [-c calendar] [-H host] [-l logfile] [-P password] [-p port] [-S profile] [-u user] [-list-profiles]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s [-h] [-m] [-C configfile] [-c calendar] [-D list] [-H host] [-l logfile] [-P password] [-p port] [-S profile] [-u user] [-list-profiles]\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "  An option 'x' with a value may be set by '-x value', '-x=value', '--x value', or '--x=value'.\n")
 		fmt.Fprintf(os.Stderr, "  A flag 'x' may be set by '-x', '--x', '-x=true|false' or '--x=true|false'\n")
-		fmt.Fprintf(os.Stderr, "  Options may NOT be combined into a single argument (use '-D -m', not '-Dm').\n")
+		fmt.Fprintf(os.Stderr, "  Options may NOT be combined into a single argument (use '-h -m', not '-hm').\n")
 		fmt.Fprintf(os.Stderr, "\n")
 		flag.PrintDefaults()
 	}
