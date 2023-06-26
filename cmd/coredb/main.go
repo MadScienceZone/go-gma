@@ -105,7 +105,7 @@ You may not combine multiple single-letter options into a single composite argum
 	  language[s] Languages
 	  skill[s]    Skills
 	  spell[s]    Spells
-	 *weapon[s]   Weapons
+	  weapon[s]   Weapons
 
 */
 package main
@@ -364,6 +364,128 @@ func main() {
 
 	if prefs.ImportPath != "" {
 		log.Printf("importing from \"%s\"", prefs.ImportPath)
+		fp, err := os.Open(prefs.ImportPath)
+		if err != nil {
+			log.Fatalf("can't open import file: %v", err)
+		}
+		defer func() {
+			if err := fp.Close(); err != nil {
+				log.Fatalf("error closing import file: %v", err)
+			}
+		}()
+
+		var token json.Token
+		var delim json.Delim
+		var version float64
+		var valid bool
+		var fld string
+		decoder := json.NewDecoder(fp)
+
+		// Expected format:
+
+		// { "GMA_Core_Database_Export_Version": 1,
+		// <export type> (String) : [
+		// <series of objects of that type>
+		// ], ...
+		// "SRD" (String) : <bool>
+		// }
+
+		if token, err = decoder.Token(); err != nil {
+			log.Fatalf("error decoding import file: %v", err)
+		}
+		if delim, valid = token.(json.Delim); !valid || delim.String() != "{" {
+			log.Fatalf("expected '{' not found in import file")
+		}
+
+		if token, err = decoder.Token(); err != nil {
+			log.Fatalf("error decoding import file: %v", err)
+		}
+		if fld, valid = token.(string); !valid || fld != "GMA_Core_Database_Export_Version" {
+			log.Fatalf("expected 'GMA_Core_Database_Export_version' field not found at start of import file")
+		}
+
+		if token, err = decoder.Token(); err != nil {
+			log.Fatalf("error decoding import file: %v", err)
+		}
+		if version, valid = token.(float64); !valid {
+			log.Fatalf("expected 'GMA_Core_Database_Export_version' value not missing or wrong type")
+		}
+		if version != 1 {
+			log.Fatalf("File is version %v, which this version of gma coredb does not support.")
+		}
+		log.Printf("importing from version %v file", version)
+
+		for decoder.More() {
+			if token, err = decoder.Token(); err != nil {
+				log.Fatalf("error decoding next section of import file: %v", err)
+			}
+			if fld, valid = token.(string); !valid {
+				log.Fatalf("expected import type block name in import file")
+			}
+
+			if fld == "SRD" {
+				break
+			}
+
+			if token, err = decoder.Token(); err != nil {
+				log.Fatalf("error decoding next section of import file: %v", err)
+			}
+			if delim, valid = token.(json.Delim); !valid || delim.String() != "[" {
+				log.Fatalf("missing '[' delimeter after '%s' in import file", fld)
+			}
+
+			if (prefs.DebugBits & DebugMisc) != 0 {
+				log.Printf("importing %s records...", fld)
+			}
+
+			for decoder.More() {
+				switch fld {
+				case "Bestiary":
+					err = importMonster(decoder, db, &prefs)
+				case "Classes":
+					err = importClass(decoder, db, &prefs)
+				case "Feats":
+					err = importFeat(decoder, db, &prefs)
+				case "Languages":
+					err = importLanguage(decoder, db, &prefs)
+				case "Skills":
+					err = importSkill(decoder, db, &prefs)
+				case "Spells":
+					err = importSpell(decoder, db, &prefs)
+				case "Weapons":
+					err = importWeapon(decoder, db, &prefs)
+				}
+				if err != nil {
+					log.Fatalf("unable to decode %v type object: %v", fld, err)
+				}
+
+			}
+
+			if token, err = decoder.Token(); err != nil {
+				log.Fatalf("error decoding next section of import file: %v", err)
+			}
+			if delim, valid = token.(json.Delim); !valid || delim.String() != "]" {
+				log.Fatalf("missing ']' delimeter at end of '%s' block in import file", fld)
+			}
+		}
+
+		if token, err = decoder.Token(); err != nil {
+			log.Fatalf("error decoding import file: %v", err)
+		}
+		if _, valid = token.(bool); !valid {
+			log.Fatalf("expected boolean value for SRD field")
+		}
+
+		if token, err = decoder.Token(); err != nil {
+			log.Fatalf("error decoding import file: %v", err)
+		}
+		if delim, valid = token.(json.Delim); !valid || delim.String() != "}" {
+			log.Fatalf("expected final '}' not found in import file")
+		}
+
+		if decoder.More() {
+			log.Fatalf("data after end of expected structure at end of import file")
+		}
 	}
 
 	if prefs.ExportPath != "" {
@@ -472,6 +594,179 @@ func getSpellDescriptors(db *sql.DB, prefs *AppPreferences) (map[int]string, err
 func getClassCodes(db *sql.DB, prefs *AppPreferences) (map[int]string, error) {
 	return getBitStrings(db, prefs, "SELECT ID, Code FROM Classes")
 }
+
+func recordExists(db *sql.DB, prefs *AppPreferences, table, idfield, keyfield string, keyvalue any) (bool, int64, error) {
+	// This isn't a SQL injection risk because we generate and control the values used to build the query
+	// and don't get them from an outside source.
+	rows, err := query(db, prefs, "SELECT "+idfield+" FROM "+table+" WHERE "+keyfield+"=?", keyvalue)
+	if err != nil {
+		return false, 0, err
+	}
+	defer rows.Close()
+	if rows.Next() {
+		var id int64
+		if err = rows.Scan(&id); err != nil {
+			return false, 0, err
+		}
+		return true, id, nil
+	}
+	return false, 0, nil
+}
+
+func importMonster(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error { return nil }
+func importClass(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error {
+	var class Class
+	var err, err2, err3 error
+	var id int64
+	var exists bool
+	var res sql.Result
+
+	if err = decoder.Decode(&class); err != nil {
+		return err
+	}
+
+	if exists, id, err = recordExists(db, prefs, "Classes", "ID", "Code", class.Code); err != nil {
+		return err
+	}
+
+	if exists {
+		_, err2 = db.Exec(`DELETE FROM ClassSpells WHERE ClassID=?`, id)
+		_, err3 = db.Exec(`DELETE FROM ClassMagic WHERE ClassID=?`, id)
+		_, err = db.Exec(`UPDATE Classes SET Name=?, Code=?, IsLocal=? WHERE ID=?`, class.Name, class.Code, class.IsLocal, id)
+	} else {
+		if res, err = db.Exec(`INSERT INTO Classes (Name, Code, IsLocal) VALUES (?,?,?)`, class.Name, class.Code, class.IsLocal); err != nil {
+			return err
+		}
+		if id, err = res.LastInsertId(); err != nil {
+			return err
+		}
+	}
+
+	if err != nil {
+		return err
+	}
+	if err2 != nil {
+		return err2
+	}
+	if err3 != nil {
+		return err3
+	}
+
+	if (prefs.DebugBits & DebugMisc) != 0 {
+		if exists {
+			log.Printf("updated existing class %s (database id %d)", class.Name, id)
+		} else {
+			log.Printf("created new class %s (database id %d)", class.Name, id)
+		}
+	}
+
+	// add spell capabilities
+	if class.Spells.Type != "" || class.Spells.Ability != "" {
+		var dcpd, dppd, dknown sql.NullInt32
+
+		if _, err = db.Exec(`INSERT INTO ClassMagic (MagicType, Ability, Bonus, IsSpontaneous) VALUES (?,?,?,?)`,
+			class.Spells.Type, class.Spells.Ability, class.Spells.HasBonusSpells, class.Spells.IsSpontaneous); err != nil {
+			return err
+		}
+		if len(class.Spells.PreparedPerDay) != 0 && len(class.Spells.PreparedPerDay) != len(class.Spells.CastPerDay) {
+			return fmt.Errorf("length of class %s prepared spells per day doesn't match cast per day table length", class.Name)
+		}
+		if len(class.Spells.SpellsKnown) != 0 && len(class.Spells.SpellsKnown) != len(class.Spells.CastPerDay) {
+			return fmt.Errorf("length of class %s spells known table doesn't match cast per day table length", class.Name)
+		}
+		classLevel := 1
+		spellLevel := 0
+		startOfLevel := true
+		startOfSpLevel := true
+		for i, cpd := range class.Spells.CastPerDay {
+			if classLevel != cpd.ClassLevel {
+				if startOfLevel {
+					return fmt.Errorf("class %s cast per day table missing class level %d data", class.Name, classLevel)
+				}
+				if cpd.ClassLevel != classLevel+1 {
+					return fmt.Errorf("class %s cast per day table missing class level %d data (skips from %d to %d)",
+						class.Name, classLevel+1, classLevel, cpd.ClassLevel)
+				}
+				classLevel = cpd.ClassLevel
+				spellLevel = 0
+				startOfLevel = true
+				startOfSpLevel = true
+			} else {
+				startOfLevel = false
+			}
+
+			if spellLevel != cpd.SpellLevel {
+				if startOfSpLevel {
+					return fmt.Errorf("class %s cast per day table missing spell level %d data for class level %d", class.Name, spellLevel, classLevel)
+				}
+				if cpd.SpellLevel != spellLevel+1 {
+					return fmt.Errorf("class %s cast per day table missing spell level %d data (skips from %d to %d) for class level %d",
+						class.Name, spellLevel+1, spellLevel, cpd.SpellLevel, cpd.ClassLevel)
+				}
+				spellLevel = cpd.SpellLevel
+				startOfSpLevel = true
+			} else {
+				startOfSpLevel = false
+			}
+
+			dppd.Valid = false
+			if len(class.Spells.PreparedPerDay) != 0 {
+				if class.Spells.PreparedPerDay[i].ClassLevel != cpd.ClassLevel || class.Spells.PreparedPerDay[i].SpellLevel != cpd.SpellLevel {
+					return fmt.Errorf("class %s prepared per day table entry %d is for class level %d, spell level %d, which is out of sync with cast per day table",
+						class.Name, i, class.Spells.PreparedPerDay[i].ClassLevel, class.Spells.PreparedPerDay[i].SpellLevel)
+				}
+				if !class.Spells.PreparedPerDay[i].IsProhibited {
+					dppd.Valid = true
+					if class.Spells.PreparedPerDay[i].IsUnlimitedUse {
+						dppd.Int32 = -1
+					} else {
+						dppd.Int32 = int32(class.Spells.PreparedPerDay[i].Number)
+					}
+				}
+			}
+
+			dknown.Valid = false
+			if len(class.Spells.SpellsKnown) != 0 {
+				if class.Spells.SpellsKnown[i].ClassLevel != cpd.ClassLevel || class.Spells.SpellsKnown[i].SpellLevel != cpd.SpellLevel {
+					return fmt.Errorf("class %s spells known table entry %d is for class level %d, spell level %d, which is out of sync with cast per day table",
+						class.Name, i, class.Spells.SpellsKnown[i].ClassLevel, class.Spells.SpellsKnown[i].SpellLevel)
+				}
+				if !class.Spells.SpellsKnown[i].IsProhibited {
+					dknown.Valid = true
+					if class.Spells.SpellsKnown[i].IsUnlimitedUse {
+						dknown.Int32 = -1
+					} else {
+						dknown.Int32 = int32(class.Spells.SpellsKnown[i].Number)
+					}
+				}
+			}
+
+			if cpd.IsProhibited {
+				dcpd.Valid = false
+			} else {
+				dcpd.Valid = true
+				if cpd.IsUnlimitedUse {
+					dcpd.Int32 = -1
+				} else {
+					dcpd.Int32 = int32(cpd.Number)
+				}
+			}
+
+			if _, err = db.Exec(`INSERT INTO ClassSpells (ClassID, ClassLevel, SpellLevel, CastPerDay, PrepPerDay, Known) VALUES (?,?,?,?,?,?)`,
+				id, cpd.ClassLevel, cpd.SpellLevel, dcpd, dppd, dknown); err != nil {
+				return err
+			}
+		}
+	}
+
+	return err
+}
+
+func importFeat(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error     { return nil }
+func importLanguage(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error { return nil }
+func importSkill(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error    { return nil }
+func importSpell(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error    { return nil }
+func importWeapon(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error   { return nil }
 
 func exportFeats(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 	var rows *sql.Rows
@@ -866,11 +1161,11 @@ func exportClasses(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 	if rows, err = query(db, prefs,
 		`SELECT 
 				ID, Name, Code,
-				MagicType, Ability, Bonus, IsSpontaneous
+		MagicType, Ability, Bonus, IsSpontaneous
 			FROM Classes
 			LEFT JOIN ClassMagic
 				ON ClassID = ID
-		`); err != nil {
+	`); err != nil {
 		return err
 	}
 	defer rows.Close()
@@ -919,9 +1214,6 @@ func exportClasses(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 				var rows *sql.Rows
 				var err error
 
-				firstResult := true
-				lastLevel := 0
-
 				if rows, err = query(db, prefs,
 					`SELECT
 						ClassLevel, SpellLevel, CastPerDay, PrepPerDay, Known
@@ -933,7 +1225,6 @@ func exportClasses(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 					return err
 				}
 				defer rows.Close()
-				var cast, prep, known []ClassSpellLevel
 				for rows.Next() {
 					var cl, sl int
 					var cpd, ppd, kn sql.NullInt32
@@ -942,21 +1233,9 @@ func exportClasses(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 					if err := rows.Scan(&cl, &sl, &cpd, &ppd, &kn); err != nil {
 						return err
 					}
-					if firstResult || cl != lastLevel {
-						if !firstResult {
-							cls.Spells.CastPerDay = append(cls.Spells.CastPerDay, cast)
-							cls.Spells.PreparedPerDay = append(cls.Spells.PreparedPerDay, prep)
-							cls.Spells.SpellsKnown = append(cls.Spells.SpellsKnown, known)
-						}
-						cast = []ClassSpellLevel{}
-						prep = []ClassSpellLevel{}
-						known = []ClassSpellLevel{}
-						firstResult = false
-						lastLevel = cl
-					}
+					c.ClassLevel = cl
+					c.SpellLevel = sl
 					if cpd.Valid {
-						c.ClassLevel = cl
-						c.SpellLevel = sl
 						if cpd.Int32 < 0 {
 							c.IsUnlimitedUse = true
 						} else {
@@ -966,9 +1245,9 @@ func exportClasses(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 						c.IsProhibited = true
 					}
 
+					p.ClassLevel = cl
+					p.SpellLevel = sl
 					if ppd.Valid {
-						p.ClassLevel = cl
-						p.SpellLevel = sl
 						if ppd.Int32 < 0 {
 							p.IsUnlimitedUse = true
 						} else {
@@ -978,9 +1257,9 @@ func exportClasses(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 						p.IsProhibited = true
 					}
 
+					k.ClassLevel = cl
+					k.SpellLevel = sl
 					if kn.Valid {
-						k.ClassLevel = cl
-						k.SpellLevel = sl
 						if kn.Int32 < 0 {
 							k.IsUnlimitedUse = true
 						} else {
@@ -990,14 +1269,9 @@ func exportClasses(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 						k.IsProhibited = true
 					}
 
-					cast = append(cast, c)
-					prep = append(prep, p)
-					known = append(known, k)
-				}
-				if !firstResult {
-					cls.Spells.CastPerDay = append(cls.Spells.CastPerDay, cast)
-					cls.Spells.PreparedPerDay = append(cls.Spells.PreparedPerDay, prep)
-					cls.Spells.SpellsKnown = append(cls.Spells.SpellsKnown, known)
+					cls.Spells.CastPerDay = append(cls.Spells.CastPerDay, c)
+					cls.Spells.PreparedPerDay = append(cls.Spells.PreparedPerDay, p)
+					cls.Spells.SpellsKnown = append(cls.Spells.SpellsKnown, k)
 				}
 				return rows.Err()
 			}(); err != nil {
@@ -1783,13 +2057,13 @@ type Class struct {
 	Name    string
 	IsLocal bool `json:",omitempty"`
 	Spells  struct {
-		Type           string              `json:",omitempty"`
-		Ability        string              `json:",omitempty"`
-		HasBonusSpells bool                `json:",omitempty"`
-		IsSpontaneous  bool                `json:",omitempty"`
-		CastPerDay     [][]ClassSpellLevel `json:",omitempty"`
-		PreparedPerDay [][]ClassSpellLevel `json:",omitempty"`
-		SpellsKnown    [][]ClassSpellLevel `json:",omitempty"`
+		Type           string            `json:",omitempty"`
+		Ability        string            `json:",omitempty"`
+		HasBonusSpells bool              `json:",omitempty"`
+		IsSpontaneous  bool              `json:",omitempty"`
+		CastPerDay     []ClassSpellLevel `json:",omitempty"`
+		PreparedPerDay []ClassSpellLevel `json:",omitempty"`
+		SpellsKnown    []ClassSpellLevel `json:",omitempty"`
 	} `json:",omitempty"`
 }
 type ClassSpellLevel struct {
