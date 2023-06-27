@@ -1,7 +1,4 @@
 /*
-} else {
-	weap.Critical.CantCritical = true
-}
 ########################################################################################
 #  __                                                                                  #
 # /__ _                                                                                #
@@ -544,6 +541,119 @@ func main() {
 	}
 }
 
+//
+//  ____    _  _____  _    ____    _    ____  _____
+// |  _ \  / \|_   _|/ \  | __ )  / \  / ___|| ____|
+// | | | |/ _ \ | | / _ \ |  _ \ / _ \ \___ \|  _|
+// | |_| / ___ \| |/ ___ \| |_) / ___ \ ___) | |___
+// |____/_/   \_\_/_/   \_\____/_/   \_\____/|_____|
+//
+// The GMA core database schema looks like this:
+// *=primary key; #=bit-encoded integer referencing ID as bit number; >=foreign key
+// not all field names are shown
+//
+//
+//         SpellDescriptors(*ID)
+//                           :   SpellComponents(*ID)
+//                           :                   : CastingTimes(*CastingTime)
+//                           :                   :               : Ranges(*Range)
+//                           :                   :               :         : SpellResistances(*SpellResistance)
+//                           :                   :               :         :      .................:
+//                           :                   :               :         :      :  SavingThrows(*Save)
+//                           :                   :               :         :      :       ...........:
+//                           :....               :               :         :      :       : SaveEffects(*Effect)
+//                               :               :               :         :      :       :              : Durations(*Duration)
+//                               :               :               :         :      :       :              :             :
+//       Spells(*ID, SchoolID, #Descriptors, #Components, >CastingTime, >Range, >SR, >SavingThrow, >SaveEffect, >Duration)
+//               |          |
+//               |          V
+//               V Schools(*ID)
+// SpellLevels(*>SpellID, *>ClassID)
+//               ^             |
+//               |             +-------+
+//              [S]                    V
+//                            Classes(*ID)
+//                                     ^
+//                                     |<----------------------+<---------------------------------------------+
+//                                     |                       |                                              |
+// SpellsPrepared(*ID, >MonsterID, >ClassID)   ClassSpells(>ClassID, ClassLevel, SpellLevel)  ClassMagic(>*ClassID, >MagicType, >Ability)
+//                  ^       |                                                                                             :          :
+//                  |       V                                                                                             :          :
+//                  |      [M]                                                                               MagicTypes(*Type)       :
+//                  |<------------------------------------------------------+                                         AbilityTypes(*Type)
+//                  |                                                       |
+// SpellList(*>CollectionID, *>SpellID, *Instance)    SpellSlots(*ID, >CollectionID, >SpellID, Instance)
+//                                |                                |                      |
+//                                V                                V                      V
+//                               [S]             SpellSlotMeta(>SlotID, >MetaID)         [S]
+//                                                                          |
+//                                                                          V
+//                                                            MetaMagic(*>FeatID)
+//                                                                          |
+//                                                                          V
+//                                                                  Feats(*>ID, #Flags)
+//                                                                        ^ |      :
+//                                                                        | |      :.......
+//                                                +-----------------------+ |             :
+//                                                |                         V  FeatFlags(*ID)
+//                                                |    FeatFeatTypes(*>FeatID, *>FeatType)
+//                                                |                                  :
+//                                                |                       FeatTypes(*FeatType)
+//                                                |
+//                    MonsterFeats(>MonsterID, >FeatID)
+//                                     |
+//                                     V
+//                                    [M]
+//
+// MonsterLanguages(*>MonsterID, *>LanguageID)
+//                      |              |
+//                      V              V
+//                     [M]  Languages(*ID)
+//
+//                         Skills(*ID)
+//                                 ^
+//                                 |
+// MonsterSkills(*>MonsterID, *>SkillID)
+//                    |
+//                    V
+//                   [M]
+//
+//
+//        Alignments(*ID)
+//                    : Sizes(*Code)
+//          [M]       :         : MonsterTypes(*Type)
+//           |        :         :      ...........:
+//           V        :         :      :
+// Monsters(*ID, #Alignment, >Size, >Type, >AgeCategory,
+//           ^                                   :
+//           |                AgeCategories(*Category)
+//           |
+//           |           ACTypes(*ID)
+//           +-------+            ^
+//                   |            |
+// ACAdjustments(*>MonsterID, *>ACType)
+//                       ACCTypes(*ID)
+//                                 ^
+//                                 |
+// ACComponents(*>MonsterID, *>ACComponent)
+//                         MonsterSubtypes(*ID)
+//                                          ^
+//                             [M]          |
+//                              ^           |
+//                              |           |
+// MonsterMonsterSubtypes(*>MonsterID, *>SubtypeID)
+//
+// AttackModes(*>MonsterID, *TierGroup, *TierSeq, >BaseWeaponID, >Mode)
+//                                                     |           :
+//                                                     V           :
+//                                            Weapons(*ID)         :
+//                                               AttackModeTypes(*Mode)
+//
+//                   [M]   Domains(*ID)
+//                    ^             ^
+//                    |             |
+// MonsterDomains(*>MonsterID, *>DomainID)
+
 func query(db *sql.DB, prefs *AppPreferences, query string, args ...any) (*sql.Rows, error) {
 	if (prefs.DebugBits & DebugQuery) != 0 {
 		log.Printf("query: \"%s\" with %q", query, args)
@@ -595,8 +705,21 @@ func getClassCodes(db *sql.DB, prefs *AppPreferences) (map[int]string, error) {
 	return getBitStrings(db, prefs, "SELECT ID, Code FROM Classes")
 }
 
+func makeRecordExist(db *sql.DB, prefs *AppPreferences, table, keyfield string, keyvalue any) error {
+	exists, _, err := recordExists(db, prefs, table, keyfield, keyfield, keyvalue)
+	if exists || err != nil {
+		return err
+	}
+
+	_, err = db.Exec("INSERT INTO "+table+" ("+keyfield+") VALUES (?)", keyvalue)
+	if (prefs.DebugBits & DebugMisc) != 0 {
+		log.Printf("added \"%v\" to %s", keyvalue, table)
+	}
+	return err
+}
+
 func recordExists(db *sql.DB, prefs *AppPreferences, table, idfield, keyfield string, keyvalue any) (bool, int64, error) {
-	// This isn't a SQL injection risk because we generate and control the values used to build the query
+	// This shouldn't be a SQL injection risk because we generate and control the values used to build the query
 	// and don't get them from an outside source.
 	rows, err := query(db, prefs, "SELECT "+idfield+" FROM "+table+" WHERE "+keyfield+"=?", keyvalue)
 	if err != nil {
@@ -613,7 +736,12 @@ func recordExists(db *sql.DB, prefs *AppPreferences, table, idfield, keyfield st
 	return false, 0, nil
 }
 
-func importMonster(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error { return nil }
+//   ____ _        _    ____ ____  _____ ____
+//  / ___| |      / \  / ___/ ___|| ____/ ___|
+// | |   | |     / _ \ \___ \___ \|  _| \___ \
+// | |___| |___ / ___ \ ___) |__) | |___ ___) |
+//  \____|_____/_/   \_\____/____/|_____|____/
+//
 func importClass(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error {
 	var class Class
 	var err, err2, err3 error
@@ -623,6 +751,13 @@ func importClass(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error
 
 	if err = decoder.Decode(&class); err != nil {
 		return err
+	}
+
+	if (prefs.TypeBits & TypeClass) == 0 {
+		if (prefs.DebugBits & DebugMisc) != 0 {
+			log.Printf("skipping class %s because it's not in the requested type filter", class.Name)
+		}
+		return nil
 	}
 
 	if exists, id, err = recordExists(db, prefs, "Classes", "ID", "Code", class.Code); err != nil {
@@ -675,45 +810,18 @@ func importClass(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error
 			return fmt.Errorf("length of class %s spells known table doesn't match cast per day table length", class.Name)
 		}
 		classLevel := 1
-		spellLevel := 0
-		startOfLevel := true
-		startOfSpLevel := true
+		sl := 0
 		for i, cpd := range class.Spells.CastPerDay {
-			if classLevel != cpd.ClassLevel {
-				if startOfLevel {
-					return fmt.Errorf("class %s cast per day table missing class level %d data", class.Name, classLevel)
-				}
-				if cpd.ClassLevel != classLevel+1 {
-					return fmt.Errorf("class %s cast per day table missing class level %d data (skips from %d to %d)",
-						class.Name, classLevel+1, classLevel, cpd.ClassLevel)
-				}
-				classLevel = cpd.ClassLevel
-				spellLevel = 0
-				startOfLevel = true
-				startOfSpLevel = true
-			} else {
-				startOfLevel = false
-			}
-
-			if spellLevel != cpd.SpellLevel {
-				if startOfSpLevel {
-					return fmt.Errorf("class %s cast per day table missing spell level %d data for class level %d", class.Name, spellLevel, classLevel)
-				}
-				if cpd.SpellLevel != spellLevel+1 {
-					return fmt.Errorf("class %s cast per day table missing spell level %d data (skips from %d to %d) for class level %d",
-						class.Name, spellLevel+1, spellLevel, cpd.SpellLevel, cpd.ClassLevel)
-				}
-				spellLevel = cpd.SpellLevel
-				startOfSpLevel = true
-			} else {
-				startOfSpLevel = false
+			if classLevel != cpd.ClassLevel || sl != cpd.SpellLevel {
+				return fmt.Errorf("class %s cast-per-day table entry for CL %d, SL %d expected, but CL %d, SL %d found instead",
+					class.Name, classLevel, sl, cpd.ClassLevel, cpd.SpellLevel)
 			}
 
 			dppd.Valid = false
 			if len(class.Spells.PreparedPerDay) != 0 {
 				if class.Spells.PreparedPerDay[i].ClassLevel != cpd.ClassLevel || class.Spells.PreparedPerDay[i].SpellLevel != cpd.SpellLevel {
-					return fmt.Errorf("class %s prepared per day table entry %d is for class level %d, spell level %d, which is out of sync with cast per day table",
-						class.Name, i, class.Spells.PreparedPerDay[i].ClassLevel, class.Spells.PreparedPerDay[i].SpellLevel)
+					return fmt.Errorf("class %s prepared per day table entry %d (CL %d, SL %d) is out of sync (should be CL %d, SL %d)",
+						class.Name, i, class.Spells.PreparedPerDay[i].ClassLevel, class.Spells.PreparedPerDay[i].SpellLevel, classLevel, sl)
 				}
 				if !class.Spells.PreparedPerDay[i].IsProhibited {
 					dppd.Valid = true
@@ -728,8 +836,8 @@ func importClass(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error
 			dknown.Valid = false
 			if len(class.Spells.SpellsKnown) != 0 {
 				if class.Spells.SpellsKnown[i].ClassLevel != cpd.ClassLevel || class.Spells.SpellsKnown[i].SpellLevel != cpd.SpellLevel {
-					return fmt.Errorf("class %s spells known table entry %d is for class level %d, spell level %d, which is out of sync with cast per day table",
-						class.Name, i, class.Spells.SpellsKnown[i].ClassLevel, class.Spells.SpellsKnown[i].SpellLevel)
+					return fmt.Errorf("class %s spells known table entry %d (CL %d, SL %d) is out of sync (should be CL %d, SL %d)",
+						class.Name, i, class.Spells.SpellsKnown[i].ClassLevel, class.Spells.SpellsKnown[i].SpellLevel, classLevel, sl)
 				}
 				if !class.Spells.SpellsKnown[i].IsProhibited {
 					dknown.Valid = true
@@ -756,395 +864,15 @@ func importClass(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error
 				id, cpd.ClassLevel, cpd.SpellLevel, dcpd, dppd, dknown); err != nil {
 				return err
 			}
+
+			if sl++; sl > 9 {
+				sl = 0
+				classLevel++
+			}
 		}
 	}
 
 	return err
-}
-
-func importFeat(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error     { return nil }
-func importLanguage(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error { return nil }
-func importSkill(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error    { return nil }
-func importSpell(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error    { return nil }
-func importWeapon(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error   { return nil }
-
-func exportFeats(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
-	var rows *sql.Rows
-	var err error
-
-	if (prefs.DebugBits & DebugMisc) != 0 {
-		log.Printf("Exporting feat data")
-	}
-	if _, err = fp.WriteString(" \"Feats\": [\n"); err != nil {
-		return err
-	}
-
-	featFlags, err := getFeatFlags(db, prefs)
-	if err != nil {
-		return err
-	}
-	if rows, err = query(db, prefs,
-		`SELECT 
-			ID, Code, Name, Parameters, Feats.IsLocal, Description, Flags, Prerequisites, Benefit,
-			Normal, Special, Source, Race, Note, Goal, CompletionBenefit, SuggestedTraits,
-			Adjective, LevelCost, Symbol
-		FROM Feats
-		LEFT JOIN MetaMagic
-			ON MetaMagic.FeatID = ID`,
-	); err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	firstLine := true
-	for rows.Next() {
-		var feat Feat
-		var adj, sym, param, prereq, benefit, normal, special, source, race, note, goal, comp, traits sql.NullString
-		var levelcost sql.NullInt32
-		var feat_db_id int
-
-		if !firstLine {
-			if _, err = fp.WriteString(",\n"); err != nil {
-				return err
-			}
-		} else {
-			firstLine = false
-		}
-
-		if err := rows.Scan(&feat_db_id, &feat.Code, &feat.Name, &param, &feat.IsLocal, &feat.Description,
-			&feat.Flags, &prereq, &benefit, &normal, &special, &source, &race,
-			&note, &goal, &comp, &traits,
-			&adj, &levelcost, &sym); err != nil {
-			return err
-		}
-		if param.Valid {
-			feat.Parameters = param.String
-		}
-		if prereq.Valid {
-			feat.Prerequisites = prereq.String
-		}
-		if benefit.Valid {
-			feat.Benefit = benefit.String
-		}
-		if normal.Valid {
-			feat.Normal = normal.String
-		}
-		if special.Valid {
-			feat.Special = special.String
-		}
-		if source.Valid {
-			feat.Source = source.String
-		}
-		if race.Valid {
-			feat.Race = race.String
-		}
-		if note.Valid {
-			feat.Note = note.String
-		}
-		if goal.Valid {
-			feat.Goal = goal.String
-		}
-		if comp.Valid {
-			feat.CompletionBenefit = comp.String
-		}
-		if traits.Valid {
-			feat.SuggestedTraits = traits.String
-		}
-
-		if prefs.SRD == feat.IsLocal {
-			if (prefs.DebugBits & DebugMisc) != 0 {
-				log.Printf("Skipping feat %s because SRD=%v", feat.Code, prefs.SRD)
-			}
-			continue
-		}
-
-		if err = func() error {
-			var rows *sql.Rows
-			var err error
-			var t string
-
-			if rows, err = query(db, prefs, "SELECT FeatType FROM FeatFeatTypes WHERE FeatID=?", feat_db_id); err != nil {
-				return err
-			}
-			defer rows.Close()
-			for rows.Next() {
-				if err = rows.Scan(&t); err != nil {
-					return err
-				}
-				feat.Types = append(feat.Types, t)
-			}
-			return nil
-		}(); err != nil {
-			return err
-		}
-
-		for bit, name := range featFlags {
-			if (feat.Flags & (1 << bit)) != 0 {
-				feat.FlagNames = append(feat.FlagNames, name)
-			}
-		}
-
-		if adj.Valid || levelcost.Valid || sym.Valid {
-			feat.MetaMagic.IsMetaMagicFeat = true
-			if adj.Valid {
-				feat.MetaMagic.Adjective = adj.String
-			}
-			if levelcost.Valid {
-				feat.MetaMagic.LevelCost = int(levelcost.Int32)
-			} else {
-				feat.MetaMagic.IsLevelCostVariable = true
-			}
-			if sym.Valid {
-				feat.MetaMagic.Symbol = sym.String
-			}
-		}
-		bytes, err := json.MarshalIndent(feat, "", "    ")
-		if err != nil {
-			return err
-		}
-		if _, err = fp.Write(bytes); err != nil {
-			return err
-		}
-	}
-	if _, err = fp.WriteString(" ],\n"); err != nil {
-		return err
-	}
-	return rows.Err()
-}
-
-func exportWeapons(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
-	var rows *sql.Rows
-	var err error
-
-	if (prefs.DebugBits & DebugMisc) != 0 {
-		log.Printf("Exporting weapon data")
-	}
-	if _, err = fp.WriteString(" \"Weapons\": [\n"); err != nil {
-		return err
-	}
-
-	if rows, err = query(db, prefs,
-		`SELECT 
-			IsLocal, Code, Cost, Name, DmgT, DmgS, DmgM, DmgL,
-			CritMultiplier, CritThreat, RangeIncrement, RangeMax,
-			Weight, DmgTypes, Qualities
-		FROM Weapons`,
-	); err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	firstLine := true
-	for rows.Next() {
-		var weap Weapon
-		var cost, ri, rmax, wt sql.NullInt32
-		var dt, ct, cm, ds, dm, dl, dtyp, q sql.NullString
-
-		if !firstLine {
-			if _, err = fp.WriteString(",\n"); err != nil {
-				return err
-			}
-		} else {
-			firstLine = false
-		}
-
-		if err := rows.Scan(&weap.IsLocal, &weap.Code, &cost, &weap.Name,
-			&dt, &ds, &dm, &dl, &cm, &ct, &ri, &rmax, &wt, &dtyp, &q); err != nil {
-			return err
-		}
-
-		if prefs.SRD == weap.IsLocal {
-			if (prefs.DebugBits & DebugMisc) != 0 {
-				log.Printf("Skipping weapon %s because SRD=%v", weap.Code, prefs.SRD)
-			}
-			continue
-		}
-
-		weap.Damage = make(map[string]string)
-
-		if wt.Valid {
-			weap.Weight = int(wt.Int32)
-		}
-		if dtyp.Valid {
-			weap.DamageTypes = dtyp.String
-		}
-		if q.Valid {
-			weap.Qualities = q.String
-		}
-		if cost.Valid {
-			weap.Cost = int(cost.Int32)
-		}
-		if dt.Valid {
-			weap.Damage["T"] = dt.String
-		}
-		if ds.Valid {
-			weap.Damage["S"] = ds.String
-		}
-		if dm.Valid {
-			weap.Damage["M"] = dm.String
-		}
-		if dl.Valid {
-			weap.Damage["L"] = dl.String
-		}
-		if ct.Valid || cm.Valid {
-			if ct.Valid {
-				weap.Critical.Threat = ct.String
-			}
-			if cm.Valid {
-				weap.Critical.Multiplier = cm.String
-			}
-		} else {
-			weap.Critical.CantCritical = true
-		}
-		if ri.Valid || rmax.Valid {
-			if ri.Valid {
-				weap.Ranged.Increment = int(ri.Int32)
-			}
-			if rmax.Valid {
-				weap.Ranged.MaxIncrements = int(rmax.Int32)
-			}
-			weap.Ranged.IsRanged = true
-		}
-
-		bytes, err := json.MarshalIndent(weap, "", "    ")
-		if err != nil {
-			return err
-		}
-		if _, err = fp.Write(bytes); err != nil {
-			return err
-		}
-	}
-	if _, err = fp.WriteString(" ],\n"); err != nil {
-		return err
-	}
-	return rows.Err()
-}
-
-func exportSkills(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
-	var rows *sql.Rows
-	var err error
-
-	if (prefs.DebugBits & DebugMisc) != 0 {
-		log.Printf("Exporting skill data")
-	}
-	if _, err = fp.WriteString(" \"Skills\": [\n"); err != nil {
-		return err
-	}
-
-	classCodes, err := getClassCodes(db, prefs)
-	if err != nil {
-		return err
-	}
-	if rows, err = query(db, prefs,
-		`SELECT 
-			ID, Name, Classes, Ability, ArmorCheck, TrainedOnly, Source,
-			Description, FullText, ParentSkill, IsVirtual, IsLocal, IsBackground
-		FROM Skills
-		`); err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	firstLine := true
-	for rows.Next() {
-		var skill_db_id int
-		var classbits int
-		var sk Skill
-		var source sql.NullString
-		var parent sql.NullInt32
-
-		if !firstLine {
-			if _, err = fp.WriteString(",\n"); err != nil {
-				return err
-			}
-		} else {
-			firstLine = false
-		}
-
-		if err := rows.Scan(&skill_db_id, &sk.Name, &classbits, &sk.Ability,
-			&sk.HasArmorPenalty, &sk.TrainingRequired, &source, &sk.Description,
-			&sk.FullText, &parent, &sk.IsVirtual, &sk.IsLocal, &sk.IsBackground); err != nil {
-			return err
-		}
-
-		if prefs.SRD == sk.IsLocal {
-			if (prefs.DebugBits & DebugMisc) != 0 {
-				log.Printf("Skipping skill %s because SRD=%v", sk.Name, prefs.SRD)
-			}
-			continue
-		}
-
-		for bit, code := range classCodes {
-			if (classbits & (1 << bit)) != 0 {
-				sk.ClassSkillFor = append(sk.ClassSkillFor, code)
-			}
-		}
-
-		bytes, err := json.MarshalIndent(sk, "", "    ")
-		if err != nil {
-			return err
-		}
-		if _, err = fp.Write(bytes); err != nil {
-			return err
-		}
-	}
-	if _, err = fp.WriteString(" ],\n"); err != nil {
-		return err
-	}
-	return rows.Err()
-}
-
-func exportLanguages(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
-	var rows *sql.Rows
-	var err error
-
-	if (prefs.DebugBits & DebugMisc) != 0 {
-		log.Printf("Exporting language data")
-	}
-	if _, err = fp.WriteString(" \"Languages\": [\n"); err != nil {
-		return err
-	}
-
-	if rows, err = query(db, prefs, `SELECT Language, IsLocal FROM Languages`); err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	firstLine := true
-	for rows.Next() {
-		var lang BaseLanguage
-
-		if !firstLine {
-			if _, err = fp.WriteString(",\n"); err != nil {
-				return err
-			}
-		} else {
-			firstLine = false
-		}
-
-		if err := rows.Scan(&lang.Language, &lang.IsLocal); err != nil {
-			return err
-		}
-
-		if prefs.SRD == lang.IsLocal {
-			if (prefs.DebugBits & DebugMisc) != 0 {
-				log.Printf("Skipping language %s because SRD=%v", lang.Language, prefs.SRD)
-			}
-			continue
-		}
-
-		bytes, err := json.MarshalIndent(lang, "", "    ")
-		if err != nil {
-			return err
-		}
-		if _, err = fp.Write(bytes); err != nil {
-			return err
-		}
-	}
-	if _, err = fp.WriteString(" ],\n"); err != nil {
-		return err
-	}
-	return rows.Err()
 }
 
 func exportClasses(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
@@ -1293,6 +1021,636 @@ func exportClasses(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 	return rows.Err()
 }
 
+//  _____ _____    _  _____ ____
+// |  ___| ____|  / \|_   _/ ___|
+// | |_  |  _|   / _ \ | | \___ \
+// |  _| | |___ / ___ \| |  ___) |
+// |_|   |_____/_/   \_\_| |____/
+//
+func importFeat(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error {
+	var feat Feat
+	var err, err2, err3 error
+	var id int64
+	var exists bool
+	var res sql.Result
+	var flags int
+
+	if err = decoder.Decode(&feat); err != nil {
+		return err
+	}
+
+	if (prefs.TypeBits & TypeFeat) == 0 {
+		if (prefs.DebugBits & DebugMisc) != 0 {
+			log.Printf("skipping feat %s because it's not in the requested type filter", feat.Name)
+		}
+		return nil
+	}
+
+	if exists, id, err = recordExists(db, prefs, "Feats", "ID", "Code", feat.Code); err != nil {
+		return err
+	}
+
+	fflags, err := getFeatFlags(db, prefs)
+	if err != nil {
+		return err
+	}
+
+	for _, f := range feat.FlagNames {
+		for bit, fname := range fflags {
+			if fname == f {
+				flags |= bit
+			}
+		}
+	}
+
+	var params, note, goal, comp, traits sql.NullString
+	var prereq, benefit, norm, spec, src, race sql.NullString
+	if feat.Prerequisites == "" {
+		prereq.Valid = false
+	} else {
+		prereq.Valid = true
+		prereq.String = feat.Prerequisites
+	}
+	if feat.Benefit == "" {
+		benefit.Valid = false
+	} else {
+		benefit.Valid = true
+		benefit.String = feat.Benefit
+	}
+	if feat.Normal == "" {
+		norm.Valid = false
+	} else {
+		norm.Valid = true
+		norm.String = feat.Normal
+	}
+	if feat.Special == "" {
+		spec.Valid = false
+	} else {
+		spec.Valid = true
+		spec.String = feat.Special
+	}
+	if feat.Source == "" {
+		src.Valid = false
+	} else {
+		src.Valid = true
+		src.String = feat.Source
+	}
+	if feat.Race == "" {
+		race.Valid = false
+	} else {
+		race.Valid = true
+		race.String = feat.Race
+	}
+
+	if feat.Parameters == "" {
+		params.Valid = false
+	} else {
+		params.Valid = true
+		params.String = feat.Parameters
+	}
+	if feat.Note == "" {
+		note.Valid = false
+	} else {
+		note.Valid = true
+		note.String = feat.Note
+	}
+	if feat.Goal == "" {
+		goal.Valid = false
+	} else {
+		goal.Valid = true
+		goal.String = feat.Goal
+	}
+	if feat.CompletionBenefit == "" {
+		comp.Valid = false
+	} else {
+		comp.Valid = true
+		comp.String = feat.CompletionBenefit
+	}
+	if feat.SuggestedTraits == "" {
+		traits.Valid = false
+	} else {
+		traits.Valid = true
+		traits.String = feat.SuggestedTraits
+	}
+
+	if exists {
+		_, err2 = db.Exec(`DELETE FROM MetaMagic WHERE FeatID=?`, id)
+		_, err3 = db.Exec(`DELETE FROM FeatFeatTypes WHERE FeatID=?`, id)
+		_, err = db.Exec(`UPDATE Feats SET Code=?, Name=?, Parameters=?, IsLocal=?, Description=?, Flags=?, Prerequisites=?,
+			Benefit=?, Normal=?, Special=?, Source=?, Race=?, Note=?, Goal=?, CompletionBenefit=?, SuggestedTraits=?
+			WHERE ID=?`,
+			feat.Code, feat.Name, params, feat.IsLocal, feat.Description, flags, prereq, benefit, norm, spec, src, race,
+			note, goal, comp, traits, id)
+	} else {
+		if res, err = db.Exec(`INSERT INTO Feats
+			(Code, Name, Parameters, IsLocal, Description, Flags, Prerequisites,
+			 Benefit, Normal, Special, Source, Race, Note, Goal, CompletionBenefit, SuggestedTraits)
+			VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+			feat.Code, feat.Name, params, feat.IsLocal, feat.Description, flags, prereq, benefit, norm, spec, src, race,
+			note, goal, comp, traits); err != nil {
+			return err
+		}
+		if id, err = res.LastInsertId(); err != nil {
+			return err
+		}
+	}
+
+	if err != nil {
+		return err
+	}
+	if err2 != nil {
+		return err2
+	}
+	if err3 != nil {
+		return err3
+	}
+
+	if (prefs.DebugBits & DebugMisc) != 0 {
+		if exists {
+			log.Printf("updated existing feat %s (database id %d)", feat.Name, id)
+		} else {
+			log.Printf("created new feat %s (database id %d)", feat.Name, id)
+		}
+	}
+
+	// add metamagic
+	if feat.MetaMagic.Adjective != "" || feat.MetaMagic.Symbol != "" {
+		var cost sql.NullInt32
+		var sym sql.NullString
+
+		if feat.MetaMagic.IsLevelCostVariable {
+			cost.Valid = false
+		} else {
+			cost.Valid = true
+			cost.Int32 = int32(feat.MetaMagic.LevelCost)
+		}
+
+		if feat.MetaMagic.Symbol == "" {
+			sym.Valid = false
+		} else {
+			sym.Valid = true
+			sym.String = feat.MetaMagic.Symbol
+		}
+
+		if _, err = db.Exec(`INSERT INTO MetaMagic (Adjective, LevelCost, Symbol, FeatID) VALUES (?,?,?,?)`,
+			feat.MetaMagic.Adjective, cost, sym, id); err != nil {
+			return err
+		}
+	}
+
+	// add feat types
+	for _, ftype := range feat.Types {
+		makeRecordExist(db, prefs, "FeatTypes", "FeatType", ftype)
+		if _, err = db.Exec(`INSERT INTO FeatFeatTypes (FeatID, FeatType) VALUES (?, ?)`, id, ftype); err != nil {
+			return err
+		}
+	}
+
+	return err
+}
+
+func exportFeats(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
+	var rows *sql.Rows
+	var err error
+
+	if (prefs.DebugBits & DebugMisc) != 0 {
+		log.Printf("Exporting feat data")
+	}
+	if _, err = fp.WriteString(" \"Feats\": [\n"); err != nil {
+		return err
+	}
+
+	featFlags, err := getFeatFlags(db, prefs)
+	if err != nil {
+		return err
+	}
+	if rows, err = query(db, prefs,
+		`SELECT 
+			ID, Code, Name, Parameters, Feats.IsLocal, Description, Flags, Prerequisites, Benefit,
+			Normal, Special, Source, Race, Note, Goal, CompletionBenefit, SuggestedTraits,
+			Adjective, LevelCost, Symbol
+		FROM Feats
+		LEFT JOIN MetaMagic
+			ON MetaMagic.FeatID = ID`,
+	); err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	firstLine := true
+	for rows.Next() {
+		var feat Feat
+		var adj, sym, param, prereq, benefit, normal, special, source, race, note, goal, comp, traits sql.NullString
+		var levelcost sql.NullInt32
+		var feat_db_id int
+
+		if !firstLine {
+			if _, err = fp.WriteString(",\n"); err != nil {
+				return err
+			}
+		} else {
+			firstLine = false
+		}
+
+		if err := rows.Scan(&feat_db_id, &feat.Code, &feat.Name, &param, &feat.IsLocal, &feat.Description,
+			&feat.Flags, &prereq, &benefit, &normal, &special, &source, &race,
+			&note, &goal, &comp, &traits,
+			&adj, &levelcost, &sym); err != nil {
+			return err
+		}
+		if param.Valid {
+			feat.Parameters = param.String
+		}
+		if prereq.Valid {
+			feat.Prerequisites = prereq.String
+		}
+		if benefit.Valid {
+			feat.Benefit = benefit.String
+		}
+		if normal.Valid {
+			feat.Normal = normal.String
+		}
+		if special.Valid {
+			feat.Special = special.String
+		}
+		if source.Valid {
+			feat.Source = source.String
+		}
+		if race.Valid {
+			feat.Race = race.String
+		}
+		if note.Valid {
+			feat.Note = note.String
+		}
+		if goal.Valid {
+			feat.Goal = goal.String
+		}
+		if comp.Valid {
+			feat.CompletionBenefit = comp.String
+		}
+		if traits.Valid {
+			feat.SuggestedTraits = traits.String
+		}
+
+		if prefs.SRD == feat.IsLocal {
+			if (prefs.DebugBits & DebugMisc) != 0 {
+				log.Printf("Skipping feat %s because SRD=%v", feat.Code, prefs.SRD)
+			}
+			continue
+		}
+
+		if err = func() error {
+			var rows *sql.Rows
+			var err error
+			var t string
+
+			if rows, err = query(db, prefs, "SELECT FeatType FROM FeatFeatTypes WHERE FeatID=?", feat_db_id); err != nil {
+				return err
+			}
+			defer rows.Close()
+			for rows.Next() {
+				if err = rows.Scan(&t); err != nil {
+					return err
+				}
+				feat.Types = append(feat.Types, t)
+			}
+			return nil
+		}(); err != nil {
+			return err
+		}
+
+		for bit, name := range featFlags {
+			if (feat.Flags & (1 << bit)) != 0 {
+				feat.FlagNames = append(feat.FlagNames, name)
+			}
+		}
+
+		if adj.Valid || levelcost.Valid || sym.Valid {
+			feat.MetaMagic.IsMetaMagicFeat = true
+			if adj.Valid {
+				feat.MetaMagic.Adjective = adj.String
+			}
+			if levelcost.Valid {
+				feat.MetaMagic.LevelCost = int(levelcost.Int32)
+			} else {
+				feat.MetaMagic.IsLevelCostVariable = true
+			}
+			if sym.Valid {
+				feat.MetaMagic.Symbol = sym.String
+			}
+		}
+		bytes, err := json.MarshalIndent(feat, "", "    ")
+		if err != nil {
+			return err
+		}
+		if _, err = fp.Write(bytes); err != nil {
+			return err
+		}
+	}
+	if _, err = fp.WriteString(" ],\n"); err != nil {
+		return err
+	}
+	return rows.Err()
+}
+
+// __        _______    _    ____   ___  _   _ ____
+// \ \      / / ____|  / \  |  _ \ / _ \| \ | / ___|
+//  \ \ /\ / /|  _|   / _ \ | |_) | | | |  \| \___ \
+//   \ V  V / | |___ / ___ \|  __/| |_| | |\  |___) |
+//    \_/\_/  |_____/_/   \_\_|    \___/|_| \_|____/
+//
+func importWeapon(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error { return nil }
+func exportWeapons(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
+	var rows *sql.Rows
+	var err error
+
+	if (prefs.DebugBits & DebugMisc) != 0 {
+		log.Printf("Exporting weapon data")
+	}
+	if _, err = fp.WriteString(" \"Weapons\": [\n"); err != nil {
+		return err
+	}
+
+	if rows, err = query(db, prefs,
+		`SELECT 
+			IsLocal, Code, Cost, Name, DmgT, DmgS, DmgM, DmgL,
+			CritMultiplier, CritThreat, RangeIncrement, RangeMax,
+			Weight, DmgTypes, Qualities
+		FROM Weapons`,
+	); err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	firstLine := true
+	for rows.Next() {
+		var weap Weapon
+		var cost, ri, rmax, wt sql.NullInt32
+		var dt, ct, cm, ds, dm, dl, dtyp, q sql.NullString
+
+		if !firstLine {
+			if _, err = fp.WriteString(",\n"); err != nil {
+				return err
+			}
+		} else {
+			firstLine = false
+		}
+
+		if err := rows.Scan(&weap.IsLocal, &weap.Code, &cost, &weap.Name,
+			&dt, &ds, &dm, &dl, &cm, &ct, &ri, &rmax, &wt, &dtyp, &q); err != nil {
+			return err
+		}
+
+		if prefs.SRD == weap.IsLocal {
+			if (prefs.DebugBits & DebugMisc) != 0 {
+				log.Printf("Skipping weapon %s because SRD=%v", weap.Code, prefs.SRD)
+			}
+			continue
+		}
+
+		weap.Damage = make(map[string]string)
+
+		if wt.Valid {
+			weap.Weight = int(wt.Int32)
+		}
+		if dtyp.Valid {
+			weap.DamageTypes = dtyp.String
+		}
+		if q.Valid {
+			weap.Qualities = q.String
+		}
+		if cost.Valid {
+			weap.Cost = int(cost.Int32)
+		}
+		if dt.Valid {
+			weap.Damage["T"] = dt.String
+		}
+		if ds.Valid {
+			weap.Damage["S"] = ds.String
+		}
+		if dm.Valid {
+			weap.Damage["M"] = dm.String
+		}
+		if dl.Valid {
+			weap.Damage["L"] = dl.String
+		}
+		if ct.Valid || cm.Valid {
+			if ct.Valid {
+				weap.Critical.Threat = ct.String
+			}
+			if cm.Valid {
+				weap.Critical.Multiplier = cm.String
+			}
+		} else {
+			weap.Critical.CantCritical = true
+		}
+		if ri.Valid || rmax.Valid {
+			if ri.Valid {
+				weap.Ranged.Increment = int(ri.Int32)
+			}
+			if rmax.Valid {
+				weap.Ranged.MaxIncrements = int(rmax.Int32)
+			}
+			weap.Ranged.IsRanged = true
+		}
+
+		bytes, err := json.MarshalIndent(weap, "", "    ")
+		if err != nil {
+			return err
+		}
+		if _, err = fp.Write(bytes); err != nil {
+			return err
+		}
+	}
+	if _, err = fp.WriteString(" ],\n"); err != nil {
+		return err
+	}
+	return rows.Err()
+}
+
+//  ____  _  _____ _     _     ____
+// / ___|| |/ /_ _| |   | |   / ___|
+// \___ \| ' / | || |   | |   \___ \
+//  ___) | . \ | || |___| |___ ___) |
+// |____/|_|\_\___|_____|_____|____/
+//
+func importSkill(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error { return nil }
+func exportSkills(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
+	var rows *sql.Rows
+	var err error
+
+	if (prefs.DebugBits & DebugMisc) != 0 {
+		log.Printf("Exporting skill data")
+	}
+	if _, err = fp.WriteString(" \"Skills\": [\n"); err != nil {
+		return err
+	}
+
+	classCodes, err := getClassCodes(db, prefs)
+	if err != nil {
+		return err
+	}
+	if rows, err = query(db, prefs,
+		`SELECT 
+			ID, Name, Classes, Ability, ArmorCheck, TrainedOnly, Source,
+			Description, FullText, ParentSkill, IsVirtual, IsLocal, IsBackground
+		FROM Skills
+		`); err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	firstLine := true
+	for rows.Next() {
+		var skill_db_id int
+		var classbits int
+		var sk Skill
+		var source sql.NullString
+		var parent sql.NullInt32
+
+		if !firstLine {
+			if _, err = fp.WriteString(",\n"); err != nil {
+				return err
+			}
+		} else {
+			firstLine = false
+		}
+
+		if err := rows.Scan(&skill_db_id, &sk.Name, &classbits, &sk.Ability,
+			&sk.HasArmorPenalty, &sk.TrainingRequired, &source, &sk.Description,
+			&sk.FullText, &parent, &sk.IsVirtual, &sk.IsLocal, &sk.IsBackground); err != nil {
+			return err
+		}
+
+		if prefs.SRD == sk.IsLocal {
+			if (prefs.DebugBits & DebugMisc) != 0 {
+				log.Printf("Skipping skill %s because SRD=%v", sk.Name, prefs.SRD)
+			}
+			continue
+		}
+
+		for bit, code := range classCodes {
+			if (classbits & (1 << bit)) != 0 {
+				sk.ClassSkillFor = append(sk.ClassSkillFor, code)
+			}
+		}
+
+		bytes, err := json.MarshalIndent(sk, "", "    ")
+		if err != nil {
+			return err
+		}
+		if _, err = fp.Write(bytes); err != nil {
+			return err
+		}
+	}
+	if _, err = fp.WriteString(" ],\n"); err != nil {
+		return err
+	}
+	return rows.Err()
+}
+
+//  _        _    _   _  ____ _   _   _    ____ _____ ____
+// | |      / \  | \ | |/ ___| | | | / \  / ___| ____/ ___|
+// | |     / _ \ |  \| | |  _| | | |/ _ \| |  _|  _| \___ \
+// | |___ / ___ \| |\  | |_| | |_| / ___ \ |_| | |___ ___) |
+// |_____/_/   \_\_| \_|\____|\___/_/   \_\____|_____|____/
+//
+func importLanguage(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error {
+	var lang BaseLanguage
+	var err error
+	var id int64
+	var exists bool
+
+	if err = decoder.Decode(&lang); err != nil {
+		return err
+	}
+
+	if (prefs.TypeBits & TypeLanguage) == 0 {
+		if (prefs.DebugBits & DebugMisc) != 0 {
+			log.Printf("skipping language %s because it's not in the requested type filter", lang.Language)
+		}
+		return nil
+	}
+
+	if exists, id, err = recordExists(db, prefs, "Languages", "ID", "Language", lang.Language); err != nil {
+		return err
+	}
+
+	if exists {
+		_, err = db.Exec(`UPDATE Languages SET Language=?, IsLocal=? WHERE ID=?`, lang.Language, lang.IsLocal, id)
+	} else {
+		_, err = db.Exec(`INSERT INTO Languages (Language, IsLocal) VALUES (?,?)`, lang.Language, lang.IsLocal)
+	}
+
+	if (prefs.DebugBits & DebugMisc) != 0 {
+		if exists {
+			log.Printf("updated existing language %s (database id %d)", lang.Language, id)
+		} else {
+			log.Printf("created new language %s", lang.Language)
+		}
+	}
+	return err
+}
+func exportLanguages(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
+	var rows *sql.Rows
+	var err error
+
+	if (prefs.DebugBits & DebugMisc) != 0 {
+		log.Printf("Exporting language data")
+	}
+	if _, err = fp.WriteString(" \"Languages\": [\n"); err != nil {
+		return err
+	}
+
+	if rows, err = query(db, prefs, `SELECT Language, IsLocal FROM Languages`); err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	firstLine := true
+	for rows.Next() {
+		var lang BaseLanguage
+
+		if !firstLine {
+			if _, err = fp.WriteString(",\n"); err != nil {
+				return err
+			}
+		} else {
+			firstLine = false
+		}
+
+		if err := rows.Scan(&lang.Language, &lang.IsLocal); err != nil {
+			return err
+		}
+
+		if prefs.SRD == lang.IsLocal {
+			if (prefs.DebugBits & DebugMisc) != 0 {
+				log.Printf("Skipping language %s because SRD=%v", lang.Language, prefs.SRD)
+			}
+			continue
+		}
+
+		bytes, err := json.MarshalIndent(lang, "", "    ")
+		if err != nil {
+			return err
+		}
+		if _, err = fp.Write(bytes); err != nil {
+			return err
+		}
+	}
+	if _, err = fp.WriteString(" ],\n"); err != nil {
+		return err
+	}
+	return rows.Err()
+}
+
+//  __  __  ___  _   _ ____ _____ _____ ____  ____
+// |  \/  |/ _ \| \ | / ___|_   _| ____|  _ \/ ___|
+// | |\/| | | | |  \| \___ \ | | |  _| | |_) \___ \
+// | |  | | |_| | |\  |___) || | | |___|  _ < ___) |
+// |_|  |_|\___/|_| \_|____/ |_| |_____|_| \_\____/
+//
+func importMonster(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error { return nil }
 func exportBestiary(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 	var rows *sql.Rows
 	var err error
@@ -2101,6 +2459,13 @@ type Feat struct {
 	} `json:",omitempty"`
 }
 
+//  ____  ____  _____ _     _     ____
+// / ___||  _ \| ____| |   | |   / ___|
+// \___ \| |_) |  _| | |   | |   \___ \
+//  ___) |  __/| |___| |___| |___ ___) |
+// |____/|_|   |_____|_____|_____|____/
+//
+func importSpell(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error { return nil }
 func exportSpells(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 	var rows *sql.Rows
 	var err error
