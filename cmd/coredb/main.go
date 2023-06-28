@@ -40,8 +40,8 @@ local items to the database and saving core data to files.
 (Otherwise)
    coredb -h
    coredb -help
-   coredb [-debug flags] [-export file] [-import file] [-log file] [-preferences file] [-srd] [-type list]
-   coredb [-D flags] [-e file] [-i file] [-l file] [-preferences file] [-srd] [-t list]
+   coredb [-debug flags] [-export file] [-filter [!]re] [-ignore-case] [-import file] [-log file] [-preferences file] [-srd] [-type list]
+   coredb [-D flags] [-e file] [-f [!]re] [-I] [-i file] [-l file] [-preferences file] [-srd] [-t list]
 
 # OPTIONS
 
@@ -65,8 +65,21 @@ You may not combine multiple single-letter options into a single composite argum
   -e, -export file
       Write database entries to the named file.
 
+  -f, -filter [!]regex
+      When importing or exporting, only include entries matching the regular expression
+	  regex. If regex begins with a '!' character, all entries which do NOT match the
+	  expression are included.
+
+	  The regex is matched against the Code and Name fields. If either matches, then
+	  the entry is included (or excluded). For languages, the Language field is checked.
+	  For monsters in the bestiary, the Code and Species fields are checked.
+	  For Spells and Skills, only the Name field is checked.
+
   -h, -help
       Print a command summary and exit.
+
+  -I, -ignore-case
+	Regex matching (-f/-filter option) is done irrespective of case.
 
   -i, -import file
       Read the contents of the file into the database.
@@ -88,8 +101,8 @@ You may not combine multiple single-letter options into a single composite argum
 
   -t, -type list
       Entries exported will include only database entries of the specified
-	  type(s). This is not necessary for import operations since the data type
-	  is indicated in the file being read.
+	  type(s). When importing, any records in the import file which are not
+	  of the specified type(s) will be skipped over.
 
 	  The list parameter is a comma-separated list of type names, which
 	  may be any of the following:
@@ -115,6 +128,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -130,16 +144,20 @@ var (
 	Fpreferences string
 	Fsrd         bool
 	Ftype        string
+	Ffilter      string
+	Fignorecase  bool
 )
 
 func init() {
 	const (
-		defaultDebug  = "none"
-		defaultExport = ""
-		defaultImport = ""
-		defaultLog    = ""
-		defaultSRD    = false
-		defaultType   = "all"
+		defaultDebug      = "none"
+		defaultExport     = ""
+		defaultImport     = ""
+		defaultLog        = ""
+		defaultSRD        = false
+		defaultType       = "all"
+		defaultFilter     = ""
+		defaultIgnoreCase = false
 	)
 	var defaultPreferences = ""
 
@@ -149,7 +167,7 @@ func init() {
 	}
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s [-D list] [-e file] [-i file] [-l file] [-preferences file] [-srd] [-t list]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s [-D list] [-e file] [-f re] [-I] [-i file] [-l file] [-preferences file] [-srd] [-t list]\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "  An option 'x' with a value may be set by '-x value', '-x=value', '--x value', or '--x=value'.\n")
 		fmt.Fprintf(os.Stderr, "  A flag 'x' may be set by '-x', '--x', '-x=true|false' or '--x=true|false'\n")
 		fmt.Fprintf(os.Stderr, "  Options may NOT be combined into a single argument (use '-x -y', not '-xy').\n")
@@ -162,6 +180,12 @@ func init() {
 
 	flag.StringVar(&Fexport, "export", defaultExport, "Export entries to the named file")
 	flag.StringVar(&Fexport, "e", defaultExport, "(same as -export)")
+
+	flag.StringVar(&Ffilter, "filter", defaultFilter, "Filter to include (or exclude if re starts with '!') entries matching re")
+	flag.StringVar(&Ffilter, "f", defaultFilter, "(same as -filter)")
+
+	flag.BoolVar(&Fignorecase, "ignore-case", defaultIgnoreCase, "-filter should ignore case")
+	flag.BoolVar(&Fignorecase, "I", defaultIgnoreCase, "(same as -ignore-case)")
 
 	flag.StringVar(&Fimport, "import", defaultExport, "Export entries to the named file")
 	flag.StringVar(&Fimport, "i", defaultExport, "(same as -export)")
@@ -349,6 +373,15 @@ func main() {
 		typeFilterNames(prefs.TypeBits),
 		prefs.SRD,
 		prefs.Prefs.CoreDBPath)
+	if prefs.FilterRegexp != nil {
+		log.Printf("%s entries with pattern /%s/",
+			func(x bool) string {
+				if x {
+					return "excluding"
+				}
+				return "including"
+			}(prefs.FilterExclude), prefs.FilterRegexp.String())
+	}
 
 	if _, err = os.Stat(prefs.Prefs.CoreDBPath); os.IsNotExist(err) {
 		log.Fatalf("core database does not exist; giving up!")
@@ -568,11 +601,11 @@ func main() {
 //               |          |
 //               |          V
 //               V Schools(*ID)
-// SpellLevels(*>SpellID, *>ClassID)
-//               ^             |
-//               |             +-------+
-//              [S]                    V
-//                            Classes(*ID)
+// SpellLevels(*>SpellID, *>ClassID)        [CC]
+//               ^             |             :
+//               |             +-------+     :
+//              [S]                    V     :
+//                            Classes(*ID, Code)
 //                                     ^
 //                                     |<----------------------+<---------------------------------------------+
 //                                     |                       |                                              |
@@ -608,9 +641,9 @@ func main() {
 // MonsterLanguages(*>MonsterID, *>LanguageID)
 //                      |              |
 //                      V              V
-//                     [M]  Languages(*ID)
-//
-//                         Skills(*ID)
+//                     [M]  Languages(*ID)      [CC]
+//                                               :
+//                         Skills(*ID, #ClassSkillFor)
 //                                 ^
 //                                 |
 // MonsterSkills(*>MonsterID, *>SkillID)
@@ -653,6 +686,35 @@ func main() {
 //                    ^             ^
 //                    |             |
 // MonsterDomains(*>MonsterID, *>DomainID)
+
+// filterOut returns true if we should skip this entry. It also logs the reason why.
+func filterOut(prefs *AppPreferences, entryType TypeFilter, entryTypeName, entryName, entryName2 string) bool {
+	if (prefs.TypeBits & entryType) == 0 {
+		if (prefs.DebugBits & DebugMisc) != 0 {
+			log.Printf("skipping %s %s because it's not in the requested type filter", entryTypeName, entryName)
+		}
+		return true
+	}
+	if prefs.FilterRegexp != nil {
+		if prefs.FilterRegexp.MatchString(entryName) || prefs.FilterRegexp.MatchString(entryName2) {
+			if prefs.FilterExclude {
+				if (prefs.DebugBits & DebugMisc) != 0 {
+					log.Printf("skipping %s %s because it matches filter regexp /%s/", entryTypeName, entryName, prefs.FilterRegexp.String())
+				}
+				return true // explicitly skip this
+			} else {
+				return false // explicitly DON'T skip this
+			}
+		}
+		if !prefs.FilterExclude {
+			if (prefs.DebugBits & DebugMisc) != 0 {
+				log.Printf("skipping %s %s because it does not match filter regexp /%s/", entryTypeName, entryName, prefs.FilterRegexp.String())
+			}
+			return true // implicitly skip this
+		}
+	}
+	return false
+}
 
 func query(db *sql.DB, prefs *AppPreferences, query string, args ...any) (*sql.Rows, error) {
 	if (prefs.DebugBits & DebugQuery) != 0 {
@@ -742,6 +804,43 @@ func recordExists(db *sql.DB, prefs *AppPreferences, table, idfield, keyfield st
 // | |___| |___ / ___ \ ___) |__) | |___ ___) |
 //  \____|_____/_/   \_\____/____/|_____|____/
 //
+
+// Class describes a character class.
+type Class struct {
+	Code    string
+	Name    string
+	IsLocal bool `json:",omitempty"`
+	// If this class includes spellcasting capability, the details are here.
+	Spells struct {
+		// Magic type (arcane, etc)
+		Type string `json:",omitempty"`
+		// Ability score relevant to spells
+		Ability string `json:",omitempty"`
+		// Does this class allow bonus spells (e.g., domain spells)?
+		HasBonusSpells bool `json:",omitempty"`
+		// Is this a spontaneous (vs prepared) casting class?
+		IsSpontaneous bool `json:",omitempty"`
+		// A list of the number of spells which may be cast per day by class and spell level
+		CastPerDay []ClassSpellLevel `json:",omitempty"`
+		// A list of the number of spells which may be prepared per day by class and spell level (or empty list if that doesn't apply)
+		PreparedPerDay []ClassSpellLevel `json:",omitempty"`
+		// A list of the number of spells which may be known by class and spell level (or empty list if that doesn't apply)
+		SpellsKnown []ClassSpellLevel `json:",omitempty"`
+	} `json:",omitempty"`
+}
+
+// ClassSpellLevel describes a given spell-casting capability offered at a given class and spell level.
+type ClassSpellLevel struct {
+	ClassLevel int
+	SpellLevel int
+	// Is this level of spell even possible at this class level (or is this thing applicable at all)?
+	IsProhibited bool `json:",omitempty"`
+	// Is this level of spell unlimited (in terms of usages per day) at this class level?
+	IsUnlimitedUse bool `json:",omitempty"`
+	// The number of spells granted at this spell and class level.
+	Number int `json:",omitempty"`
+}
+
 func importClass(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error {
 	var class Class
 	var err, err2, err3 error
@@ -753,10 +852,7 @@ func importClass(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error
 		return err
 	}
 
-	if (prefs.TypeBits & TypeClass) == 0 {
-		if (prefs.DebugBits & DebugMisc) != 0 {
-			log.Printf("skipping class %s because it's not in the requested type filter", class.Name)
-		}
+	if filterOut(prefs, TypeClass, "class", class.Name, class.Code) {
 		return nil
 	}
 
@@ -905,16 +1001,20 @@ func exportClasses(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 		var mtype, abil sql.NullString
 		var bonus, spon sql.NullBool
 
+		if err := rows.Scan(&cls_db_id, &cls.Name, &cls.Code, &mtype, &abil, &bonus, &spon); err != nil {
+			return err
+		}
+
+		if filterOut(prefs, TypeClass, "class", cls.Name, cls.Code) {
+			continue
+		}
+
 		if !firstLine {
 			if _, err = fp.WriteString(",\n"); err != nil {
 				return err
 			}
 		} else {
 			firstLine = false
-		}
-
-		if err := rows.Scan(&cls_db_id, &cls.Name, &cls.Code, &mtype, &abil, &bonus, &spon); err != nil {
-			return err
 		}
 
 		if prefs.SRD == cls.IsLocal {
@@ -1027,6 +1127,39 @@ func exportClasses(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 // |  _| | |___ / ___ \| |  ___) |
 // |_|   |_____/_/   \_\_| |____/
 //
+
+// Feat describes each feat that is in play for the game.
+type Feat struct {
+	Code string
+	Name string
+	// If there are parameters allowed for this feat, this describes them.
+	Parameters        string   `json:",omitempty"`
+	IsLocal           bool     `json:",omitempty"`
+	Description       string   `json:",omitempty"`
+	Flags             uint64   `json:""`
+	Prerequisites     string   `json:",omitempty"`
+	Benefit           string   `json:",omitempty"`
+	Normal            string   `json:",omitempty"`
+	Special           string   `json:",omitempty"`
+	Source            string   `json:",omitempty"`
+	Race              string   `json:",omitempty"`
+	Note              string   `json:",omitempty"`
+	Goal              string   `json:",omitempty"`
+	CompletionBenefit string   `json:",omitempty"`
+	SuggestedTraits   string   `json:",omitempty"`
+	Types             []string `json:",omitempty"`
+	FlagNames         []string `json:"Flags,omitempty"`
+	// If this is a metamagic feat, the following will apply.
+	MetaMagic struct {
+		IsMetaMagicFeat     bool   `json:",omitempty"`
+		Adjective           string `json:",omitempty"`
+		LevelCost           int    `json:",omitempty"`
+		IsLevelCostVariable bool   `json:",omitempty"`
+		// Symbol to place in checkboxes on character sheets, if any.
+		Symbol string `json:",omitempty"`
+	} `json:",omitempty"`
+}
+
 func importFeat(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error {
 	var feat Feat
 	var err, err2, err3 error
@@ -1039,10 +1172,7 @@ func importFeat(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error 
 		return err
 	}
 
-	if (prefs.TypeBits & TypeFeat) == 0 {
-		if (prefs.DebugBits & DebugMisc) != 0 {
-			log.Printf("skipping feat %s because it's not in the requested type filter", feat.Name)
-		}
+	if filterOut(prefs, TypeFeat, "feat", feat.Name, feat.Code) {
 		return nil
 	}
 
@@ -1244,6 +1374,17 @@ func exportFeats(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 		var levelcost sql.NullInt32
 		var feat_db_id int
 
+		if err := rows.Scan(&feat_db_id, &feat.Code, &feat.Name, &param, &feat.IsLocal, &feat.Description,
+			&feat.Flags, &prereq, &benefit, &normal, &special, &source, &race,
+			&note, &goal, &comp, &traits,
+			&adj, &levelcost, &sym); err != nil {
+			return err
+		}
+
+		if filterOut(prefs, TypeFeat, "feat", feat.Name, feat.Code) {
+			continue
+		}
+
 		if !firstLine {
 			if _, err = fp.WriteString(",\n"); err != nil {
 				return err
@@ -1252,12 +1393,6 @@ func exportFeats(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 			firstLine = false
 		}
 
-		if err := rows.Scan(&feat_db_id, &feat.Code, &feat.Name, &param, &feat.IsLocal, &feat.Description,
-			&feat.Flags, &prereq, &benefit, &normal, &special, &source, &race,
-			&note, &goal, &comp, &traits,
-			&adj, &levelcost, &sym); err != nil {
-			return err
-		}
 		if param.Valid {
 			feat.Parameters = param.String
 		}
@@ -1359,7 +1494,158 @@ func exportFeats(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 //   \ V  V / | |___ / ___ \|  __/| |_| | |\  |___) |
 //    \_/\_/  |_____/_/   \_\_|    \___/|_| \_|____/
 //
-func importWeapon(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error { return nil }
+
+// Weapon describes a weapon in the core data.
+type Weapon struct {
+	IsLocal bool `json:",omitempty"`
+	Code    string
+	// Cost is in units of copper pieces.
+	Cost int `json:",omitempty"`
+	Name string
+	// Damage maps a size code to the damage done for a weapon of that size.
+	Damage   map[string]string
+	Critical struct {
+		// If true, no critical information is available / weapon can't inflict critical damage.
+		CantCritical bool   `json:",omitempty"`
+		Multiplier   string `json:",omitempty"`
+		Threat       string `json:",omitempty"`
+	}
+	Ranged struct {
+		Increment     int  `json:",omitempty"`
+		MaxIncrements int  `json:",omitempty"`
+		IsRanged      bool `json:",omitempty"`
+	} `json:",omitempty"`
+	// Weight is in units of grams.
+	Weight int `json:",omitempty"`
+	// DamageTypes is a string of single letters which each specify a type of damage dealt.
+	DamageTypes string `json:",omitempty"`
+	// Qualities is a string of single letters which each specify a weapon quality.
+	Qualities string `json:",omitempty"`
+}
+
+func importWeapon(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error {
+	var weap Weapon
+	var err error
+	var id int64
+	var exists, ok bool
+	var res sql.Result
+	var cost, ri, rmax, wt sql.NullInt32
+	var dt, ds, dm, dl, cm, ct, dtype, q sql.NullString
+	var s string
+
+	if err = decoder.Decode(&weap); err != nil {
+		return err
+	}
+
+	if filterOut(prefs, TypeWeapon, "weapon", weap.Name, weap.Code) {
+		return nil
+	}
+
+	if exists, id, err = recordExists(db, prefs, "Weapons", "ID", "Code", weap.Code); err != nil {
+		return err
+	}
+
+	if weap.Cost == 0 {
+		cost.Valid = false
+	} else {
+		cost.Valid = true
+		cost.Int32 = int32(weap.Cost)
+	}
+	if weap.Weight == 0 {
+		wt.Valid = false
+	} else {
+		wt.Valid = true
+		wt.Int32 = int32(weap.Weight)
+	}
+	if weap.Ranged.IsRanged {
+		ri.Valid = true
+		ri.Int32 = int32(weap.Ranged.Increment)
+		rmax.Valid = true
+		rmax.Int32 = int32(weap.Ranged.MaxIncrements)
+	} else {
+		ri.Valid = false
+		rmax.Valid = false
+	}
+	if weap.Critical.CantCritical {
+		cm.Valid = false
+		ct.Valid = false
+	} else {
+		cm.Valid = true
+		cm.String = weap.Critical.Multiplier
+		ct.Valid = true
+		ct.String = weap.Critical.Threat
+	}
+	if s, ok = weap.Damage["T"]; !ok || s == "" {
+		dt.Valid = false
+	} else {
+		dt.Valid = true
+		dt.String = s
+	}
+	if s, ok = weap.Damage["S"]; !ok || s == "" {
+		ds.Valid = false
+	} else {
+		ds.Valid = true
+		ds.String = s
+	}
+	if s, ok = weap.Damage["M"]; !ok || s == "" {
+		dm.Valid = false
+	} else {
+		dm.Valid = true
+		dm.String = s
+	}
+	if s, ok = weap.Damage["L"]; !ok || s == "" {
+		dl.Valid = false
+	} else {
+		dl.Valid = true
+		dl.String = s
+	}
+	if weap.DamageTypes == "" {
+		dtype.Valid = false
+	} else {
+		dtype.Valid = true
+		dtype.String = weap.DamageTypes
+	}
+	if weap.Qualities == "" {
+		q.Valid = false
+	} else {
+		q.Valid = true
+		q.String = weap.Qualities
+	}
+
+	if exists {
+		_, err = db.Exec(`UPDATE Weapons SET
+							IsLocal=?, Code=?, Cost=?, Name=?, DmgT=?, DmgS=?, DmgM=?, DmgL=?, CritMultiplier=?,
+							CritThreat=?, RangeIncrement=?, RangeMax=?, Weight=?, DmgTypes=?, Qualities=?
+						WHERE ID=?`,
+			weap.IsLocal, weap.Code, cost, weap.Name, dt, ds, dm, dl, cm, ct, ri, rmax, wt, dtype, q,
+			id)
+	} else {
+		if res, err = db.Exec(`INSERT INTO Weapons
+								(IsLocal, Code, Cost, Name, DmgT, DmgS, DmgM, DmgL, CritMultiplier,
+								CritThreat, RangeIncrement, RangeMax, Weight, DmgTypes, Qualities)
+							VALUES
+								(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+			weap.IsLocal, weap.Code, cost, weap.Name, dt, ds, dm, dl, cm, ct, ri, rmax, wt, dtype, q); err != nil {
+			return err
+		}
+		id, err = res.LastInsertId()
+	}
+
+	if err != nil {
+		return err
+	}
+
+	if (prefs.DebugBits & DebugMisc) != 0 {
+		if exists {
+			log.Printf("updated existing weapon %s (database id %d)", weap.Name, id)
+		} else {
+			log.Printf("created new weapon %s (database id %d)", weap.Name, id)
+		}
+	}
+
+	return err
+}
+
 func exportWeapons(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 	var rows *sql.Rows
 	var err error
@@ -1388,17 +1674,21 @@ func exportWeapons(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 		var cost, ri, rmax, wt sql.NullInt32
 		var dt, ct, cm, ds, dm, dl, dtyp, q sql.NullString
 
+		if err := rows.Scan(&weap.IsLocal, &weap.Code, &cost, &weap.Name,
+			&dt, &ds, &dm, &dl, &cm, &ct, &ri, &rmax, &wt, &dtyp, &q); err != nil {
+			return err
+		}
+
+		if filterOut(prefs, TypeWeapon, "weapon", weap.Name, weap.Code) {
+			continue
+		}
+
 		if !firstLine {
 			if _, err = fp.WriteString(",\n"); err != nil {
 				return err
 			}
 		} else {
 			firstLine = false
-		}
-
-		if err := rows.Scan(&weap.IsLocal, &weap.Code, &cost, &weap.Name,
-			&dt, &ds, &dm, &dl, &cm, &ct, &ri, &rmax, &wt, &dtyp, &q); err != nil {
-			return err
 		}
 
 		if prefs.SRD == weap.IsLocal {
@@ -1474,6 +1764,27 @@ func exportWeapons(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 //  ___) | . \ | || |___| |___ ___) |
 // |____/|_|\_\___|_____|_____|____/
 //
+
+// Skill describes a skill that any creature might have.
+type Skill struct {
+	Name string
+	// List of the class Code strings for those classes which have this skill as a class skill.
+	ClassSkillFor []string `json:",omitempty"`
+	// Relevant ability score name
+	Ability          string
+	HasArmorPenalty  bool   `json:",omitempty"`
+	TrainingRequired bool   `json:",omitempty"`
+	Source           string `json:",omitempty"`
+	Description      string `json:",omitempty"`
+	FullText         string `json:",omitempty"`
+	// If this is a sub-skill, the skill code for its parent (e.g., "craft" for "craft.alchemy")
+	ParentSkill string `json:",omitempty"`
+	// If this is a parent skill but ONLY its children should be instantiated, not this skill itself.
+	IsVirtual    bool `json:",omitempty"`
+	IsBackground bool `json:",omitempty"`
+	IsLocal      bool `json:",omitempty"`
+}
+
 func importSkill(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error { return nil }
 func exportSkills(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 	var rows *sql.Rows
@@ -1508,18 +1819,22 @@ func exportSkills(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 		var source sql.NullString
 		var parent sql.NullInt32
 
+		if err := rows.Scan(&skill_db_id, &sk.Name, &classbits, &sk.Ability,
+			&sk.HasArmorPenalty, &sk.TrainingRequired, &source, &sk.Description,
+			&sk.FullText, &parent, &sk.IsVirtual, &sk.IsLocal, &sk.IsBackground); err != nil {
+			return err
+		}
+
+		if filterOut(prefs, TypeSkill, "skill", sk.Name, sk.Name) {
+			continue
+		}
+
 		if !firstLine {
 			if _, err = fp.WriteString(",\n"); err != nil {
 				return err
 			}
 		} else {
 			firstLine = false
-		}
-
-		if err := rows.Scan(&skill_db_id, &sk.Name, &classbits, &sk.Ability,
-			&sk.HasArmorPenalty, &sk.TrainingRequired, &source, &sk.Description,
-			&sk.FullText, &parent, &sk.IsVirtual, &sk.IsLocal, &sk.IsBackground); err != nil {
-			return err
 		}
 
 		if prefs.SRD == sk.IsLocal {
@@ -1555,6 +1870,13 @@ func exportSkills(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 // | |___ / ___ \| |\  | |_| | |_| / ___ \ |_| | |___ ___) |
 // |_____/_/   \_\_| \_|\____|\___/_/   \_\____|_____|____/
 //
+
+// BaseLanguage describes a language in use in the campaign world.
+type BaseLanguage struct {
+	Language string
+	IsLocal  bool `json:",omitempty"`
+}
+
 func importLanguage(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error {
 	var lang BaseLanguage
 	var err error
@@ -1565,10 +1887,7 @@ func importLanguage(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) er
 		return err
 	}
 
-	if (prefs.TypeBits & TypeLanguage) == 0 {
-		if (prefs.DebugBits & DebugMisc) != 0 {
-			log.Printf("skipping language %s because it's not in the requested type filter", lang.Language)
-		}
+	if filterOut(prefs, TypeLanguage, "language", lang.Language, lang.Language) {
 		return nil
 	}
 
@@ -1611,16 +1930,20 @@ func exportLanguages(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 	for rows.Next() {
 		var lang BaseLanguage
 
+		if err := rows.Scan(&lang.Language, &lang.IsLocal); err != nil {
+			return err
+		}
+
+		if filterOut(prefs, TypeLanguage, "language", lang.Language, lang.Language) {
+			continue
+		}
+
 		if !firstLine {
 			if _, err = fp.WriteString(",\n"); err != nil {
 				return err
 			}
 		} else {
 			firstLine = false
-		}
-
-		if err := rows.Scan(&lang.Language, &lang.IsLocal); err != nil {
-			return err
 		}
 
 		if prefs.SRD == lang.IsLocal {
@@ -1650,6 +1973,261 @@ func exportLanguages(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 // | |  | | |_| | |\  |___) || | | |___|  _ < ___) |
 // |_|  |_|\___/|_| \_|____/ |_| |_____|_| \_\____/
 //
+
+// Monster describes a creature (could be an individual or descriptive of a species)
+type Monster struct {
+	IsLocal   bool
+	Species   string
+	Code      string
+	CR        string
+	XP        int
+	Class     string `json:",omitempty"`
+	Alignment struct {
+		Alignments []string
+		Special    string `json:",omitempty"`
+	}
+	Source string `json:",omitempty"`
+	Size   struct {
+		Code      string
+		SpaceText string `json:",omitempty"`
+		ReachText string `json:",omitempty"`
+	}
+	Type       string
+	Subtypes   []string `json:",omitempty"`
+	Initiative struct {
+		Mod     int
+		Special string `json:",omitempty"`
+	}
+	Senses string `json:",omitempty"`
+	Aura   string `json:",omitempty"`
+	HP     struct {
+		Typical int    `json:",omitempty"`
+		Current int    `json:",omitempty"`
+		Special string `json:",omitempty"`
+		HitDice string
+	}
+	Save struct {
+		Fort    SavingThrow
+		Refl    SavingThrow
+		Will    SavingThrow
+		Special string `json:",omitempty"`
+	}
+	DefensiveAbilities string `json:",omitempty"`
+	DR                 struct {
+		DR     int    `json:",omitempty"`
+		Bypass string `json:",omitempty"`
+	} `json:",omitempty"`
+	Immunities string `json:",omitempty"`
+	Resists    string `json:",omitempty"`
+	SR         struct {
+		SR      int    `json:",omitempty"`
+		Special string `json:",omitempty"`
+	} `json:",omitempty"`
+	Weaknesses string `json:",omitempty"`
+	Speed      struct {
+		Code    string
+		Special string `json:",omitempty"`
+	}
+	SpecialAttacks string `json:",omitempty"`
+	Abilities      struct {
+		Str AbilityScore
+		Dex AbilityScore
+		Con AbilityScore
+		Int AbilityScore
+		Wis AbilityScore
+		Cha AbilityScore
+	}
+	Combat struct {
+		BAB        int
+		CMB        int
+		CMD        int
+		CMBSpecial string `json:",omitempty"`
+		CMDSpecial string `json:",omitempty"`
+	}
+	SQ           string `json:",omitempty"`
+	Environment  string `json:",omitempty"`
+	Organization string `json:",omitempty"`
+	Treasure     string `json:",omitempty"`
+	Appearance   string `json:",omitempty"`
+	Group        string `json:",omitempty"`
+	IsTemplate   bool   `json:",omitempty"`
+	Strategy     struct {
+		BeforeCombat string `json:",omitempty"`
+		DuringCombat string `json:",omitempty"`
+		Morale       string `json:",omitempty"`
+	} `json:",omitempty"`
+	IsCharacter       bool   `json:",omitempty"`
+	IsCompanion       bool   `json:",omitempty"`
+	IsUnique          bool   `json:",omitempty"`
+	AgeCategory       string `json:",omitempty"`
+	Gender            string `json:",omitempty"`
+	Bloodline         string `json:",omitempty"`
+	Patron            string `json:",omitempty"`
+	AlternateNameForm string `json:",omitempty"`
+	DontUseRacialHD   bool   `json:",omitempty"`
+	VariantParent     string `json:",omitempty"`
+	Mythic            struct {
+		IsMythic bool `json:",omitempty"`
+		MR       int  `json:",omitempty"`
+		MT       int  `json:",omitempty"`
+	} `json:",omitempty"`
+	OffenseNote    string `json:",omitempty"`
+	StatisticsNote string `json:",omitempty"`
+	Gear           struct {
+		Combat string `json:",omitempty"`
+		Other  string `json:",omitempty"`
+	} `json:",omitempty"`
+	Schools struct {
+		Focused    string `json:",omitempty"`
+		Prohibited string `json:",omitempty"`
+		Opposition string `json:",omitempty"`
+	} `json:",omitempty"`
+	ClassArchetypes string   `json:",omitempty"`
+	BaseStatistics  string   `json:",omitempty"`
+	RacialMods      string   `json:",omitempty"`
+	Mystery         string   `json:",omitempty"`
+	Notes           string   `json:",omitempty"`
+	Domains         []string `json:",omitempty"`
+	AC              struct {
+		Components  map[string]int `json:",omitempty"`
+		Adjustments map[string]int `json:",omitempty"`
+	} `json:",omitempty"`
+	AttackModes []AttackMode   `json:",omitempty"`
+	Languages   []Language     `json:",omitempty"`
+	Feats       []MonsterFeat  `json:",omitempty"`
+	Skills      []MonsterSkill `json:",omitempty"`
+	Spells      []SpellBlock   `json:",omitempty"`
+}
+
+// SpellBlock describes a set of spells prepared by a creature.
+// There may be multiple blocks if it has multiple types of spells.
+// There will also be one of these for spell-like abilities
+// in which case ClassName will be "SLA".
+type SpellBlock struct {
+	ClassName            string
+	CL                   int  `json:",omitempty"`
+	Concentration        int  `json:",omitempty"`
+	NoConcentrationValue bool `json:",omitempty"`
+	// Add this many domain spells at each level.
+	PlusDomain  int    `json:",omitempty"`
+	Description string `json:",omitempty"`
+	Special     string `json:",omitempty"`
+	// List of the spells prepared/known for this block.
+	Spells []PreparedSpell
+}
+
+// PreparedSpell describes a spell that a creature has prepared to cast,
+// or a spell-like ability it can use.
+type PreparedSpell struct {
+	Name string
+	// Some spell-like abilities are based on a core spell (named in Name),
+	// with some different effects (listed in Special), and with a new name
+	// (named in AlternateName). For example, "coldball" is like "fireball"
+	// but deals cold damage.
+	AlternateName string `json:",omitempty"`
+	// For spell-like abilities, how may times per day the spell can be cast.
+	Frequency string `json:",omitempty"`
+	Special   string `json:",omitempty"`
+	// Each instance of this prepared spell is described in Slots.
+	Slots []SpellSlot
+}
+
+// SpellSlot describes each prepared instance of a particular spell.
+type SpellSlot struct {
+	IsCast   bool `json:",omitempty"`
+	IsDomain bool `json:",omitempty"`
+	// A list of metamagic feats used when preparing this instance.
+	MetaMagic []string `json:",omitempty"`
+}
+
+// MonsterSkill describes the significant skills for the creature.
+type MonsterSkill struct {
+	Code     string `json:",omitempty"`
+	Modifier int    `json:",omitempty"`
+	Notes    string `json:",omitempty"`
+}
+
+// MonsterFeat describes each feat known by the creature.
+type MonsterFeat struct {
+	// Feat code identifies the feat (must exist in the core feat list).
+	Code string `json:",omitempty"`
+	// Parameters hold any specific parameters (e.g. "sword" in "weapon focus (sword)").
+	Parameters string `json:",omitempty"`
+	// Is this a bonus feat for this creature?
+	IsBonus bool `json:",omitempty"`
+}
+
+// Language describes each language known by a creature.
+type Language struct {
+	Name string `json:",omitempty"`
+	// Can the creature understand the language but not speak?
+	IsMute bool `json:",omitempty"`
+	// Any special considerations for this language for this creature.
+	Special string `json:",omitempty"`
+}
+
+// AttackMode describes each attack a monster can make.
+type AttackMode struct {
+	// Each tier is an individual way a monster can attack in a round.
+	// If multiple AttackModes have the same Tier, they are all taken
+	// together if making a full-round attack.
+	Tier int
+	// If this attack is based on a weapon, its Code appears here.
+	BaseWeaponID string `json:",omitempty"`
+	// The number of attacks the creature gets for this. Normally this is 1,
+	// but could be, e.g., 2 for an attack listed as "2 Claws".
+	Multiple int
+	Name     string
+	// The name of the attack. If only part of this should be visible to the players
+	// (e.g., in the online die-roller), then the player-visible parts should be in
+	// square brackets (e.g., "+1 vorpal [shortsword]")
+	//
+	// If multiple attacks with different attack rolls are applicable, then
+	// Multiple will be 1 and the different attacks are listed here with slashes
+	// between them (e.g., "+17/+12/+7/+2")
+	Attack string `json:",omitempty"`
+	// The damage dealt by each blow from this attack. If there are parts of the
+	// damage which should be seen by the GM only and not given to the players NOR the
+	// die-roller, put the parts which should be given to the players and die roller in
+	// square brackets (e.g., "[2d6 acid] plus poison").
+	//
+	// If there is damage which is not multiplied on critical hits, enclose those
+	// portions in angle brackets, including any math operators they use
+	// (e.g., "2d6 <+1d6 electricity>"). On a critical hit, any text inside <...> will be
+	// omitted entirely from the extra damage.
+	Damage   string `json:",omitempty"`
+	Critical struct {
+		CantCritical bool   `json:",omitempty"`
+		Threat       string `json:",omitempty"`
+		Multiplier   string `json:",omitempty"`
+	} `json:",omitempty"`
+	Ranged struct {
+		IsRanged      bool `json:",omitempty"`
+		Increment     int  `json:",omitempty"`
+		MaxIncrements int  `json:",omitempty"`
+	} `json:",omitempty"`
+	IsReach bool   `json:",omitempty"`
+	Special string `json:",omitempty"`
+	// Attack mode (melee or ranged)
+	Mode string `json:",omitempty"`
+}
+
+// SavingThrow describes each of the creature's saving throw.
+type SavingThrow struct {
+	Mod     int
+	Special string `json:",omitempty"`
+}
+
+// AbilityScore describes each of the creature's ability scores.
+type AbilityScore struct {
+	// Raw score.
+	Base    int    `json:",omitempty"`
+	Special string `json:",omitempty"`
+	// If NullScore is true, the creature simply does not have this ability score at all,
+	// which is different than an ability score of zero.
+	NullScore bool `json:",omitempty"`
+}
+
 func importMonster(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error { return nil }
 func exportBestiary(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 	var rows *sql.Rows
@@ -1699,14 +2277,6 @@ FROM
 		var sq, env, org, treas, appear, grp, before, during, morale, age, gender, bline, patron, altname sql.NullString
 		var varpar, offense, stats, gear, other, focused, arch, basestats, racial, prohibit, oppos, mystery, notes sql.NullString
 
-		if !firstLine {
-			if _, err = fp.WriteString(",\n"); err != nil {
-				return err
-			}
-		} else {
-			firstLine = false
-		}
-
 		if err := rows.Scan(&mob_db_id, &monster.IsLocal, &monster.Species, &monster.Code, &monster.CR, &monster.XP,
 			&cls, &aligns, &alspec, &src, &monster.Size.Code, &spctext, &rchtext, &monster.Type, &monster.Initiative.Mod,
 			&itext, &senses, &aura, &monster.HP.Typical, &curhp, &hpspec, &monster.HP.HitDice, &f, &r, &w, &ft, &rt, &wt,
@@ -1718,6 +2288,18 @@ FROM
 			&arch, &basestats, &acadj, &flatadj, &touchadj, &racial, &prohibit, &oppos, &mystery, &notes,
 		); err != nil {
 			return err
+		}
+
+		if filterOut(prefs, TypeBestiary, "monster", monster.Species, monster.Code) {
+			continue
+		}
+
+		if !firstLine {
+			if _, err = fp.WriteString(",\n"); err != nil {
+				return err
+			}
+		} else {
+			firstLine = false
 		}
 
 		if before.Valid {
@@ -2390,81 +2972,85 @@ FROM
 	return rows.Err()
 }
 
-type BaseLanguage struct {
-	Language string
-	IsLocal  bool `json:",omitempty"`
-}
-
-type Skill struct {
-	Name             string
-	ClassSkillFor    []string `json:",omitempty"`
-	Ability          string
-	HasArmorPenalty  bool   `json:",omitempty"`
-	TrainingRequired bool   `json:",omitempty"`
-	Source           string `json:",omitempty"`
-	Description      string `json:",omitempty"`
-	FullText         string `json:",omitempty"`
-	ParentSkill      string `json:",omitempty"`
-	IsVirtual        bool   `json:",omitempty"`
-	IsBackground     bool   `json:",omitempty"`
-	IsLocal          bool   `json:",omitempty"`
-}
-
-type Class struct {
-	Code    string
-	Name    string
-	IsLocal bool `json:",omitempty"`
-	Spells  struct {
-		Type           string            `json:",omitempty"`
-		Ability        string            `json:",omitempty"`
-		HasBonusSpells bool              `json:",omitempty"`
-		IsSpontaneous  bool              `json:",omitempty"`
-		CastPerDay     []ClassSpellLevel `json:",omitempty"`
-		PreparedPerDay []ClassSpellLevel `json:",omitempty"`
-		SpellsKnown    []ClassSpellLevel `json:",omitempty"`
-	} `json:",omitempty"`
-}
-type ClassSpellLevel struct {
-	ClassLevel     int
-	SpellLevel     int
-	IsProhibited   bool `json:",omitempty"`
-	IsUnlimitedUse bool `json:",omitempty"`
-	Number         int  `json:",omitempty"`
-}
-type Feat struct {
-	Code              string
-	Name              string
-	Parameters        string   `json:",omitempty"`
-	IsLocal           bool     `json:",omitempty"`
-	Description       string   `json:",omitempty"`
-	Flags             uint64   `json:""`
-	Prerequisites     string   `json:",omitempty"`
-	Benefit           string   `json:",omitempty"`
-	Normal            string   `json:",omitempty"`
-	Special           string   `json:",omitempty"`
-	Source            string   `json:",omitempty"`
-	Race              string   `json:",omitempty"`
-	Note              string   `json:",omitempty"`
-	Goal              string   `json:",omitempty"`
-	CompletionBenefit string   `json:",omitempty"`
-	SuggestedTraits   string   `json:",omitempty"`
-	Types             []string `json:",omitempty"`
-	FlagNames         []string `json:"Flags,omitempty"`
-	MetaMagic         struct {
-		IsMetaMagicFeat     bool   `json:",omitempty"`
-		Adjective           string `json:",omitempty"`
-		LevelCost           int    `json:",omitempty"`
-		IsLevelCostVariable bool   `json:",omitempty"`
-		Symbol              string `json:",omitempty"`
-	} `json:",omitempty"`
-}
-
 //  ____  ____  _____ _     _     ____
 // / ___||  _ \| ____| |   | |   / ___|
 // \___ \| |_) |  _| | |   | |   \___ \
 //  ___) |  __/| |___| |___| |___ ___) |
 // |____/|_|   |_____|_____|_____|____/
 //
+
+// Spell describes a spell in the campaign world.
+type Spell struct {
+	IsLocal     bool `json:",omitempty"`
+	Name        string
+	School      string
+	Descriptors []string `json:",omitempty"`
+	Components  struct {
+		Components          []string
+		Material            string `json:",omitempty"`
+		Focus               string `json:",omitempty"`
+		HasCostlyComponents bool   `json:",omitempty"`
+		MaterialCosts       int    `json:",omitempty"`
+	}
+	Casting struct {
+		Time    string
+		Special string `json:",omitempty"`
+	}
+	Range struct {
+		// Range code
+		Range string
+		// Specific distance if called for by the range code.
+		Distance int `json:",omitempty"`
+		// Distance to add per level.
+		DistancePerLevel int    `json:",omitempty"`
+		DistanceSpecial  string `json:",omitempty"`
+	}
+	Effect struct {
+		Area    string `json:",omitempty"`
+		Effect  string `json:",omitempty"`
+		Targets string `json:",omitempty"`
+	}
+	Duration struct {
+		// Duration code.
+		Duration string
+		// Specific amount of time if called for by the duration code.
+		Time    string `json:",omitempty"`
+		Special string `json:",omitempty"`
+		// Does the spell last while concentrated upon?
+		Concentration bool `json:",omitempty"`
+		// Is the duration specified here multiplied by their level?
+		PerLevel bool `json:",omitempty"`
+	}
+	SR struct {
+		SR       string `json:",omitempty"`
+		Special  string `json:",omitempty"`
+		Object   bool   `json:",omitempty"`
+		Harmless bool   `json:",omitempty"`
+	} `json:",omitempty"`
+	Save struct {
+		SavingThrow string `json:",omitempty"`
+		Effect      string `json:",omitempty"`
+		Special     string `json:",omitempty"`
+		Object      bool   `json:",omitempty"`
+		Harmless    bool   `json:",omitempty"`
+	} `json:",omitempty"`
+	IsDismissible bool `json:",omitempty"`
+	IsDischarge   bool `json:",omitempty"`
+	IsShapeable   bool `json:",omitempty"`
+	// ClassLevels lists what level of spell this is for each spellcasting class that can cast it.
+	// Note that Class is "SLA" for spell-like abilities.
+	ClassLevels []struct {
+		Class string
+		Level int
+	}
+	Deity       string `json:",omitempty"`
+	Domain      string `json:",omitempty"`
+	Description string `json:",omitempty"`
+	Source      string `json:",omitempty"`
+	Bloodline   string `json:",omitempty"`
+	Patron      string `json:",omitempty"`
+}
+
 func importSpell(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error { return nil }
 func exportSpells(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 	var rows *sql.Rows
@@ -2514,14 +3100,6 @@ func exportSpells(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 		var dist, dpl, slalvl, mcosts sql.NullInt32
 		var spell_db_id, descriptors, components int
 
-		if !firstLine {
-			if _, err = fp.WriteString(",\n"); err != nil {
-				return err
-			}
-		} else {
-			firstLine = false
-		}
-
 		if err := rows.Scan(&spell_db_id, &spell.IsLocal, &spell.Name, &spell.School, &descriptors, &components,
 			&material, &focus, &spell.Casting.Time, &cspec, &rang, &dist, &dpl,
 			&distspec, &area, &effect, &targs, &spell.Duration.Duration, &dtime, &dspec, &spell.Duration.Concentration, &spell.Duration.PerLevel,
@@ -2530,6 +3108,19 @@ func exportSpells(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 			&deity, &domain, &desc, &source, &mcosts, &bline, &patron); err != nil {
 			return err
 		}
+
+		if filterOut(prefs, TypeSpell, "spell", spell.Name, spell.Name) {
+			continue
+		}
+
+		if !firstLine {
+			if _, err = fp.WriteString(",\n"); err != nil {
+				return err
+			}
+		} else {
+			firstLine = false
+		}
+
 		if material.Valid {
 			spell.Components.Material = material.String
 		}
@@ -2670,302 +3261,23 @@ func exportSpells(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 	return rows.Err()
 }
 
-type Spell struct {
-	IsLocal     bool `json:",omitempty"`
-	Name        string
-	School      string
-	Descriptors []string `json:",omitempty"`
-	Components  struct {
-		Components          []string
-		Material            string `json:",omitempty"`
-		Focus               string `json:",omitempty"`
-		HasCostlyComponents bool   `json:",omitempty"`
-		MaterialCosts       int    `json:",omitempty"`
-	}
-	Casting struct {
-		Time    string
-		Special string `json:",omitempty"`
-	}
-	Range struct {
-		Range            string
-		Distance         int    `json:",omitempty"`
-		DistancePerLevel int    `json:",omitempty"`
-		DistanceSpecial  string `json:",omitempty"`
-	}
-	Effect struct {
-		Area    string `json:",omitempty"`
-		Effect  string `json:",omitempty"`
-		Targets string `json:",omitempty"`
-	}
-	Duration struct {
-		Duration      string
-		Time          string `json:",omitempty"`
-		Special       string `json:",omitempty"`
-		Concentration bool   `json:",omitempty"`
-		PerLevel      bool   `json:",omitempty"`
-	}
-	SR struct {
-		SR       string `json:",omitempty"`
-		Special  string `json:",omitempty"`
-		Object   bool   `json:",omitempty"`
-		Harmless bool   `json:",omitempty"`
-	} `json:",omitempty"`
-	Save struct {
-		SavingThrow string `json:",omitempty"`
-		Effect      string `json:",omitempty"`
-		Special     string `json:",omitempty"`
-		Object      bool   `json:",omitempty"`
-		Harmless    bool   `json:",omitempty"`
-	} `json:",omitempty"`
-	IsDismissible bool `json:",omitempty"`
-	IsDischarge   bool `json:",omitempty"`
-	IsShapeable   bool `json:",omitempty"`
-	ClassLevels   []struct {
-		Class string
-		Level int
-	}
-	Deity       string `json:",omitempty"`
-	Domain      string `json:",omitempty"`
-	Description string `json:",omitempty"`
-	Source      string `json:",omitempty"`
-	Bloodline   string `json:",omitempty"`
-	Patron      string `json:",omitempty"`
-}
-
-type Monster struct {
-	IsLocal   bool
-	Species   string
-	Code      string
-	CR        string
-	XP        int
-	Class     string `json:",omitempty"`
-	Alignment struct {
-		Alignments []string
-		Special    string `json:",omitempty"`
-	}
-	Source string `json:",omitempty"`
-	Size   struct {
-		Code      string
-		SpaceText string `json:",omitempty"`
-		ReachText string `json:",omitempty"`
-	}
-	Type       string
-	Subtypes   []string `json:",omitempty"`
-	Initiative struct {
-		Mod     int
-		Special string `json:",omitempty"`
-	}
-	Senses string `json:",omitempty"`
-	Aura   string `json:",omitempty"`
-	HP     struct {
-		Typical int    `json:",omitempty"`
-		Current int    `json:",omitempty"`
-		Special string `json:",omitempty"`
-		HitDice string
-	}
-	Save struct {
-		Fort    SavingThrow
-		Refl    SavingThrow
-		Will    SavingThrow
-		Special string `json:",omitempty"`
-	}
-	DefensiveAbilities string `json:",omitempty"`
-	DR                 struct {
-		DR     int    `json:",omitempty"`
-		Bypass string `json:",omitempty"`
-	} `json:",omitempty"`
-	Immunities string `json:",omitempty"`
-	Resists    string `json:",omitempty"`
-	SR         struct {
-		SR      int    `json:",omitempty"`
-		Special string `json:",omitempty"`
-	} `json:",omitempty"`
-	Weaknesses string `json:",omitempty"`
-	Speed      struct {
-		Code    string
-		Special string `json:",omitempty"`
-	}
-	SpecialAttacks string `json:",omitempty"`
-	Abilities      struct {
-		Str AbilityScore
-		Dex AbilityScore
-		Con AbilityScore
-		Int AbilityScore
-		Wis AbilityScore
-		Cha AbilityScore
-	}
-	Combat struct {
-		BAB        int
-		CMB        int
-		CMD        int
-		CMBSpecial string `json:",omitempty"`
-		CMDSpecial string `json:",omitempty"`
-	}
-	SQ           string `json:",omitempty"`
-	Environment  string `json:",omitempty"`
-	Organization string `json:",omitempty"`
-	Treasure     string `json:",omitempty"`
-	Appearance   string `json:",omitempty"`
-	Group        string `json:",omitempty"`
-	IsTemplate   bool   `json:",omitempty"`
-	Strategy     struct {
-		BeforeCombat string `json:",omitempty"`
-		DuringCombat string `json:",omitempty"`
-		Morale       string `json:",omitempty"`
-	} `json:",omitempty"`
-	IsCharacter       bool   `json:",omitempty"`
-	IsCompanion       bool   `json:",omitempty"`
-	IsUnique          bool   `json:",omitempty"`
-	AgeCategory       string `json:",omitempty"`
-	Gender            string `json:",omitempty"`
-	Bloodline         string `json:",omitempty"`
-	Patron            string `json:",omitempty"`
-	AlternateNameForm string `json:",omitempty"`
-	DontUseRacialHD   bool   `json:",omitempty"`
-	VariantParent     string `json:",omitempty"`
-	Mythic            struct {
-		IsMythic bool `json:",omitempty"`
-		MR       int  `json:",omitempty"`
-		MT       int  `json:",omitempty"`
-	} `json:",omitempty"`
-	OffenseNote    string `json:",omitempty"`
-	StatisticsNote string `json:",omitempty"`
-	Gear           struct {
-		Combat string `json:",omitempty"`
-		Other  string `json:",omitempty"`
-	} `json:",omitempty"`
-	Schools struct {
-		Focused    string `json:",omitempty"`
-		Prohibited string `json:",omitempty"`
-		Opposition string `json:",omitempty"`
-	} `json:",omitempty"`
-	ClassArchetypes string   `json:",omitempty"`
-	BaseStatistics  string   `json:",omitempty"`
-	RacialMods      string   `json:",omitempty"`
-	Mystery         string   `json:",omitempty"`
-	Notes           string   `json:",omitempty"`
-	Domains         []string `json:",omitempty"`
-	AC              struct {
-		Components  map[string]int `json:",omitempty"`
-		Adjustments map[string]int `json:",omitempty"`
-	} `json:",omitempty"`
-	AttackModes []AttackMode   `json:",omitempty"`
-	Languages   []Language     `json:",omitempty"`
-	Feats       []MonsterFeat  `json:",omitempty"`
-	Skills      []MonsterSkill `json:",omitempty"`
-	Spells      []SpellBlock   `json:",omitempty"`
-}
-
-type SpellBlock struct {
-	ClassName            string
-	CL                   int    `json:",omitempty"`
-	Concentration        int    `json:",omitempty"`
-	NoConcentrationValue bool   `json:",omitempty"`
-	PlusDomain           int    `json:",omitempty"`
-	Description          string `json:",omitempty"`
-	Special              string `json:",omitempty"`
-	Spells               []PreparedSpell
-}
-
-type PreparedSpell struct {
-	Name          string
-	AlternateName string `json:",omitempty"`
-	Frequency     string `json:",omitempty"`
-	Special       string `json:",omitempty"`
-	Slots         []SpellSlot
-}
-
-type SpellSlot struct {
-	IsCast    bool     `json:",omitempty"`
-	IsDomain  bool     `json:",omitempty"`
-	MetaMagic []string `json:",omitempty"`
-}
-
-type MonsterSkill struct {
-	Code     string `json:",omitempty"`
-	Modifier int    `json:",omitempty"`
-	Notes    string `json:",omitempty"`
-}
-
-type MonsterFeat struct {
-	Code       string `json:",omitempty"`
-	Parameters string `json:",omitempty"`
-	IsBonus    bool   `json:",omitempty"`
-}
-type Language struct {
-	Name    string `json:",omitempty"`
-	IsMute  bool   `json:",omitempty"`
-	Special string `json:",omitempty"`
-}
-
-type Weapon struct {
-	IsLocal  bool
-	Code     string
-	Cost     int
-	Name     string
-	Damage   map[string]string
-	Critical struct {
-		CantCritical bool `json:",omitempty"`
-		Multiplier   string
-		Threat       string
-	}
-	Ranged struct {
-		Increment     int
-		MaxIncrements int
-		IsRanged      bool
-	}
-	Weight      int
-	DamageTypes string
-	Qualities   string
-}
-
-type AttackMode struct {
-	Tier         int
-	BaseWeaponID string `json:",omitempty"`
-	Multiple     int
-	Name         string
-	Attack       string `json:",omitempty"`
-	Damage       string `json:",omitempty"`
-	Critical     struct {
-		CantCritical bool   `json:",omitempty"`
-		Threat       string `json:",omitempty"`
-		Multiplier   string `json:",omitempty"`
-	} `json:",omitempty"`
-	Ranged struct {
-		IsRanged      bool `json:",omitempty"`
-		Increment     int  `json:",omitempty"`
-		MaxIncrements int  `json:",omitempty"`
-	} `json:",omitempty"`
-	IsReach bool   `json:",omitempty"`
-	Special string `json:",omitempty"`
-	Mode    string `json:",omitempty"`
-}
-
-type SavingThrow struct {
-	Mod     int
-	Special string `json:",omitempty"`
-}
-
-type AbilityScore struct {
-	Base      int    `json:",omitempty"`
-	Special   string `json:",omitempty"`
-	NullScore bool   `json:",omitempty"`
-}
-
 type AppPreferences struct {
-	Prefs      util.GMAPreferences
-	LogFile    string
-	DebugFlags string
-	ExportPath string
-	ImportPath string
-	SRD        bool
-	TypeList   string
-	DebugBits  DebugFlags
-	TypeBits   TypeFilter
+	Prefs         util.GMAPreferences
+	LogFile       string
+	DebugFlags    string
+	ExportPath    string
+	ImportPath    string
+	FilterRegexp  *regexp.Regexp
+	FilterExclude bool
+	SRD           bool
+	TypeList      string
+	DebugBits     DebugFlags
+	TypeBits      TypeFilter
 }
 
 func configureApp() (AppPreferences, error) {
 	var prefs AppPreferences
+	var err error
 
 	//
 	// command-line parameters
@@ -2986,6 +3298,18 @@ func configureApp() (AppPreferences, error) {
 	prefs.ImportPath = Fimport
 	prefs.SRD = Fsrd
 	prefs.TypeList = Ftype
+	if Ffilter != "" {
+		if Ffilter[0:1] == "!" {
+			prefs.FilterExclude = true
+			Ffilter = Ffilter[1:]
+		}
+		if Fignorecase {
+			Ffilter = "(?i)" + Ffilter
+		}
+		if prefs.FilterRegexp, err = regexp.Compile(Ffilter); err != nil {
+			return prefs, err
+		}
+	}
 
 	return prefs, nil
 }
