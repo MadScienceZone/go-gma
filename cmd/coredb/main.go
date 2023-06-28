@@ -35,7 +35,7 @@ local items to the database and saving core data to files.
 # SYNOPSIS
 
 (If using the full GMA core tool suite)
-   gma go coredb ...
+   gma go coredb [options (see below) ...]
 
 (Otherwise)
    coredb -h
@@ -48,9 +48,9 @@ local items to the database and saving core data to files.
 The command-line options described below have a long form (e.g., -log) and a  short form (e.g., -l) which are equivalent.
 In either case, the option may be introduced with either one or two hyphens (e.g., -log or --log).
 
-Options which take parameter values may have the value separated from the option name by a space or an equals sign (e.g., -log=path or -log path), except for boolean flags which may be given alone (e.g., -L) to indicate that the option is set to ``true'' or may be given an explicit value which must be attached to the option with an equals sign (e.g., -L=true or -L=false).
+Options which take parameter values may have the value separated from the option name by a space or an equals sign (e.g., -log=path or -log path), except for boolean flags which may be given alone (e.g., -I) to indicate that the option is set to ``true'' or may be given an explicit value which must be attached to the option with an equals sign (e.g., -I=true or -I=false).
 
-You may not combine multiple single-letter options into a single composite argument, (e.g., the options -L and -h would need to be entered as two separate options, not as -Lh).
+You may not combine multiple single-letter options into a single composite argument, (e.g., the options -I and -h would need to be entered as two separate options, not as -Ih).
 
   -D, -debug flags
       Adds debugging messages to coredb's output. The flags
@@ -59,7 +59,7 @@ You may not combine multiple single-letter options into a single composite argum
 
       all      Enable all debugging messages
       none     Disable all debugging messages
-	  queries  Database queries
+      queries  Database queries
       misc     Miscellaneous debugging messages
 
   -e, -export file
@@ -67,19 +67,19 @@ You may not combine multiple single-letter options into a single composite argum
 
   -f, -filter [!]regex
       When importing or exporting, only include entries matching the regular expression
-	  regex. If regex begins with a '!' character, all entries which do NOT match the
-	  expression are included.
+      regex. If regex begins with a '!' character, all entries which do NOT match the
+      expression are included.
 
-	  The regex is matched against the Code and Name fields. If either matches, then
-	  the entry is included (or excluded). For languages, the Language field is checked.
-	  For monsters in the bestiary, the Code and Species fields are checked.
-	  For Spells and Skills, only the Name field is checked.
+      The regex is matched against the Code and Name fields. If either matches, then
+      the entry is included (or excluded). For languages, the Language field is checked.
+      For monsters in the bestiary, the Code and Species fields are checked.
+      For Spells, only the Name field is checked.
 
   -h, -help
       Print a command summary and exit.
 
   -I, -ignore-case
-	Regex matching (-f/-filter option) is done irrespective of case.
+    Regex matching (-f/-filter option) is done irrespective of case.
 
   -i, -import file
       Read the contents of the file into the database.
@@ -93,29 +93,29 @@ You may not combine multiple single-letter options into a single composite argum
 
   -srd
       Normally, all entries imported by coredb into the database are assumed
-	  to be local entries added for the user's campaign. Entries exported to
-	  a file will only be local entries, ignoring the SRD entries initially
-	  loaded from community data by "gma initdb". With this option, the inverse
-	  is true: only the SRD entries will be exported and anything imported will
-	  be assumed to be non-local SRD data.
+      to be local entries added for the user's campaign. Entries exported to
+      a file will only be local entries, ignoring the SRD entries initially
+      loaded from community data by "gma initdb". With this option, the inverse
+      is true: only the SRD entries will be exported and anything imported will
+      be assumed to be non-local SRD data.
 
   -t, -type list
       Entries exported will include only database entries of the specified
-	  type(s). When importing, any records in the import file which are not
-	  of the specified type(s) will be skipped over.
+      type(s). When importing, any records in the import file which are not
+      of the specified type(s) will be skipped over.
 
-	  The list parameter is a comma-separated list of type names, which
-	  may be any of the following:
+      The list parameter is a comma-separated list of type names, which
+      may be any of the following:
 
-	  all         All entry types
-	  none        Reset list to empty before adding more types
-	  bestiary    Creatures
-	  class[es]   Classes
-	  feat[s]     Feats
-	  language[s] Languages
-	  skill[s]    Skills
-	  spell[s]    Spells
-	  weapon[s]   Weapons
+      all         All entry types
+      none        Reset list to empty before adding more types
+      bestiary    Creatures
+      class[es]   Classes
+      feat[s]     Feats
+      language[s] Languages
+      skill[s]    Skills
+      spell[s]    Spells
+      weapon[s]   Weapons
 
 */
 package main
@@ -747,6 +747,26 @@ func getBitStrings(db *sql.DB, prefs *AppPreferences, q string) (map[int]string,
 	return flagList, rows.Err()
 }
 
+func getStringBits(db *sql.DB, prefs *AppPreferences, q string) (map[string]int, error) {
+	flagList := make(map[string]int)
+
+	rows, err := query(db, prefs, q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var bit int
+		var name string
+
+		if err := rows.Scan(&bit, &name); err != nil {
+			return nil, err
+		}
+		flagList[name] = bit
+	}
+	return flagList, rows.Err()
+}
+
 func getAlignmentCodes(db *sql.DB, prefs *AppPreferences) (map[int]string, error) {
 	return getBitStrings(db, prefs, "SELECT ID, Code FROM Alignments")
 }
@@ -765,6 +785,18 @@ func getSpellDescriptors(db *sql.DB, prefs *AppPreferences) (map[int]string, err
 
 func getClassCodes(db *sql.DB, prefs *AppPreferences) (map[int]string, error) {
 	return getBitStrings(db, prefs, "SELECT ID, Code FROM Classes")
+}
+
+func getSkillCodes(db *sql.DB, prefs *AppPreferences) (map[int]string, error) {
+	return getBitStrings(db, prefs, "SELECT ID, Code FROM Skills")
+}
+
+func getSkillIDs(db *sql.DB, prefs *AppPreferences) (map[string]int, error) {
+	return getStringBits(db, prefs, "SELECT ID, Code FROM Skills")
+}
+
+func getClassIDs(db *sql.DB, prefs *AppPreferences) (map[string]int, error) {
+	return getStringBits(db, prefs, "SELECT ID, Code FROM Classes")
 }
 
 func makeRecordExist(db *sql.DB, prefs *AppPreferences, table, keyfield string, keyvalue any) error {
@@ -1768,6 +1800,7 @@ func exportWeapons(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 // Skill describes a skill that any creature might have.
 type Skill struct {
 	Name string
+	Code string
 	// List of the class Code strings for those classes which have this skill as a class skill.
 	ClassSkillFor []string `json:",omitempty"`
 	// Relevant ability score name
@@ -1785,7 +1818,95 @@ type Skill struct {
 	IsLocal      bool `json:",omitempty"`
 }
 
-func importSkill(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error { return nil }
+func importSkill(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error {
+	var sk Skill
+	var err error
+	var id int64
+	var exists bool
+
+	if err = decoder.Decode(&sk); err != nil {
+		return err
+	}
+
+	if filterOut(prefs, TypeSkill, "skill", sk.Name, sk.Name) {
+		return nil
+	}
+
+	if exists, id, err = recordExists(db, prefs, "Skills", "ID", "Code", sk.Code); err != nil {
+		return err
+	}
+
+	var classes int
+	var ps sql.NullInt32
+	var src sql.NullString
+
+	classIDs, err := getClassIDs(db, prefs)
+	if err != nil {
+		return err
+	}
+
+	skillIDs, err := getSkillIDs(db, prefs)
+	if err != nil {
+		return err
+	}
+
+	for _, class := range sk.ClassSkillFor {
+		if bit, ok := classIDs[class]; ok {
+			classes |= 1 << bit
+		} else {
+			return fmt.Errorf("cannot add unknown class code \"%s\" to skill \"%s\"", class, sk.Name)
+		}
+	}
+	if sk.ParentSkill == "" {
+		ps.Valid = false
+	} else {
+		if pid, ok := skillIDs[sk.ParentSkill]; ok {
+			ps.Valid = true
+			ps.Int32 = int32(pid)
+		} else {
+			return fmt.Errorf("cannot add unknown skill code \"%s\" as parent of skill \"%s\"", sk.ParentSkill, sk.Name)
+		}
+	}
+
+	if sk.Source == "" {
+		src.Valid = false
+	} else {
+		src.Valid = true
+		src.String = sk.Source
+	}
+
+	if exists {
+		_, err = db.Exec(`
+			UPDATE Skills 
+			SET 
+				Code=?, Name=?, Classes=?, Ability=?, ArmorCheck=?, TrainedOnly=?,
+				Source=?, Description=?, FullText=?, ParentSkill=?, IsVirtual=?,
+				IsLocal=?, IsBackground=?
+			WHERE
+				ID=?`,
+			sk.Code, sk.Name, classes, sk.Ability, sk.HasArmorPenalty, sk.TrainingRequired,
+			src, sk.Description, sk.FullText, ps, sk.IsVirtual, sk.IsLocal, sk.IsBackground, id)
+	} else {
+		_, err = db.Exec(`
+			INSERT INTO Skills
+				(Code, Name, Classes, Ability, ArmorCheck, TrainedOnly, Source,
+				Description, FullText, ParentSkill, IsVirtual, IsLocal, IsBackground)
+			VALUES
+				(?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+			sk.Code, sk.Name, classes, sk.Ability, sk.HasArmorPenalty, sk.TrainingRequired,
+			src, sk.Description, sk.FullText, ps, sk.IsVirtual, sk.IsLocal, sk.IsBackground)
+	}
+
+	if (prefs.DebugBits & DebugMisc) != 0 {
+		if exists {
+			log.Printf("updated existing skill %s (database id %d)", sk.Name, id)
+		} else {
+			log.Printf("created new skill %s", sk.Name)
+		}
+	}
+	return err
+}
+
 func exportSkills(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 	var rows *sql.Rows
 	var err error
@@ -1801,9 +1922,13 @@ func exportSkills(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 	if err != nil {
 		return err
 	}
+	skillCodes, err := getSkillCodes(db, prefs)
+	if err != nil {
+		return err
+	}
 	if rows, err = query(db, prefs,
 		`SELECT 
-			ID, Name, Classes, Ability, ArmorCheck, TrainedOnly, Source,
+			ID, Name, Code, Classes, Ability, ArmorCheck, TrainedOnly, Source,
 			Description, FullText, ParentSkill, IsVirtual, IsLocal, IsBackground
 		FROM Skills
 		`); err != nil {
@@ -1819,7 +1944,7 @@ func exportSkills(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 		var source sql.NullString
 		var parent sql.NullInt32
 
-		if err := rows.Scan(&skill_db_id, &sk.Name, &classbits, &sk.Ability,
+		if err := rows.Scan(&skill_db_id, &sk.Name, &sk.Code, &classbits, &sk.Ability,
 			&sk.HasArmorPenalty, &sk.TrainingRequired, &source, &sk.Description,
 			&sk.FullText, &parent, &sk.IsVirtual, &sk.IsLocal, &sk.IsBackground); err != nil {
 			return err
@@ -1842,6 +1967,17 @@ func exportSkills(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 				log.Printf("Skipping skill %s because SRD=%v", sk.Name, prefs.SRD)
 			}
 			continue
+		}
+
+		if source.Valid {
+			sk.Source = source.String
+		}
+		if parent.Valid {
+			if pskill, ok := skillCodes[int(parent.Int32)]; ok {
+				sk.ParentSkill = pskill
+			} else {
+				return fmt.Errorf("skill \"%s\" refers to undefined parent skill ID %d", sk.Name, parent.Int32)
+			}
 		}
 
 		for bit, code := range classCodes {
