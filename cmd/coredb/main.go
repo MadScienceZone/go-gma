@@ -73,7 +73,6 @@ You may not combine multiple single-letter options into a single composite argum
       The regex is matched against the Code and Name fields. If either matches, then
       the entry is included (or excluded). For languages, the Language field is checked.
       For monsters in the bestiary, the Code and Species fields are checked.
-      For Spells, only the Name field is checked.
 
   -h, -help
       Print a command summary and exit.
@@ -132,6 +131,7 @@ import (
 	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/exp/slices"
 
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
@@ -486,7 +486,7 @@ func main() {
 					err = importWeapon(decoder, db, &prefs)
 				}
 				if err != nil {
-					log.Fatalf("unable to decode %v type object: %v", fld, err)
+					log.Fatalf("unable to import %v type object: %v", fld, err)
 				}
 
 			}
@@ -767,8 +767,55 @@ func getStringBits(db *sql.DB, prefs *AppPreferences, q string) (map[string]int,
 	return flagList, rows.Err()
 }
 
+func getStringList(db *sql.DB, prefs *AppPreferences, q string) ([]string, error) {
+	var list []string
+
+	rows, err := query(db, prefs, q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var name string
+
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		list = append(list, name)
+	}
+	return list, rows.Err()
+}
+
+func getCastingTimeList(db *sql.DB, prefs *AppPreferences) ([]string, error) {
+	return getStringList(db, prefs, "SELECT CastingTime FROM CastingTimes")
+}
+
+func getRangeList(db *sql.DB, prefs *AppPreferences) ([]string, error) {
+	return getStringList(db, prefs, "SELECT Range FROM Ranges")
+}
+
+func getDurationList(db *sql.DB, prefs *AppPreferences) ([]string, error) {
+	return getStringList(db, prefs, "SELECT Duration FROM Durations")
+}
+
+func getSpellResistanceList(db *sql.DB, prefs *AppPreferences) ([]string, error) {
+	return getStringList(db, prefs, "SELECT SpellResistance FROM SpellResistances")
+}
+
+func getSavingThrowList(db *sql.DB, prefs *AppPreferences) ([]string, error) {
+	return getStringList(db, prefs, "SELECT Save FROM SavingThrows")
+}
+
+func getSaveEffectsList(db *sql.DB, prefs *AppPreferences) ([]string, error) {
+	return getStringList(db, prefs, "SELECT Effect FROM SaveEffects")
+}
+
 func getAlignmentCodes(db *sql.DB, prefs *AppPreferences) (map[int]string, error) {
 	return getBitStrings(db, prefs, "SELECT ID, Code FROM Alignments")
+}
+
+func getAlignmentCodeIDs(db *sql.DB, prefs *AppPreferences) (map[string]int, error) {
+	return getStringBits(db, prefs, "SELECT ID, Code FROM Alignments")
 }
 
 func getFeatFlags(db *sql.DB, prefs *AppPreferences) (map[int]string, error) {
@@ -779,8 +826,16 @@ func getSpellComponents(db *sql.DB, prefs *AppPreferences) (map[int]string, erro
 	return getBitStrings(db, prefs, "SELECT ID, Component FROM SpellComponents")
 }
 
+func getSpellComponentIDs(db *sql.DB, prefs *AppPreferences) (map[string]int, error) {
+	return getStringBits(db, prefs, "SELECT ID, Component FROM SpellComponents")
+}
+
 func getSpellDescriptors(db *sql.DB, prefs *AppPreferences) (map[int]string, error) {
 	return getBitStrings(db, prefs, "SELECT ID, Descriptor FROM SpellDescriptors")
+}
+
+func getSpellDescriptorIDs(db *sql.DB, prefs *AppPreferences) (map[string]int, error) {
+	return getStringBits(db, prefs, "SELECT ID, Descriptor FROM SpellDescriptors")
 }
 
 func getClassCodes(db *sql.DB, prefs *AppPreferences) (map[int]string, error) {
@@ -799,8 +854,29 @@ func getClassIDs(db *sql.DB, prefs *AppPreferences) (map[string]int, error) {
 	return getStringBits(db, prefs, "SELECT ID, Code FROM Classes")
 }
 
+func getClassNameIDs(db *sql.DB, prefs *AppPreferences) (map[string]int, error) {
+	return getStringBits(db, prefs, "SELECT ID, Name FROM Classes")
+}
+
+func getSpellSchoolIDs(db *sql.DB, prefs *AppPreferences) (map[string]int, error) {
+	return getStringBits(db, prefs, "SELECT ID, Code FROM Schools")
+}
+
 func makeRecordExist(db *sql.DB, prefs *AppPreferences, table, keyfield string, keyvalue any) error {
-	exists, _, err := recordExists(db, prefs, table, keyfield, keyfield, keyvalue)
+	exists, _, err := recordExists(db, prefs, table, "ID", keyfield, keyvalue)
+	if exists || err != nil {
+		return err
+	}
+
+	_, err = db.Exec("INSERT INTO "+table+" ("+keyfield+") VALUES (?)", keyvalue)
+	if (prefs.DebugBits & DebugMisc) != 0 {
+		log.Printf("added \"%v\" to %s", keyvalue, table)
+	}
+	return err
+}
+
+func makeRecordExistWithoutID(db *sql.DB, prefs *AppPreferences, table, keyfield string, keyvalue any) error {
+	exists, err := recordExistsWithoutID(db, prefs, table, keyfield, keyvalue)
 	if exists || err != nil {
 		return err
 	}
@@ -828,6 +904,20 @@ func recordExists(db *sql.DB, prefs *AppPreferences, table, idfield, keyfield st
 		return true, id, nil
 	}
 	return false, 0, nil
+}
+
+func recordExistsWithoutID(db *sql.DB, prefs *AppPreferences, table, keyfield string, keyvalue any) (bool, error) {
+	// This shouldn't be a SQL injection risk because we generate and control the values used to build the query
+	// and don't get them from an outside source.
+	rows, err := query(db, prefs, "SELECT 1 FROM "+table+" WHERE "+keyfield+"=?", keyvalue)
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+	if rows.Next() {
+		return true, nil
+	}
+	return false, nil
 }
 
 //   ____ _        _    ____ ____  _____ ____
@@ -1362,7 +1452,9 @@ func importFeat(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error 
 
 	// add feat types
 	for _, ftype := range feat.Types {
-		makeRecordExist(db, prefs, "FeatTypes", "FeatType", ftype)
+		if err = makeRecordExist(db, prefs, "FeatTypes", "FeatType", ftype); err != nil {
+			return err
+		}
 		if _, err = db.Exec(`INSERT INTO FeatFeatTypes (FeatID, FeatType) VALUES (?, ?)`, id, ftype); err != nil {
 			return err
 		}
@@ -2350,8 +2442,9 @@ type AttackMode struct {
 
 // SavingThrow describes each of the creature's saving throw.
 type SavingThrow struct {
-	Mod     int
-	Special string `json:",omitempty"`
+	Mod           int
+	Special       string `json:",omitempty"`
+	NoSavingThrow bool   `json:",omitempty"`
 }
 
 // AbilityScore describes each of the creature's ability scores.
@@ -2364,7 +2457,722 @@ type AbilityScore struct {
 	NullScore bool `json:",omitempty"`
 }
 
-func importMonster(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error { return nil }
+func importMonster(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error {
+	var mob Monster
+	var err error
+	var id int64
+	var exists bool
+	var res sql.Result
+
+	if err = decoder.Decode(&mob); err != nil {
+		return err
+	}
+
+	if filterOut(prefs, TypeBestiary, "monster", mob.Name, mob.Species) {
+		return nil
+	}
+
+	if exists, id, err = recordExists(db, prefs, "Monsters", "ID", "Code", mob.Code); err != nil {
+		return err
+	}
+
+	var alignments int
+	alignmentIDs, err := getAlignmentCodeIDs(db, prefs)
+	if err != nil {
+		return err
+	}
+	for _, a := range mob.Alignment.Alignments {
+		bit, ok := alignmentIDs[a]
+		if !ok {
+			return fmt.Errorf("undefined alignment \"%s\" for species \"%s\"", a, mob.Species)
+		}
+		alignments |= 1 << bit
+	}
+
+	// handle the fact that many of these may be NULL in the database
+	var alignspec, ispec, senses, aura, hpspec, ft, rt, wt, sm, da sql.NullString
+	var drbp, imm, resist, srtext, sa, strtext, dextext, context, inttext, wistext sql.NullString
+	var chatext, cmbtext, cmdtext, sq, env, org, treasure, appearance, grp, before sql.NullString
+	var during, morale, agecat, gender, bline, patron, altname, varpar, offense, stats sql.NullString
+	var gear, other, focused, arch, basestats, rmods, prohibited, opposition, mystery sql.NullString
+	var notes sql.NullString
+
+	if mob.Combat.CMBSpecial != "" {
+		cmbtext.Valid = true
+		cmbtext.String = mob.Combat.CMBSpecial
+	}
+	if mob.Combat.CMDSpecial != "" {
+		cmdtext.Valid = true
+		cmdtext.String = mob.Combat.CMDSpecial
+	}
+	if mob.SQ != "" {
+		sq.Valid = true
+		sq.String = mob.SQ
+	}
+	if mob.EnvironmenT != "" {
+		env.Valid = true
+		env.String = mob.Environment
+	}
+	if mob.Organization != "" {
+		org.Valid = true
+		org.String = mob.Organization
+	}
+	if mob.Treasure != "" {
+		treasure.Valid = true
+		treasure.String = mob.Treasure
+	}
+	if mob.Appearance != "" {
+		appearance.Valid = true
+		appearance.String = mob.Appearance
+	}
+	if mob.Group != "" {
+		grp.Valid = true
+		grp.String = mob.Group
+	}
+	if mob.Strategy.BeforeCombat != "" {
+		before.Valid = true
+		before.String = mob.Strategy.BeforeCombat
+	}
+	if mob.Strategy.DuringCombat != "" {
+		during.Valid = true
+		during.String = mob.Strategy.DuringCombat
+	}
+	if mob.Strategy.Morale != "" {
+		morale.Valid = true
+		morale.String = mob.Strategy.Morale
+	}
+	if mob.AgeCategory != "" {
+		agecat.Valid = true
+		agecat.String = mob.AgeCategory
+	}
+	if mob.Gender != "" {
+		gender.Valid = true
+		gender.String = mob.Gender
+	}
+	if mob.Bloodline != "" {
+		bline.Valid = true
+		bline.String = mob.Bloodline
+	}
+	if mob.Patron != "" {
+		patron.Valid = true
+		patron.String = mob.Patron
+	}
+	if mob.AlternateNameForm != "" {
+		altname.Valid = true
+		altname.String = mob.AlternateNameForm
+	}
+	if mob.VariantParent != "" {
+		varpar.Valid = true
+		varpar.String = mob.VariantParent
+	}
+	if mob.OffenseNote != "" {
+		offense.Valid = true
+		offense.String = mob.OffenseNote
+	}
+	if mob.StatisticsNote != "" {
+		stats.Valid = true
+		stats.String = mob.StatisticsNote
+	}
+	if mob.Gear.Combat != "" {
+		gear.Valid = true
+		gear.String = mob.Gear.Combat
+	}
+	if mob.Gear.Other != "" {
+		other.Valid = true
+		other.String = mob.Gear.Other
+	}
+	if mob.Schools.Focused != "" {
+		focused.Valid = true
+		focused.String = mob.Schools.Focused
+	}
+	if mob.Schools.Prohibited != "" {
+		prohibited.Valid = true
+		prohibited.String = mob.Schools.Prohibited
+	}
+	if mob.Schools.Opposition != "" {
+		opposition.Valid = true
+		opposition.String = mob.Schools.Opposition
+	}
+	if mob.ClassArchetypes != "" {
+		arch.Valid = true
+		arch.String = mob.ClassArchetypes
+	}
+	if mob.BaseStatistics != "" {
+		basestats.Valid = true
+		basestats.String = mob.BaseStatistics
+	}
+	if mob.RacialMods != "" {
+		rmods.Valid = true
+		rmods.String = mob.RacialMods
+	}
+	if mob.Mystery != "" {
+		mystery.Valid = true
+		mystery.String = mob.Mystery
+	}
+	if mob.Notes != "" {
+		notes.Valid = true
+		notes.String = mob.Notes
+	}
+
+	if mob.DR.Bypass != "" {
+		drbp.Valid = true
+		drbp.String = mob.DR.Bypass
+	}
+	if mob.Immunities != "" {
+		imm.Valid = true
+		imm.String = mob.Immunities
+	}
+	if mob.Resists != "" {
+		resist.Valid = true
+		resist.String = mob.Resists
+	}
+	if mob.SR.Special != "" {
+		srtext.Valid = true
+		srtext.String = mob.SR.Special
+	}
+	if mob.SpecialAttacks != "" {
+		sa.Valid = true
+		sa.String = mob.SpecialAttacks
+	}
+	if mob.Abilities.Str.Special != "" {
+		strtext.Valid = true
+		strtext.String = mob.Abilities.Str.Special
+	}
+	if mob.Abilities.Dex.Special != "" {
+		dextext.Valid = true
+		dextext.String = mob.Abilities.Dex.Special
+	}
+	if mob.Abilities.Con.Special != "" {
+		context.Valid = true
+		context.String = mob.Abilities.Con.Special
+	}
+	if mob.Abilities.Int.Special != "" {
+		inttext.Valid = true
+		inttext.String = mob.Abilities.Int.Special
+	}
+	if mob.Abilities.Wis.Special != "" {
+		wistext.Valid = true
+		wistext.String = mob.Abilities.Wis.Special
+	}
+	if mob.Abilities.Cha.Special != "" {
+		chatext.Valid = true
+		chatext.String = mob.Abilities.Cha.Special
+	}
+
+	if mob.Alignment.Special != "" {
+		alignspec.Valid = true
+		alignspec.String = mob.Alignment.Special
+	}
+	if mob.Initiative.Special != "" {
+		ispec.Valid = true
+		ispec.String = mob.Initiative.Special
+	}
+	if mob.Senses != "" {
+		senses.Valid = true
+		senses.String = mob.Senses
+	}
+	if mob.Aura != "" {
+		aura.Valid = true
+		aura.String = mob.Aura
+	}
+	if mob.HP.Special != "" {
+		hpspec.Valid = true
+		hpspec.String = mob.HP.Special
+	}
+	if mob.Save.Fort.Special != "" {
+		ft.Valid = true
+		ft.String = mob.Save.Fort.Special
+	}
+	if mob.Save.Refl.Special != "" {
+		rt.Valid = true
+		rt.String = mob.Save.Refl.Special
+	}
+	if mob.Save.Will.Special != "" {
+		wt.Valid = true
+		wt.String = mob.Save.Will.Special
+	}
+	if mob.Save.Special != "" {
+		sm.Valid = true
+		sm.String = mob.Save.Special
+	}
+	if mob.DefensiveAbilities != "" {
+		da.Valid = true
+		da.String = mob.DefensiveAbilities
+	}
+
+	var curhp, fort, refl, will, dr, sr, str, dex, con, int_, wis, cha, bab, cmb, cmd sql.NullInt32
+	var mr, mt, acadj, fadj, tadj sql.NullInt32
+
+	if v, ok := mob.AC.Adjustments["AC"]; ok {
+		acadj.Valid = true
+		acadj.Int32 = int32(v)
+	}
+	if v, ok := mob.AC.Adjustments["Touch"]; ok {
+		tadj.Valid = true
+		tadj.Int32 = int32(v)
+	}
+	if v, ok := mob.AC.Adjustments["Flat"]; ok {
+		fadj.Valid = true
+		fadj.Int32 = int32(v)
+	}
+
+	// TODO is this really right? we could have 0 current HP in some cases which is different than
+	// not providing this stat for the monster.
+	if mob.HP.Current != 0 {
+		curhp.Valid = true
+		curhp.Int32 = int32(mob.HP.Current)
+	}
+
+	if !mob.Save.Fort.NoSavingThrow {
+		fort.Valid = true
+		fort.Int32 = int32(mob.Save.Fort.Mod)
+	}
+	if !mob.Save.Refl.NoSavingThrow {
+		refl.Valid = true
+		refl.Int32 = int32(mob.Save.Refl.Mod)
+	}
+	if !mob.Save.Will.NoSavingThrow {
+		will.Valid = true
+		will.Int32 = int32(mob.Save.Will.Mod)
+	}
+
+	if mob.DR.DR != 0 {
+		dr.Valid = true
+		dr.Int32 = int32(mob.DR.DR)
+	}
+	if mob.SR.SR != 0 {
+		sr.Valid = true
+		sr.Int32 = int32(mob.SR.SR)
+	}
+
+	if !mob.Abilities.Str.NullScore {
+		str.Valid = true
+		str.Int32 = int32(mob.Abilities.Str.Base)
+	}
+	if !mob.Abilities.Dex.NullScore {
+		dex.Valid = true
+		dex.Int32 = int32(mob.Abilities.Dex.Base)
+	}
+	if !mob.Abilities.Con.NullScore {
+		con.Valid = true
+		con.Int32 = int32(mob.Abilities.Con.Base)
+	}
+	if !mob.Abilities.Int.NullScore {
+		int_.Valid = true
+		int_.Int32 = int32(mob.Abilities.Int.Base)
+	}
+	if !mob.Abilities.Wis.NullScore {
+		wis.Valid = true
+		wis.Int32 = int32(mob.Abilities.Wis.Base)
+	}
+	if !mob.Abilities.Cha.NullScore {
+		cha.Valid = true
+		cha.Int32 = int32(mob.Abilities.Cha.Base)
+	}
+
+	// TODO we're not going to assume BAB of +0 is NULL. I'm not sure it makes sense for
+	// the database to allow BAB to be null in the first place.
+	// same for CMB and CMD.
+	bab.Valid = true
+	bab.Int32 = int32(mob.Combat.BAB)
+	cmb.Valid = true
+	cmb.Int32 = int32(mob.Combat.CMB)
+	cmd.Valid = true
+	cmd.Int32 = int32(mob.Combat.CMD)
+
+	if mob.Mythic.IsMythic {
+		mr.Valid = true
+		mr.Int32 = int32(mob.Mythic.MR)
+		mt.Valid = true
+		mt.Int32 = int32(mob.Mythic.MT)
+	}
+	// fk mob.Type mob.Size.Code
+
+	if exists {
+		for _, q := range []string{
+			`DELETE FROM SpellList 
+			WHERE CollectionID IN (
+				SELECT ID FROM SpellsPrepared
+				WHERE MonsterID=?
+			)`, `
+			DELETE FROM SpellSlots 
+			WHERE CollectionID IN (
+				SELECT ID FROM SpellsPrepared
+				WHERE MonsterID=?
+			)`, `DELETE FROM MonsterDomains WHERE MonsterID=?`,
+			`DELETE FROM ACComponents WHERE MonsterID=?`,
+			`DELETE FROM AttackModes WHERE MonsterID=?`,
+			`DELETE FROM MonsterSubtypes WHERE MonsterID=?`,
+			`DELETE FROM MonsterLanguages WHERE MonsterID=?`,
+			`DELETE FROM MonsterFeats WHERE MonsterID=?`,
+			`DELETE FROM MonsterFeats WHERE MonsterID=?`,
+			`DELETE FROM SpellsPrepared WHERE MonsterID=?`,
+		} {
+			_, err = db.Exec(q, id)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = db.Exec(`
+			UPDATE Monsters 
+			SET 
+				IsLocal=?, Species=?, Code=?, CR=?, XP=?, Class=?, Alignment=?,
+				AlignmentSpecial=?, Source=?, Size=?, SpaceText=?, ReachText=?,
+				Type=?, Initiative=?, InitiativeText=?, Senses=?, Aura=?,
+				TypicalHP=? CurrentHP=?, HPSpecial=?, HitDice=?, Fort=?, Refl=?,
+				Will=?, FortText=?, ReflText=?, WillText=?, SaveMods=?,
+				DefensiveAbilities=?, DR=?, DRBypass=?, Immunities=?, Resists=?,
+				SR=?, SRText=?, Weaknesses=?, Speed=?, SpeedText=?, SpecialAttacks=?,
+				Str=?, Dex=?, Con=?, Int=?, Wis=?, Cha=?,
+				StrText=?, DexText=?, ConText=?, IntText=?, WisText=?, ChaText=?,
+				BAB=?, CMB=?, CMD=?, CMBText=?, CMDText=?, SQ=?, Environment=?,
+				Organization=?, Treasure=?, Appearance=?, Grp=?, IsTemplate=?,
+				BeforeCombat=?, DuringCombat=?, Morale=?, CharacterFlag=?,
+				CompanionFlag=?, IsUniqueMonster=?, AgeCategory=?, Gender=?,
+				Bloodline=?, Patron=?, AlternateNameForm=?, DoneUseRacialHD=?,
+				VariantParent=?, MR=?, IsMythic=?, MT=?, OffenseNote=?,
+				StatisticsNote=?, Gear=?, OtherGear=?, FocusedSchool=?,
+				ClassArchetypes=?, BaseStatistics=?, ACAdj=?, FlatAdj=?, TouchAdj=?,
+				RacialMods=?, ProhibitedSchools=?, OppositionSchools=?, Mystery=?,
+				Notes=?
+			WHERE
+				ID=?`,
+			mob.IsLocal, mob.Species, mob.Code, mob.CR, mob.XP, mob.Class, alignments,
+			alignspec, mob.Source, mob.Size.Code, mob.Size.SpaceText, mob.Size.ReachText,
+			mob.Type, mob.Initiative.Mod, ispec, senses, aura, mob.HP.Typical, curhp,
+			hpspec, mob.HP.HitDice, fort, refl, will, ft, rt, wt, sm, da, dr, drbp,
+			imm, resist, sr, srtext, sa, str, dex, con, int_, wis, cha, strtext,
+			dextext, context, inttext, wistext, chatext, bab, cmb, cmd, cmbtext,
+			cmdtext, sq, env, org, treasure, appearance, grp, mob.IsTemplate,
+			before, during, morale, mob.IsCharacter, mob.IsCompanion, mob.IsUnique,
+			agecat, gender, bline, patron, altname, mob.DontUseRacialHD, varpar,
+			mr, mob.Mythic.IsMythic, mt, offense, stats, gear, other, focused, arch,
+			basestats, acadj, fadj, tadj, rmods, prohibited, opposition, mystery,
+			notes,
+			id)
+	} else {
+		if res, err = db.Exec(`
+			INSERT INTO Monsters (
+				IsLocal, Species, Code, CR, XP, Class, Alignment,
+				AlignmentSpecial, Source, Size, SpaceText, ReachText,
+				Type, Initiative, InitiativeText, Senses, Aura,
+				TypicalHP CurrentHP, HPSpecial, HitDice, Fort, Refl,
+				Will, FortText, ReflText, WillText, SaveMods,
+				DefensiveAbilities, DR, DRBypass, Immunities, Resists,
+				SR, SRText, Weaknesses, Speed, SpeedText, SpecialAttacks,
+				Str, Dex, Con, Int, Wis, Cha,
+				StrText, DexText, ConText, IntText, WisText, ChaText,
+				BAB, CMB, CMD, CMBText, CMDText, SQ, Environment,
+				Organization, Treasure, Appearance, Grp, IsTemplate,
+				BeforeCombat, DuringCombat, Morale, CharacterFlag,
+				CompanionFlag, IsUniqueMonster, AgeCategory, Gender,
+				Bloodline, Patron, AlternateNameForm, DoneUseRacialHD,
+				VariantParent, MR, IsMythic, MT, OffenseNote,
+				StatisticsNote, Gear, OtherGear, FocusedSchool,
+				ClassArchetypes, BaseStatistics, ACAdj, FlatAdj, TouchAdj,
+				RacialMods, ProhibitedSchools, OppositionSchools, Mystery,
+				Notes
+			)`,
+			mob.IsLocal, mob.Species, mob.Code, mob.CR, mob.XP, mob.Class, alignments,
+			alignspec, mob.Source, mob.Size.Code, mob.Size.SpaceText, mob.Size.ReachText,
+			mob.Type, mob.Initiative.Mod, ispec, senses, aura, mob.HP.Typical, curhp,
+			hpspec, mob.HP.HitDice, fort, refl, will, ft, rt, wt, sm, da, dr, drbp,
+			imm, resist, sr, srtext, sa, str, dex, con, int_, wis, cha, strtext,
+			dextext, context, inttext, wistext, chatext, bab, cmb, cmd, cmbtext,
+			cmdtext, sq, env, org, treasure, appearance, grp, mob.IsTemplate,
+			before, during, morale, mob.IsCharacter, mob.IsCompanion, mob.IsUnique,
+			agecat, gender, bline, patron, altname, mob.DontUseRacialHD, varpar,
+			mr, mob.Mythic.IsMythic, mt, offense, stats, gear, other, focused, arch,
+			basestats, acadj, fadj, tadj, rmods, prohibited, opposition, mystery,
+			notes); err != nil {
+			return err
+		}
+		if id, err = res.LastInsertId(); err != nil {
+			return err
+		}
+	}
+
+	if err != nil {
+		return err
+	}
+
+	if (prefs.DebugBits & DebugMisc) != 0 {
+		if exists {
+			log.Printf("updated existing monster %s (database id %d)", mob.Species, id)
+		} else {
+			log.Printf("created new monster %s (database id %d)", mob.Species, id)
+		}
+	}
+
+	// add domains
+	for _, domainName := range mob.Domains {
+		if err = makeRecordExist(db, prefs, "Domains", "Domain", domainName); err != nil {
+			return err
+		}
+		if _, err = db.Exec(`
+			INSERT INTO MonsterDomains (MonsterID, DomainID)
+			VALUES (?, (SELECT ID From Domains WHERE Domain=?))
+			`, id, domainName); err != nil {
+			return err
+		}
+	}
+
+	// armor class
+	for actype, acval := range monster.AC.Components {
+		if err = makeRecordExist(db, prefs, "ACCTypes", "Code", actype); err != nil {
+			return err
+		}
+		if _, err = db.Exec(`
+			INSERT INTO ACComponents (MonsterID, ACComponent, Value)
+			VALUES (?, (SELECT ID FROM ACCTypes WHERE Code=?), ?)`,
+			id, actype, acval); err != nil {
+			return err
+		}
+	}
+
+	// attack modes
+	var seq int
+	var lastTier int
+	for _, amode := range monster.AttackModes {
+		var baseweap sql.NullInt32
+		var weapid int64
+
+		if lastTier != amode.Tier {
+			lastTier = amode.Tier
+			seq = 0
+		}
+		if amode.BaseWeaponID != "" {
+			if ok, weapid, err = recordExists(db, prefs, "Weapons", "ID", "Code", amode.BaseWeaponID); !ok || err != nil {
+				return fmt.Errorf("monster %s attack %s (tier %d, seq %d) references unknown weapon code %s (database error %v)", mob.Species, amode.Name, amode.Tier, seq, amode.BaseWeaponID, err)
+			}
+			baseweap.Valid = true
+			baseweap.Int32 = int32(weapid)
+		}
+		if ok, err = recordExistsWithoutID(db, prefs, "AttackModeTypes", "Mode", amode.Mode); !ok || err != nil {
+			return fmt.Errorf("monster %s attack %s (tier %d, seq %d) references unknown mode %s (database error %v)", mob.Species, amode.Name, amode.Tier, seq, amode.Mode, err)
+		}
+
+		var attack, damage, threat, critical, spec sql.NullString
+		var ri, rmax sql.NullInt32
+
+		if amode.Attack != "" {
+			attack.Valid = true
+			attack.String = amode.Attack
+		}
+		if amode.Damage != "" {
+			damage.Valid = true
+			damage.String = amode.Damage
+		}
+		if !amode.Critical.CantCritical {
+			threat.Valid = true
+			critical.Valid = true
+			threat.String = amode.Critical.Threat
+			critical.String = amode.Critical.Multiplier
+		}
+		if amode.Ranged.IsRanged {
+			ri.Valid = true
+			rmax.Valid = true
+			ri.Int32 = int32(amode.Ranged.Increment)
+			rmax.Int32 = int32(amode.Ranged.MaxIncrements)
+		}
+		if amode.Special != "" {
+			spec.Valid = true
+			spec.String = amode.Special
+		}
+
+		if _, err = db.Exec(`
+			INSERT INTO AttackModes (
+				MonsterID, TierGroup, TierSeq, BaseWeaponID,
+				Multiple, Name, Attack, Damage, Threat, Critical,
+				RangeInc, RangeMax, IsReach, Special, Mode
+			)
+			VALUES (
+		`, id, amode.Tier, seq, baseweap, amode.Multiple, amode.Name,
+			attack, damage, threat, critical, ri, rmax, amode.IsReach, spec, amode.Mode,
+		); err != nil {
+			return err
+		}
+		seq++
+	}
+
+	// monster subtypes
+	for _, stype := range mob.Subtypes {
+		if err = makeRecordExist(db, prefs, "MonsterSubtypes", "Subtype", stype); err != nil {
+			return err
+		}
+		if _, err = db.Exec(`
+			INSERT INTO MonsterMonsterSubtypes (MonsterID, SubtypeID)
+			VALUES (?, (SELECT ID FROM MonsterSubtypes WHERE Subtype=?))
+		`, id, stype); err != nil {
+			return err
+		}
+	}
+
+	// languages
+	for _, lang := range mob.Languages {
+		if err = makeRecordExist(db, prefs, "Languages", "Language", lang.Name); err != nil {
+			return err
+		}
+
+		var spec sql.NullString
+		if lang.Special != "" {
+			spec.Valid = true
+			spec.String = lang.Special
+		}
+
+		if _, err = db.Exec(`
+			INSERT INTO MonsterLanguages (MonsterID, LanguageID, IsMute, Special)
+			VALUES (?, (SELECT ID FROM Languages WHERE Language=?), ?, ?)
+		`, id, lang.Name, lang.IsMute, spec); err != nil {
+			return err
+		}
+	}
+
+	// feats
+	for _, feat := range mob.Feats {
+		if ok, err = recordExistsWithoutID(db, prefs, "Feats", "Code", feat.Code); !ok || err != nil {
+			return fmt.Errorf("monster %s references unknown feat code %s (database error %v)", mob.Species, feat.Code, err)
+		}
+
+		var params sql.NullString
+		if feat.Parameters != "" {
+			params.Valid = true
+			params.String = feat.Parameters
+		}
+
+		if _, err = db.Exec(`
+			INSERT INTO MonsterFeats (MonsterID, FeatID, Parameters, BonusFeat)
+			VALUES (?, (SELECT ID FROM Feats WHERE Code=?), ?, ?)
+		`, id, feat.Code, params, feat.IsBonus); err != nil {
+			return err
+		}
+	}
+
+	// skills
+	for _, skill := range mob.Skills {
+		if ok, err = recordExistsWithoutID(db, prefs, "Skills", "Code", skill.Code); !ok || err != nil {
+			return fmt.Errorf("monster %s references unknown skill code %s (database error %v)", mob.Species, skill.Code, err)
+		}
+
+		var notes sql.NullString
+		if skill.Notes != "" {
+			notes.Valid = true
+			notes.String = skill.Notes
+		}
+
+		if _, err = db.Exec(`
+			INSERT INTO MonsterSkills (MonsterID, SkillID, Modifier, Notes)
+			VALUES (?, (SELECT ID FROM Skills WHERE Code=?), ?, ?)
+		`, id, skill.Code, skill.Modifier, notes); err != nil {
+			return err
+		}
+	}
+
+	// spells
+	for _, spell := range mob.Spells {
+		var class, desc, spec sql.NullString
+		var conc sql.NullInt32
+
+		if spell.ClassName != "SLA" {
+			if ok, clsid, err = recordExists(db, prefs, "Classes", "ID", "Name", spell.ClassName); !ok || err != nil {
+				return fmt.Errorf("monster %s references unknown spellcaster class %s (database error %v)", mob.Species, spell.ClassName, err)
+			}
+			class.Valid = true
+			class.Int32 = int32(clsid)
+		}
+		if spell.Description != "" {
+			desc.Valid = true
+			desc.String = spell.Description
+		}
+		if spell.Special != "" {
+			spec.Valid = true
+			spec.String = spell.Special
+		}
+		if !spell.NoConcentrationValue {
+			conc = true
+			conc.Int32 = int32(spell.Concentration)
+		}
+
+		if res, err = db.Exec(`
+			INSERT INTO SpellsPrepared (
+				MonsterID, ClassID, Description, CL, Concentration,
+				PlusDomain, Special
+			)
+			VALUES (?, (SELECT ID FROM Classes WHERE Name=?), ?)
+		`, id, class, desc, spell.CL, conc, spell.PlusDomain, spec); err != nil {
+			return err
+		}
+
+		if spid, err = res.LastInsertId(); err != nil {
+			return err
+		}
+
+		for _, eachSpell := range spell.Spells {
+			if ok, err = recordExistsWithoutID(db, prefs, "Spells", "Name", eachSpell.Name); !ok || err != nil {
+				return fmt.Errorf("monster %s references unknown spell name %s (database error %v)", mob.Species, eachSpell.Name, err)
+			}
+
+			var alt, freq, spec db.NullString
+			if eachSpell.AlternateName != "" {
+				alt.Valid = true
+				alt.String = eachSpell.AlternateName
+			}
+			if eachSpell.Frequency != "" {
+				freq.Valid = true
+				freq.String = eachSpell.Frequency
+			}
+			if eachSpell.Special != "" {
+				spec.Valid = true
+				spec.String = eachSpell.Special
+			}
+
+			if res, err = db.Exec(`
+				INSERT INTO SpellList (
+					CollectionID, SpellID, AlternateName, Frequency, Special
+				)
+				VALUES (?, (SELECT ID FROM Spells WHERE Name=?), ?, ?, ?)
+			`, spid, eachSpell.Name, alt, freq, spec); err != nil {
+				return err
+			}
+
+			if spellid, err = res.LastInsertId(); err != nil {
+				return err
+			}
+
+			for inst, slot := range eachSpell.Slots {
+				if res, err = db.Exec(`
+					INSERT INTO SpellSlots (
+						CollectionID, SpellID, Instance, IsCast, IsDomain
+					)
+					VALUES (?, ?, ?, ?, ?)
+				`, spid, spellid, inst, slot.IsCast, slot.IsDomain); err != nil {
+					return nil
+				}
+
+				if slotid, err = res.LastInsertId(); err != nil {
+					return err
+				}
+
+				for _, meta := range slot.MetaMagic {
+					if ok, err = recordExistsWithoutID(db, prefs, "Feats", "Code", meta); !ok || err != nil {
+						return fmt.Errorf("monster %s references unknown feat code %s (database error %v)", mob.Species, meta, err)
+					}
+
+					if _, err = db.Exec(`
+						INSERT INTO SpellSlotMeta (SlotID, MetaID)
+						VALUES (?, (SELECT ID FROM Feats WHERE Code=?))
+					`, slotid, meta); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+
+	return err
+}
+
 func exportBestiary(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 	var rows *sql.Rows
 	var err error
@@ -2551,12 +3359,19 @@ FROM
 		}
 		if f.Valid {
 			monster.Save.Fort.Mod = int(f.Int32)
+		} else {
+			monster.Save.Fort.NoSavingThrow = true
 		}
+
 		if r.Valid {
 			monster.Save.Refl.Mod = int(r.Int32)
+		} else {
+			monster.Save.Refl.NoSavingThrow = true
 		}
 		if w.Valid {
 			monster.Save.Will.Mod = int(w.Int32)
+		} else {
+			monster.Save.Will.NoSavingThrow = true
 		}
 		if ft.Valid {
 			monster.Save.Fort.Special = ft.String
@@ -2759,9 +3574,12 @@ FROM
 
 			if rows, err = query(db, prefs,
 				`SELECT 
-					TierGroup, BaseWeaponID, Multiple, Name, Attack, Damage,
+					TierGroup, Weapons.Code, Multiple, 
+					Name, Attack, Damage,
 					Threat, Critical, RangeInc, RangeMax, IsReach, Special, Mode
 				FROM AttackModes
+				LEFT JOIN Weapons
+					ON Weapons.ID=BaseWeaponID
 				WHERE
 					MonsterID=?
 				ORDER BY
@@ -2964,9 +3782,6 @@ FROM
 				var sb SpellBlock
 				var sb_db_id int
 
-				if monster.AC.Components == nil {
-					monster.AC.Components = make(map[string]int)
-				}
 				if err := rows.Scan(&sb_db_id, &cls, &desc, &sb.CL, &conc, &sb.PlusDomain, &spec); err != nil {
 					return err
 				}
@@ -3119,6 +3934,7 @@ FROM
 type Spell struct {
 	IsLocal     bool `json:",omitempty"`
 	Name        string
+	Code        string
 	School      string
 	Descriptors []string `json:",omitempty"`
 	Components  struct {
@@ -3187,7 +4003,343 @@ type Spell struct {
 	Patron      string `json:",omitempty"`
 }
 
-func importSpell(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error { return nil }
+func importSpell(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error {
+	var spell Spell
+	var err, err2 error
+	var id int64
+	var exists bool
+	var res sql.Result
+
+	if err = decoder.Decode(&spell); err != nil {
+		return err
+	}
+
+	if filterOut(prefs, TypeSpell, "spell", spell.Name, spell.Code) {
+		return nil
+	}
+
+	if exists, id, err = recordExists(db, prefs, "Spells", "ID", "Code", spell.Code); err != nil {
+		return err
+	}
+
+	var schoolID, descriptors, components int
+	var castspec, material, focus, range_, distspec, area, effect sql.NullString
+	var targets, durtime, durspec, save, saveeffect, savespec, srspec sql.NullString
+	var deity, domain, description, src, bloodline, patron sql.NullString
+	var distance, distperlevel, slalevel, materialcosts sql.NullInt32
+
+	if err = makeRecordExistWithoutID(db, prefs, "Schools", "Code", spell.School); err != nil {
+		return err
+	}
+	schoolIDs, err := getSpellSchoolIDs(db, prefs)
+	if err != nil {
+		return err
+	}
+	schoolID = schoolIDs[spell.School]
+	for _, desc := range spell.Descriptors {
+		if err = makeRecordExist(db, prefs, "SpellDescriptors", "Descriptor", desc); err != nil {
+			return err
+		}
+	}
+	descriptorIDs, err := getSpellDescriptorIDs(db, prefs)
+	if err != nil {
+		return err
+	}
+
+	for _, desc := range spell.Descriptors {
+		if did, ok := descriptorIDs[desc]; ok {
+			descriptors |= did
+		}
+	}
+
+	componentIDs, err := getSpellComponentIDs(db, prefs)
+	if err != nil {
+		return err
+	}
+
+	for _, comp := range spell.Descriptors {
+		if cid, ok := componentIDs[comp]; ok {
+			components |= cid
+		}
+	}
+
+	if spell.Casting.Special == "" {
+		castspec.Valid = false
+	} else {
+		castspec.Valid = true
+		castspec.String = spell.Casting.Special
+	}
+	if spell.Components.Material == "" {
+		material.Valid = false
+	} else {
+		material.Valid = true
+		material.String = spell.Components.Material
+	}
+	if spell.Components.Focus == "" {
+		focus.Valid = false
+	} else {
+		focus.Valid = true
+		focus.String = spell.Components.Focus
+	}
+	if spell.Range.Range == "" {
+		range_.Valid = false
+	} else {
+		range_.Valid = true
+		range_.String = spell.Range.Range
+	}
+	if spell.Range.DistanceSpecial == "" {
+		distspec.Valid = false
+	} else {
+		distspec.Valid = true
+		range_.String = spell.Range.DistanceSpecial
+	}
+	if spell.Effect.Area == "" {
+		area.Valid = false
+	} else {
+		area.Valid = true
+		area.String = spell.Effect.Area
+	}
+	if spell.Effect.Effect == "" {
+		effect.Valid = false
+	} else {
+		effect.Valid = true
+		effect.String = spell.Effect.Effect
+	}
+	if spell.Effect.Targets == "" {
+		targets.Valid = false
+	} else {
+		targets.Valid = true
+		targets.String = spell.Effect.Targets
+	}
+
+	if spell.Duration.Time == "" {
+		durtime.Valid = false
+	} else {
+		durtime.Valid = true
+		durtime.String = spell.Duration.Time
+	}
+	if spell.Duration.Special == "" {
+		durspec.Valid = false
+	} else {
+		durspec.Valid = true
+		durspec.String = spell.Duration.Special
+	}
+	if spell.Save.SavingThrow == "" {
+		save.Valid = false
+	} else {
+		save.Valid = true
+		save.String = spell.Save.SavingThrow
+	}
+	if spell.Save.Effect == "" {
+		saveeffect.Valid = false
+	} else {
+		saveeffect.Valid = true
+		saveeffect.String = spell.Save.Effect
+	}
+	if spell.Save.Special == "" {
+		savespec.Valid = false
+	} else {
+		savespec.Valid = true
+		savespec.String = spell.Save.Special
+	}
+	if spell.SR.Special == "" {
+		srspec.Valid = false
+	} else {
+		srspec.Valid = true
+		srspec.String = spell.SR.Special
+	}
+	if spell.Deity == "" {
+		deity.Valid = false
+	} else {
+		deity.Valid = true
+		deity.String = spell.Deity
+	}
+	if spell.Domain == "" {
+		domain.Valid = false
+	} else {
+		domain.Valid = true
+		domain.String = spell.Domain
+	}
+	if spell.Description == "" {
+		description.Valid = false
+	} else {
+		description.Valid = true
+		description.String = spell.Description
+	}
+	if spell.Source == "" {
+		src.Valid = false
+	} else {
+		src.Valid = true
+		src.String = spell.Source
+	}
+	if spell.Bloodline == "" {
+		bloodline.Valid = false
+	} else {
+		bloodline.Valid = true
+		bloodline.String = spell.Bloodline
+	}
+	if spell.Patron == "" {
+		patron.Valid = false
+	} else {
+		patron.Valid = true
+		patron.String = spell.Patron
+	}
+
+	slalevel.Valid = false
+	for _, clvl := range spell.ClassLevels {
+		if clvl.Class == "SLA" {
+			slalevel.Valid = true
+			slalevel.Int32 = int32(clvl.Level)
+			break
+		}
+	}
+
+	if spell.Components.HasCostlyComponents {
+		materialcosts.Valid = false
+	} else {
+		materialcosts.Valid = true
+		materialcosts.Int32 = int32(spell.Components.MaterialCosts)
+	}
+
+	if castingTimes, err := getCastingTimeList(db, prefs); err != nil || !slices.Contains[string](castingTimes, spell.Casting.Time) {
+		return fmt.Errorf("invalid casting time \"%s\" (database error %v)", spell.Casting.Time, err)
+	}
+
+	if spell.Range.Range != "" {
+		if ranges, err := getRangeList(db, prefs); err != nil || !slices.Contains[string](ranges, spell.Range.Range) {
+			return fmt.Errorf("invalid range \"%s\" (database error %v)", spell.Range.Range, err)
+		}
+		if spell.Range.Range != "feet" && spell.Range.Range != "miles" {
+			distance.Valid = false
+		} else {
+			distance.Valid = true
+			distance.Int32 = int32(spell.Range.Distance)
+			if spell.Range.DistancePerLevel == 0 {
+				distperlevel.Valid = false
+			} else {
+				distperlevel.Valid = true
+				distperlevel.Int32 = int32(spell.Range.DistancePerLevel)
+			}
+		}
+	}
+
+	if durations, err := getDurationList(db, prefs); err != nil || !slices.Contains[string](durations, spell.Duration.Duration) {
+		return fmt.Errorf("invalid duration \"%s\" (database error %v)", spell.Duration.Duration, err)
+	}
+
+	spell.SR.SR = strings.ToLower(spell.SR.SR)
+	if ress, err := getSpellResistanceList(db, prefs); err != nil || !slices.Contains[string](ress, spell.SR.SR) {
+		return fmt.Errorf("invalid SR \"%s\" (database error %v)", spell.SR.SR, err)
+	}
+
+	if spell.Save.SavingThrow != "" {
+		if saves, err := getSavingThrowList(db, prefs); err != nil || !slices.Contains[string](saves, spell.Save.SavingThrow) {
+			return fmt.Errorf("invalid saving throw \"%s\" (database error %v)", spell.Save.SavingThrow, err)
+		}
+	}
+
+	if spell.Save.Effect != "" {
+		if se, err := getSaveEffectsList(db, prefs); err != nil || !slices.Contains[string](se, spell.Save.Effect) {
+			return fmt.Errorf("invalid saving throw effect \"%s\" (database error %v)", spell.Save.Effect, err)
+		}
+	}
+
+	if exists {
+		_, err2 = db.Exec(`DELETE FROM SpellLevels WHERE SpellID=?`, id)
+		_, err = db.Exec(`
+			UPDATE Spells 
+			SET 
+				IsLocal=?, Code=?, Name=?, SchoolID=?, Descriptors=?, Components=?,
+				Material=?, Focus=?, CastingTime=?, CastingSpec=?, Range=?, Distance=?,
+				DistPerLevel=?, DistSpec=?, Area=?, Effect=?, Targets=?, Duration=?,
+				DurationTime=?, DurationSpec=?, DurationConc=?, DurationPerLvl=?,
+				SR=?, SRSpec=?, SRObject=?, SRHarmless=?, SavingThrow=?, SaveEffect=?,
+				SaveSpec=?, SaveObject=?, SaveHarmless=?, IsDismissible=?, IsDischarge=?,
+				IsShapeable=?, HasCostlyComponents=?, SLALevel=?, Deity=?,
+				Domain=?, Description=?, Source=?, MaterialCosts=?, Bloodline=?, 
+				Patron=?
+			WHERE
+				ID=?`,
+			spell.IsLocal, spell.Code, spell.Name, schoolID, descriptors, components,
+			material, focus, spell.Casting.Time, castspec, range_, distance, distperlevel,
+			distspec, area, effect, targets, spell.Duration.Duration, durtime, durspec,
+			spell.Duration.Concentration, spell.Duration.PerLevel,
+			spell.SR.SR, srspec, spell.SR.Object, spell.SR.Harmless,
+			save, saveeffect, savespec, spell.Save.Object, spell.Save.Harmless,
+			spell.IsDismissible, spell.IsDischarge, spell.IsShapeable,
+			spell.Components.HasCostlyComponents, slalevel, deity, domain,
+			description, src, materialcosts, bloodline, patron, id)
+	} else {
+		if res, err = db.Exec(`
+			INSERT INTO Spells (
+				IsLocal, Code, Name, SchoolID, Descriptors, Components,
+				Material, Focus, CastingTime, CastingSpec, Range, Distance,
+				DistPerLevel, DistSpec, Area, Effect, Targets, Duration,
+				DurationTime, DurationSpec, DurationConc, DurationPerLvl,
+				SR, SRSpec, SRObject, SRHarmless, SavingThrow, SaveEffect,
+				SaveSpec, SaveObject, SaveHarmless, IsDismissible, IsDischarge,
+				IsShapeable, HasCostlyComponents, SLALevel, Deity,
+				Domain, Description, Source, MaterialCosts, Bloodline, 
+				Patron
+			)`,
+			spell.IsLocal, spell.Code, spell.Name, schoolID, descriptors, components,
+			material, focus, spell.Casting.Time, castspec, range_, distance, distperlevel,
+			distspec, area, effect, targets, spell.Duration.Duration, durtime, durspec,
+			spell.Duration.Concentration, spell.Duration.PerLevel,
+			spell.SR.SR, srspec, spell.SR.Object, spell.SR.Harmless,
+			save, saveeffect, savespec, spell.Save.Object, spell.Save.Harmless,
+			spell.IsDismissible, spell.IsDischarge, spell.IsShapeable,
+			spell.Components.HasCostlyComponents, slalevel, deity, domain,
+			description, src, materialcosts, bloodline, patron); err != nil {
+			return err
+		}
+
+		if id, err = res.LastInsertId(); err != nil {
+			return err
+		}
+	}
+
+	if err != nil {
+		return err
+	}
+	if err2 != nil {
+		return err2
+	}
+
+	if (prefs.DebugBits & DebugMisc) != 0 {
+		if exists {
+			log.Printf("updated existing spell %s (database id %d)", spell.Name, id)
+		} else {
+			log.Printf("created new spell %s (database id %d)", spell.Name, id)
+		}
+	}
+
+	// add classes and levels
+	classIDs, err := getClassNameIDs(db, prefs)
+	if err != nil {
+		return err
+	}
+	for _, scl := range spell.ClassLevels {
+		if scl.Class != "SLA" {
+			cid, ok := classIDs[scl.Class]
+			if !ok {
+				return fmt.Errorf("class \"%s\" for spell \"%s\" is not defined", scl.Class, spell.Name)
+			}
+
+			if _, err = db.Exec(`
+				INSERT INTO SpellLevels (
+					SpellID, ClassID, Level
+				) 
+				VALUES (?,?,?)
+			`, id, cid, scl.Level); err != nil {
+				return err
+			}
+		}
+	}
+
+	return err
+}
+
 func exportSpells(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 	var rows *sql.Rows
 	var err error
@@ -3211,7 +4363,7 @@ func exportSpells(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 
 	if rows, err = query(db, prefs,
 		`SELECT 
-			Spells.ID, IsLocal, Spells.Name, Schools.Code, Descriptors, Components, Material,
+			Spells.ID, IsLocal, Spells.Name, Spells.Code, Schools.Code, Descriptors, Components, Material,
 			Focus, CastingTime, CastingSpec, Range, Distance, DistPerLevel,
 			DistSpec, Area, Effect, Targets, Duration, DurationTime,
 			DurationSpec, DurationConc, DurationPerLvl, SR, SRSpec, SRObject,
@@ -3236,7 +4388,7 @@ func exportSpells(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 		var dist, dpl, slalvl, mcosts sql.NullInt32
 		var spell_db_id, descriptors, components int
 
-		if err := rows.Scan(&spell_db_id, &spell.IsLocal, &spell.Name, &spell.School, &descriptors, &components,
+		if err := rows.Scan(&spell_db_id, &spell.IsLocal, &spell.Name, &spell.Code, &spell.School, &descriptors, &components,
 			&material, &focus, &spell.Casting.Time, &cspec, &rang, &dist, &dpl,
 			&distspec, &area, &effect, &targs, &spell.Duration.Duration, &dtime, &dspec, &spell.Duration.Concentration, &spell.Duration.PerLevel,
 			&spell.SR.SR, &srspec, &spell.SR.Object, &spell.SR.Harmless, &save, &seffect, &sspec, &spell.Save.Object, &spell.Save.Harmless,

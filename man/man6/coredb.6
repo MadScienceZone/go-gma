@@ -1,0 +1,292 @@
+'\" <<ital-is-var>>
+'\" <<bold-is-fixed>>
+.TH COREDB 6 "Go-GMA 5.6.0" 31-May-2023 "Games" \" @@mp@@
+.SH NAME
+coredb \- import/export entries in the GMA core SRD database
+.SH SYNOPSIS
+'\" <<usage>>
+.LP
+(If using the full GMA core tool suite)
+.LP
+.na
+.B gma
+.B go
+.B coredb
+[options as described below...]
+.ad
+.LP
+(Otherwise)
+.LP
+.na
+.B coredb
+.B \-h
+.LP
+.B coredb
+.B \-help
+.LP
+.B coredb
+.RB [ \-D 
+.IR flags ]
+.RB [ \-e
+.IR file ]
+.RB [ \-f
+.RI [\fB!\fP] regexp]
+.RB [ \-I ]
+.RB [ \-i
+.IR file ]
+.RB [ \-l
+.IR file ]
+.RB [ \-preferences
+.IR file ]
+.RB [ \-srd ]
+.RB [ \-t
+.IR list ]
+.LP
+.B coredb
+.RB [ \-debug 
+.IR flags ]
+.RB [ \-export
+.IR file ]
+.RB [ \-filter
+.RI [\fB!\fP] regexp]
+.RB [ \-ignore\-case ]
+.RB [ \-import
+.IR file ]
+.RB [ \-log
+.IR file ]
+.RB [ \-preferences
+.IR file ]
+.RB [ \-srd ]
+.RB [ \-type
+.IR list ]
+.ad
+'\" <</usage>>
+.SH DESCRIPTION
+.LP
+.B Coredb
+is used for maintenance of the core (SRD) database. Once the
+initial load of community-published SRD data is performed
+via
+.B gma
+.BR initdb ,
+you will probably add a number of your own entries to the database
+for your own campaign. These are known as \*(lqlocal\*(rq entries,
+while the ones that are in the core game's SRD content which are
+licensed to be freely used (according to the applicable license)
+are known as \*(lqSRD\*(rq entries.
+.LP
+If run with the
+.B \-export
+option,
+.B coredb
+will export the local entries from your core database to the specified
+output file, encoded in JSON.
+If run with the
+.B \-import
+option, the opposite is done:
+the JSON-encoded file is read, and its contents added to the core database.
+If this file's contents match the name or ID (as appropriate) of an existing
+entry, that entry is updated in-place in the database.
+.SH OPTIONS
+.LP
+The command-line options described below have a long form
+(e.g.,
+.BR \-log )
+and a short form
+(e.g.,
+.BR \-l )
+which are equivalent. In either case, the option may be
+introduced with either one or two hyphens (e.g.,
+.B \-log
+or
+.BR \-\-log ).
+Options which take parameter values may have the value separated
+from the option name by a space or an equals sign (e.g.,
+.BI \-log= path
+or
+.BR "\-log \fIpath\fP" ), 
+except for boolean flags which may be given
+alone (e.g.,
+.BR \-I )
+to indicate that the option is set to \*(lqtrue\*(rq or may be given
+an explicit value which must be attached to the option with an
+equals sign (e.g.,
+.B \-I=true
+or
+.BR \-I=false ).
+.LP
+You 
+'\" <</bold-is-fixed>>
+.I "may not"
+'\" <<bold-is-fixed>>
+combine multiple single-letter options into a single composite
+argument, (e.g., the options
+.B \-I
+and
+.B \-h
+would need to be entered as two separate options, not as
+.BR \-Ih ).
+'\" <<list>>
+.TP 
+.BI "\-D\fR, \fP\-debug " flags
+This adds debugging messages to
+.BR coredb "'s"
+output. The
+.I flags
+value is a comma-separated list of debug flag names, which
+may be any of the following:
+.RS
+'\" <<desc>>
+.TP 10
+.B all
+Enable all possible debugging flags.
+.TP
+.B none
+If you want to explicitly disable debugging, you can specify
+.B none
+for the
+.I flags
+value to override the previous flag list and effectively disable
+debugging.
+If
+.B none
+appears in a comma-separated flag list, it cancels all the
+previously-set flags, but any other flag names which occur after
+it will be set.
+.TP
+.B misc
+Show miscellaneous debugging messages.
+.TP
+.B queries
+Show SQL queries made to the database.
+.RE
+'\" <</>>
+.TP
+.BI "\-e\fR, \fP\-export " file
+Export the local entries from the database to the named
+JSON-encoded
+.IR file .
+.TP
+.BI "\-f\fR, \fP\-filter \fR[\fP!\fR]\fP" regexp
+When importing or exporting, only include entries matching the regular
+expression
+.IR regexp .
+If
+.I regexp
+begins with a
+.RB \*(lq ! \*(rq
+character, only entries which do
+'\" <</ital-is-var>>
+.I not
+'\" <<ital-is-var>>
+match the expression are included.
+.RS
+.LP
+The
+.I regexp
+is matched against the
+.B Code
+and
+.B Name
+fields of the entries in question. If either matches, then
+the entry is included (or excluded). For language entries,
+the
+.B Language
+field is checked instead.
+For monsters in the bestiary, the
+.B Code
+and
+.B Species
+fields are checked.
+.RE
+.TP
+.BR \-I , " \-ignore\-case"
+Pattern matching via the
+.B \-filter
+option should be done irrespective of case.
+.TP
+.BI "\-i\fR, \fP\-import " file
+Read the contents of the JSON-encoded
+.IR file ,
+importing them to the database.
+.TP
+.BI "\-l\fR, \fP\-log " file
+Directs log messages (including any debugging output) to
+the named
+.I file
+instead of the standard output. You may explicitly specify
+the standard output by using a single hyphen as the file name
+(e.g.,
+.RB \*(lq \-log=\- \*(rq).
+.TP
+.BI "\-preferences " file
+Normally,
+.B coredb
+reads the default GMA preferences file to obtain the pathname of
+the core database file. This option specifies an alternative
+preferences file from which to get that pathname.
+.TP
+.B \-srd
+Instead of exporting only the local entries and assuming imported entries are local,
+export SRD entries and assume imported entries are SRD.
+.TP
+.BI "\-t\fR, \fP\-type " list
+Entries exported will include only database entries of the
+specified type(s). When importing, any records in the import file
+which are not of the specified type(s) are skipped over.
+The
+.I list
+value is a comma-separated list of type names, which
+may be any of the following:
+.RS
+'\" <<desc>>
+.TP 12
+.B all
+All entry types (the default).
+.TP
+.B none
+No types.
+If
+.B none
+appears in a comma-separated type list, it cancels all the
+previously-set types, but any other type names which occur after
+it will be set.
+.TP
+.B bestiary
+Monster entries.
+.TP
+.BR class [ es ]
+Character class entries.
+.TP
+.BR feat [ s ]
+Feats.
+.TP
+.BR language [ s ]
+Languages.
+.TP
+.BR skill [ s ]
+Skills.
+.TP
+.BR spell [ s ]
+Spells.
+.TP
+.BR weapon [ s ]
+Weapons.
+.RE
+'\" <</>>
+'\" <</>>
+.SH "SEE ALSO"
+.LP
+.BR gma (6),
+.BR importdb (6),
+.BR initdb (6).
+.SH AUTHOR
+.LP
+Steve Willoughby / steve@madscience.zone.
+.SH HISTORY
+.LP
+The core database appeared in GMA Core version 7.0; this utility
+appeared in go-gma version 5.7.0.
+.SH BUGS
+.SH COPYRGHT
+Part of the GMA software suite, copyright \(co 1992\-2023 by Steven L. Willoughby, Aloha, Oregon, USA. All Rights Reserved. Distributed under BSD-3-Clause License. \"@m(c)@
