@@ -441,7 +441,7 @@ func main() {
 			log.Fatalf("expected 'GMA_Core_Database_Export_version' value not missing or wrong type")
 		}
 		if version != 1 {
-			log.Fatalf("File is version %v, which this version of gma coredb does not support.")
+			log.Fatalf("File is version %v, which this version of gma coredb does not support.", version)
 		}
 		log.Printf("importing from version %v file", version)
 
@@ -688,7 +688,15 @@ func main() {
 // MonsterDomains(*>MonsterID, *>DomainID)
 
 // filterOut returns true if we should skip this entry. It also logs the reason why.
-func filterOut(prefs *AppPreferences, entryType TypeFilter, entryTypeName, entryName, entryName2 string) bool {
+
+func filterOut(prefs *AppPreferences, entryType TypeFilter, entryTypeName, entryName, entryName2 string, isLocal bool) bool {
+	if isLocal == prefs.SRD {
+		if (prefs.DebugBits & DebugMisc) != 0 {
+			log.Printf("skipping %s %s because -srd=%v", entryTypeName, entryName, prefs.SRD)
+			return true
+		}
+	}
+
 	if (prefs.TypeBits & entryType) == 0 {
 		if (prefs.DebugBits & DebugMisc) != 0 {
 			log.Printf("skipping %s %s because it's not in the requested type filter", entryTypeName, entryName)
@@ -974,7 +982,7 @@ func importClass(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error
 		return err
 	}
 
-	if filterOut(prefs, TypeClass, "class", class.Name, class.Code) {
+	if filterOut(prefs, TypeClass, "class", class.Name, class.Code, class.IsLocal) {
 		return nil
 	}
 
@@ -1127,7 +1135,7 @@ func exportClasses(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 			return err
 		}
 
-		if filterOut(prefs, TypeClass, "class", cls.Name, cls.Code) {
+		if filterOut(prefs, TypeClass, "class", cls.Name, cls.Code, cls.IsLocal) {
 			continue
 		}
 
@@ -1137,13 +1145,6 @@ func exportClasses(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 			}
 		} else {
 			firstLine = false
-		}
-
-		if prefs.SRD == cls.IsLocal {
-			if (prefs.DebugBits & DebugMisc) != 0 {
-				log.Printf("Skipping class %s because SRD=%v", cls.Code, prefs.SRD)
-			}
-			continue
 		}
 
 		if mtype.Valid || abil.Valid || bonus.Valid || spon.Valid {
@@ -1294,7 +1295,7 @@ func importFeat(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error 
 		return err
 	}
 
-	if filterOut(prefs, TypeFeat, "feat", feat.Name, feat.Code) {
+	if filterOut(prefs, TypeFeat, "feat", feat.Name, feat.Code, feat.IsLocal) {
 		return nil
 	}
 
@@ -1505,7 +1506,7 @@ func exportFeats(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 			return err
 		}
 
-		if filterOut(prefs, TypeFeat, "feat", feat.Name, feat.Code) {
+		if filterOut(prefs, TypeFeat, "feat", feat.Name, feat.Code, feat.IsLocal) {
 			continue
 		}
 
@@ -1549,13 +1550,6 @@ func exportFeats(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 		}
 		if traits.Valid {
 			feat.SuggestedTraits = traits.String
-		}
-
-		if prefs.SRD == feat.IsLocal {
-			if (prefs.DebugBits & DebugMisc) != 0 {
-				log.Printf("Skipping feat %s because SRD=%v", feat.Code, prefs.SRD)
-			}
-			continue
 		}
 
 		if err = func() error {
@@ -1661,7 +1655,7 @@ func importWeapon(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) erro
 		return err
 	}
 
-	if filterOut(prefs, TypeWeapon, "weapon", weap.Name, weap.Code) {
+	if filterOut(prefs, TypeWeapon, "weapon", weap.Name, weap.Code, weap.IsLocal) {
 		return nil
 	}
 
@@ -1803,7 +1797,7 @@ func exportWeapons(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 			return err
 		}
 
-		if filterOut(prefs, TypeWeapon, "weapon", weap.Name, weap.Code) {
+		if filterOut(prefs, TypeWeapon, "weapon", weap.Name, weap.Code, weap.IsLocal) {
 			continue
 		}
 
@@ -1813,13 +1807,6 @@ func exportWeapons(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 			}
 		} else {
 			firstLine = false
-		}
-
-		if prefs.SRD == weap.IsLocal {
-			if (prefs.DebugBits & DebugMisc) != 0 {
-				log.Printf("Skipping weapon %s because SRD=%v", weap.Code, prefs.SRD)
-			}
-			continue
 		}
 
 		weap.Damage = make(map[string]string)
@@ -1920,7 +1907,7 @@ func importSkill(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error
 		return err
 	}
 
-	if filterOut(prefs, TypeSkill, "skill", sk.Name, sk.Name) {
+	if filterOut(prefs, TypeSkill, "skill", sk.Name, sk.Name, sk.IsLocal) {
 		return nil
 	}
 
@@ -2042,7 +2029,7 @@ func exportSkills(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 			return err
 		}
 
-		if filterOut(prefs, TypeSkill, "skill", sk.Name, sk.Name) {
+		if filterOut(prefs, TypeSkill, "skill", sk.Name, sk.Name, sk.IsLocal) {
 			continue
 		}
 
@@ -2052,13 +2039,6 @@ func exportSkills(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 			}
 		} else {
 			firstLine = false
-		}
-
-		if prefs.SRD == sk.IsLocal {
-			if (prefs.DebugBits & DebugMisc) != 0 {
-				log.Printf("Skipping skill %s because SRD=%v", sk.Name, prefs.SRD)
-			}
-			continue
 		}
 
 		if source.Valid {
@@ -2115,7 +2095,7 @@ func importLanguage(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) er
 		return err
 	}
 
-	if filterOut(prefs, TypeLanguage, "language", lang.Language, lang.Language) {
+	if filterOut(prefs, TypeLanguage, "language", lang.Language, lang.Language, lang.IsLocal) {
 		return nil
 	}
 
@@ -2162,7 +2142,7 @@ func exportLanguages(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 			return err
 		}
 
-		if filterOut(prefs, TypeLanguage, "language", lang.Language, lang.Language) {
+		if filterOut(prefs, TypeLanguage, "language", lang.Language, lang.Language, lang.IsLocal) {
 			continue
 		}
 
@@ -2172,13 +2152,6 @@ func exportLanguages(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 			}
 		} else {
 			firstLine = false
-		}
-
-		if prefs.SRD == lang.IsLocal {
-			if (prefs.DebugBits & DebugMisc) != 0 {
-				log.Printf("Skipping language %s because SRD=%v", lang.Language, prefs.SRD)
-			}
-			continue
 		}
 
 		bytes, err := json.MarshalIndent(lang, "", "    ")
@@ -2468,7 +2441,7 @@ func importMonster(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) err
 		return err
 	}
 
-	if filterOut(prefs, TypeBestiary, "monster", mob.Name, mob.Species) {
+	if filterOut(prefs, TypeBestiary, "monster", mob.Code, mob.Species, mob.IsLocal) {
 		return nil
 	}
 
@@ -2509,7 +2482,7 @@ func importMonster(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) err
 		sq.Valid = true
 		sq.String = mob.SQ
 	}
-	if mob.EnvironmenT != "" {
+	if mob.Environment != "" {
 		env.Valid = true
 		env.String = mob.Environment
 	}
@@ -2919,7 +2892,7 @@ func importMonster(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) err
 	}
 
 	// armor class
-	for actype, acval := range monster.AC.Components {
+	for actype, acval := range mob.AC.Components {
 		if err = makeRecordExist(db, prefs, "ACCTypes", "Code", actype); err != nil {
 			return err
 		}
@@ -2934,9 +2907,10 @@ func importMonster(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) err
 	// attack modes
 	var seq int
 	var lastTier int
-	for _, amode := range monster.AttackModes {
+	for _, amode := range mob.AttackModes {
 		var baseweap sql.NullInt32
 		var weapid int64
+		var ok bool
 
 		if lastTier != amode.Tier {
 			lastTier = amode.Tier
@@ -3031,6 +3005,7 @@ func importMonster(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) err
 
 	// feats
 	for _, feat := range mob.Feats {
+		var ok bool
 		if ok, err = recordExistsWithoutID(db, prefs, "Feats", "Code", feat.Code); !ok || err != nil {
 			return fmt.Errorf("monster %s references unknown feat code %s (database error %v)", mob.Species, feat.Code, err)
 		}
@@ -3051,6 +3026,7 @@ func importMonster(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) err
 
 	// skills
 	for _, skill := range mob.Skills {
+		var ok bool
 		if ok, err = recordExistsWithoutID(db, prefs, "Skills", "Code", skill.Code); !ok || err != nil {
 			return fmt.Errorf("monster %s references unknown skill code %s (database error %v)", mob.Species, skill.Code, err)
 		}
@@ -3071,8 +3047,11 @@ func importMonster(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) err
 
 	// spells
 	for _, spell := range mob.Spells {
-		var class, desc, spec sql.NullString
-		var conc sql.NullInt32
+		var ok bool
+		var desc, spec sql.NullString
+		var class, conc sql.NullInt32
+		var clsid int64
+		var spid int64
 
 		if spell.ClassName != "SLA" {
 			if ok, clsid, err = recordExists(db, prefs, "Classes", "ID", "Name", spell.ClassName); !ok || err != nil {
@@ -3090,7 +3069,7 @@ func importMonster(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) err
 			spec.String = spell.Special
 		}
 		if !spell.NoConcentrationValue {
-			conc = true
+			conc.Valid = true
 			conc.Int32 = int32(spell.Concentration)
 		}
 
@@ -3113,7 +3092,7 @@ func importMonster(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) err
 				return fmt.Errorf("monster %s references unknown spell name %s (database error %v)", mob.Species, eachSpell.Name, err)
 			}
 
-			var alt, freq, spec db.NullString
+			var alt, freq, spec sql.NullString
 			if eachSpell.AlternateName != "" {
 				alt.Valid = true
 				alt.String = eachSpell.AlternateName
@@ -3136,6 +3115,7 @@ func importMonster(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) err
 				return err
 			}
 
+			var spellid, slotid int64
 			if spellid, err = res.LastInsertId(); err != nil {
 				return err
 			}
@@ -3234,7 +3214,7 @@ FROM
 			return err
 		}
 
-		if filterOut(prefs, TypeBestiary, "monster", monster.Species, monster.Code) {
+		if filterOut(prefs, TypeBestiary, "monster", monster.Species, monster.Code, monster.IsLocal) {
 			continue
 		}
 
@@ -3501,13 +3481,6 @@ FROM
 			if (aligns & (1 << bit)) != 0 {
 				monster.Alignment.Alignments = append(monster.Alignment.Alignments, align)
 			}
-		}
-
-		if prefs.SRD == monster.IsLocal {
-			if (prefs.DebugBits & DebugMisc) != 0 {
-				log.Printf("Skipping monster %s because SRD=%v", monster.Species, prefs.SRD)
-			}
-			continue
 		}
 
 		if err = func() error {
@@ -4014,7 +3987,7 @@ func importSpell(decoder *json.Decoder, db *sql.DB, prefs *AppPreferences) error
 		return err
 	}
 
-	if filterOut(prefs, TypeSpell, "spell", spell.Name, spell.Code) {
+	if filterOut(prefs, TypeSpell, "spell", spell.Name, spell.Code, spell.IsLocal) {
 		return nil
 	}
 
@@ -4397,7 +4370,7 @@ func exportSpells(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 			return err
 		}
 
-		if filterOut(prefs, TypeSpell, "spell", spell.Name, spell.Name) {
+		if filterOut(prefs, TypeSpell, "spell", spell.Name, spell.Name, spell.IsLocal) {
 			continue
 		}
 
@@ -4489,13 +4462,6 @@ func exportSpells(fp *os.File, db *sql.DB, prefs *AppPreferences) error {
 			if (descriptors & (1 << bit)) != 0 {
 				spell.Descriptors = append(spell.Descriptors, desc)
 			}
-		}
-
-		if prefs.SRD == spell.IsLocal {
-			if (prefs.DebugBits & DebugMisc) != 0 {
-				log.Printf("Skipping spell %s because SRD=%v", spell.Name, prefs.SRD)
-			}
-			continue
 		}
 
 		if err = func() error {
