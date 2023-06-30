@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      ______     _______               #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    / ____ \   (  __   )              #
-# | (    \/| () () || (   ) | Master's  | (    \/   ( (    \/   | (  )  |              #
-# | |      | || || || (___) | Assistant | (____     | (____     | | /   |              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    |  ___ \    | (/ /) |              #
-# | | \_  )| |   | || (   ) |                 ) )   | (   ) )   |   / | |              #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ |  (__) |              #
-# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)(_______)              #
+#  _______  _______  _______             _______     ______      _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \    (  __   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  )   | (  )  |              #
+# | |      | || || || (___) | Assistant | (____         /  /    | | /   |              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       /  /     | (/ /) |              #
+# | | \_  )| |   | || (   ) |                 ) )     /  /      |   / | |              #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  /  /     _ |  (__) |              #
+# (_______)|/     \||/     \| Client    \______/ (_) \_/     (_)(_______)              #
 #                                                                                      #
 ########################################################################################
 */
@@ -23,6 +23,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -270,6 +271,64 @@ type UserPreferences struct {
 }
 
 //
+// InitiativeSeedData represents each entry in the GMA initiative seed list.
+//
+type InitiativeSeedData struct {
+	Name         string `json:"name"`
+	Dexterity    int    `json:"dex"`
+	Constitution int    `json:"con"`
+	InitAdj      int    `json:"init_adj"`
+	HP           int    `json:"hp"`
+	BlurHP       int    `json:"blur_hp"`
+}
+
+//
+// CasterData represents each entry in the GMA caster level list.
+//
+type CasterData struct {
+	Name string `json:"name"`
+	CL   int    `json:"cl"`
+}
+
+//
+// GMAPreferences represents the preferences settings for GMA and its supporting utilities.
+//
+type GMAPreferences struct {
+	GMAPreferencesVersion int    `json:"gma_preferences_file_version"`
+	CoreDBPath            string `json:"core_db"`
+	Appearance            struct {
+		DarkMode bool `json:"dark_mode"`
+	} `json:"appearance"`
+	Worlds             map[string]GMAWorld          `json:"worlds"`
+	Networks           map[string]GMANetworkProfile `json:"networks"`
+	CurrentWorldName   string                       `json:"current_world"`
+	CurrentNetworkName string                       `json:"network_profile"`
+}
+
+//
+// GMAWorld represents the preferences settings for each campaign world.
+//
+type GMAWorld struct {
+	CalendarType         string               `json:"calendar_type"`
+	ModulePath           string               `json:"module,omitempty"`
+	BlurHP               int                  `json:"blur_hp,omitempty"`
+	DBName               string               `json:"db_name"`
+	DisplayName          string               `json:"display_name"`
+	InitiativeBackupPath string               `json:"initiative_backup_path,omitempty"`
+	Password             string               `json:"password,omitempty"`
+	InitiativeSeed       []InitiativeSeedData `json:"initiative_seed"`
+	CasterLevels         []CasterData         `json:"caster_levels"`
+}
+
+//
+// GMANetworkProfile represents the preferences settings for each network profile.
+//
+type GMANetworkProfile struct {
+	Hostname string `json:"hostname,omitempty"`
+	Port     int    `json:"port,omitempty"`
+}
+
+//
 // StyleDescription describes the different kinds of style settings.
 //
 type StyleDescription struct {
@@ -317,6 +376,24 @@ type DialogStyles struct {
 	MinorGridColor   ColorSet `json:"grid_minor,omitempty"`
 	MajorGridColor   ColorSet `json:"grid_major,omitempty"`
 	PresetNameColor  ColorSet `json:"preset_name,omitempty"`
+}
+
+//
+// DefaultGMAPreferences returns a GMAPreferences value with default values.
+//
+func DefaultGMAPreferences() (GMAPreferences, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return GMAPreferences{}, err
+	}
+
+	return GMAPreferences{
+		CoreDBPath: filepath.Join(homeDir, ".gma", "core.db"),
+		Networks: map[string]GMANetworkProfile{
+			"offline": GMANetworkProfile{},
+		},
+		CurrentNetworkName: "offline",
+	}, nil
 }
 
 //
@@ -617,6 +694,24 @@ func DefaultPreferences() UserPreferences {
 }
 
 //
+// LoadGMAPreferencesWithDefaults is like LoadPreferencesWithDefaults but for
+// the GMA preferences file instead of the mapper's.
+//
+func LoadGMAPreferencesWithDefaults(stream io.Reader) (GMAPreferences, error) {
+	prefs, err := DefaultGMAPreferences()
+	if err != nil {
+		return prefs, err
+	}
+	if err := prefs.Update(stream); err != nil {
+		return prefs, err
+	}
+	if prefs.GMAPreferencesVersion != 1 {
+		return prefs, fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAPreferencesVersion)
+	}
+	return prefs, nil
+}
+
+//
 // LoadPreferencesWithDefaults reads a set of saved preferences from an open file
 // or other io.Reader object. It provides default values for fields not specified in
 // the input data.
@@ -662,6 +757,22 @@ func (prefs *UserPreferences) Update(stream io.Reader) error {
 	}
 	if prefs.GMAMapperPreferencesVersion != 1 {
 		return fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAMapperPreferencesVersion)
+	}
+	return nil
+}
+
+//
+// Update reads a set of saved preferences as LoadGMAPreferences does, but
+// rather than returning a new GMAPreferences value, it updates the
+// values of an existing GMAPreferences value with the input data.
+//
+func (prefs *GMAPreferences) Update(stream io.Reader) error {
+	err := json.NewDecoder(stream).Decode(prefs)
+	if err != nil {
+		return err
+	}
+	if prefs.GMAPreferencesVersion != 1 {
+		return fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAPreferencesVersion)
 	}
 	return nil
 }
@@ -807,7 +918,7 @@ func SearchInPath(program string) (string, error) {
 	return "", fmt.Errorf("file not found in PATH")
 }
 
-// @[00]@| Go-GMA 5.6.0
+// @[00]@| Go-GMA 5.7.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

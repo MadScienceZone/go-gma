@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      ______     _______               #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    / ____ \   (  __   )              #
-# | (    \/| () () || (   ) | Master's  | (    \/   ( (    \/   | (  )  |              #
-# | |      | || || || (___) | Assistant | (____     | (____     | | /   |              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    |  ___ \    | (/ /) |              #
-# | | \_  )| |   | || (   ) |                 ) )   | (   ) )   |   / | |              #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ |  (__) |              #
-# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)(_______)              #
+#  _______  _______  _______             _______     ______      _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \    (  __   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  )   | (  )  |              #
+# | |      | || || || (___) | Assistant | (____         /  /    | | /   |              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       /  /     | (/ /) |              #
+# | | \_  )| |   | || (   ) |                 ) )     /  /      |   / | |              #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  /  /     _ |  (__) |              #
+# (_______)|/     \||/     \| Client    \______/ (_) \_/     (_)(_______)              #
 #                                                                                      #
 ########################################################################################
 #
@@ -199,7 +199,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.6.0" //@@##@@
+const GoVersionNumber="5.7.0" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -228,10 +228,10 @@ func init() {
 		defaultLog      = ""
 	)
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s [-Dhm] [-C configfile] [-c calendar] [-H host] [-l logfile] [-P password] [-p port] [-S profile] [-u user] [-list-profiles]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s [-h] [-m] [-C configfile] [-c calendar] [-D list] [-H host] [-l logfile] [-P password] [-p port] [-S profile] [-u user] [-list-profiles]\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "  An option 'x' with a value may be set by '-x value', '-x=value', '--x value', or '--x=value'.\n")
 		fmt.Fprintf(os.Stderr, "  A flag 'x' may be set by '-x', '--x', '-x=true|false' or '--x=true|false'\n")
-		fmt.Fprintf(os.Stderr, "  Options may NOT be combined into a single argument (use '-D -m', not '-Dm').\n")
+		fmt.Fprintf(os.Stderr, "  Options may NOT be combined into a single argument (use '-h -m', not '-hm').\n")
 		fmt.Fprintf(os.Stderr, "\n")
 		flag.PrintDefaults()
 	}
@@ -1878,7 +1878,7 @@ func colorize(text, color string, mono bool) string {
 }
 
 /*
-# @[00]@| Go-GMA 5.6.0
+# @[00]@| Go-GMA 5.7.0
 # @[01]@|
 # @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

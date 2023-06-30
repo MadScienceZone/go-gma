@@ -1,14 +1,20 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.6.0                <!-- @@##@@ -->
- * Effective Date: 31-May-2023			<!-- @@##@@ -->
+ * This Package Version: 5.7.0                <!-- @@##@@ -->
+ * Effective Date: 30-Jun-2023			<!-- @@##@@ -->
 
 ## Compatibility
  * GMA Core API Library Version: 6.3		<!-- @@##@@ -->
  * GMA Mapper Version: 4.10		<!-- @@##@@ -->
  * GMA Mapper Protocol: 406		<!-- @@##@@ -->
  * GMA Mapper File Format: 21		<!-- @@##@@ -->
+
+## v5.7.0
+### Enhancements
+ * Added `coredb` program and supporting functions and types in the `util` package to import/export entries to/from the core game database (which will be) introducted in GMA Core 7.0.
+ * Added the GMA PostScript preamble file as `string` constants `text.commonPostScriptPreamble` and `text.gmaPostScriptPreamble`
+ * Added data structures and functions to access the global GMA preferences settings (which will be) introduced in GMA Core 7.0.
 
 ## v5.6.0
 ### Enhancements
