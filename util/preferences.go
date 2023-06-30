@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      ______     _______               #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    / ____ \   (  __   )              #
-# | (    \/| () () || (   ) | Master's  | (    \/   ( (    \/   | (  )  |              #
-# | |      | || || || (___) | Assistant | (____     | (____     | | /   |              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    |  ___ \    | (/ /) |              #
-# | | \_  )| |   | || (   ) |                 ) )   | (   ) )   |   / | |              #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ |  (__) |              #
-# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)(_______)              #
+#  _______  _______  _______             _______     ______      _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \    (  __   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  )   | (  )  |              #
+# | |      | || || || (___) | Assistant | (____         /  /    | | /   |              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       /  /     | (/ /) |              #
+# | | \_  )| |   | || (   ) |                 ) )     /  /      |   / | |              #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  /  /     _ |  (__) |              #
+# (_______)|/     \||/     \| Client    \______/ (_) \_/     (_)(_______)              #
 #                                                                                      #
 ########################################################################################
 */
@@ -315,7 +315,7 @@ type GMAWorld struct {
 	DBName               string               `json:"db_name"`
 	DisplayName          string               `json:"display_name"`
 	InitiativeBackupPath string               `json:"initiative_backup_path,omitempty"`
-	Password             string               `json:"password,omitemptyh"`
+	Password             string               `json:"password,omitempty"`
 	InitiativeSeed       []InitiativeSeedData `json:"initiative_seed"`
 	CasterLevels         []CasterData         `json:"caster_levels"`
 }
@@ -918,7 +918,7 @@ func SearchInPath(program string) (string, error) {
 	return "", fmt.Errorf("file not found in PATH")
 }
 
-// @[00]@| Go-GMA 5.6.0
+// @[00]@| Go-GMA 5.7.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

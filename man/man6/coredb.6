@@ -1,6 +1,6 @@
 '\" <<ital-is-var>>
 '\" <<bold-is-fixed>>
-.TH COREDB 6 "Go-GMA 5.6.0" 31-May-2023 "Games" \" @@mp@@
+.TH COREDB 6 "Go-GMA 5.7.0" 30-Jun-2023 "Games" \" @@mp@@
 .SH NAME
 coredb \- import/export entries in the GMA core SRD database
 .SH SYNOPSIS
@@ -253,7 +253,11 @@ previously-set types, but any other type names which occur after
 it will be set.
 .TP
 .B bestiary
-Monster entries.
+Monster entries. (The names
+.BR creature [ s ]
+and
+.BR monster [ s ]
+are also recognized.)
 .TP
 .BR class [ es ]
 Character class entries.
@@ -275,6 +279,18 @@ Weapons.
 .RE
 '\" <</>>
 '\" <</>>
+.SH "FILE FORMAT"
+.LP
+The JSON file used for exporting and importing operations is as documented for the
+.B util.CoreImport
+function of the Go-GMA project (see
+'\" <</ital-is-var>>
+'\" <<TeX>>
+'\" \href{https://pkg.go.dev/github.com/MadScienceZone/go-gma/v5/util#CoreImport}{pkg.go.dev/github.com/MadScienceZone/go-gma/v5/util#CoreImport}
+.IR https://pkg.go.dev/github.com/MadScienceZone/go-gma/v5/util#CoreImport ).
+'\" <</TeX>>
+Each of the data structures marshalled into JSON for monsters, weapons, etc., are
+documented on the same page at that URL.
 .SH "SEE ALSO"
 .LP
 .BR gma (6),

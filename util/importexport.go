@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      ______     _______               #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    / ____ \   (  __   )              #
-# | (    \/| () () || (   ) | Master's  | (    \/   ( (    \/   | (  )  |              #
-# | |      | || || || (___) | Assistant | (____     | (____     | | /   |              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    |  ___ \    | (/ /) |              #
-# | | \_  )| |   | || (   ) |                 ) )   | (   ) )   |   / | |              #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ |  (__) |              #
-# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)(_______)              #
+#  _______  _______  _______             _______     ______      _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \    (  __   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  )   | (  )  |              #
+# | |      | || || || (___) | Assistant | (____         /  /    | | /   |              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       /  /     | (/ /) |              #
+# | | \_  )| |   | || (   ) |                 ) )     /  /      |   / | |              #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  /  /     _ |  (__) |              #
+# (_______)|/     \||/     \| Client    \______/ (_) \_/     (_)(_______)              #
 #                                                                                      #
 ########################################################################################
 #
@@ -48,13 +48,21 @@ import (
 type CorePreferences struct {
 	// If true, the sense of FilterRegexp is reversed: import/export only if pattern NOT matched.
 	FilterExclude bool
+
 	// If true, import/export SRD data, otherwise local entries.
 	SRD bool
+
 	// These bits indicate what kind of debugging information to send to the log output.
 	DebugBits DebugFlags
+
 	// These bits filter the kinds of entries to be imported or exported.
 	TypeBits TypeFilter
+
 	// If non-nil, only entries matching this regular expression will be included.
+	// For most data types, the regexp is matched against the Code and Name struct fields.
+	// The entry is considered a match if either field contains text that matches the regexp.
+	// For BaseLanguage, the Language field is matched. For monsters, the Code and Species
+	// fields are checked.
 	FilterRegexp *regexp.Regexp
 }
 
@@ -72,7 +80,7 @@ type CorePreferences struct {
 // must appear first, and SRD must appear last.
 //   <v>        ::= <integer> (file format version; currently must be 1)
 //   <type>     ::= Bestiary | Classes | Feats | Languages | Skills | Spells | Weapons
-//   <src_bool> ::= true | false (true if importing/exporting SRD data; false for local entries)
+//   <srd_bool> ::= true | false (true if importing/exporting SRD data; false for local entries)
 //
 // Given an open database connection db and a file fp open for reading, this will read through the
 // JSON-encoded data from fp, calling the appropriate subordinate functions to handle the import of
@@ -1133,7 +1141,7 @@ type Feat struct {
 	Parameters        string   `json:",omitempty"`
 	IsLocal           bool     `json:",omitempty"`
 	Description       string   `json:",omitempty"`
-	Flags             uint64   `json:""`
+	Flags             uint64   `json:"-"`
 	Prerequisites     string   `json:",omitempty"`
 	Benefit           string   `json:",omitempty"`
 	Normal            string   `json:",omitempty"`
@@ -4404,7 +4412,7 @@ func ExportSpells(fp *os.File, db *sql.DB, prefs *CorePreferences) error {
 }
 
 /*
-# @[00]@| Go-GMA 5.6.0
+# @[00]@| Go-GMA 5.7.0
 # @[01]@|
 # @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
