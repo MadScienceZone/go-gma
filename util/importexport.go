@@ -1336,7 +1336,7 @@ func ImportFeat(decoder *json.Decoder, db *sql.DB, prefs *CorePreferences) error
 
 	// add feat types
 	for _, ftype := range feat.Types {
-		if err = makeRecordExist(db, prefs, "FeatTypes", "FeatType", ftype); err != nil {
+		if err = makeRecordExistWithoutID(db, prefs, "FeatTypes", "FeatType", ftype); err != nil {
 			return err
 		}
 		if _, err = db.Exec(`INSERT INTO FeatFeatTypes (FeatID, FeatType) VALUES (?, ?)`, id, ftype); err != nil {
