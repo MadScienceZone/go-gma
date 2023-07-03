@@ -1,7 +1,7 @@
 DIRS=map-console map-update preset-update server upload-presets coredb
 
 binaries:
-	@echo "(run make help for instructions)"
+	@echo "(run 'make help' for instructions)"
 	@for d in $(DIRS); do \
 		echo "building $$d"; \
 		(cd cmd/$$d && go build); \
