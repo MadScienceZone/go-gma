@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______      _______               #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \    (  __   )              #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  )   | (  )  |              #
-# | |      | || || || (___) | Assistant | (____         /  /    | | /   |              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       /  /     | (/ /) |              #
-# | | \_  )| |   | || (   ) |                 ) )     /  /      |   / | |              #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  /  /     _ |  (__) |              #
-# (_______)|/     \||/     \| Client    \______/ (_) \_/     (_)(_______)              #
+#  _______  _______  _______             _______      _____      _______         _____ #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    (  __   )       (  ___ #
+# | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )   | (  )  |       | (    #
+# | |      | || || || (___) | Assistant | (____      \     /    | | /   | _____ | (___ #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \    | (/ /) |(_____)|  ___ #
+# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )   |   / | |       | (    #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ |  (__) |       | )    #
+# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)(_______)       |/     #
 #                                                                                      #
 ########################################################################################
 #
@@ -199,7 +199,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.7.0" //@@##@@
+const GoVersionNumber="5.8.0-alpha" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -726,6 +726,14 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"size", m.Size},
 		)
 	case mapper.AddImageMessagePayload:
+		if m.Animation != nil {
+			printFields(mono, "AddImage animataion parameters",
+				fieldDesc{"name", m.Name},
+				fieldDesc{"frames", m.Animation.Frames},
+				fieldDesc{"speed", m.Animation.FrameSpeed},
+				fieldDesc{"loops", m.Animation.Loops},
+			)
+		}
 		for i, inst := range m.Sizes {
 			if inst.ImageData != nil {
 				printFields(mono, fmt.Sprintf("AddImage %d of %d", i+1, len(m.Sizes)),
@@ -1878,7 +1886,7 @@ func colorize(text, color string, mono bool) string {
 }
 
 /*
-# @[00]@| Go-GMA 5.7.0
+# @[00]@| Go-GMA 5.8.0-alpha
 # @[01]@|
 # @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

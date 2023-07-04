@@ -558,7 +558,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				Zoom:        instance.Zoom,
 				IsLocalFile: instance.IsLocalFile,
 				File:        instance.File,
-			}); err != nil {
+			}, p.Animation); err != nil {
 				a.Logf("error storing image data for \"%s\"@%v: %v", p.Name, instance.Zoom, err)
 			}
 		}

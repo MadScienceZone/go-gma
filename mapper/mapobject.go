@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______      _______               #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \    (  __   )              #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  )   | (  )  |              #
-# | |      | || || || (___) | Assistant | (____         /  /    | | /   |              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       /  /     | (/ /) |              #
-# | | \_  )| |   | || (   ) |                 ) )     /  /      |   / | |              #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  /  /     _ |  (__) |              #
-# (_______)|/     \||/     \| Client    \______/ (_) \_/     (_)(_______)              #
+#  _______  _______  _______             _______      _____      _______         _____ #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    (  __   )       (  ___ #
+# | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )   | (  )  |       | (    #
+# | |      | || || || (___) | Assistant | (____      \     /    | | /   | _____ | (___ #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \    | (/ /) |(_____)|  ___ #
+# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )   |   / | |       | (    #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ |  (__) |       | )    #
+# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)(_______)       |/     #
 #                                                                                      #
 ########################################################################################
 */
@@ -862,8 +862,13 @@ type ImageDefinition struct {
 	// The name of the image as known within the mapper.
 	Name  string
 	Sizes []ImageInstance
+
+	// If non-nil, this indicates that the image is to be animated
+	Animation *ImageAnimation `json:",omitempty"`
 }
 
+// ImageInstance is a single instance of a file (generally, an image is availble
+// in several formats and sizes, each of which is an instance).
 type ImageInstance struct {
 	// If IsLocalFile is true, File is the name of the image file on disk;
 	// otherwise it is the server's internal ID by which you may request
@@ -881,6 +886,19 @@ type ImageInstance struct {
 	// from the server. This usage is not recommended but still
 	// supported.
 	ImageData []byte `json:",omitempty"`
+}
+
+// ImageAnimation describes the animation parameters for animated images.
+type ImageAnimation struct {
+	// The number of frames in the animation. These will be in files with
+	// :n: prepended to their names where n is the frame number starting with 0.
+	Frames int `json:",omitempty"`
+
+	// The number of milliseconds to display each frame.
+	FrameSpeed int `json:",omitempty"`
+
+	// The number of loops to play before stopping. 0 means unlimited.
+	Loops int `json:",omitempty"`
 }
 
 //________________________________________________________________________________
@@ -1975,7 +1993,7 @@ func loadMapFile(input io.Reader, metaDataOnly bool) ([]any, MapMetaData, error)
 	return nil, meta, fmt.Errorf("invalid map file format: unexpected end of file")
 }
 
-// @[00]@| Go-GMA 5.7.0
+// @[00]@| Go-GMA 5.8.0-alpha
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
