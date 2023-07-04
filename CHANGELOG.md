@@ -17,11 +17,9 @@
 ### IMPORTANT UPGRADE NOTE
 When moving to version 5.8.0, a change is needed to the database file in use by the server.
 You can either delete the database file so that the 5.8.0 server will create a new one, or run the following
-commands after shutting down your old server to make the necessary schema change before starting your 5.8.0 server:
+command after shutting down your old server to make the necessary schema change before starting your 5.8.0 server:
 ```
-sqlite3 yourfile.db 'alter table images add column frames integer not null default 0;'
-sqlite3 yourfile.db 'alter table images add column speed integer not null default 0;'
-sqlite3 yourfile.db 'alter table images add column loops integer not null default 0;'
+scripts/upgrade5.7.0-5.8.0
 ```
 
 ## v5.7.0
