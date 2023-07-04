@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______      _______               #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \    (  __   )              #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  )   | (  )  |              #
-# | |      | || || || (___) | Assistant | (____         /  /    | | /   |              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       /  /     | (/ /) |              #
-# | | \_  )| |   | || (   ) |                 ) )     /  /      |   / | |              #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  /  /     _ |  (__) |              #
-# (_______)|/     \||/     \| Client    \______/ (_) \_/     (_)(_______)              #
+#  _______  _______  _______             _______      _____      _______         _____ #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    (  __   )       (  ___ #
+# | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )   | (  )  |       | (    #
+# | |      | || || || (___) | Assistant | (____      \     /    | | /   | _____ | (___ #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \    | (/ /) |(_____)|  ___ #
+# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )   |   / | |       | (    #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ |  (__) |       | )    #
+# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)(_______)       |/     #
 #                                                                                      #
 ########################################################################################
 */
@@ -73,6 +73,9 @@ func (a *Application) dbOpen() error {
 				zoom    real    not null,
 				location text   not null,
 				islocal integer(1) not null,
+				frames integer not null default 0,
+				speed integer not null default 0,
+				loops integer not null default 0,
 					primary key (name,zoom)
 		);`)
 
@@ -93,12 +96,26 @@ func (a *Application) dbClose() error {
 	return a.sqldb.Close()
 }
 
-func (a *Application) StoreImageData(imageName string, img mapper.ImageInstance) error {
-	result, err := a.sqldb.Exec(`REPLACE INTO images (name, zoom, location, islocal) VALUES (?, ?, ?, ?);`, imageName, img.Zoom, img.File, img.IsLocalFile)
-	if err != nil {
-		return err
+func (a *Application) StoreImageData(imageName string, img mapper.ImageInstance, anim *mapper.ImageAnimation) error {
+	if anim == nil {
+		result, err := a.sqldb.Exec(`REPLACE INTO images (name, zoom, location, islocal) VALUES (?, ?, ?, ?);`, imageName, img.Zoom, img.File, img.IsLocalFile)
+		if err != nil {
+			return err
+		}
+
+		a.debugDbAffected(result, fmt.Sprintf("stored image record \"%s\"@%v local=%v, ID=%v", imageName, img.Zoom, img.IsLocalFile, img.File))
+	} else {
+		result, err := a.sqldb.Exec(`REPLACE INTO images (name, zoom, location, islocal, frames, speed, loops) VALUES (?, ?, ?, ?, ?, ?, ?);`,
+			imageName, img.Zoom, img.File, img.IsLocalFile,
+			anim.Frames, anim.FrameSpeed, anim.Loops,
+		)
+		if err != nil {
+			return err
+		}
+
+		a.debugDbAffected(result, fmt.Sprintf("stored image record \"%s\"@%v local=%v, ID=%v, frames=%d, speed=%d mS/frame, loops=%d", imageName, img.Zoom, img.IsLocalFile, img.File, anim.Frames, anim.FrameSpeed, anim.Loops))
 	}
-	a.debugDbAffected(result, fmt.Sprintf("stored image record \"%s\"@%v local=%v, ID=%v", imageName, img.Zoom, img.IsLocalFile, img.File))
+
 	return nil
 }
 
@@ -413,7 +430,7 @@ func (a *Application) FilterImages(f mapper.FilterImagesMessagePayload) error {
 	return nil
 }
 
-// @[00]@| Go-GMA 5.7.0
+// @[00]@| Go-GMA 5.8.0-alpha
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
