@@ -7,7 +7,7 @@
 ## Compatibility
  * GMA Core API Library Version: 6.4-alpha		<!-- @@##@@ -->
  * GMA Mapper Version: 4.12		<!-- @@##@@ -->
- * GMA Mapper Protocol: 406		<!-- @@##@@ -->
+ * GMA Mapper Protocol: 407		<!-- @@##@@ -->
  * GMA Mapper File Format: 21		<!-- @@##@@ -->
 
 ## v5.7.0
