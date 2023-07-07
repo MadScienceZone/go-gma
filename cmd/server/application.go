@@ -584,6 +584,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 
 		answers.Name = p.Name
 		questions.Name = p.Name
+		answers.Animation = imgData.Animation
 		for _, askedFor := range p.Sizes {
 			// do we know the answer to this one?
 			askOthers := true
