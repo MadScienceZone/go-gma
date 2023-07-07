@@ -153,24 +153,35 @@ func (a *Application) QueryImageData(img mapper.ImageDefinition) (mapper.ImageDe
 	var resultSet mapper.ImageDefinition
 
 	a.Debugf(DebugDB, "query of image \"%s\"", img.Name)
-	rows, err := a.sqldb.Query(`SELECT zoom, location, islocal FROM images WHERE name=?`, img.Name)
+	rows, err := a.sqldb.Query(`SELECT zoom, location, islocal, frames, speed, loops FROM images WHERE name=?`, img.Name)
 	if err != nil {
 		return resultSet, err
 	}
 	defer rows.Close()
 
 	resultSet.Name = img.Name
+
 	for rows.Next() {
 		var instance mapper.ImageInstance
 		var isLocal int
+		var aframes int
+		var aspeed int
+		var aloops int
 
-		if err := rows.Scan(&instance.Zoom, &instance.File, &isLocal); err != nil {
+		if err := rows.Scan(&instance.Zoom, &instance.File, &isLocal, &aframes, &aspeed, &aloops); err != nil {
 			return resultSet, err
 		}
 		if isLocal != 0 {
 			instance.IsLocalFile = true
 		}
 		resultSet.Sizes = append(resultSet.Sizes, instance)
+		if resultSet.Animation == nil && (aframes != 0 || aspeed != 0 || aloops != 0) {
+			resultSet.Animation = &mapper.ImageAnimation{
+				Frames:     aframes,
+				FrameSpeed: aspeed,
+				Loops:      aloops,
+			}
+		}
 		a.Debugf(DebugDB, "result: \"%s\"@%v from \"%s\" (local=%v)", img.Name, instance.Zoom, instance.File, instance.IsLocalFile)
 	}
 	return resultSet, rows.Err()

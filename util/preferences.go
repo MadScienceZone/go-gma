@@ -28,6 +28,13 @@ import (
 	"strings"
 )
 
+const (
+	GMAMapperPreferencesMinimumVersion int = 1
+	GMAMapperPreferencesMaximumVersion int = 2
+	GMAPreferencesMinimumVersion       int = 1
+	GMAPreferencesMaximumVersion       int = 1
+)
+
 //
 // GridOffsets provide x and y offsets for grid guides
 //
@@ -705,7 +712,7 @@ func LoadGMAPreferencesWithDefaults(stream io.Reader) (GMAPreferences, error) {
 	if err := prefs.Update(stream); err != nil {
 		return prefs, err
 	}
-	if prefs.GMAPreferencesVersion != 1 {
+	if prefs.GMAPreferencesVersion < GMAPreferencesMinimumVersion || prefs.GMAPreferencesVersion > GMAPreferencesMaximumVersion {
 		return prefs, fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAPreferencesVersion)
 	}
 	return prefs, nil
@@ -722,7 +729,7 @@ func LoadPreferencesWithDefaults(stream io.Reader) (UserPreferences, error) {
 	if err != nil {
 		return prefs, err
 	}
-	if prefs.GMAMapperPreferencesVersion != 1 {
+	if prefs.GMAMapperPreferencesVersion < GMAMapperPreferencesMinimumVersion || prefs.GMAMapperPreferencesVersion > GMAMapperPreferencesMaximumVersion {
 		return prefs, fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAMapperPreferencesVersion)
 	}
 	return prefs, nil
@@ -739,7 +746,7 @@ func LoadPreferences(stream io.Reader) (UserPreferences, error) {
 	if err != nil {
 		return prefs, err
 	}
-	if prefs.GMAMapperPreferencesVersion != 1 {
+	if prefs.GMAMapperPreferencesVersion < GMAMapperPreferencesMinimumVersion || prefs.GMAMapperPreferencesVersion > GMAMapperPreferencesMaximumVersion {
 		return prefs, fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAMapperPreferencesVersion)
 	}
 	return prefs, nil
@@ -755,7 +762,7 @@ func (prefs *UserPreferences) Update(stream io.Reader) error {
 	if err != nil {
 		return err
 	}
-	if prefs.GMAMapperPreferencesVersion != 1 {
+	if prefs.GMAMapperPreferencesVersion < GMAMapperPreferencesMinimumVersion || prefs.GMAMapperPreferencesVersion > GMAMapperPreferencesMaximumVersion {
 		return fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAMapperPreferencesVersion)
 	}
 	return nil
@@ -771,7 +778,7 @@ func (prefs *GMAPreferences) Update(stream io.Reader) error {
 	if err != nil {
 		return err
 	}
-	if prefs.GMAPreferencesVersion != 1 {
+	if prefs.GMAPreferencesVersion < GMAPreferencesMinimumVersion || prefs.GMAPreferencesVersion > GMAPreferencesMaximumVersion {
 		return fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAPreferencesVersion)
 	}
 	return nil
