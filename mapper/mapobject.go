@@ -6,11 +6,11 @@
 #  _______  _______  _______             _______      _____      _______         _____ #
 # (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    (  __   )       (  ___ #
 # | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )   | (  )  |       | (    #
-# | |      | || || || (___) | Assistant | (____      \     /    | | /   | _____ | (___ #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \    | (/ /) |(_____)|  ___ #
-# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )   |   / | |       | (    #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ |  (__) |       | )    #
-# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)(_______)       |/     #
+# | |      | || || || (___) | Assistant | (____      \     /    | | /   | _____ | (__/ #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \    | (/ /) |(_____)|  __  #
+# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )   |   / | |       | (  \ #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ |  (__) |       | )___ #
+# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)(_______)       |/ \__ #
 #                                                                                      #
 ########################################################################################
 */
@@ -41,7 +41,7 @@ import (
 // the GMA File Format version number current as of this build.
 // This is the format which will be used for saving map data.
 //
-const GMAMapperFileFormat = 21 // @@##@@ auto-configured
+const GMAMapperFileFormat = 22 // @@##@@ auto-configured
 //
 // MinimumSupportedMapFileFormat gives the lowest file format this package can
 // understand.
@@ -1993,7 +1993,7 @@ func loadMapFile(input io.Reader, metaDataOnly bool) ([]any, MapMetaData, error)
 	return nil, meta, fmt.Errorf("invalid map file format: unexpected end of file")
 }
 
-// @[00]@| Go-GMA 5.8.0-alpha
+// @[00]@| Go-GMA 5.8.0-beta
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
