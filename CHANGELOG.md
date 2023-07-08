@@ -10,7 +10,7 @@
  * GMA Mapper Protocol: 407		<!-- @@##@@ -->
  * GMA Mapper File Format: 22		<!-- @@##@@ -->
 
-## v5.8.0-alpha
+## v5.8.0-beta
 ### Enhancements
  * Added support for animated image files.
 
