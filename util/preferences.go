@@ -6,11 +6,11 @@
 #  _______  _______  _______             _______      _____      _______         _____ #
 # (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    (  __   )       (  ___ #
 # | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )   | (  )  |       | (    #
-# | |      | || || || (___) | Assistant | (____      \     /    | | /   | _____ | (___ #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \    | (/ /) |(_____)|  ___ #
-# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )   |   / | |       | (    #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ |  (__) |       | )    #
-# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)(_______)       |/     #
+# | |      | || || || (___) | Assistant | (____      \     /    | | /   | _____ | (__/ #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \    | (/ /) |(_____)|  __  #
+# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )   |   / | |       | (  \ #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ |  (__) |       | )___ #
+# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)(_______)       |/ \__ #
 #                                                                                      #
 ########################################################################################
 */
@@ -30,7 +30,7 @@ import (
 
 const (
 	GMAMapperPreferencesMinimumVersion int = 1
-	GMAMapperPreferencesMaximumVersion int = 2
+	GMAMapperPreferencesMaximumVersion int = 3
 	GMAPreferencesMinimumVersion       int = 1
 	GMAPreferencesMaximumVersion       int = 1
 )
@@ -256,10 +256,13 @@ type DieRollComponent struct {
 //
 // UserPreferences represents the preferences settings for the GMA Mapper.
 //
+// This represents preferences version 3.
+//
 type UserPreferences struct {
 	GMAMapperPreferencesVersion int        `json:"GMA_Mapper_preferences_version"`
 	Animate                     bool       `json:"animate,omitempty"`
 	ButtonSize                  ButtonSize `json:"button_size,omitempty"`
+	ColorizeDieRolls            bool       `json:"colorize_die_rolls,omitempty"`
 	CurlPath                    string     `json:"curl_path,omitempty"`
 	CurrentProfile              string     `json:"current_profile,omitempty"`
 	DarkMode                    bool       `json:"dark,omitempty"`
@@ -271,6 +274,8 @@ type UserPreferences struct {
 	} `json:"guide_lines,omitempty"`
 	ImageFormat   ImageType           `json:"image_format,omitempty"`
 	KeepTools     bool                `json:"keep_tools,omitempty"`
+	MenuButton    bool                `json:"menu_button,omitempty"`
+	NeverAnimate  bool                `json:"never_animate,omitempty"`
 	PreloadImages bool                `json:"preload,omitempty"`
 	Profiles      []ServerProfile     `json:"profiles,omitempty"`
 	Fonts         map[string]UserFont `json:"fonts,omitempty"`
@@ -925,7 +930,7 @@ func SearchInPath(program string) (string, error) {
 	return "", fmt.Errorf("file not found in PATH")
 }
 
-// @[00]@| Go-GMA 5.8.0-alpha
+// @[00]@| Go-GMA 5.8.0-beta
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

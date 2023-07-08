@@ -6,11 +6,11 @@
 #  _______  _______  _______             _______      _____      _______         _____ #
 # (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    (  __   )       (  ___ #
 # | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )   | (  )  |       | (    #
-# | |      | || || || (___) | Assistant | (____      \     /    | | /   | _____ | (___ #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \    | (/ /) |(_____)|  ___ #
-# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )   |   / | |       | (    #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ |  (__) |       | )    #
-# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)(_______)       |/     #
+# | |      | || || || (___) | Assistant | (____      \     /    | | /   | _____ | (__/ #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \    | (/ /) |(_____)|  __  #
+# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )   |   / | |       | (  \ #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ |  (__) |       | )___ #
+# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)(_______)       |/ \__ #
 #                                                                                      #
 ########################################################################################
 */
@@ -120,7 +120,7 @@ import (
 // Auto-configured values
 //
 
-const GoVersionNumber = "5.8.0-alpha.1" // @@##@@
+const GoVersionNumber="5.8.0-beta" // @@##@@
 
 //
 // eventMonitor responds to signals and timers that affect our overall operation
@@ -329,7 +329,7 @@ func acceptIncomingConnections(incoming net.Listener, app *Application) {
 	}
 }
 
-// @[00]@| Go-GMA 5.8.0-alpha
+// @[00]@| Go-GMA 5.8.0-beta
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
