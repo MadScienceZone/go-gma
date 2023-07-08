@@ -52,7 +52,7 @@ const MinimumSupportedMapFileFormat = 17
 // MaximumSupportedMapFileFormat gives the highest file format this package
 // can understand. Saved data will be in this format.
 //
-const MaximumSupportedMapFileFormat = 21
+const MaximumSupportedMapFileFormat = 22
 
 func init() {
 	if MinimumSupportedMapFileFormat > GMAMapperFileFormat || MaximumSupportedMapFileFormat < GMAMapperFileFormat {
