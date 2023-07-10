@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______      _______               #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \    (  __   )              #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  )   | (  )  |              #
-# | |      | || || || (___) | Assistant | (____         /  /    | | /   |              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       /  /     | (/ /) |              #
-# | | \_  )| |   | || (   ) |                 ) )     /  /      |   / | |              #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  /  /     _ |  (__) |              #
-# (_______)|/     \||/     \| Client    \______/ (_) \_/     (_)(_______)              #
+#  _______  _______  _______             _______      _____      _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    (  __   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )   | (  )  |              #
+# | |      | || || || (___) | Assistant | (____      \     /    | | /   |              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \    | (/ /) |              #
+# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )   |   / | |              #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ |  (__) |              #
+# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)(_______)              #
 #                                                                                      #
 ########################################################################################
 */
@@ -26,6 +26,13 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+)
+
+const (
+	GMAMapperPreferencesMinimumVersion int = 1
+	GMAMapperPreferencesMaximumVersion int = 3
+	GMAPreferencesMinimumVersion       int = 1
+	GMAPreferencesMaximumVersion       int = 1
 )
 
 //
@@ -249,10 +256,13 @@ type DieRollComponent struct {
 //
 // UserPreferences represents the preferences settings for the GMA Mapper.
 //
+// This represents preferences version 3.
+//
 type UserPreferences struct {
 	GMAMapperPreferencesVersion int        `json:"GMA_Mapper_preferences_version"`
 	Animate                     bool       `json:"animate,omitempty"`
 	ButtonSize                  ButtonSize `json:"button_size,omitempty"`
+	ColorizeDieRolls            bool       `json:"colorize_die_rolls,omitempty"`
 	CurlPath                    string     `json:"curl_path,omitempty"`
 	CurrentProfile              string     `json:"current_profile,omitempty"`
 	DarkMode                    bool       `json:"dark,omitempty"`
@@ -264,6 +274,8 @@ type UserPreferences struct {
 	} `json:"guide_lines,omitempty"`
 	ImageFormat   ImageType           `json:"image_format,omitempty"`
 	KeepTools     bool                `json:"keep_tools,omitempty"`
+	MenuButton    bool                `json:"menu_button,omitempty"`
+	NeverAnimate  bool                `json:"never_animate,omitempty"`
 	PreloadImages bool                `json:"preload,omitempty"`
 	Profiles      []ServerProfile     `json:"profiles,omitempty"`
 	Fonts         map[string]UserFont `json:"fonts,omitempty"`
@@ -705,7 +717,7 @@ func LoadGMAPreferencesWithDefaults(stream io.Reader) (GMAPreferences, error) {
 	if err := prefs.Update(stream); err != nil {
 		return prefs, err
 	}
-	if prefs.GMAPreferencesVersion != 1 {
+	if prefs.GMAPreferencesVersion < GMAPreferencesMinimumVersion || prefs.GMAPreferencesVersion > GMAPreferencesMaximumVersion {
 		return prefs, fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAPreferencesVersion)
 	}
 	return prefs, nil
@@ -722,7 +734,7 @@ func LoadPreferencesWithDefaults(stream io.Reader) (UserPreferences, error) {
 	if err != nil {
 		return prefs, err
 	}
-	if prefs.GMAMapperPreferencesVersion != 1 {
+	if prefs.GMAMapperPreferencesVersion < GMAMapperPreferencesMinimumVersion || prefs.GMAMapperPreferencesVersion > GMAMapperPreferencesMaximumVersion {
 		return prefs, fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAMapperPreferencesVersion)
 	}
 	return prefs, nil
@@ -739,7 +751,7 @@ func LoadPreferences(stream io.Reader) (UserPreferences, error) {
 	if err != nil {
 		return prefs, err
 	}
-	if prefs.GMAMapperPreferencesVersion != 1 {
+	if prefs.GMAMapperPreferencesVersion < GMAMapperPreferencesMinimumVersion || prefs.GMAMapperPreferencesVersion > GMAMapperPreferencesMaximumVersion {
 		return prefs, fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAMapperPreferencesVersion)
 	}
 	return prefs, nil
@@ -755,7 +767,7 @@ func (prefs *UserPreferences) Update(stream io.Reader) error {
 	if err != nil {
 		return err
 	}
-	if prefs.GMAMapperPreferencesVersion != 1 {
+	if prefs.GMAMapperPreferencesVersion < GMAMapperPreferencesMinimumVersion || prefs.GMAMapperPreferencesVersion > GMAMapperPreferencesMaximumVersion {
 		return fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAMapperPreferencesVersion)
 	}
 	return nil
@@ -771,7 +783,7 @@ func (prefs *GMAPreferences) Update(stream io.Reader) error {
 	if err != nil {
 		return err
 	}
-	if prefs.GMAPreferencesVersion != 1 {
+	if prefs.GMAPreferencesVersion < GMAPreferencesMinimumVersion || prefs.GMAPreferencesVersion > GMAPreferencesMaximumVersion {
 		return fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAPreferencesVersion)
 	}
 	return nil
@@ -918,7 +930,7 @@ func SearchInPath(program string) (string, error) {
 	return "", fmt.Errorf("file not found in PATH")
 }
 
-// @[00]@| Go-GMA 5.7.0
+// @[00]@| Go-GMA 5.8.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
