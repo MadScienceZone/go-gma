@@ -1,14 +1,26 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.7.0                <!-- @@##@@ -->
- * Effective Date: 30-Jun-2023			<!-- @@##@@ -->
+ * This Package Version: 5.8.0                <!-- @@##@@ -->
+ * Effective Date: 10-Jul-2023			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 6.3		<!-- @@##@@ -->
- * GMA Mapper Version: 4.10		<!-- @@##@@ -->
- * GMA Mapper Protocol: 406		<!-- @@##@@ -->
- * GMA Mapper File Format: 21		<!-- @@##@@ -->
+ * GMA Core API Library Version: 6.4-alpha		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.14-beta		<!-- @@##@@ -->
+ * GMA Mapper Protocol: 407		<!-- @@##@@ -->
+ * GMA Mapper File Format: 22		<!-- @@##@@ -->
+
+## v5.8.0
+### Enhancements
+ * Added support for animated image files.
+
+### IMPORTANT UPGRADE NOTE
+When moving to version 5.8.0, a change is needed to the database file in use by the server.
+You can either delete the database file so that the 5.8.0 server will create a new one, or run the following
+command after shutting down your old server to make the necessary schema change before starting your 5.8.0 server:
+```
+scripts/upgrade5.7.0-5.8.0
+```
 
 ## v5.7.0
 ### Enhancements
