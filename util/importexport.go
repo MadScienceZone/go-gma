@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      _____      _______               #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    (  __   )              #
-# | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )   | (  )  |              #
-# | |      | || || || (___) | Assistant | (____      \     /    | | /   |              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \    | (/ /) |              #
-# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )   |   / | |              #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ |  (__) |              #
-# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)(_______)              #
+#  _______  _______  _______             _______      _____       __                   #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \     /  \                  #
+# | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )    \/) )                 #
+# | |      | || || || (___) | Assistant | (____      \     /       | |                 #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \       | |                 #
+# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )      | |                 #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _  __) (_                #
+# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_) \____/                #
 #                                                                                      #
 ########################################################################################
 #
@@ -1336,7 +1336,7 @@ func ImportFeat(decoder *json.Decoder, db *sql.DB, prefs *CorePreferences) error
 
 	// add feat types
 	for _, ftype := range feat.Types {
-		if err = makeRecordExist(db, prefs, "FeatTypes", "FeatType", ftype); err != nil {
+		if err = makeRecordExistWithoutID(db, prefs, "FeatTypes", "FeatType", ftype); err != nil {
 			return err
 		}
 		if _, err = db.Exec(`INSERT INTO FeatFeatTypes (FeatID, FeatType) VALUES (?, ?)`, id, ftype); err != nil {
@@ -4412,7 +4412,7 @@ func ExportSpells(fp *os.File, db *sql.DB, prefs *CorePreferences) error {
 }
 
 /*
-# @[00]@| Go-GMA 5.8.0
+# @[00]@| Go-GMA 5.8.1
 # @[01]@|
 # @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
