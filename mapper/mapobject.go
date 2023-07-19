@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      ______     _______         _____ #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    / ____ \   (  __   )       (  ___ #
-# | (    \/| () () || (   ) | Master's  | (    \/   ( (    \/   | (  )  |       | (    #
-# | |      | || || || (___) | Assistant | (____     | (____     | | /   | _____ | (___ #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \    |  ___ \    | (/ /) |(_____)|  ___ #
-# | | \_  )| |   | || (   ) |                 ) )   | (   ) )   |   / | |       | (    #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ |  (__) |       | )    #
-# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)(_______)       |/     #
+#  _______  _______  _______             _______      _____       __                   #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \     /  \                  #
+# | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )    \/) )                 #
+# | |      | || || || (___) | Assistant | (____      \     /       | |                 #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \       | |                 #
+# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )      | |                 #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _  __) (_                #
+# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_) \____/                #
 #                                                                                      #
 ########################################################################################
 */
@@ -41,7 +41,7 @@ import (
 // the GMA File Format version number current as of this build.
 // This is the format which will be used for saving map data.
 //
-const GMAMapperFileFormat = 20 // @@##@@ auto-configured
+const GMAMapperFileFormat = 22 // @@##@@ auto-configured
 //
 // MinimumSupportedMapFileFormat gives the lowest file format this package can
 // understand.
@@ -1959,7 +1959,7 @@ func loadMapFile(input io.Reader, metaDataOnly bool) ([]any, MapMetaData, error)
 	return nil, meta, fmt.Errorf("invalid map file format: unexpected end of file")
 }
 
-// @[00]@| Go-GMA 5.6.0-alpha
+// @[00]@| Go-GMA 5.8.1
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
