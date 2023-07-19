@@ -51,10 +51,10 @@ import (
 // and protocol versions supported by this code.
 //
 const (
-	GMAMapperProtocol=407     // @@##@@ auto-configured
-	GoVersionNumber="5.8.1" // @@##@@ auto-configured
+	GMAMapperProtocol           = 407     // @@##@@ auto-configured
+	GoVersionNumber             = "5.8.1" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
-	MaximumSupportedMapProtocol = 405
+	MaximumSupportedMapProtocol = 407
 )
 
 func init() {

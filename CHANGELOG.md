@@ -10,6 +10,35 @@
  * GMA Mapper Protocol: 407		<!-- @@##@@ -->
  * GMA Mapper File Format: 22		<!-- @@##@@ -->
 
+## v5.8.1
+### Fixes
+ * Correction to `coredb` feat import code.
+
+## v5.8.0
+### Enhancements
+ * Added support for animated image files.
+
+### IMPORTANT UPGRADE NOTE
+When moving to version 5.8.0, a change is needed to the database file in use by the server.
+You can either delete the database file so that the 5.8.0 server will create a new one, or run the following
+command after shutting down your old server to make the necessary schema change before starting your 5.8.0 server:
+```
+scripts/upgrade5.7.0-5.8.0
+```
+
+## v5.7.0
+### Enhancements
+ * Added `coredb` program and supporting functions and types in the `util` package to import/export entries to/from the core game database (which will be) introducted in GMA Core 7.0.
+ * Added the GMA PostScript preamble file as `string` constants `text.commonPostScriptPreamble` and `text.gmaPostScriptPreamble`
+ * Added data structures and functions to access the global GMA preferences settings (which will be) introduced in GMA Core 7.0.
+
+## v5.6.0
+### Enhancements
+ * Updated to file format version 21
+ * Removed redundant `Area` field from creatures
+ * Added new `CustomReach` field for creatures
+ * Added new `DispSize` field for creatures
+
 ## v5.5.2
 ### Fixes
  * `map-console` didn't work if no `preferences.json` or `*.conf` file was found.

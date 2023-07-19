@@ -23,8 +23,16 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
+)
+
+const (
+	GMAMapperPreferencesMinimumVersion int = 1
+	GMAMapperPreferencesMaximumVersion int = 3
+	GMAPreferencesMinimumVersion       int = 1
+	GMAPreferencesMaximumVersion       int = 1
 )
 
 //
@@ -248,10 +256,13 @@ type DieRollComponent struct {
 //
 // UserPreferences represents the preferences settings for the GMA Mapper.
 //
+// This represents preferences version 3.
+//
 type UserPreferences struct {
 	GMAMapperPreferencesVersion int        `json:"GMA_Mapper_preferences_version"`
 	Animate                     bool       `json:"animate,omitempty"`
 	ButtonSize                  ButtonSize `json:"button_size,omitempty"`
+	ColorizeDieRolls            bool       `json:"colorize_die_rolls,omitempty"`
 	CurlPath                    string     `json:"curl_path,omitempty"`
 	CurrentProfile              string     `json:"current_profile,omitempty"`
 	DarkMode                    bool       `json:"dark,omitempty"`
@@ -263,10 +274,70 @@ type UserPreferences struct {
 	} `json:"guide_lines,omitempty"`
 	ImageFormat   ImageType           `json:"image_format,omitempty"`
 	KeepTools     bool                `json:"keep_tools,omitempty"`
+	MenuButton    bool                `json:"menu_button,omitempty"`
+	NeverAnimate  bool                `json:"never_animate,omitempty"`
 	PreloadImages bool                `json:"preload,omitempty"`
 	Profiles      []ServerProfile     `json:"profiles,omitempty"`
 	Fonts         map[string]UserFont `json:"fonts,omitempty"`
 	Styles        StyleDescription    `json:"styles,omitempty"`
+}
+
+//
+// InitiativeSeedData represents each entry in the GMA initiative seed list.
+//
+type InitiativeSeedData struct {
+	Name         string `json:"name"`
+	Dexterity    int    `json:"dex"`
+	Constitution int    `json:"con"`
+	InitAdj      int    `json:"init_adj"`
+	HP           int    `json:"hp"`
+	BlurHP       int    `json:"blur_hp"`
+}
+
+//
+// CasterData represents each entry in the GMA caster level list.
+//
+type CasterData struct {
+	Name string `json:"name"`
+	CL   int    `json:"cl"`
+}
+
+//
+// GMAPreferences represents the preferences settings for GMA and its supporting utilities.
+//
+type GMAPreferences struct {
+	GMAPreferencesVersion int    `json:"gma_preferences_file_version"`
+	CoreDBPath            string `json:"core_db"`
+	Appearance            struct {
+		DarkMode bool `json:"dark_mode"`
+	} `json:"appearance"`
+	Worlds             map[string]GMAWorld          `json:"worlds"`
+	Networks           map[string]GMANetworkProfile `json:"networks"`
+	CurrentWorldName   string                       `json:"current_world"`
+	CurrentNetworkName string                       `json:"network_profile"`
+}
+
+//
+// GMAWorld represents the preferences settings for each campaign world.
+//
+type GMAWorld struct {
+	CalendarType         string               `json:"calendar_type"`
+	ModulePath           string               `json:"module,omitempty"`
+	BlurHP               int                  `json:"blur_hp,omitempty"`
+	DBName               string               `json:"db_name"`
+	DisplayName          string               `json:"display_name"`
+	InitiativeBackupPath string               `json:"initiative_backup_path,omitempty"`
+	Password             string               `json:"password,omitempty"`
+	InitiativeSeed       []InitiativeSeedData `json:"initiative_seed"`
+	CasterLevels         []CasterData         `json:"caster_levels"`
+}
+
+//
+// GMANetworkProfile represents the preferences settings for each network profile.
+//
+type GMANetworkProfile struct {
+	Hostname string `json:"hostname,omitempty"`
+	Port     int    `json:"port,omitempty"`
 }
 
 //
@@ -317,6 +388,24 @@ type DialogStyles struct {
 	MinorGridColor   ColorSet `json:"grid_minor,omitempty"`
 	MajorGridColor   ColorSet `json:"grid_major,omitempty"`
 	PresetNameColor  ColorSet `json:"preset_name,omitempty"`
+}
+
+//
+// DefaultGMAPreferences returns a GMAPreferences value with default values.
+//
+func DefaultGMAPreferences() (GMAPreferences, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return GMAPreferences{}, err
+	}
+
+	return GMAPreferences{
+		CoreDBPath: filepath.Join(homeDir, ".gma", "core.db"),
+		Networks: map[string]GMANetworkProfile{
+			"offline": GMANetworkProfile{},
+		},
+		CurrentNetworkName: "offline",
+	}, nil
 }
 
 //
@@ -617,6 +706,24 @@ func DefaultPreferences() UserPreferences {
 }
 
 //
+// LoadGMAPreferencesWithDefaults is like LoadPreferencesWithDefaults but for
+// the GMA preferences file instead of the mapper's.
+//
+func LoadGMAPreferencesWithDefaults(stream io.Reader) (GMAPreferences, error) {
+	prefs, err := DefaultGMAPreferences()
+	if err != nil {
+		return prefs, err
+	}
+	if err := prefs.Update(stream); err != nil {
+		return prefs, err
+	}
+	if prefs.GMAPreferencesVersion < GMAPreferencesMinimumVersion || prefs.GMAPreferencesVersion > GMAPreferencesMaximumVersion {
+		return prefs, fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAPreferencesVersion)
+	}
+	return prefs, nil
+}
+
+//
 // LoadPreferencesWithDefaults reads a set of saved preferences from an open file
 // or other io.Reader object. It provides default values for fields not specified in
 // the input data.
@@ -627,7 +734,7 @@ func LoadPreferencesWithDefaults(stream io.Reader) (UserPreferences, error) {
 	if err != nil {
 		return prefs, err
 	}
-	if prefs.GMAMapperPreferencesVersion != 1 {
+	if prefs.GMAMapperPreferencesVersion < GMAMapperPreferencesMinimumVersion || prefs.GMAMapperPreferencesVersion > GMAMapperPreferencesMaximumVersion {
 		return prefs, fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAMapperPreferencesVersion)
 	}
 	return prefs, nil
@@ -644,7 +751,7 @@ func LoadPreferences(stream io.Reader) (UserPreferences, error) {
 	if err != nil {
 		return prefs, err
 	}
-	if prefs.GMAMapperPreferencesVersion != 1 {
+	if prefs.GMAMapperPreferencesVersion < GMAMapperPreferencesMinimumVersion || prefs.GMAMapperPreferencesVersion > GMAMapperPreferencesMaximumVersion {
 		return prefs, fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAMapperPreferencesVersion)
 	}
 	return prefs, nil
@@ -660,8 +767,24 @@ func (prefs *UserPreferences) Update(stream io.Reader) error {
 	if err != nil {
 		return err
 	}
-	if prefs.GMAMapperPreferencesVersion != 1 {
+	if prefs.GMAMapperPreferencesVersion < GMAMapperPreferencesMinimumVersion || prefs.GMAMapperPreferencesVersion > GMAMapperPreferencesMaximumVersion {
 		return fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAMapperPreferencesVersion)
+	}
+	return nil
+}
+
+//
+// Update reads a set of saved preferences as LoadGMAPreferences does, but
+// rather than returning a new GMAPreferences value, it updates the
+// values of an existing GMAPreferences value with the input data.
+//
+func (prefs *GMAPreferences) Update(stream io.Reader) error {
+	err := json.NewDecoder(stream).Decode(prefs)
+	if err != nil {
+		return err
+	}
+	if prefs.GMAPreferencesVersion < GMAPreferencesMinimumVersion || prefs.GMAPreferencesVersion > GMAPreferencesMaximumVersion {
+		return fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAPreferencesVersion)
 	}
 	return nil
 }

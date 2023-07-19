@@ -3030,7 +3030,6 @@ func (c *Connection) receiveAddCharacter(d AddCharacterMessagePayload) {
 				},
 				Name:  d.Name,
 				Color: d.Color,
-				Area:  d.Area,
 				Size:  d.Size,
 			},
 		}

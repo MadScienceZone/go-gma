@@ -52,7 +52,7 @@ const MinimumSupportedMapFileFormat = 17
 // MaximumSupportedMapFileFormat gives the highest file format this package
 // can understand. Saved data will be in this format.
 //
-const MaximumSupportedMapFileFormat = 20
+const MaximumSupportedMapFileFormat = 22
 
 func init() {
 	if MinimumSupportedMapFileFormat > GMAMapperFileFormat || MaximumSupportedMapFileFormat < GMAMapperFileFormat {
@@ -720,9 +720,9 @@ type CreatureToken struct {
 	// May also be the size in feet (DEPRECATED USAGE).
 	Size string
 
-	// The tactical threat zone size of the creature, specified just
-	// as with Size.
-	Area string
+	// If DispSize is nonempty, it holds the size category to display
+	// the creature (say, as a result of casting an enlarge person spell).
+	DispSize string `json:",omitempty"`
 
 	// A list of condition codes which apply to the character. These
 	// are arbitrary and defined by the server according to the needs
@@ -737,6 +737,23 @@ type CreatureToken struct {
 	// Currently only radius emanations are supported. In future, the
 	// type of this attribute may change to handle other shapes.
 	AoE *RadiusAoE `json:",omitempty"`
+
+	// If there is a custom reach/threat zone defined for this
+	// creature, it is detailed here.
+	CustomReach CreatureCustomReach `json:",omitempty"`
+}
+
+// CreatureCustomReach describes a creature's natural and extended
+// reach zones if they differ from the standard templates.
+type CreatureCustomReach struct {
+	// Enabled is true if this custom information should be used for the creature.
+	Enabled bool `json:",omitempty"`
+
+	// Natural and Extended give the distance in 5-foot grid squares
+	// away from the creature's PERIMETER to which their natural reach
+	// and extended (as with a reach weapon) reach extends.
+	Natural  int `json:",omitempty"`
+	Extended int `json:",omitempty"`
 }
 
 //
@@ -845,8 +862,13 @@ type ImageDefinition struct {
 	// The name of the image as known within the mapper.
 	Name  string
 	Sizes []ImageInstance
+
+	// If non-nil, this indicates that the image is to be animated
+	Animation *ImageAnimation `json:",omitempty"`
 }
 
+// ImageInstance is a single instance of a file (generally, an image is availble
+// in several formats and sizes, each of which is an instance).
 type ImageInstance struct {
 	// If IsLocalFile is true, File is the name of the image file on disk;
 	// otherwise it is the server's internal ID by which you may request
@@ -864,6 +886,19 @@ type ImageInstance struct {
 	// from the server. This usage is not recommended but still
 	// supported.
 	ImageData []byte `json:",omitempty"`
+}
+
+// ImageAnimation describes the animation parameters for animated images.
+type ImageAnimation struct {
+	// The number of frames in the animation. These will be in files with
+	// :n: prepended to their names where n is the frame number starting with 0.
+	Frames int `json:",omitempty"`
+
+	// The number of milliseconds to display each frame.
+	FrameSpeed int `json:",omitempty"`
+
+	// The number of loops to play before stopping. 0 means unlimited.
+	Loops int `json:",omitempty"`
 }
 
 //________________________________________________________________________________
@@ -1134,7 +1169,7 @@ func WriteMapFile(path string, objList []any, meta MapMetaData) error {
 //
 func SaveMapFile(output io.Writer, objList []any, meta MapMetaData) error {
 	writer := bufio.NewWriter(output)
-	writer.WriteString("__MAPPER__:20\n")
+	writer.WriteString("__MAPPER__:21\n")
 	if meta.Timestamp == 0 {
 		now := time.Now()
 		meta.Timestamp = now.Unix()
@@ -1437,7 +1472,6 @@ func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta stri
 		m.Color, err = objString(mob, 0, "COLOR", false, err)
 		m.Note, err = objString(mob, 0, "NOTE", false, err)
 		m.Size, err = objString(mob, 0, "SIZE", false, err)
-		m.Area, err = objString(mob, 0, "AREA", false, err)
 		m.StatusList, err = objStrings(mob, 0, "STATUSLIST", false, err)
 		if aoeStruct, ok := mob["AOE"]; ok {
 			ss, err := tcllist.ParseTclList(aoeStruct[0])

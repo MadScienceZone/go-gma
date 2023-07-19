@@ -15,7 +15,7 @@ This includes a multi-user interactive tactical battle map where players
 can move their tokens around the map, initiative is managed automatically,
 etc.
 
-While we intend to open source GMA eventually, it's not quite ready for
+While we intend to open source GMA **later in 2023**, it's not quite ready for
 general use (mostly because it needs to be generalized more to be playable
 on multiple game systems and less tied to the author's game group).
 The manual describing the full GMA product may be downloaded 
@@ -40,10 +40,8 @@ By default, this will build the server without instrumentation to collect runtim
 If you wish to compile the server with telemetry instrumentation enabled, run `make telemetry`.
 
 ## Versioning
-We are keeping the version numbers for this project in sync with
-the main GMA project, so version _x_._y_._z_ of `go-gma` will always
-be compatible with version _x_._y_._z_ of `gma`. (This is why `go-gma` started at
-at v4. It moved to v5 when the JSON formats were introduced as a breaking change.)
+We started out with a desire to keep the version numbers for this project in sync with the main GMA project, so version _x_._y_._z_ of `go-gma` would always be compatible with version _x_._y_._z_ of `gma`. (This is why `go-gma` started at at v4. It moved to v5 when the JSON formats were introduced as a breaking change.)
+This is no longer the case, so the version numbers of each don't necessarily match, since each project has encountered breaking changes at different times.
 
 ## Game System Neutral
 

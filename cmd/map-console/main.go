@@ -228,10 +228,10 @@ func init() {
 		defaultLog      = ""
 	)
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s [-Dhm] [-C configfile] [-c calendar] [-H host] [-l logfile] [-P password] [-p port] [-S profile] [-u user] [-list-profiles]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s [-h] [-m] [-C configfile] [-c calendar] [-D list] [-H host] [-l logfile] [-P password] [-p port] [-S profile] [-u user] [-list-profiles]\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "  An option 'x' with a value may be set by '-x value', '-x=value', '--x value', or '--x=value'.\n")
 		fmt.Fprintf(os.Stderr, "  A flag 'x' may be set by '-x', '--x', '-x=true|false' or '--x=true|false'\n")
-		fmt.Fprintf(os.Stderr, "  Options may NOT be combined into a single argument (use '-D -m', not '-Dm').\n")
+		fmt.Fprintf(os.Stderr, "  Options may NOT be combined into a single argument (use '-h -m', not '-hm').\n")
 		fmt.Fprintf(os.Stderr, "\n")
 		flag.PrintDefaults()
 	}
@@ -432,9 +432,9 @@ func main() {
 
 	fmt.Printf("Server protocol %d; using %s calendar.\n", server.Protocol, server.CalendarSystem)
 	fmt.Println("Characters Defined:")
-	fmt.Println(colorize("NAME----------- ID-------- COLOR----- AREA SIZE", "Blue", mono))
+	fmt.Println(colorize("NAME----------- ID-------- COLOR----- SIZE", "Blue", mono))
 	for _, def := range server.Characters {
-		fmt.Println(colorize(fmt.Sprintf("%-15s %-10s %-10s %4s %4s", def.Name, def.ObjID(), def.Color, def.Area, def.Size), "Yellow", mono))
+		fmt.Println(colorize(fmt.Sprintf("%-15s %-10s %-10s %4s", def.Name, def.ObjID(), def.Color, def.Size), "Yellow", mono))
 	}
 
 	fmt.Println("Condition Codes from Server:")
@@ -667,7 +667,7 @@ func describeObject(mono bool, obj any) string {
 			fieldDesc{"color", o.Color},
 			fieldDesc{"note", o.Note},
 			fieldDesc{"size", o.Size},
-			fieldDesc{"area", o.Area},
+			fieldDesc{"dispsize", o.DispSize},
 			fieldDesc{"statuslist", o.StatusList},
 			fieldDesc{"aoe", describeObject(mono, o.AoE)},
 			fieldDesc{"movemode", o.MoveMode},
@@ -675,6 +675,7 @@ func describeObject(mono bool, obj any) string {
 			fieldDesc{"killed", o.Killed},
 			fieldDesc{"dim", o.Dim},
 			fieldDesc{"type", o.CreatureType},
+			fieldDesc{"customreach", o.CustomReach},
 		))
 
 	case mapper.MapElement:
@@ -722,10 +723,17 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"name", m.Name},
 			fieldDesc{"id", m.ObjID()},
 			fieldDesc{"color", m.Color},
-			fieldDesc{"area", m.Area},
 			fieldDesc{"size", m.Size},
 		)
 	case mapper.AddImageMessagePayload:
+		if m.Animation != nil {
+			printFields(mono, "AddImage animataion parameters",
+				fieldDesc{"name", m.Name},
+				fieldDesc{"frames", m.Animation.Frames},
+				fieldDesc{"speed", m.Animation.FrameSpeed},
+				fieldDesc{"loops", m.Animation.Loops},
+			)
+		}
 		for i, inst := range m.Sizes {
 			if inst.ImageData != nil {
 				printFields(mono, fmt.Sprintf("AddImage %d of %d", i+1, len(m.Sizes)),
@@ -1747,7 +1755,7 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 				c.ID = v[1].(string)
 				c.Color = v[2].(string)
 				c.Name = v[3].(string)
-				c.Area = v[4].(string)
+				//c.Area = v[4].(string)
 				c.Size = v[5].(string)
 				c.Gx = v[7].(float64)
 				c.Gy = v[8].(float64)
