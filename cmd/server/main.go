@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      _____       __                   #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \     /  \                  #
-# | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )    \/) )                 #
-# | |      | || || || (___) | Assistant | (____      \     /       | |                 #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \       | |                 #
-# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )      | |                 #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _  __) (_                #
-# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_) \____/                #
+#  _______  _______  _______             _______      _____      _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    / ___   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )   \/   )  |              #
+# | |      | || || || (___) | Assistant | (____      \     /        /   )              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \      _/   /               #
+# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )    /   _/                #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ (   (__/\              #
+# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)\_______/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -127,7 +127,7 @@ import (
 // Auto-configured values
 //
 
-const GoVersionNumber = "5.8.1" // @@##@@
+const GoVersionNumber="5.8.2" // @@##@@
 
 //
 // eventMonitor responds to signals and timers that affect our overall operation
@@ -327,7 +327,7 @@ func acceptIncomingConnections(incoming net.Listener, app *Application) {
 	}
 }
 
-// @[00]@| Go-GMA 5.8.1
+// @[00]@| Go-GMA 5.8.2
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
