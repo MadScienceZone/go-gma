@@ -193,6 +193,8 @@ func (c *ClientConnection) Close() {
 // ServeToClient is intended to be run in its own thread,
 // and speaks to one client for the duration of its session.
 //
+// If the ctx context value is cancelled, the connection to the client will be closed and this routin will exit.
+//
 func (c *ClientConnection) ServeToClient(ctx context.Context, serverStarted, lastPing time.Time, nrApp *newrelic.Application) {
 	if c == nil {
 		return
@@ -208,23 +210,19 @@ func (c *ClientConnection) ServeToClient(ctx context.Context, serverStarted, las
 	c.LastPoloTime = time.Now()
 	go c.loginClient(loginctx, loginDone, serverStarted, lastPing)
 
-syncloop:
-	for {
-		select {
-		case err = <-loginDone:
-			if err != nil {
-				c.Logf("client login failed: %v", err)
-				time.Sleep(2 * time.Second)
-				return
-			}
-			c.debugf(DebugIO, "login successfully completed")
-			loginCancel()
-			break syncloop
-
-		case <-ctx.Done():
-			c.Logf("context cancelled; closing connection to client and aborting login")
+	select {
+	case err = <-loginDone:
+		if err != nil {
+			c.Logf("client login failed: %v", err)
+			time.Sleep(2 * time.Second)
 			return
 		}
+		c.debugf(DebugIO, "login successfully completed")
+		loginCancel()
+
+	case <-ctx.Done():
+		c.Logf("context cancelled; closing connection to client and aborting login")
+		return
 	}
 
 	c.Server.AddClient(c)
@@ -281,6 +279,7 @@ syncloop:
 	go func(ctx context.Context) {
 		c.Log("client buffer agent started")
 		defer c.Log("client buffer agent stopped")
+		bufferReadable := make(chan byte, 1)
 
 		for {
 			select {
@@ -291,16 +290,18 @@ syncloop:
 						c.debugf(DebugIO, "moved packet directly to output channel (buffer empty and channel available now)")
 						continue
 					default:
+						// buffer was empty, so populate it and signal that it has content
+						c.Conn.sendBuf = append(c.Conn.sendBuf, packet)
+						c.debugf(DebugIO, "moved packet to empty output buffer (depth %d)", len(c.Conn.sendBuf))
+						bufferReadable <- 0
 					}
+				} else {
+					// buffer already has contents, just add to it
+					c.Conn.sendBuf = append(c.Conn.sendBuf, packet)
+					c.debugf(DebugIO, "moved packet to existing output buffer (depth %d)", len(c.Conn.sendBuf))
 				}
-				c.Conn.sendBuf = append(c.Conn.sendBuf, packet)
-				c.debugf(DebugIO, "moved packet to output buffer (depth %d)", len(c.Conn.sendBuf))
 
-			case <-ctx.Done():
-				c.Log("buffer manager context cancelled")
-				return
-
-			default:
+			case <-bufferReadable:
 				if len(c.Conn.sendBuf) > 0 {
 					select {
 					case toSend <- c.Conn.sendBuf[0]:
@@ -309,6 +310,13 @@ syncloop:
 					default:
 					}
 				}
+				if len(c.Conn.sendBuf) > 0 {
+					bufferReadable <- 0
+				}
+
+			case <-ctx.Done():
+				c.Log("buffer manager context cancelled")
+				return
 			}
 		}
 	}(clientBufferCtx)
@@ -422,7 +430,6 @@ mainloop:
 			}
 		}
 	}
-
 }
 
 func (c *ClientConnection) loginClient(ctx context.Context, done chan error, serverStarted, lastPing time.Time) {

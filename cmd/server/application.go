@@ -211,6 +211,8 @@ type Application struct {
 
 	// Time the server was started.
 	ServerStarted time.Time
+
+	CPUProfileFile string
 }
 
 func (a *Application) GetClientPreamble() *mapper.ClientPreamble {
@@ -374,6 +376,7 @@ func (a *Application) GetAppOptions() error {
 	var debugFlags = flag.String("debug", "", "List the debugging trace types to enable")
 	var nrLogger = flag.String("telemetry-log", "", "Debugging log for telemetry collection (default: stdout)")
 	var nrAppName = flag.String("telemetry-name", "", "Application name for telemetry collection (default: \"gma-server\")")
+	var profFile = flag.String("profile", "", "CPU Profiling output file (default: no profiling)")
 	flag.Parse()
 
 	if *debugFlags != "" {
@@ -398,6 +401,10 @@ func (a *Application) GetAppOptions() error {
 			}
 			a.Debugf(DebugInit, "Logging to %v", path)
 		}
+	}
+
+	if *profFile != "" {
+		a.CPUProfileFile = *profFile
 	}
 
 	if *nrLogger == "" {

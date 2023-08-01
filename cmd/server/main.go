@@ -115,6 +115,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"runtime/pprof"
 	"syscall"
 	"time"
 
@@ -126,7 +127,7 @@ import (
 // Auto-configured values
 //
 
-const GoVersionNumber="5.8.1" // @@##@@
+const GoVersionNumber = "5.8.1" // @@##@@
 
 //
 // eventMonitor responds to signals and timers that affect our overall operation
@@ -214,6 +215,15 @@ func main() {
 		mapper.GMAMapperProtocol,
 		mapper.MinimumSupportedMapProtocol,
 		mapper.MaximumSupportedMapProtocol)
+
+	if app.CPUProfileFile != "" {
+		f, err := os.Create(app.CPUProfileFile)
+		if err != nil {
+			app.Logger.Fatal(err)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
 
 	go generateMessageIDs(app.Logf, app.MessageIDGenerator)
 	go app.managePreambleData()

@@ -1014,6 +1014,7 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 
 //
 // Send out all waiting outbound messages and then return
+// DO NOT CALL this if you have a writer routine still running that is managing the sendBuf slice.
 //
 func (c *MapConnection) Flush() error {
 	// receive all the messages still in the channel

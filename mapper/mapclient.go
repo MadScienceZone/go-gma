@@ -3323,6 +3323,7 @@ func (c *Connection) interact() error {
 	listenerDone := make(chan error, 1)
 	go c.listen(listenerDone)
 	c.signedOn = true
+	bufferReadable := make(chan byte, 1)
 
 	for {
 		//
@@ -3337,25 +3338,28 @@ func (c *Connection) interact() error {
 			c.Logf("interact: listener done (%v), stopping", err)
 			return err
 		case packet := <-c.serverConn.sendChan:
+			if len(c.serverConn.sendBuf) == 0 {
+				bufferReadable <- 0
+			}
 			c.serverConn.sendBuf = append(c.serverConn.sendBuf, packet)
-		default:
-		}
-		//
-		// Send the next outgoing message in the buffer
-		//
-		if c.serverConn.writer != nil && len(c.serverConn.sendBuf) > 0 {
-			if (c.DebuggingLevel & DebugBinary) != 0 {
-				c.debug(DebugBinary, util.Hexdump([]byte(c.serverConn.sendBuf[0])))
+		case <-bufferReadable:
+			if c.serverConn.writer != nil && len(c.serverConn.sendBuf) > 0 {
+				if (c.DebuggingLevel & DebugBinary) != 0 {
+					c.debug(DebugBinary, util.Hexdump([]byte(c.serverConn.sendBuf[0])))
+				}
+				c.debug(DebugIO, fmt.Sprintf("client->%q (%d)", c.serverConn.sendBuf[0], len(c.serverConn.sendBuf)))
+				if written, err := c.serverConn.writer.WriteString(c.serverConn.sendBuf[0]); err != nil {
+					return fmt.Errorf("only wrote %d of %d bytes: %v", written, len(c.serverConn.sendBuf[0]), err)
+				}
+				if err := c.serverConn.writer.Flush(); err != nil {
+					c.Logf("interact: unable to flush: %v", err)
+					return err
+				}
+				c.serverConn.sendBuf = c.serverConn.sendBuf[1:]
 			}
-			c.debug(DebugIO, fmt.Sprintf("client->%q (%d)", c.serverConn.sendBuf[0], len(c.serverConn.sendBuf)))
-			if written, err := c.serverConn.writer.WriteString(c.serverConn.sendBuf[0]); err != nil {
-				return fmt.Errorf("only wrote %d of %d bytes: %v", written, len(c.serverConn.sendBuf[0]), err)
+			if len(c.serverConn.sendBuf) > 0 {
+				bufferReadable <- 0
 			}
-			if err := c.serverConn.writer.Flush(); err != nil {
-				c.Logf("interact: unable to flush: %v", err)
-				return err
-			}
-			c.serverConn.sendBuf = c.serverConn.sendBuf[1:]
 		}
 	}
 }
