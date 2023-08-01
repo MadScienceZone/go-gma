@@ -4069,12 +4069,12 @@ func ImportSpell(decoder *json.Decoder, db *sql.DB, prefs *CorePreferences) erro
 		materialcosts.Int32 = int32(spell.Components.MaterialCosts)
 	}
 
-	if castingTimes, err := getCastingTimeList(db, prefs); err != nil || !slices.Contains[string](castingTimes, spell.Casting.Time) {
+	if castingTimes, err := getCastingTimeList(db, prefs); err != nil || !slices.Contains(castingTimes, spell.Casting.Time) {
 		return fmt.Errorf("invalid casting time \"%s\" (database error %v)", spell.Casting.Time, err)
 	}
 
 	if spell.Range.Range != "" {
-		if ranges, err := getRangeList(db, prefs); err != nil || !slices.Contains[string](ranges, spell.Range.Range) {
+		if ranges, err := getRangeList(db, prefs); err != nil || !slices.Contains(ranges, spell.Range.Range) {
 			return fmt.Errorf("invalid range \"%s\" (database error %v)", spell.Range.Range, err)
 		}
 		if spell.Range.Range != "feet" && spell.Range.Range != "miles" {
@@ -4091,23 +4091,23 @@ func ImportSpell(decoder *json.Decoder, db *sql.DB, prefs *CorePreferences) erro
 		}
 	}
 
-	if durations, err := getDurationList(db, prefs); err != nil || !slices.Contains[string](durations, spell.Duration.Duration) {
+	if durations, err := getDurationList(db, prefs); err != nil || !slices.Contains(durations, spell.Duration.Duration) {
 		return fmt.Errorf("invalid duration \"%s\" (database error %v)", spell.Duration.Duration, err)
 	}
 
 	spell.SR.SR = strings.ToLower(spell.SR.SR)
-	if ress, err := getSpellResistanceList(db, prefs); err != nil || !slices.Contains[string](ress, spell.SR.SR) {
+	if ress, err := getSpellResistanceList(db, prefs); err != nil || !slices.Contains(ress, spell.SR.SR) {
 		return fmt.Errorf("invalid SR \"%s\" (database error %v)", spell.SR.SR, err)
 	}
 
 	if spell.Save.SavingThrow != "" {
-		if saves, err := getSavingThrowList(db, prefs); err != nil || !slices.Contains[string](saves, spell.Save.SavingThrow) {
+		if saves, err := getSavingThrowList(db, prefs); err != nil || !slices.Contains(saves, spell.Save.SavingThrow) {
 			return fmt.Errorf("invalid saving throw \"%s\" (database error %v)", spell.Save.SavingThrow, err)
 		}
 	}
 
 	if spell.Save.Effect != "" {
-		if se, err := getSaveEffectsList(db, prefs); err != nil || !slices.Contains[string](se, spell.Save.Effect) {
+		if se, err := getSaveEffectsList(db, prefs); err != nil || !slices.Contains(se, spell.Save.Effect) {
 			return fmt.Errorf("invalid saving throw effect \"%s\" (database error %v)", spell.Save.Effect, err)
 		}
 	}

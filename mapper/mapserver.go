@@ -416,7 +416,7 @@ mainloop:
 					})
 
 				case AcceptMessagePayload:
-					if len(p.Messages) == 0 || slices.Index[string](p.Messages, "*") < 0 {
+					if len(p.Messages) == 0 || slices.Index(p.Messages, "*") < 0 {
 						c.Subscriptions = nil
 					} else {
 						c.Subscriptions = make(map[ServerMessage]bool)

@@ -302,13 +302,13 @@ func (a *Application) manageClientList() {
 				continue
 			}
 			a.Debugf(DebugIO, "removing client %v from list", c.IdTag())
-			pos := slices.Index[*mapper.ClientConnection](clients, c)
+			pos := slices.Index(clients, c)
 			if pos < 0 {
 				a.Logf("client %v not found in server's client list, so can't delete it more", c.IdTag())
 				continue
 			}
 			clients[pos] = nil
-			clients = slices.Delete[[]*mapper.ClientConnection, *mapper.ClientConnection](clients, pos, pos+1)
+			clients = slices.Delete(clients, pos, pos+1)
 			clientListCopy = newClientListCopy()
 			refreshChannel()
 			a.clientData.announcer <- 0
@@ -806,7 +806,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 						a.Debugf(DebugIO, "sending to explicit list but we don't know who %v is (skipped)", peer.IdTag())
 						continue
 					}
-					if peer.Auth.Username != requester.Auth.Username && slices.Index[string](p.Recipients, peer.Auth.Username) < 0 {
+					if peer.Auth.Username != requester.Auth.Username && slices.Index(p.Recipients, peer.Auth.Username) < 0 {
 						a.Debugf(DebugIO, "sending to explicit list but user \"%s\" (from %v) isn't on the list (skipped)", peer.Auth.Username, peer.IdTag())
 						continue
 					}
@@ -965,7 +965,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 					a.Debugf(DebugIO, "sending to explicit list but we don't know who %v is (skipped)", peer.IdTag())
 					continue
 				}
-				if peer.Auth.Username != requester.Auth.Username && slices.Index[string](p.Recipients, peer.Auth.Username) < 0 {
+				if peer.Auth.Username != requester.Auth.Username && slices.Index(p.Recipients, peer.Auth.Username) < 0 {
 					a.Debugf(DebugIO, "sending to explicit list but user \"%s\" (from %v) isn't on the list (skipped)", peer.Auth.Username, peer.IdTag())
 					continue
 				}
@@ -1552,9 +1552,9 @@ func (a *Application) manageGameState() {
 							delete(eventHistory, "del:"+p.ObjID+":"+p.AttrName)
 						} else {
 							for _, addedValue := range p.Values {
-								if pos := slices.Index[string](obj.Values, addedValue); pos >= 0 {
+								if pos := slices.Index(obj.Values, addedValue); pos >= 0 {
 									// we previously tracked deletion of this, so remove from the delete list now
-									slices.Delete[[]string, string](obj.Values, pos, pos+1)
+									slices.Delete(obj.Values, pos, pos+1)
 								}
 							}
 						}
@@ -1566,7 +1566,7 @@ func (a *Application) manageGameState() {
 								a.Logf("value of eventHistory[add:%s:%s] is of type %T (removed)", p.ObjID, p.AttrName, o)
 								delete(eventHistory, "add:"+p.ObjID+":"+p.AttrName)
 							} else {
-								if slices.Contains[string](obj.Values, addedValue) {
+								if slices.Contains(obj.Values, addedValue) {
 									// we already have a note to add this value, do nothing
 								} else {
 									// add this to our existing add: record
@@ -1712,9 +1712,9 @@ func (a *Application) manageGameState() {
 							delete(eventHistory, "add:"+p.ObjID+":"+p.AttrName)
 						} else {
 							for _, addedValue := range p.Values {
-								if pos := slices.Index[string](obj.Values, addedValue); pos >= 0 {
+								if pos := slices.Index(obj.Values, addedValue); pos >= 0 {
 									// we previously tracked addition of this, so remove from the add list now
-									slices.Delete[[]string, string](obj.Values, pos, pos+1)
+									slices.Delete(obj.Values, pos, pos+1)
 								}
 							}
 						}
@@ -1726,7 +1726,7 @@ func (a *Application) manageGameState() {
 								a.Logf("value of eventHistory[del:%s:%s] is of type %T (removed)", p.ObjID, p.AttrName, o)
 								delete(eventHistory, "del:"+p.ObjID+":"+p.AttrName)
 							} else {
-								if slices.Contains[string](obj.Values, addedValue) {
+								if slices.Contains(obj.Values, addedValue) {
 									// we already have a note to remove this value, do nothing
 								} else {
 									// add this to our existing del: record

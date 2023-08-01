@@ -231,7 +231,7 @@ func (a *Application) QueryChatHistory(target int, requester *mapper.ClientConne
 			if err := json.Unmarshal([]byte(jdata), &chat); err != nil {
 				return err
 			}
-			if chat.ToAll || (chat.ToGM && requester.Auth.GmMode) || slices.Contains[string](chat.Recipients, requester.Auth.Username) {
+			if chat.ToAll || (chat.ToGM && requester.Auth.GmMode) || slices.Contains(chat.Recipients, requester.Auth.Username) {
 				requester.Conn.Send(mapper.ChatMessage, chat)
 			}
 
@@ -240,7 +240,7 @@ func (a *Application) QueryChatHistory(target int, requester *mapper.ClientConne
 			if err := json.Unmarshal([]byte(jdata), &rr); err != nil {
 				return err
 			}
-			if rr.ToAll || (rr.ToGM && requester.Auth.GmMode) || slices.Contains[string](rr.Recipients, requester.Auth.Username) {
+			if rr.ToAll || (rr.ToGM && requester.Auth.GmMode) || slices.Contains(rr.Recipients, requester.Auth.Username) {
 				requester.Conn.Send(mapper.RollResult, rr)
 			}
 
