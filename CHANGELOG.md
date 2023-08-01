@@ -1,7 +1,7 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.8.3                <!-- @@##@@ -->
+ * This Package Version: 5.9.0-alpha.0                <!-- @@##@@ -->
  * Effective Date: 01-Aug-2023			<!-- @@##@@ -->
 
 ## Compatibility
@@ -9,6 +9,12 @@
  * GMA Mapper Version: 4.14.1		<!-- @@##@@ -->
  * GMA Mapper Protocol: 407		<!-- @@##@@ -->
  * GMA Mapper File Format: 22		<!-- @@##@@ -->
+
+## Unreleased v5.9.0-alpha.0
+### Enhancements
+ * Added New Relic APM instrumentation to the major server functions.
+ * Renamed the server's `-profile` option to `-cpuprofile`
+ * Changed the semantics of `-telemetry-log` so that by default it does not log at all; now give `"-"` as the log path to have it log to standard output.
 
 ## v5.8.3
 ### Fixes
