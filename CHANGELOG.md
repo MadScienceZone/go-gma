@@ -1,7 +1,7 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.8.2                <!-- @@##@@ -->
+ * This Package Version: 5.8.3                <!-- @@##@@ -->
  * Effective Date: 01-Aug-2023			<!-- @@##@@ -->
 
 ## Compatibility
@@ -10,8 +10,12 @@
  * GMA Mapper Protocol: 407		<!-- @@##@@ -->
  * GMA Mapper File Format: 22		<!-- @@##@@ -->
 
+## v5.8.3
+### Fixes
+ * Added missing source files needed for mapper clients and server.
+
 ## v5.8.2
-## Fixes
+### Fixes
  * The server and client connection code included a spin loop that sent CPU usage through the roof when clients were connected. This has been fixed.
 
 ## v5.8.1
