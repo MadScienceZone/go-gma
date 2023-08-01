@@ -1,7 +1,7 @@
 .\" vim:set syntax=nroff:
 '\" <<ital-is-var>>
 '\" <<bold-is-fixed>>
-.TH SERVER 6 "Go-GMA 5.8.1" 11-Jul-2023 "Games" \" @@mp@@
+.TH SERVER 6 "Go-GMA 5.8.2" 01-Aug-2023 "Games" \" @@mp@@
 .SH NAME
 server \- GMA battle grid map server (Go version)
 .SH SYNOPSIS
@@ -35,6 +35,8 @@ server \- GMA battle grid map server (Go version)
 .I path
 .RB [ \-telemetry\-log
 .IR path ]
+.RB [ \-telemetry\-name
+.IR string ]
 .ad
 '\" <</usage>>
 .SH DESCRIPTION
@@ -231,7 +233,15 @@ does not exist, a new empty database will automatically be created by the server
 .BI "\-telemetry\-log " path
 If the server is configured to send telemetry metrics,
 this provides the name of a file into which to write
-telemetry debugging information.
+telemetry debugging information. Defaults to the
+standard output.
+.TP
+.BI "\-telemetry\-name " string
+If the server is configured to send telemetry metrics,
+this provides the name of the application for purposes
+of identifying this running instance of the server. Defaults
+to
+.RB \*(lq gma\-server \*(rq.
 '\" <</>>
 .SH "CLIENT INITIALIZATION"
 .LP

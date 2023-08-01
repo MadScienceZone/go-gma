@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      _____       __                   #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \     /  \                  #
-# | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )    \/) )                 #
-# | |      | || || || (___) | Assistant | (____      \     /       | |                 #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \       | |                 #
-# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )      | |                 #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _  __) (_                #
-# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_) \____/                #
+#  _______  _______  _______             _______      _____      _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    / ___   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )   \/   )  |              #
+# | |      | || || || (___) | Assistant | (____      \     /        /   )              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \      _/   /               #
+# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )    /   _/                #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ (   (__/\              #
+# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)\_______/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -33,7 +33,6 @@ import (
 
 	"github.com/MadScienceZone/go-gma/v5/dice"
 	"github.com/MadScienceZone/go-gma/v5/mapper"
-	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/exp/slices"
 )
 
@@ -49,7 +48,7 @@ func (a *Application) dbOpen() error {
 		// database doesn't exist yet; create a new one
 
 		a.Logf("no existing sqlite3 database \"%s\" found--creating a new one", a.DatabaseName)
-		a.sqldb, err = sql.Open("sqlite3", "file:"+a.DatabaseName)
+		a.sqldb, err = sql.Open(DatabaseDriver, "file:"+a.DatabaseName)
 		if err != nil {
 			a.Logf("unable to create sqlite3 database %s: %v", a.DatabaseName, err)
 			return err
@@ -441,7 +440,7 @@ func (a *Application) FilterImages(f mapper.FilterImagesMessagePayload) error {
 	return nil
 }
 
-// @[00]@| Go-GMA 5.8.1
+// @[00]@| Go-GMA 5.8.2
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

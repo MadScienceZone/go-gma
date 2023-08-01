@@ -1,3 +1,20 @@
+/*
+########################################################################################
+#  __                                                                                  #
+# /__ _                                                                                #
+# \_|(_)                                                                               #
+#  _______  _______  _______             _______      _____      _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    / ___   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )   \/   )  |              #
+# | |      | || || || (___) | Assistant | (____      \     /        /   )              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \      _/   /               #
+# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )    /   _/                #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ (   (__/\              #
+# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)\_______/              #
+#                                                                                      #
+########################################################################################
+*/
+
 package main
 
 import (
@@ -17,6 +34,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/dice"
 	"github.com/MadScienceZone/go-gma/v5/mapper"
 	"github.com/MadScienceZone/go-gma/v5/util"
+	"github.com/newrelic/go-agent/v3/newrelic"
 	"golang.org/x/exp/slices"
 )
 
@@ -134,6 +152,8 @@ type Application struct {
 	Logger *log.Logger
 
 	NrLogFile *os.File
+	NrAppName string
+	NrApp     *newrelic.Application
 
 	// If DeLugLevel is 0, no extra debugging output will be logged.
 	// Otherwise, it gives a set of debugging topics to report.
@@ -191,6 +211,8 @@ type Application struct {
 
 	// Time the server was started.
 	ServerStarted time.Time
+
+	CPUProfileFile string
 }
 
 func (a *Application) GetClientPreamble() *mapper.ClientPreamble {
@@ -353,6 +375,8 @@ func (a *Application) GetAppOptions() error {
 	var sqlDbName = flag.String("sqlite", "", "Specify filename for sqlite database to use")
 	var debugFlags = flag.String("debug", "", "List the debugging trace types to enable")
 	var nrLogger = flag.String("telemetry-log", "", "Debugging log for telemetry collection (default: stdout)")
+	var nrAppName = flag.String("telemetry-name", "", "Application name for telemetry collection (default: \"gma-server\")")
+	var profFile = flag.String("profile", "", "CPU Profiling output file (default: no profiling)")
 	flag.Parse()
 
 	if *debugFlags != "" {
@@ -379,6 +403,10 @@ func (a *Application) GetAppOptions() error {
 		}
 	}
 
+	if *profFile != "" {
+		a.CPUProfileFile = *profFile
+	}
+
 	if *nrLogger == "" {
 		a.NrLogFile = os.Stdout
 	} else {
@@ -390,6 +418,18 @@ func (a *Application) GetAppOptions() error {
 		a.NrLogFile, err = os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			return fmt.Errorf("unable to open telemetry log file: %v", err)
+		}
+		if !InstrumentCode {
+			a.Log("WARNING: -telemetry-log option given but the server is not compiled to enable telemetry!")
+		}
+	}
+
+	if *nrAppName == "" {
+		a.NrAppName = "gma-server"
+	} else {
+		a.NrAppName = *nrAppName
+		if !InstrumentCode {
+			a.Log("WARNING: -telemetry-name option given but the server is not compiled to enable telemetry!")
 		}
 	}
 

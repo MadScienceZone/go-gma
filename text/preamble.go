@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      _____       __                   #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \     /  \                  #
-# | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )    \/) )                 #
-# | |      | || || || (___) | Assistant | (____      \     /       | |                 #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \       | |                 #
-# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )      | |                 #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _  __) (_                #
-# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_) \____/                #
+#  _______  _______  _______             _______      _____      _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    / ___   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )   \/   )  |              #
+# | |      | || || || (___) | Assistant | (____      \     /        /   )              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \      _/   /               #
+# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )    /   _/                #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ (   (__/\              #
+# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)\_______/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -29,21 +29,19 @@ package text
 //
 // @@:go:form-preamble:begin:commonPostScriptPreamble@@
 const commonPostScriptPreamble = `%!PS
-% vim:set syntax=postscr ai sm nu ts=4 sw=4 expandtab:
-%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  _______  _______  _______              ______        ___                            %
-% (  ____ \(       )(  ___  )            / ____ \      /   )                           %
-% | (    \/| () () || (   ) |           ( (    \/     / /) |                           %
-% | |      | || || || (___) |           | (____      / (_) (_                          %
-% | | ____ | |(_)| ||  ___  |           |  ___ \    (____   _)                         %
-% | | \_  )| |   | || (   ) | Game      | (   ) )        ) (                           %
-% | (___) || )   ( || )   ( | Master's  ( (___) ) _      | |                           %
-% (_______)|/     \||/     \| Assistant  \_____/ (_)     (_)                           %
+%  _______  _______  _______              ______      ______                           %
+% (  ____ \(       )(  ___  )            / ____ \    / ____ \                          %
+% | (    \/| () () || (   ) |           ( (    \/   ( (    \/                          %
+% | |      | || || || (___) |           | (____     | (____                            %
+% | | ____ | |(_)| ||  ___  |           |  ___ \    |  ___ \                           %
+% | | \_  )| |   | || (   ) | Game      | (   ) )   | (   ) )                          %
+% | (___) || )   ( || )   ( | Master's  ( (___) ) _ ( (___) )                          %
+% (_______)|/     \||/     \| Assistant  \_____/ (_) \_____/                           %
 %                                                                                      %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-% @[00]@| GMA Core 6.4
+% @[00]@| GMA Core 6.6
 % @[01]@|
 % @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 % @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
@@ -365,13 +363,45 @@ const commonPostScriptPreamble = `%!PS
 %
 % Row of check-boxes, shaded in blocks 
 % qty used checked half-checked boxesperrow box-x y w h gap-x y shadeinterval shadeChecked shadeHalf differential? CheckBoxMatrix -
+% qty used checked half-checked boxesperrow box-x y w h gap-x y shadeinterval shadeChecked shadeHalf differential? minboxx maxboxx nl CheckBoxMatrixBounded -
+% qty used checked half-checked boxesperrow box-x y w h gap-x y shadeinterval shadeChecked shadeHalf differential? title TitledCheckBoxMatrix -
+% qty used checked half-checked boxesperrow box-x y w h gap-x y shadeinterval shadeChecked shadeHalf differential? title minboxx maxboxx nl TitledCheckBoxMatrixBounded -
+% qty used checked half-checked boxesperrow box-x y w h gap-x y shadeinterval shadeChecked shadeHalf differential? [labels] minboxx maxboxx nl LabelledCheckBoxMatrixBounded -
 % qty used checked half-checked boxesperrow box-x y w h gap-x y shadeinterval shadeChecked shadeHalf differential? [labels] LabelledCheckBoxMatrix -
 %
+
+/LabelledCheckBoxMatrixBounded {
+    () 4 1 roll _coreCBMrender
+} def
+
+/TitledCheckBoxMatrixBounded {
+    [] 5 1 roll _coreCBMrender
+} def
+
+/TitledCheckBoxMatrix {
+    [] exch 0 0 {} _coreCBMrender 
+} def
+
 /CheckBoxMatrix {
-    [] LabelledCheckBoxMatrix
+    [] () 0 0 {} _coreCBMrender
+} def
+
+/CheckBoxMatrixBounded {
+    [] () 5 2 roll _coreCBMrender
 } def
 
 /LabelledCheckBoxMatrix {
+    () 0 0 {} _coreCBMrender
+} def
+
+/LabelledTitledCheckBoxMatrixBounded {_coreCBMrender} def
+
+% ... [labels] title minboxx|0 maxboxx|0 nlfunc _coreCBMrender -
+/_coreCBMrender {
+    /CBM_nl_proc exch def
+    /CBM_maxboxx exch def
+    /CBM_minboxx exch def
+    /CBM_title exch def
     /CBM_labels exch def
     /CBM_label_i 0 def
     /CBM_label_n CBM_labels length def
@@ -405,6 +435,18 @@ const commonPostScriptPreamble = `%!PS
     % |<------------qty----------->|
     % 
     % (__x,__y) give the position for the next box to draw
+    CBM_title () ne {
+        CBM_title stringwidth pop CBM_bx_x add CBM_maxboxx gt {
+            /CBM_bx_x CBM_minboxx def
+            /CBM__x CBM_minboxx def
+            CBM_nl_proc
+        } if
+
+	% TODO "7" here should be calculated based on font height
+	CBM__x CBM__y 7 sub moveto CBM_title show
+        /CBM_bx_x CBM_bx_x CBM_title stringwidth pop add CBM_gap_x add def
+	/CBM__x CBM_bx_x def
+    } if
 
     /CBM_shademode false def
     1 1 CBM_qty_total {
@@ -456,6 +498,13 @@ const commonPostScriptPreamble = `%!PS
             } if
         } if
         /CBM__x CBM__x CBM_gap_x CBM_bx_w add add def   % advance to next horizontal position
+
+        CBM_maxboxx 0 gt CBM__x CBM_maxboxx ge and {
+            /CBM__x CBM_minboxx def
+            /CBM__y CBM__y CBM_gap_y CBM_bx_h add sub def
+            CBM_nl_proc
+        } if
+
         CBM_bpr mod 0 eq {          % box number at end of row?
             /CBM__x CBM_bx_x def
             /CBM__y CBM__y CBM_gap_y CBM_bx_h add sub def
@@ -563,21 +612,19 @@ const commonPostScriptPreamble = `%!PS
 // @@:go:form-preamble:end:@@
 // @@:go:gma-preamble:begin:gmaPostScriptPreamble@@
 const gmaPostScriptPreamble = `%!PS
-% vim:set syntax=postscr ai sm nu expandtab ts=4 sw=4:
-%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  _______  _______  _______              ______        ___                            %
-% (  ____ \(       )(  ___  )            / ____ \      /   )                           %
-% | (    \/| () () || (   ) |           ( (    \/     / /) |                           %
-% | |      | || || || (___) |           | (____      / (_) (_                          %
-% | | ____ | |(_)| ||  ___  |           |  ___ \    (____   _)                         %
-% | | \_  )| |   | || (   ) | Game      | (   ) )        ) (                           %
-% | (___) || )   ( || )   ( | Master's  ( (___) ) _      | |                           %
-% (_______)|/     \||/     \| Assistant  \_____/ (_)     (_)                           %
+%  _______  _______  _______              ______      ______                           %
+% (  ____ \(       )(  ___  )            / ____ \    / ____ \                          %
+% | (    \/| () () || (   ) |           ( (    \/   ( (    \/                          %
+% | |      | || || || (___) |           | (____     | (____                            %
+% | | ____ | |(_)| ||  ___  |           |  ___ \    |  ___ \                           %
+% | | \_  )| |   | || (   ) | Game      | (   ) )   | (   ) )                          %
+% | (___) || )   ( || )   ( | Master's  ( (___) ) _ ( (___) )                          %
+% (_______)|/     \||/     \| Assistant  \_____/ (_) \_____/                           %
 %                                                                                      %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-% @[00]@| GMA Core 6.4
+% @[00]@| GMA Core 6.6
 % @[01]@|
 % @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 % @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
@@ -619,8 +666,8 @@ const gmaPostScriptPreamble = `%!PS
 %
 %
 % GMA d20/Pathfinder Form Definitions
-% Copyright (c) 2003, 2004, 2009, 2010, 2011, 2013, 2015 Steve Willoughby,
-% Aloha, Oregon, USA.  All Rights Reserved.
+% Copyright (c) 2003, 2004, 2009, 2010, 2011, 2013, 2015, 2023
+% Steve Willoughby, Aloha, Oregon, USA.  All Rights Reserved.
 %
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % COLOR SCHEMES
@@ -629,6 +676,47 @@ statusdict begin
     true setduplexmode
 end
 
+%/SetUpFontAttributes {
+%    findfont dup length dict
+%    begin
+%        {
+%            1 index /FID ne {
+%                def
+%            } {
+%                pop pop
+%            } ifelse
+%        } forall
+%        /Encoding ISOLatin1Encoding def
+%        currentdict
+%    end
+%    definefont
+%    pop
+%} def
+
+/_my_encoding StandardEncoding dup length array copy def
+_my_encoding 8#200 /Adieresis     put
+_my_encoding 8#220 /adieresis     put
+_my_encoding 8#345 /copyright     put
+_my_encoding 8#346 /registered    put
+_my_encoding 8#347 /degree        put
+_my_encoding 8#354 /plusminus     put
+_my_encoding 8#355 /onequarter    put
+_my_encoding 8#356 /onehalf       put
+_my_encoding 8#357 /threequarters put
+_my_encoding 8#360 /multiply      put
+_my_encoding 8#362 /endash        put
+_my_encoding 8#330 /zerosuperior  put
+_my_encoding 8#331 /onesuperior   put
+_my_encoding 8#332 /twosuperior   put
+_my_encoding 8#333 /threesuperior put
+_my_encoding 8#334 /foursuperior  put
+_my_encoding 8#335 /fivesuperior  put
+_my_encoding 8#336 /sixsuperior   put
+_my_encoding 8#337 /sevensuperior put
+_my_encoding 8#340 /eightsuperior put
+_my_encoding 8#342 /ninesuperior  put
+_my_encoding 8#344 /divide        put
+
 /SetUpFontAttributes {
     findfont dup length dict
     begin
@@ -636,10 +724,10 @@ end
             1 index /FID ne {
                 def
             } {
-                pop pop
-            } ifelse
+                pop pop 
+            } ifelse 
         } forall
-        /Encoding ISOLatin1Encoding def
+        /Encoding _my_encoding def
         currentdict
     end
     definefont
@@ -719,19 +807,19 @@ end
     SetTheme_d20_Red 
     /PageTitleText (Pathfinder Character Record Sheet) def
     /CopyrightText1 (PATHFINDER CHARACTER RECORD SHEET / ) def
-    /CopyrightText2 (\2512010, 2015 Steve Willoughby / REV 2 / 20-NOV-2015) def
+    /CopyrightText2 (\2512010, 2015, 2023 Steve Willoughby / REV 4 / 20-NOV-2015) def
 } def
 /SetTheme_d20_Monsters  { 
     SetTheme_d20_Blue
     /PageTitleText (Pathfinder Encounter Run Sheet) def
     /CopyrightText1 (PATHFINDER ENCOUNTER RUN SHEET / ) def
-    /CopyrightText2 (\2512013, 2015 Steve Willoughby / REV 3 / 20-NOV-2015) def
+    /CopyrightText2 (\2512013, 2015, 2023 Steve Willoughby / REV 4 / 07-JUN-2023) def
 } def
 /SetTheme_d20_GM_Matrix { 
     SetTheme_d20_Green 
     /PageTitleText (Pathfinder GM Player Matrix) def
     /CopyrightText1 (PATHFINDER GM PLAYER MATRIX / ) def
-    /CopyrightText2 (\2512013, 2015 Steve Willoughby / REV 3 / 20-NOV-2015) def
+    /CopyrightText2 (\2512013, 2015, 2023 Steve Willoughby / REV 4 / 07-JUN-2023) def
 } def
 %
 % Character Record PostScript Form
@@ -1431,7 +1519,7 @@ end
     20 D
     /SpB_col_w PageTextWidth 3 div def
     /SpB_row_0 Y def
-    /SpB_font /Palatino-Bold def
+    /SpB_font /BISO def
     /SpB_sz   12 def
     /X PageLeftMargin def
     /Y SpB_row_0 def
@@ -1559,6 +1647,7 @@ end
 /EndSpellBlock {
     /PF_Continuation_Proc {} def
 } def
+/SpellInstanceExtension {} def
 /Spell {            % ref sr sv dur trg rng comp ct sch name lvl #prep #cast [flags] txt
     %
     % start by counting the number of lines of text this will require
@@ -1631,6 +1720,9 @@ end
           Sp_sFlags LabelledCheckBoxMatrix
         EndDataBlock
     } if
+
+    SpellInstanceExtension
+    /SpellInstanceExtension {} def
 
     Sp_text_block length 0 gt {
         SelectBodyFont
@@ -1741,10 +1833,21 @@ end
     /PsFF_bf { DataFontBold findfont PsFF_sz scalefont setfont } def
     /PsFF_it { DataFontItalic findfont PsFF_sz scalefont setfont } def
     /PsFF_bi { DataFontBoldItalic findfont PsFF_sz scalefont setfont } def
+    /PsFF_section { DataFontBold findfont PsFF_sz 1.2 mul scalefont setfont } def
+    /PsFF_tbl_caption { PsFF_section } def
+    /PsFF_subsection { DataFontBold findfont PsFF_sz 1.1 mul scalefont setfont } def
+    /PsFF_tbl_footer { DataFont findfont PsFF_sz 0.8 mul scalefont setfont } def
+    /PsFF_tbl_footer_it { DataFontItalic findfont PsFF_sz 0.8 mul scalefont setfont } def
+    /PsFF_tbl_footer_bf { DataFontBold findfont PsFF_sz 0.8 mul scalefont setfont } def
+    /PsFF_tbl_footer_bi { DataFontBoldItalic findfont PsFF_sz 0.8 mul scalefont setfont } def
 
     /X PsFF__x def
     /Y PsFF__y def
     X Y moveto
+} def
+
+/PsFF_p {
+	PsFF_allowOutput {PsFF_show} {pop} ifelse
 } def
 
 /PsFF_indsz 10 def  % points of indent for each level
@@ -1859,6 +1962,137 @@ end
 % pad=padding (horiz and vert) around text inside box
 % spn=distance reclaimed in box for each span (=2*pad)
 %
+% NEW table formatting support which alows for multi-line table cells with a mixture of fonts within
+% the cell body.
+%
+% datawidth header? centered? right? colwidth PsFF_cell[TMBF_] --
+% 	start cell with rules T=top, M=middle, B=bottom, F=full, _=none
+% 	if centered? then move in enough distance for the full text to be centered
+% 	if right? then move in enough distance for the full text to be right-aligned
+% str PsFF_cellfragment --
+% 	typeset (next) part of the cell's contents
+%
+/PsFF_ntcommon_ { 
+	/PsFF__cl_w__ exch def 
+	/PsFF__cl_R__ exch def
+	/PsFF__cl_C__ exch def
+	/PsFF__cl_hdr__ exch def
+	/PsFF__cl_dw__ exch def
+} def
+/PsFF_ntalign_ {
+	PsFF__cl_C__ {
+		PsFF__cl_dw__ 2 div neg PsFF__cl_w__ 2 div add X add PsFF_TcolPad add Y moveto
+	} {
+		PsFF__cl_R__ {
+			PsFF__cl_dw__ neg PsFF__cl_w__ add X add PsFF_TcolPad add Y moveto
+		} {
+			X PsFF_TcolPad add Y moveto
+		} ifelse
+	} ifelse
+} def
+
+/PsFF_cellfragment {
+	PsFF_allowOutput {
+		PsFF__cl_hdr__ {
+			1 setgray show 0 setgray
+		} {
+			show
+		} ifelse
+	} { 
+		pop 
+	} ifelse
+} def
+
+/PsFF_cellT { 
+	PsFF_ntcommon_ 
+	PsFF_allowOutput {
+		SetLine_thin
+		PsFF_pathT ok
+		PsFF_hdrfill
+		PsFF_ntalign_
+	} if
+} def 
+
+/PsFF_hdrfill {
+	PsFF__cl_hdr__ {
+		PsFF_pathF fill
+	} if
+} def
+
+/PsFF_pathT {
+	np X Y 2 sub mv
+	0 PsFF_ld rln 
+	PsFF__cl_w__ 4 add 0 rln 
+	0 PsFF_ld neg rln 
+} def
+
+/PsFF_cellM {
+	PsFF_ntcommon_ 
+	PsFF_allowOutput {
+		SetLine_thin
+		PsFF_pathMl ok
+		PsFF_pathMr ok
+		PsFF_hdrfill
+		PsFF_ntalign_
+	} if
+} def 
+
+/PsFF_pathMl {
+	np X Y 2 sub mv
+	0 PsFF_ld rln 
+} def
+
+/PsFF_pathMr {
+	np X PsFF__cl_w__ add 4 add Y 2 sub mv
+	0 PsFF_ld rln
+} def
+
+/PsFF_cellB {
+	PsFF_ntcommon_ 
+	PsFF_allowOutput {
+		SetLine_thin
+		PsFF_pathB ok
+		PsFF_hdrfill
+		PsFF_ntalign_
+	} if
+} def
+
+/PsFF_pathB {
+	np X Y 2 sub PsFF_ld add mv
+	0 PsFF_ld neg rln 
+	PsFF__cl_w__ 4 add 0 rln
+	0 PsFF_ld rln
+} def
+
+/PsFF_cellF {
+	PsFF_ntcommon_
+	PsFF_allowOutput {
+		SetLine_thin
+		PsFF_pathF ok
+		PsFF_hdrfill
+		PsFF_ntalign_
+	} if
+} def
+
+/PsFF_pathF {
+	np X Y 2 sub mv
+	PsFF__cl_w__ 4 add 0 rln
+	0 PsFF_ld rln
+	PsFF__cl_w__ 4 add neg 0 rln
+	cp
+} def
+
+/PsFF_cell_ {
+	PsFF_ntcommon_
+	PsFF_allowOutput {
+		PsFF_hdrfill
+		PsFF_ntalign_
+	} if
+} def
+
+%
+% Older table formatting commands
+%
 /PsFF_tcommon {
     % X Y is at baseline of next character.  In our case, we descend 2pt below for rules
     % and move in 2pt on each side.  We leave X Y at the baseline for the next cell after
@@ -1919,11 +2153,6 @@ end
     } { pop pop } ifelse
 } def
 
-
-
-%
-% End GMA Preamble
-%
 /ThePageCounter 1 def
 /ThePage (**) def
 /__PFGMA_buf 20 string def
@@ -2526,10 +2755,13 @@ end
 		} if
 	} if
 } def
+%
+% End GMA Preamble
+%
 `
 // @@:go:gma-preamble:end:@@
 
-// @[00]@| Go-GMA 5.8.1
+// @[00]@| Go-GMA 5.8.2
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

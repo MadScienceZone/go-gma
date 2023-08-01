@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      _____       __                   #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \     /  \                  #
-# | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )    \/) )                 #
-# | |      | || || || (___) | Assistant | (____      \     /       | |                 #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \       | |                 #
-# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )      | |                 #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _  __) (_                #
-# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_) \____/                #
+#  _______  _______  _______             _______      _____      _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    / ___   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )   \/   )  |              #
+# | |      | || || || (___) | Assistant | (____      \     /        /   )              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \      _/   /               #
+# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )    /   _/                #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ (   (__/\              #
+# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)\_______/              #
 #                                                                                      #
 ########################################################################################
 */
@@ -97,6 +97,12 @@ Options:
       If server was compiled to send performance telemetry data, a debugging log of that
       data is recorded in the specified file.
 
+   -telemetry-name string
+      If server was compiled to send performance telemetry data, this specifies a custom
+      application name to be reported for this instance of the server.
+	  You can also accomplish this by setting the NEW_RELIC_APP_NAME
+	  environment variable.
+
 See the full documentation in the accompanying manual file man/man6/server.6.pdf (or run “gma man go server” if you have the GMA Core package installed as well as Go-GMA).
 
 See also the server protocol specification in the man/man7/mapper-protocol.7.pdf of the GMA-Mapper package (or run “gma man mapper-protocol”). This is also printed in Appendix F of the GMA Game Master's Guide.
@@ -109,6 +115,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"runtime/pprof"
 	"syscall"
 	"time"
 
@@ -120,7 +127,7 @@ import (
 // Auto-configured values
 //
 
-const GoVersionNumber="5.8.1" // @@##@@
+const GoVersionNumber="5.8.2" // @@##@@
 
 //
 // eventMonitor responds to signals and timers that affect our overall operation
@@ -193,7 +200,6 @@ func generateMessageIDs(logf func(format string, args ...any), c chan int) {
 }
 
 func main() {
-	var nrApp *newrelic.Application
 	var err error
 
 	app := *NewApplication()
@@ -210,6 +216,15 @@ func main() {
 		mapper.MinimumSupportedMapProtocol,
 		mapper.MaximumSupportedMapProtocol)
 
+	if app.CPUProfileFile != "" {
+		f, err := os.Create(app.CPUProfileFile)
+		if err != nil {
+			app.Logger.Fatal(err)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
+
 	go generateMessageIDs(app.Logf, app.MessageIDGenerator)
 	go app.managePreambleData()
 	go app.manageClientList()
@@ -219,17 +234,17 @@ func main() {
 	/* instrumentation */
 	// set the following environment variables for the New Relic
 	// Go Agent:
-	//    NEW_RELIC_APP_NAME = the name you want to appear in the datasets
+	//    NEW_RELIC_APP_NAME = the name you want to appear in the datasets (or use -telemetry-name option)
 	//    NEW_RELIC_LICENSE_KEY = your license key
-	//    NEW_RELIC_METADATA_RELEASE_TAG = application release
+	//    NEW_RELIC_METADATA_SERVICE_VERSION = application release
 	//
 	if InstrumentCode {
 		app.Log("application performance metrics telemetry reporting enabled")
 		if err = os.Setenv("NEW_RELIC_METADATA_SERVICE_VERSION", GoVersionNumber); err != nil {
 			app.Logf("unable to set version metadata: %v", err)
 		}
-		nrApp, err = newrelic.NewApplication(
-			newrelic.ConfigAppName("gma-server"),
+		app.NrApp, err = newrelic.NewApplication(
+			newrelic.ConfigAppName(app.NrAppName),
 			newrelic.ConfigFromEnvironment(),
 			newrelic.ConfigCodeLevelMetricsEnabled(true),
 			newrelic.ConfigCodeLevelMetricsPathPrefixes("go-gma/"),
@@ -242,32 +257,15 @@ func main() {
 		}
 		defer func() {
 			app.Logf("waiting for instrumentation to finish (max 30 sec) ...")
-			nrApp.Shutdown(30 * time.Second)
+			app.NrApp.Shutdown(30 * time.Second)
 		}()
 	}
-	/*
-		for {
-			func() {
-				if InstrumentCode {
-					defer nrApp.StartTransaction("testing").End()
-				}
-				time.Sleep(10 * time.Second)
-			}()
-		}
-	*/
 
 	if err := app.dbOpen(); err != nil {
 		app.Logf("unable to open database: %v", err)
 		os.Exit(1)
 	}
 	defer app.dbClose()
-
-	// TODO instrumentation
-	/*
-		txn := nrapp.StartTransaction("background")
-		defer txn.End()
-		// do stuff
-	*/
 
 	// start listening to incoming port
 	incoming, err := net.Listen("tcp", app.Endpoint)
@@ -325,11 +323,11 @@ func acceptIncomingConnections(incoming net.Listener, app *Application) {
 			client.Close()
 			continue
 		}
-		go newConnection.ServeToClient(context.Background(), app.ServerStarted, app.LastPing)
+		go newConnection.ServeToClient(context.Background(), app.ServerStarted, app.LastPing, app.NrApp)
 	}
 }
 
-// @[00]@| Go-GMA 5.8.1
+// @[00]@| Go-GMA 5.8.2
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

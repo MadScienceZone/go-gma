@@ -1,3 +1,20 @@
+/*
+########################################################################################
+#  __                                                                                  #
+# /__ _                                                                                #
+# \_|(_)                                                                               #
+#  _______  _______  _______             _______      _____      _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    / ___   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )   \/   )  |              #
+# | |      | || || || (___) | Assistant | (____      \     /        /   )              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \      _/   /               #
+# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )    /   _/                #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ (   (__/\              #
+# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)\_______/              #
+#                                                                                      #
+########################################################################################
+*/
+
 //
 // Client/Server protocol functions.
 //
@@ -34,8 +51,8 @@ import (
 // and protocol versions supported by this code.
 //
 const (
-	GMAMapperProtocol=407           // @@##@@ auto-configured
-	GoVersionNumber="5.8.1" // @@##@@ auto-configured
+	GMAMapperProtocol=407     // @@##@@ auto-configured
+	GoVersionNumber="5.8.2" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
 	MaximumSupportedMapProtocol = 407
 )
@@ -997,6 +1014,7 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 
 //
 // Send out all waiting outbound messages and then return
+// DO NOT CALL this if you have a writer routine still running that is managing the sendBuf slice.
 //
 func (c *MapConnection) Flush() error {
 	// receive all the messages still in the channel
