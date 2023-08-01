@@ -271,6 +271,19 @@ func (c *ClientConnection) ServeToClient(ctx context.Context, serverStarted, las
 	// them (which is tied to the network socket being available and the client's reading
 	// speed, so this is where data backs up in the buffer when the client isn't able to
 	// accept as fast as we can send.
+	//
+	// To avoid pegging the CPU in a tight buzz loop which constantly keeps checking to
+	// see if anything showed up in the buffer (*cough*pre-v8.5.3*cough*), we use the
+	// bufferReadable channel as a sort of simple semaphore that (due to its blocking
+	// behavior) we can wait for in the select, so this goroutine can fully sleep until either the semaphore (channel)
+	// lights up to indicate the buffer needs service, or an
+	// incoming message is received.  Sure, we could make a fancy
+	// queue type which accepts an arbitrary amount of data and
+	// blocks if we try to read from it when it's empty, but since the
+	// buffer is managed just right here (and in a corresponding
+	// bit of code on the client side), this is a simpler approach
+	// that works for what we're doing now. It's possible this
+	// will evolve later into something more sophisticated such as what was just described.
 
 	toSend := make(chan string, 1)
 	clientBufferCtx, cancelClientBuffer := context.WithCancel(ctx)
@@ -376,58 +389,60 @@ mainloop:
 				break mainloop
 			}
 			c.debugf(DebugIO, "received packet %v", packet)
-			if InstrumentCode {
-				if nrApp != nil {
-					txn := nrApp.StartTransaction("handle_request")
-					txn.End()
+			func() {
+				if InstrumentCode {
+					if nrApp != nil {
+						txn := nrApp.StartTransaction("handle_request")
+						defer txn.End()
+					}
 				}
-			}
-			switch p := packet.(type) {
-			case CommentMessagePayload:
+				switch p := packet.(type) {
+				case CommentMessagePayload:
 
-			case AddCharacterMessagePayload, ChallengeMessagePayload, ProtocolMessagePayload,
-				UpdateDicePresetsMessagePayload, DeniedMessagePayload, GrantedMessagePayload,
-				MarcoMessagePayload, PrivMessagePayload, ReadyMessagePayload,
-				RollResultMessagePayload, UpdatePeerListMessagePayload, UpdateVersionsMessagePayload,
-				WorldMessagePayload:
-				c.Conn.Send(Priv, PrivMessagePayload{
-					Command: p.RawMessage(),
-					Reason:  "I get to send that command, not you.",
-				})
+				case AddCharacterMessagePayload, ChallengeMessagePayload, ProtocolMessagePayload,
+					UpdateDicePresetsMessagePayload, DeniedMessagePayload, GrantedMessagePayload,
+					MarcoMessagePayload, PrivMessagePayload, ReadyMessagePayload,
+					RollResultMessagePayload, UpdatePeerListMessagePayload, UpdateVersionsMessagePayload,
+					WorldMessagePayload:
+					c.Conn.Send(Priv, PrivMessagePayload{
+						Command: p.RawMessage(),
+						Reason:  "I get to send that command, not you.",
+					})
 
-			case AuthMessagePayload:
-				c.Conn.Send(Priv, PrivMessagePayload{
-					Command: p.RawMessage(),
-					Reason:  "It's not the right time in our conversation for that.",
-				})
+				case AuthMessagePayload:
+					c.Conn.Send(Priv, PrivMessagePayload{
+						Command: p.RawMessage(),
+						Reason:  "It's not the right time in our conversation for that.",
+					})
 
-			case AcceptMessagePayload:
-				if len(p.Messages) == 0 || slices.Index[string](p.Messages, "*") < 0 {
-					c.Subscriptions = nil
-				} else {
-					c.Subscriptions = make(map[ServerMessage]bool)
-					for _, message := range p.Messages {
-						if msgId, ok := ServerMessageByName[message]; ok {
-							c.Subscriptions[msgId] = true
+				case AcceptMessagePayload:
+					if len(p.Messages) == 0 || slices.Index[string](p.Messages, "*") < 0 {
+						c.Subscriptions = nil
+					} else {
+						c.Subscriptions = make(map[ServerMessage]bool)
+						for _, message := range p.Messages {
+							if msgId, ok := ServerMessageByName[message]; ok {
+								c.Subscriptions[msgId] = true
+							}
 						}
 					}
-				}
 
-			case AllowMessagePayload:
-				c.Features.DiceColorBoxes = false
+				case AllowMessagePayload:
+					c.Features.DiceColorBoxes = false
 
-				for _, feature := range p.Features {
-					if feature == "DICE-COLOR-BOXES" {
-						c.Features.DiceColorBoxes = true
+					for _, feature := range p.Features {
+						if feature == "DICE-COLOR-BOXES" {
+							c.Features.DiceColorBoxes = true
+						}
 					}
+
+				case PoloMessagePayload:
+					c.LastPoloTime = time.Now()
+
+				default:
+					c.Server.HandleServerMessage(packet, c)
 				}
-
-			case PoloMessagePayload:
-				c.LastPoloTime = time.Now()
-
-			default:
-				c.Server.HandleServerMessage(packet, c)
-			}
+			}()
 		}
 	}
 }

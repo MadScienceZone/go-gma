@@ -7,24 +7,17 @@ server \- GMA battle grid map server (Go version)
 .SH SYNOPSIS
 '\" <<usage>>
 .LP
-(If using the full GMA core tool suite)
-.LP
 .na
-.B gma
-.B go
+.RB [ gma
+.BR go ]
 .B server
-.RI [ args
-\&...]
-.ad
-.LP
-(Otherwise)
-.LP
-.na
-.B server
+.RB [ \-cpuprofile
+.IR path ]
 .RB [ \-debug
 .IR flags ]
 .RB [ \-endpoint
 .RI [ hostname ]\fB:\fP port ]
+.RB [ \-help ]
 .RB [ \-init\-file
 .IR path ]
 .RB [ \-log\-file
@@ -116,6 +109,10 @@ or
 '\" .BR \-rm ).
 '\" <<list>>
 .TP 8
+.BI "\-cpuprofile " path
+Enable CPU profiling via Go's pprof tool. Sample data will be saved to the named
+.IR path .
+.TP
 .BI "\-debug " flags
 Add debugging information to the server log. The
 .I flags
@@ -233,7 +230,12 @@ does not exist, a new empty database will automatically be created by the server
 .BI "\-telemetry\-log " path
 If the server is configured to send telemetry metrics,
 this provides the name of a file into which to write
-telemetry debugging information. Defaults to the
+telemetry debugging information. The default is not to write
+debugging information at all. If
+.I path
+is a single hyphen 
+.RB (\*(lq \- \*(rq),
+then the log will go to the
 standard output.
 .TP
 .BI "\-telemetry\-name " string
@@ -270,7 +272,7 @@ no authentication is required), the server sends a number
 of messages just as described for the preamble stage.
 .TP
 .B Ready
-The server then signals to the client that the negotion
+The server then signals to the client that the negotiation
 is completed and the client is then free to issue any
 commands to the server, and may receive any messages from
 the server. (Before this point, the server won't even
@@ -313,7 +315,7 @@ include the following:
 .TP 11
 .B //
 This line is transmitted AS-IS to the client. This
-command does not requre JSON data to follow it. All text
+command does not require JSON data to follow it. All text
 from the
 .RB \*(lq // \*(rq
 to the end of the line are considered a comment and are
@@ -337,7 +339,7 @@ and
 providing a unique ID for the character, their name
 as it appears on the map, the color of their threat
 zone, creature size category, threatened area size
-catetory, and creature type (1 for monsters or 2 for players).
+category, and creature type (1 for monsters or 2 for players).
 .TP
 .B DSM
 Defines a condition status marker that may be placed
@@ -518,7 +520,7 @@ contents the other players see.
 .RE
 .SH SECURITY
 .LP
-The authentication system employed here is simplisitic and not ideal for general
+The authentication system employed here is simplistic and not ideal for general
 use, but is considered to be good enough for our purposes here, since the stakes
 are so low. It is intended just to discourage cheating at the game by looking
 at spoilers or direct messages intended for other users, not for any more rigorous

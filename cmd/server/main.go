@@ -49,8 +49,9 @@ The server may respond directly to some client queries if it knows the answer ra
 To guard against nuisance or malicious port scans and other superfluous connections, the server will automatically drop any clients which don’t authenticate within a short time.
 (In actual production use, we have observed some automated agents which connected and then sat idle for hours, if we didn’t terminate their connections. This prevents that.)
 
-Options:
-   server [−debug flags] [−endpoint [hostname]:port] [−init−file path] [−log−file path] [−password−file path] −sqlite path [−telemetry−log path]
+Usage:
+   server [-cpuprofile path] [−debug flags] [−endpoint [hostname]:port] [-help] [−init−file path]
+          [−log−file path] [−password−file path] −sqlite path [−telemetry−log path] [-telemetry-name name]
 
    -debug flags
       Add debugging information to the log file. The flags value is a comma-separated
@@ -88,6 +89,10 @@ Options:
           user3:password3
       Only the first line is required.
 
+   -cpuprofile path
+      Enables CPU profiling, saving sampled performance data to the named path, which can
+	  then be analyzed with tools such as "go tool pprof".
+
    -sqlite path
       Specifies the file name of a sqlite database used to keep persistent data used
       by the server. If path does not exist, server will create a new database with that
@@ -95,7 +100,8 @@ Options:
 
    -telemetry-log path
       If server was compiled to send performance telemetry data, a debugging log of that
-      data is recorded in the specified file.
+      data is recorded in the specified file. If path is "-", the debugging log will go
+	  to standard output.
 
    -telemetry-name string
       If server was compiled to send performance telemetry data, this specifies a custom
@@ -127,7 +133,7 @@ import (
 // Auto-configured values
 //
 
-const GoVersionNumber="5.8.3" // @@##@@
+const GoVersionNumber = "5.9.0-alpha.0" // @@##@@
 
 //
 // eventMonitor responds to signals and timers that affect our overall operation
@@ -249,7 +255,11 @@ func main() {
 			newrelic.ConfigCodeLevelMetricsEnabled(true),
 			newrelic.ConfigCodeLevelMetricsPathPrefixes("go-gma/"),
 			newrelic.ConfigCodeLevelMetricsRedactPathPrefixes(false),
-			newrelic.ConfigDebugLogger(app.NrLogFile),
+			func(cfg *newrelic.Config) {
+				if app.NrLogFile != nil {
+					newrelic.ConfigDebugLogger(app.NrLogFile)(cfg)
+				}
+			},
 		)
 		if err != nil {
 			app.Logf("unable to start instrumentation: %v", err)
