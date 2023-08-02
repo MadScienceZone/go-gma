@@ -193,7 +193,7 @@ func (c *ClientConnection) Close() {
 // ServeToClient is intended to be run in its own thread,
 // and speaks to one client for the duration of its session.
 //
-// If the ctx context value is cancelled, the connection to the client will be closed and this routin will exit.
+// If the ctx context value is cancelled, the connection to the client will be closed and this routine will exit.
 //
 func (c *ClientConnection) ServeToClient(ctx context.Context, serverStarted, lastPing time.Time, nrApp *newrelic.Application) {
 	if c == nil {
