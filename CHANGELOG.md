@@ -15,6 +15,9 @@
  * Added New Relic APM instrumentation to the major server functions.
  * Renamed the server's `-profile` option to `-cpuprofile`
  * Changed the semantics of `-telemetry-log` so that by default it does not log at all; now give `"-"` as the log path to have it log to standard output.
+### TODO
+ * Add custom attributes to transactions (client info)
+ * Add error reporting
 
 ## v5.8.3
 ### Fixes
