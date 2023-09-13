@@ -2447,6 +2447,9 @@ type StatusMarkerDefinition struct {
 	// If the token should be transparent when this condition is in effect
 	Transparent bool `json:",omitempty"`
 
+	// If the creature should be considered unable to take any actions
+	UnableToAct bool `json:",omitempty"`
+
 	// The name of the condition
 	Condition string
 
