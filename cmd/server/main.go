@@ -151,6 +151,11 @@ func eventMonitor(sigChan chan os.Signal, stopChan chan int, app *Application) {
 			case syscall.SIGHUP:
 				app.Debug(DebugEvents, "SIGHUP; sending STOP signal to application")
 				stopChan <- 1
+				if InstrumentCode {
+					if app.NrApp != nil {
+						app.NrApp.RecordCustomEvent("signal-HUP", nil)
+					}
+				}
 
 			case syscall.SIGUSR1:
 				app.Debug(DebugEvents, "SIGUSR1; reloading configuration data")
@@ -159,11 +164,21 @@ func eventMonitor(sigChan chan os.Signal, stopChan chan int, app *Application) {
 					app.Logf("WARNING: authenticator initialization file reload failed: %v", err)
 					app.Log("WARNING: client credentials may be incomplete or incorrect now")
 				}
+				if InstrumentCode {
+					if app.NrApp != nil {
+						app.NrApp.RecordCustomEvent("signal-reload-config", nil)
+					}
+				}
 
 			case syscall.SIGUSR2:
 				app.Debug(DebugEvents, "SIGUSR2 (dump database out to logfile)")
 				if err := app.LogDatabaseContents(); err != nil {
 					app.Logf("Error dumping database: %v", err)
+				}
+				if InstrumentCode {
+					if app.NrApp != nil {
+						app.NrApp.RecordCustomEvent("signal-dump-database", nil)
+					}
 				}
 
 			case syscall.SIGINT:
@@ -177,12 +192,22 @@ func eventMonitor(sigChan chan os.Signal, stopChan chan int, app *Application) {
 				//					log.Printf("Terminating client %v from %s", i, client.ClientAddr)
 				//					client.Connection.Close()
 				//				}
+				if InstrumentCode {
+					if app.NrApp != nil {
+						app.NrApp.RecordCustomEvent("signal-interrupt", nil)
+					}
+				}
 			}
 
 		case <-ping_signal.C:
 			app.Debug(DebugEvents, "ping timer expired")
 			app.LastPing = time.Now()
 			app.SendToAll(mapper.Marco, nil)
+			if InstrumentCode {
+				if app.NrApp != nil {
+					app.NrApp.RecordCustomEvent("ping", nil)
+				}
+			}
 		}
 	}
 }
