@@ -24,6 +24,7 @@ package mapper
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -53,6 +54,12 @@ const MinimumSupportedMapFileFormat = 17
 // can understand. Saved data will be in this format.
 //
 const MaximumSupportedMapFileFormat = 22
+
+// ErrCreatureNoSizes is the error returned when a creature size code is expected but none given.
+var ErrCreatureNoSizes = errors.New("missing creature size code")
+
+// ErrCreatureInvalidSize is the error returned when a creature size code is expected but the code(s) given are invalid.
+var ErrCreatureInvalidSize = errors.New("invalid creature size code")
 
 func init() {
 	if MinimumSupportedMapFileFormat > GMAMapperFileFormat || MaximumSupportedMapFileFormat < GMAMapperFileFormat {
@@ -660,10 +667,10 @@ func (c *CreatureToken) SetSizes(skinSize []string, skin int, size string) error
 	// If no skinSize list was present, just use size as the single item for that list.
 	if len(skinSize) == 0 {
 		if size == "" {
-			return fmt.Errorf("no size specified")
+			return ErrCreatureNoSizes
 		}
 		if sizeCodeRE.FindStringSubmatch(size) == nil {
-			return fmt.Errorf("Size field DEPRECATED; also, size code \"%s\" is invalid", size)
+			return ErrCreatureInvalidSize
 		}
 		c.SkinSize = []string{size}
 		c.Skin = 0
@@ -680,7 +687,7 @@ func (c *CreatureToken) SetSizes(skinSize []string, skin int, size string) error
 				defaultSkinSize = i
 			}
 		} else {
-			return fmt.Errorf("skin #%d size code \"%s\" is invalid", i, ss)
+			return ErrCreatureInvalidSize
 		}
 	}
 

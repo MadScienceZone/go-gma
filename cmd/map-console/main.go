@@ -813,6 +813,9 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"i", m.I},
 			fieldDesc{"s", m.S},
 			fieldDesc{"o", describeObject(mono, m.O)},
+			fieldDesc{"ReceivedTime", m.ReceivedTime},
+			fieldDesc{"SentTime", m.SentTime},
+			fieldDesc{"(latency)", m.SentTime.Sub(m.ReceivedTime)},
 		)
 
 	case mapper.LoadFromMessagePayload:

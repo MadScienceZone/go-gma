@@ -44,6 +44,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 )
 
 //
@@ -98,6 +99,15 @@ func (c *MapConnection) Close() {
 	if c != nil && c.conn != nil {
 		c.conn.Close()
 	}
+}
+
+//
+// SendEchoWithTimestamp is identical to Send, but only takes an EchoMessagePayload parameter
+// and writes the SentTime value into it as it sends it out.
+//
+func (c *MapConnection) SendEchoWithTimestamp(command ServerMessage, data EchoMessagePayload) error {
+	data.SentTime = time.Now()
+	return c.Send(command, data)
 }
 
 //

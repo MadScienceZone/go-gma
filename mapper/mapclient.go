@@ -1433,10 +1433,12 @@ type DeniedMessagePayload struct {
 type EchoMessagePayload struct {
 	BaseMessagePayload
 
-	B bool           `json:"b,omitempty"`
-	I int            `json:"i,omitempty"`
-	S string         `json:"s,omitempty"`
-	O map[string]any `json:"o,omitempty"`
+	B            bool           `json:"b,omitempty"`
+	I            int            `json:"i,omitempty"`
+	S            string         `json:"s,omitempty"`
+	O            map[string]any `json:"o,omitempty"`
+	ReceivedTime time.Time      `json:",omitempty"`
+	SentTime     time.Time      `json:",omitempty"`
 }
 
 func (c *Connection) EchoString(s string) error {
