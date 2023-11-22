@@ -1433,10 +1433,12 @@ type DeniedMessagePayload struct {
 type EchoMessagePayload struct {
 	BaseMessagePayload
 
-	B bool           `json:"b,omitempty"`
-	I int            `json:"i,omitempty"`
-	S string         `json:"s,omitempty"`
-	O map[string]any `json:"o,omitempty"`
+	B            bool           `json:"b,omitempty"`
+	I            int            `json:"i,omitempty"`
+	S            string         `json:"s,omitempty"`
+	O            map[string]any `json:"o,omitempty"`
+	ReceivedTime time.Time      `json:",omitempty"`
+	SentTime     time.Time      `json:",omitempty"`
 }
 
 func (c *Connection) EchoString(s string) error {
@@ -3023,15 +3025,41 @@ func (c *Connection) receiveDSM(d UpdateStatusMarkerMessagePayload) {
 
 func (c *Connection) receiveAddCharacter(d AddCharacterMessagePayload) {
 	if c != nil {
-		c.Characters[d.Name] = PlayerToken{
-			CreatureToken: CreatureToken{
-				BaseMapObject: BaseMapObject{
-					ID: d.ObjID(),
-				},
-				Name:  d.Name,
-				Color: d.Color,
-				Size:  d.Size,
+		critter := CreatureToken{
+			BaseMapObject: BaseMapObject{
+				ID: d.ObjID(),
 			},
+			Name:         d.Name,
+			Color:        d.Color,
+			Killed:       d.Killed,
+			Dim:          d.Dim,
+			Hidden:       d.Hidden,
+			PolyGM:       d.PolyGM,
+			CreatureType: CreatureTypePlayer,
+			MoveMode:     d.MoveMode,
+			Reach:        d.Reach,
+			Elev:         d.Elev,
+			Gx:           d.Gx,
+			Gy:           d.Gy,
+			Note:         d.Note,
+			DispSize:     d.DispSize,
+			StatusList:   d.StatusList,
+			CustomReach: CreatureCustomReach{
+				Enabled:  d.CustomReach.Enabled,
+				Natural:  d.CustomReach.Natural,
+				Extended: d.CustomReach.Extended,
+			},
+		}
+		critter.SetSizes(d.SkinSize, d.Skin, d.Size)
+		if d.AoE != nil {
+			critter.AoE = &RadiusAoE{
+				Radius: d.AoE.Radius,
+				Color:  d.AoE.Color,
+			}
+		}
+
+		c.Characters[d.Name] = PlayerToken{
+			CreatureToken: critter,
 		}
 	}
 }

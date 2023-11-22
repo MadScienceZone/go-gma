@@ -876,7 +876,9 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		}
 
 	case mapper.EchoMessagePayload:
-		requester.Conn.Send(mapper.Echo, p)
+		if err := requester.Conn.SendEchoWithTimestamp(mapper.Echo, p); err != nil {
+			a.Logf("Error sending ECHO: %v", err)
+		}
 
 	case mapper.FilterDicePresetsMessagePayload:
 		if requester.Auth == nil {

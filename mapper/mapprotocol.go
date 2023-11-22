@@ -44,6 +44,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 )
 
 //
@@ -51,10 +52,10 @@ import (
 // and protocol versions supported by this code.
 //
 const (
-	GMAMapperProtocol=407     // @@##@@ auto-configured
-	GoVersionNumber="5.8.3" // @@##@@ auto-configured
+	GMAMapperProtocol           = 408     // @@##@@ auto-configured
+	GoVersionNumber             = "5.8.3" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
-	MaximumSupportedMapProtocol = 407
+	MaximumSupportedMapProtocol = 408
 )
 
 func init() {
@@ -98,6 +99,15 @@ func (c *MapConnection) Close() {
 	if c != nil && c.conn != nil {
 		c.conn.Close()
 	}
+}
+
+//
+// SendEchoWithTimestamp is identical to Send, but only takes an EchoMessagePayload parameter
+// and writes the SentTime value into it as it sends it out.
+//
+func (c *MapConnection) SendEchoWithTimestamp(command ServerMessage, data EchoMessagePayload) error {
+	data.SentTime = time.Now()
+	return c.Send(command, data)
 }
 
 //

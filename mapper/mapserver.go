@@ -439,6 +439,10 @@ mainloop:
 				case PoloMessagePayload:
 					c.LastPoloTime = time.Now()
 
+				case EchoMessagePayload:
+					p.ReceivedTime = time.Now()
+					c.Server.HandleServerMessage(p, c)
+
 				default:
 					c.Server.HandleServerMessage(packet, c)
 				}
