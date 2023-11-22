@@ -1,14 +1,21 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.9.0-alpha.0                <!-- @@##@@ -->
- * Effective Date: 01-Aug-2023			<!-- @@##@@ -->
+ * This Package Version: 5.9.0-alpha.1                <!-- @@##@@ -->
+ * Effective Date: 22-Nov-2023			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 6.6		<!-- @@##@@ -->
- * GMA Mapper Version: 4.14.1		<!-- @@##@@ -->
- * GMA Mapper Protocol: 407		<!-- @@##@@ -->
+ * GMA Core API Library Version: 6.9-alpha.1		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.16.4		<!-- @@##@@ -->
+ * GMA Mapper Protocol: 408		<!-- @@##@@ -->
  * GMA Mapper File Format: 22		<!-- @@##@@ -->
+
+## Unreleased v5.9.0-alpha.1
+### Enhancements
+ * Moved protocol to version 408
+   * Adds `PolyGM` attribute to `PS`.
+   * Adds `ReceivedTime` and `SentTime` to `ECHO`.
+   * Deprecates `Size` in favor of expanded and generalized `SkinSize` in `PS`.
 
 ## Unreleased v5.9.0-alpha.0
 ### Enhancements
