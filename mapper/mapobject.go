@@ -656,6 +656,10 @@ type CreatureToken struct {
 	// If true, this means the creature token is only visible to the GM.
 	Hidden bool `json:",omitempty"`
 
+	// If true, only the GM may access or manipulate the polymorph capabilities
+	// of this creature.
+	PolyGM bool `json:",omitempty"`
+
 	// The creature type.
 	CreatureType CreatureTypeCode
 
@@ -718,6 +722,8 @@ type CreatureToken struct {
 	// category while upper-case indicates "tall" versions.
 	//
 	// May also be the size in feet (DEPRECATED USAGE).
+	//
+	// This field is now DEPRECATED. Use SkinSize instead.
 	Size string
 
 	// If DispSize is nonempty, it holds the size category to display
