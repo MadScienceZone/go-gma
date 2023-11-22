@@ -637,6 +637,62 @@ const (
 	CreatureTypePlayer
 )
 
+// SetSizes handles the bridge bewteen the deprecated use of the
+// Size field and the new use of SkinSize to handle both polymorph
+// skins and the creature's native size.
+//
+// Given (possibly nil or empty) skinSize, skin, and size values,
+// the SetSizes method gives preference to the SkinSize array,
+// setting Size to the default size from that list for backward
+// compatibility. If SkinSize is empty but Size is populated, the
+// opposite is done. If an explicit default size is listed in
+// SkinSize, that will override a zero value in the Size field.
+// A nonzero Size value will take priority over the default size,
+// however.
+//
+// An error is returned if one of the size codes is invalid. If there
+// is a conflict between the size value and the default size in skinSizes,
+// skinSizes takes priority.
+//
+func (c *CreatureToken) SetSizes(skinSize []string, skin int, size string) error {
+	sizeCodeRE := regexp.MustCompile(`^[fFdDtTsSmMlLhHgGcC](\d+)?(?:->(\d+))?(?:=(\d+))?(?::(\*)?(.*))?$`)
+
+	// If no skinSize list was present, just use size as the single item for that list.
+	if len(skinSize) == 0 {
+		if size == "" {
+			return fmt.Errorf("no size specified")
+		}
+		if sizeCodeRE.FindStringSubmatch(size) == nil {
+			return fmt.Errorf("Size field DEPRECATED; also, size code \"%s\" is invalid", size)
+		}
+		c.SkinSize = []string{size}
+		c.Skin = 0
+		c.Size = size
+		return nil
+	}
+
+	// If they gave us a list of skin sizes, make sure they're all valid and see if one is
+	// designated as the default one.
+	defaultSkinSize := 0
+	for i, ss := range skinSize {
+		if szFields := sizeCodeRE.FindStringSubmatch(ss); szFields != nil {
+			if szFields[4] == "*" {
+				defaultSkinSize = i
+			}
+		} else {
+			return fmt.Errorf("skin #%d size code \"%s\" is invalid", i, ss)
+		}
+	}
+
+	if skin <= 0 || skin >= len(skinSize) {
+		skin = defaultSkinSize
+	}
+	c.SkinSize = skinSize
+	c.Skin = skin
+	c.Size = c.SkinSize[c.Skin]
+	return nil
+}
+
 //
 // CreatureToken is a MapObject (but not a MapElement) which displays a movable
 // token indicating the size and location of a creature in the game.
