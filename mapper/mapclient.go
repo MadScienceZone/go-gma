@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      _____      ______                #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    / ___  \               #
-# | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )   \/   \  \              #
-# | |      | || || || (___) | Assistant | (____      \     /       ___) /              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \      (___ (               #
-# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )         ) \              #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ /\___/  /              #
-# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)\______/               #
+#  _______  _______  _______             _______      _____      _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    (  __   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   ( (   ) )   | (  )  |              #
+# | |      | || || || (___) | Assistant | (____     ( (___) |   | | /   |              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     \____  |   | (/ /) |              #
+# | | \_  )| |   | || (   ) |                 ) )         ) |   |   / | |              #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\____) ) _ |  (__) |              #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_)(_______)              #
 #                                                                                      #
 ########################################################################################
 */
@@ -1433,10 +1433,12 @@ type DeniedMessagePayload struct {
 type EchoMessagePayload struct {
 	BaseMessagePayload
 
-	B bool           `json:"b,omitempty"`
-	I int            `json:"i,omitempty"`
-	S string         `json:"s,omitempty"`
-	O map[string]any `json:"o,omitempty"`
+	B            bool           `json:"b,omitempty"`
+	I            int            `json:"i,omitempty"`
+	S            string         `json:"s,omitempty"`
+	O            map[string]any `json:"o,omitempty"`
+	ReceivedTime time.Time      `json:",omitempty"`
+	SentTime     time.Time      `json:",omitempty"`
 }
 
 func (c *Connection) EchoString(s string) error {
@@ -3023,15 +3025,41 @@ func (c *Connection) receiveDSM(d UpdateStatusMarkerMessagePayload) {
 
 func (c *Connection) receiveAddCharacter(d AddCharacterMessagePayload) {
 	if c != nil {
-		c.Characters[d.Name] = PlayerToken{
-			CreatureToken: CreatureToken{
-				BaseMapObject: BaseMapObject{
-					ID: d.ObjID(),
-				},
-				Name:  d.Name,
-				Color: d.Color,
-				Size:  d.Size,
+		critter := CreatureToken{
+			BaseMapObject: BaseMapObject{
+				ID: d.ObjID(),
 			},
+			Name:         d.Name,
+			Color:        d.Color,
+			Killed:       d.Killed,
+			Dim:          d.Dim,
+			Hidden:       d.Hidden,
+			PolyGM:       d.PolyGM,
+			CreatureType: CreatureTypePlayer,
+			MoveMode:     d.MoveMode,
+			Reach:        d.Reach,
+			Elev:         d.Elev,
+			Gx:           d.Gx,
+			Gy:           d.Gy,
+			Note:         d.Note,
+			DispSize:     d.DispSize,
+			StatusList:   d.StatusList,
+			CustomReach: CreatureCustomReach{
+				Enabled:  d.CustomReach.Enabled,
+				Natural:  d.CustomReach.Natural,
+				Extended: d.CustomReach.Extended,
+			},
+		}
+		critter.SetSizes(d.SkinSize, d.Skin, d.Size)
+		if d.AoE != nil {
+			critter.AoE = &RadiusAoE{
+				Radius: d.AoE.Radius,
+				Color:  d.AoE.Color,
+			}
+		}
+
+		c.Characters[d.Name] = PlayerToken{
+			CreatureToken: critter,
 		}
 	}
 }
@@ -3518,7 +3546,7 @@ func (c *Connection) CheckVersionOf(packageName, myVersionNumber string) (*Packa
 	return availableVersion, nil
 }
 
-// @[00]@| Go-GMA 5.8.3
+// @[00]@| Go-GMA 5.9.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

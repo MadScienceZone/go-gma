@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      _____      ______                #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    / ___  \               #
-# | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )   \/   \  \              #
-# | |      | || || || (___) | Assistant | (____      \     /       ___) /              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \      (___ (               #
-# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )         ) \              #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ /\___/  /              #
-# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)\______/               #
+#  _______  _______  _______             _______      _____      _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    (  __   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   ( (   ) )   | (  )  |              #
+# | |      | || || || (___) | Assistant | (____     ( (___) |   | | /   |              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     \____  |   | (/ /) |              #
+# | | \_  )| |   | || (   ) |                 ) )         ) |   |   / | |              #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\____) ) _ |  (__) |              #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_)(_______)              #
 #                                                                                      #
 ########################################################################################
 */
@@ -302,13 +302,13 @@ func (a *Application) manageClientList() {
 				continue
 			}
 			a.Debugf(DebugIO, "removing client %v from list", c.IdTag())
-			pos := slices.Index[*mapper.ClientConnection](clients, c)
+			pos := slices.Index(clients, c)
 			if pos < 0 {
 				a.Logf("client %v not found in server's client list, so can't delete it more", c.IdTag())
 				continue
 			}
 			clients[pos] = nil
-			clients = slices.Delete[[]*mapper.ClientConnection, *mapper.ClientConnection](clients, pos, pos+1)
+			clients = slices.Delete(clients, pos, pos+1)
 			clientListCopy = newClientListCopy()
 			refreshChannel()
 			a.clientData.announcer <- 0
@@ -374,9 +374,9 @@ func (a *Application) GetAppOptions() error {
 	//	var saveInterval = flag.String("save-interval", "10m", "Save internal state this often")
 	var sqlDbName = flag.String("sqlite", "", "Specify filename for sqlite database to use")
 	var debugFlags = flag.String("debug", "", "List the debugging trace types to enable")
-	var nrLogger = flag.String("telemetry-log", "", "Debugging log for telemetry collection (default: stdout)")
+	var nrLogger = flag.String("telemetry-log", "", "Debugging log for telemetry collection")
 	var nrAppName = flag.String("telemetry-name", "", "Application name for telemetry collection (default: \"gma-server\")")
-	var profFile = flag.String("profile", "", "CPU Profiling output file (default: no profiling)")
+	var profFile = flag.String("cpuprofile", "", "CPU Profiling output file (default: no profiling)")
 	flag.Parse()
 
 	if *debugFlags != "" {
@@ -407,9 +407,9 @@ func (a *Application) GetAppOptions() error {
 		a.CPUProfileFile = *profFile
 	}
 
-	if *nrLogger == "" {
+	if *nrLogger == "-" {
 		a.NrLogFile = os.Stdout
-	} else {
+	} else if *nrLogger != "" {
 		var err error
 		path, err := util.FancyFileName(*nrLogger, nil)
 		if err != nil {
@@ -806,7 +806,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 						a.Debugf(DebugIO, "sending to explicit list but we don't know who %v is (skipped)", peer.IdTag())
 						continue
 					}
-					if peer.Auth.Username != requester.Auth.Username && slices.Index[string](p.Recipients, peer.Auth.Username) < 0 {
+					if peer.Auth.Username != requester.Auth.Username && slices.Index(p.Recipients, peer.Auth.Username) < 0 {
 						a.Debugf(DebugIO, "sending to explicit list but user \"%s\" (from %v) isn't on the list (skipped)", peer.Auth.Username, peer.IdTag())
 						continue
 					}
@@ -876,7 +876,9 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		}
 
 	case mapper.EchoMessagePayload:
-		requester.Conn.Send(mapper.Echo, p)
+		if err := requester.Conn.SendEchoWithTimestamp(mapper.Echo, p); err != nil {
+			a.Logf("Error sending ECHO: %v", err)
+		}
 
 	case mapper.FilterDicePresetsMessagePayload:
 		if requester.Auth == nil {
@@ -965,7 +967,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 					a.Debugf(DebugIO, "sending to explicit list but we don't know who %v is (skipped)", peer.IdTag())
 					continue
 				}
-				if peer.Auth.Username != requester.Auth.Username && slices.Index[string](p.Recipients, peer.Auth.Username) < 0 {
+				if peer.Auth.Username != requester.Auth.Username && slices.Index(p.Recipients, peer.Auth.Username) < 0 {
 					a.Debugf(DebugIO, "sending to explicit list but user \"%s\" (from %v) isn't on the list (skipped)", peer.Auth.Username, peer.IdTag())
 					continue
 				}
@@ -1514,6 +1516,11 @@ func (a *Application) manageGameState() {
 	defer a.Log("game state manager stopped")
 
 	recordElement := func(id string, e *mapper.MessagePayload) {
+		if InstrumentCode {
+			if a.NrApp != nil {
+				defer a.NrApp.StartTransaction("record-element").End()
+			}
+		}
 		for k, _ := range eventHistory {
 			if strings.Contains(k, ":"+id) {
 				delete(eventHistory, k)
@@ -1532,110 +1539,125 @@ func (a *Application) manageGameState() {
 			a.Debugf(DebugState, "updating game state from event %v", *event)
 			switch p := (*event).(type) {
 			case mapper.AddObjAttributesMessagePayload:
-				// TODO this could be more efficient
-				if o, ok := eventHistory["del:"+p.ObjID+":"+p.AttrName]; ok {
-					obj, valid := (*o).(mapper.RemoveObjAttributesMessagePayload)
-					if !valid {
-						a.Logf("value of eventHistory[del:%s:%s] is of type %T (removed)", p.ObjID, p.AttrName, o)
-						delete(eventHistory, "del:"+p.ObjID+":"+p.AttrName)
-					} else {
-						for _, addedValue := range p.Values {
-							if pos := slices.Index[string](obj.Values, addedValue); pos >= 0 {
-								// we previously tracked deletion of this, so remove from the delete list now
-								slices.Delete[[]string, string](obj.Values, pos, pos+1)
-							}
+				func() {
+					if InstrumentCode {
+						if a.NrApp != nil {
+							defer a.NrApp.StartTransaction("track-add-obj-attributes").End()
 						}
 					}
-				}
-				for _, addedValue := range p.Values {
-					if o, ok := eventHistory["add:"+p.ObjID+":"+p.AttrName]; ok {
-						obj, valid := (*o).(mapper.AddObjAttributesMessagePayload)
+
+					// TODO this could be more efficient
+					if o, ok := eventHistory["del:"+p.ObjID+":"+p.AttrName]; ok {
+						obj, valid := (*o).(mapper.RemoveObjAttributesMessagePayload)
 						if !valid {
-							a.Logf("value of eventHistory[add:%s:%s] is of type %T (removed)", p.ObjID, p.AttrName, o)
-							delete(eventHistory, "add:"+p.ObjID+":"+p.AttrName)
+							a.Logf("value of eventHistory[del:%s:%s] is of type %T (removed)", p.ObjID, p.AttrName, o)
+							delete(eventHistory, "del:"+p.ObjID+":"+p.AttrName)
 						} else {
-							if slices.Contains[string](obj.Values, addedValue) {
-								// we already have a note to add this value, do nothing
-							} else {
-								// add this to our existing add: record
-								obj.Values = append(obj.Values, addedValue)
+							for _, addedValue := range p.Values {
+								if pos := slices.Index(obj.Values, addedValue); pos >= 0 {
+									// we previously tracked deletion of this, so remove from the delete list now
+									slices.Delete(obj.Values, pos, pos+1)
+								}
 							}
 						}
-					} else {
-						// we need a new add: record for this attribute
-						var pl mapper.MessagePayload
-						pl = mapper.AddObjAttributesMessagePayload{
-							ObjID:    p.ObjID,
-							AttrName: p.AttrName,
-							Values: []string{
-								addedValue,
-							},
-						}
-						eventHistory["add:"+p.ObjID+":"+p.AttrName] = &pl
 					}
-				}
+					for _, addedValue := range p.Values {
+						if o, ok := eventHistory["add:"+p.ObjID+":"+p.AttrName]; ok {
+							obj, valid := (*o).(mapper.AddObjAttributesMessagePayload)
+							if !valid {
+								a.Logf("value of eventHistory[add:%s:%s] is of type %T (removed)", p.ObjID, p.AttrName, o)
+								delete(eventHistory, "add:"+p.ObjID+":"+p.AttrName)
+							} else {
+								if slices.Contains(obj.Values, addedValue) {
+									// we already have a note to add this value, do nothing
+								} else {
+									// add this to our existing add: record
+									obj.Values = append(obj.Values, addedValue)
+								}
+							}
+						} else {
+							// we need a new add: record for this attribute
+							var pl mapper.MessagePayload
+							pl = mapper.AddObjAttributesMessagePayload{
+								ObjID:    p.ObjID,
+								AttrName: p.AttrName,
+								Values: []string{
+									addedValue,
+								},
+							}
+							eventHistory["add:"+p.ObjID+":"+p.AttrName] = &pl
+						}
+					}
+				}()
 
 			case mapper.AdjustViewMessagePayload:
 				viewx = p.XView
 				viewy = p.YView
 				viewg = p.Grid
 			case mapper.ClearMessagePayload:
-				switch p.ObjID {
-				case "*":
-					viewx = 0.0
-					viewy = 0.0
-					viewg = ""
-					eventHistory = make(map[string]*mapper.MessagePayload)
-
-				case "E*":
-					for k, v := range eventHistory {
-						if !strings.HasPrefix(k, "new:") {
-							delete(eventHistory, k)
-						} else if _, isCreature := (*v).(mapper.PlaceSomeoneMessagePayload); !isCreature {
-							delete(eventHistory, k)
+				func() {
+					if InstrumentCode {
+						if a.NrApp != nil {
+							defer a.NrApp.StartTransaction("track-clear").End()
 						}
 					}
+					switch p.ObjID {
+					case "*":
+						viewx = 0.0
+						viewy = 0.0
+						viewg = ""
+						eventHistory = make(map[string]*mapper.MessagePayload)
 
-				case "M*":
-					for k, v := range eventHistory {
-						if strings.HasPrefix(k, "new:") {
-							if creature, ok := (*v).(mapper.PlaceSomeoneMessagePayload); ok {
-								if creature.CreatureType != 2 {
-									delete(eventHistory, k)
-								}
-							}
-						}
-					}
-
-				case "P*":
-					for k, v := range eventHistory {
-						if strings.HasPrefix(k, "new:") {
-							if creature, ok := (*v).(mapper.PlaceSomeoneMessagePayload); ok {
-								if creature.CreatureType == 2 {
-									delete(eventHistory, k)
-								}
-							}
-						}
-					}
-
-				default:
-					if pos := strings.IndexRune(p.ObjID, '='); pos > 0 {
-						p.ObjID = p.ObjID[pos+1:]
-					}
-
-					for k, v := range eventHistory {
-						if creature, ok := (*v).(mapper.PlaceSomeoneMessagePayload); ok {
-							if creature.Name == p.ObjID {
+					case "E*":
+						for k, v := range eventHistory {
+							if !strings.HasPrefix(k, "new:") {
 								delete(eventHistory, k)
-								continue
+							} else if _, isCreature := (*v).(mapper.PlaceSomeoneMessagePayload); !isCreature {
+								delete(eventHistory, k)
 							}
 						}
-						f := strings.Split(k, ":")
-						if len(f) > 1 && f[1] == p.ObjID {
-							delete(eventHistory, k)
+
+					case "M*":
+						for k, v := range eventHistory {
+							if strings.HasPrefix(k, "new:") {
+								if creature, ok := (*v).(mapper.PlaceSomeoneMessagePayload); ok {
+									if creature.CreatureType != 2 {
+										delete(eventHistory, k)
+									}
+								}
+							}
+						}
+
+					case "P*":
+						for k, v := range eventHistory {
+							if strings.HasPrefix(k, "new:") {
+								if creature, ok := (*v).(mapper.PlaceSomeoneMessagePayload); ok {
+									if creature.CreatureType == 2 {
+										delete(eventHistory, k)
+									}
+								}
+							}
+						}
+
+					default:
+						if pos := strings.IndexRune(p.ObjID, '='); pos > 0 {
+							p.ObjID = p.ObjID[pos+1:]
+						}
+
+						for k, v := range eventHistory {
+							if creature, ok := (*v).(mapper.PlaceSomeoneMessagePayload); ok {
+								if creature.Name == p.ObjID {
+									delete(eventHistory, k)
+									continue
+								}
+							}
+							f := strings.Split(k, ":")
+							if len(f) > 1 && f[1] == p.ObjID {
+								delete(eventHistory, k)
+							}
 						}
 					}
-				}
+				}()
 
 			case mapper.ClearFromMessagePayload:
 				if p.IsLocalFile {
@@ -1678,75 +1700,89 @@ func (a *Application) manageGameState() {
 				}
 
 			case mapper.RemoveObjAttributesMessagePayload:
-				// TODO this could be more efficient
-				if o, ok := eventHistory["add:"+p.ObjID+":"+p.AttrName]; ok {
-					obj, valid := (*o).(mapper.AddObjAttributesMessagePayload)
-					if !valid {
-						a.Logf("value of eventHistory[add:%s:%s] is of type %T (removed)", p.ObjID, p.AttrName, o)
-						delete(eventHistory, "add:"+p.ObjID+":"+p.AttrName)
-					} else {
-						for _, addedValue := range p.Values {
-							if pos := slices.Index[string](obj.Values, addedValue); pos >= 0 {
-								// we previously tracked addition of this, so remove from the add list now
-								slices.Delete[[]string, string](obj.Values, pos, pos+1)
-							}
+				func() {
+					if InstrumentCode {
+						if a.NrApp != nil {
+							defer a.NrApp.StartTransaction("track-remove-obj-attributes").End()
 						}
 					}
-				}
-				for _, addedValue := range p.Values {
-					if o, ok := eventHistory["del:"+p.ObjID+":"+p.AttrName]; ok {
-						obj, valid := (*o).(mapper.RemoveObjAttributesMessagePayload)
+					// TODO this could be more efficient
+					if o, ok := eventHistory["add:"+p.ObjID+":"+p.AttrName]; ok {
+						obj, valid := (*o).(mapper.AddObjAttributesMessagePayload)
 						if !valid {
-							a.Logf("value of eventHistory[del:%s:%s] is of type %T (removed)", p.ObjID, p.AttrName, o)
-							delete(eventHistory, "del:"+p.ObjID+":"+p.AttrName)
+							a.Logf("value of eventHistory[add:%s:%s] is of type %T (removed)", p.ObjID, p.AttrName, o)
+							delete(eventHistory, "add:"+p.ObjID+":"+p.AttrName)
 						} else {
-							if slices.Contains[string](obj.Values, addedValue) {
-								// we already have a note to remove this value, do nothing
-							} else {
-								// add this to our existing del: record
-								obj.Values = append(obj.Values, addedValue)
+							for _, addedValue := range p.Values {
+								if pos := slices.Index(obj.Values, addedValue); pos >= 0 {
+									// we previously tracked addition of this, so remove from the add list now
+									slices.Delete(obj.Values, pos, pos+1)
+								}
 							}
 						}
-					} else {
-						// we need a new del: record for this attribute
-						var pl mapper.MessagePayload
-						pl = mapper.RemoveObjAttributesMessagePayload{
-							ObjID:    p.ObjID,
-							AttrName: p.AttrName,
-							Values: []string{
-								addedValue,
-							},
-						}
-						eventHistory["del:"+p.ObjID+":"+p.AttrName] = &pl
 					}
-				}
+					for _, addedValue := range p.Values {
+						if o, ok := eventHistory["del:"+p.ObjID+":"+p.AttrName]; ok {
+							obj, valid := (*o).(mapper.RemoveObjAttributesMessagePayload)
+							if !valid {
+								a.Logf("value of eventHistory[del:%s:%s] is of type %T (removed)", p.ObjID, p.AttrName, o)
+								delete(eventHistory, "del:"+p.ObjID+":"+p.AttrName)
+							} else {
+								if slices.Contains(obj.Values, addedValue) {
+									// we already have a note to remove this value, do nothing
+								} else {
+									// add this to our existing del: record
+									obj.Values = append(obj.Values, addedValue)
+								}
+							}
+						} else {
+							// we need a new del: record for this attribute
+							var pl mapper.MessagePayload
+							pl = mapper.RemoveObjAttributesMessagePayload{
+								ObjID:    p.ObjID,
+								AttrName: p.AttrName,
+								Values: []string{
+									addedValue,
+								},
+							}
+							eventHistory["del:"+p.ObjID+":"+p.AttrName] = &pl
+						}
+					}
+				}()
 
 			case mapper.ToolbarMessagePayload:
 				toolbarHidden = !p.Enabled
 
 			case mapper.UpdateObjAttributesMessagePayload:
-				if o, ok := eventHistory["mod:"+p.ObjID]; ok {
-					old, valid := (*o).(mapper.UpdateObjAttributesMessagePayload)
-					if !valid {
-						a.Logf("value of eventHistory[mod:%s] is of type %T (removed)", p.ObjID, o)
-						delete(eventHistory, "mod:"+p.ObjID)
+				func() {
+					if InstrumentCode {
+						if a.NrApp != nil {
+							defer a.NrApp.StartTransaction("track-update-obj-attributes").End()
+						}
+					}
+					if o, ok := eventHistory["mod:"+p.ObjID]; ok {
+						old, valid := (*o).(mapper.UpdateObjAttributesMessagePayload)
+						if !valid {
+							a.Logf("value of eventHistory[mod:%s] is of type %T (removed)", p.ObjID, o)
+							delete(eventHistory, "mod:"+p.ObjID)
+						} else {
+							// we already have a record for this; edit in place
+							for attrName, attrValue := range p.NewAttrs {
+								old.NewAttrs[attrName] = attrValue
+								// If we have add: or del: events for this object, this supercedes them
+								delete(eventHistory, "add:"+p.ObjID+":"+attrName)
+								delete(eventHistory, "del:"+p.ObjID+":"+attrName)
+							}
+						}
 					} else {
-						// we already have a record for this; edit in place
-						for attrName, attrValue := range p.NewAttrs {
-							old.NewAttrs[attrName] = attrValue
+						eventHistory["mod:"+p.ObjID] = event
+						for attrName, _ := range p.NewAttrs {
 							// If we have add: or del: events for this object, this supercedes them
 							delete(eventHistory, "add:"+p.ObjID+":"+attrName)
 							delete(eventHistory, "del:"+p.ObjID+":"+attrName)
 						}
 					}
-				} else {
-					eventHistory["mod:"+p.ObjID] = event
-					for attrName, _ := range p.NewAttrs {
-						// If we have add: or del: events for this object, this supercedes them
-						delete(eventHistory, "add:"+p.ObjID+":"+attrName)
-						delete(eventHistory, "del:"+p.ObjID+":"+attrName)
-					}
-				}
+				}()
 
 			case mapper.UpdateStatusMarkerMessagePayload:
 				newStatusMarkers[p.Condition] = p
@@ -1765,54 +1801,61 @@ func (a *Application) manageGameState() {
 			}
 
 		case client := <-a.gameState.sync:
-			a.Debugf(DebugState, "client %v requests SYNC", client.IdTag())
-			client.Conn.Send(mapper.CombatMode, mapper.CombatModeMessagePayload{Enabled: isInCombatMode})
-			client.Conn.Send(mapper.Toolbar, mapper.ToolbarMessagePayload{Enabled: !toolbarHidden})
-			client.Conn.Send(mapper.AdjustView, mapper.AdjustViewMessagePayload{Grid: viewg, XView: viewx, YView: viewy})
-			if currentTurn == nil {
-				client.Conn.Send(mapper.Comment, "no current turn set")
-			} else {
-				client.Conn.Send(mapper.UpdateTurn, *currentTurn)
-			}
-			if currentInitiativeList == nil {
-				client.Conn.Send(mapper.Comment, "no current initiative list set")
-			} else {
-				client.Conn.Send(mapper.UpdateInitiative, *currentInitiativeList)
-			}
-			if currentTime == nil {
-				client.Conn.Send(mapper.Comment, "no current time set")
-			} else {
-				client.Conn.Send(mapper.UpdateClock, *currentTime)
-			}
-			for _, marker := range newStatusMarkers {
-				client.Conn.Send(mapper.UpdateStatusMarker, marker)
-			}
-
-			for k, e := range eventHistory {
-				if strings.HasPrefix(k, "llf:") || strings.HasPrefix(k, "lsf:") {
-					client.Conn.Send((*e).MessageType(), *e)
+			func() {
+				if InstrumentCode {
+					if a.NrApp != nil {
+						defer a.NrApp.StartTransaction("sync").End()
+					}
 				}
-			}
-
-			for k, e := range eventHistory {
-				if strings.HasPrefix(k, "ulf:") || strings.HasPrefix(k, "usf:") {
-					client.Conn.Send((*e).MessageType(), *e)
+				a.Debugf(DebugState, "client %v requests SYNC", client.IdTag())
+				client.Conn.Send(mapper.CombatMode, mapper.CombatModeMessagePayload{Enabled: isInCombatMode})
+				client.Conn.Send(mapper.Toolbar, mapper.ToolbarMessagePayload{Enabled: !toolbarHidden})
+				client.Conn.Send(mapper.AdjustView, mapper.AdjustViewMessagePayload{Grid: viewg, XView: viewx, YView: viewy})
+				if currentTurn == nil {
+					client.Conn.Send(mapper.Comment, "no current turn set")
+				} else {
+					client.Conn.Send(mapper.UpdateTurn, *currentTurn)
 				}
-			}
-
-			for k, e := range eventHistory {
-				if strings.HasPrefix(k, "new:") {
-					client.Conn.Send((*e).MessageType(), *e)
+				if currentInitiativeList == nil {
+					client.Conn.Send(mapper.Comment, "no current initiative list set")
+				} else {
+					client.Conn.Send(mapper.UpdateInitiative, *currentInitiativeList)
 				}
-			}
-
-			for k, e := range eventHistory {
-				if strings.HasPrefix(k, "add:") || strings.HasPrefix(k, "del:") || strings.HasPrefix(k, "mod:") {
-					client.Conn.Send((*e).MessageType(), *e)
+				if currentTime == nil {
+					client.Conn.Send(mapper.Comment, "no current time set")
+				} else {
+					client.Conn.Send(mapper.UpdateClock, *currentTime)
 				}
-			}
+				for _, marker := range newStatusMarkers {
+					client.Conn.Send(mapper.UpdateStatusMarker, marker)
+				}
 
-			a.Debug(DebugState, "SYNC operation completed")
+				for k, e := range eventHistory {
+					if strings.HasPrefix(k, "llf:") || strings.HasPrefix(k, "lsf:") {
+						client.Conn.Send((*e).MessageType(), *e)
+					}
+				}
+
+				for k, e := range eventHistory {
+					if strings.HasPrefix(k, "ulf:") || strings.HasPrefix(k, "usf:") {
+						client.Conn.Send((*e).MessageType(), *e)
+					}
+				}
+
+				for k, e := range eventHistory {
+					if strings.HasPrefix(k, "new:") {
+						client.Conn.Send((*e).MessageType(), *e)
+					}
+				}
+
+				for k, e := range eventHistory {
+					if strings.HasPrefix(k, "add:") || strings.HasPrefix(k, "del:") || strings.HasPrefix(k, "mod:") {
+						client.Conn.Send((*e).MessageType(), *e)
+					}
+				}
+
+				a.Debug(DebugState, "SYNC operation completed")
+			}()
 		}
 	}
 }

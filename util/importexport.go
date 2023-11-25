@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      _____      ______                #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    / ___  \               #
-# | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )   \/   \  \              #
-# | |      | || || || (___) | Assistant | (____      \     /       ___) /              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \      (___ (               #
-# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )         ) \              #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ /\___/  /              #
-# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)\______/               #
+#  _______  _______  _______             _______      _____      _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    (  __   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   ( (   ) )   | (  )  |              #
+# | |      | || || || (___) | Assistant | (____     ( (___) |   | | /   |              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     \____  |   | (/ /) |              #
+# | | \_  )| |   | || (   ) |                 ) )         ) |   |   / | |              #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\____) ) _ |  (__) |              #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_)(_______)              #
 #                                                                                      #
 ########################################################################################
 #
@@ -4069,12 +4069,12 @@ func ImportSpell(decoder *json.Decoder, db *sql.DB, prefs *CorePreferences) erro
 		materialcosts.Int32 = int32(spell.Components.MaterialCosts)
 	}
 
-	if castingTimes, err := getCastingTimeList(db, prefs); err != nil || !slices.Contains[string](castingTimes, spell.Casting.Time) {
+	if castingTimes, err := getCastingTimeList(db, prefs); err != nil || !slices.Contains(castingTimes, spell.Casting.Time) {
 		return fmt.Errorf("invalid casting time \"%s\" (database error %v)", spell.Casting.Time, err)
 	}
 
 	if spell.Range.Range != "" {
-		if ranges, err := getRangeList(db, prefs); err != nil || !slices.Contains[string](ranges, spell.Range.Range) {
+		if ranges, err := getRangeList(db, prefs); err != nil || !slices.Contains(ranges, spell.Range.Range) {
 			return fmt.Errorf("invalid range \"%s\" (database error %v)", spell.Range.Range, err)
 		}
 		if spell.Range.Range != "feet" && spell.Range.Range != "miles" {
@@ -4091,23 +4091,23 @@ func ImportSpell(decoder *json.Decoder, db *sql.DB, prefs *CorePreferences) erro
 		}
 	}
 
-	if durations, err := getDurationList(db, prefs); err != nil || !slices.Contains[string](durations, spell.Duration.Duration) {
+	if durations, err := getDurationList(db, prefs); err != nil || !slices.Contains(durations, spell.Duration.Duration) {
 		return fmt.Errorf("invalid duration \"%s\" (database error %v)", spell.Duration.Duration, err)
 	}
 
 	spell.SR.SR = strings.ToLower(spell.SR.SR)
-	if ress, err := getSpellResistanceList(db, prefs); err != nil || !slices.Contains[string](ress, spell.SR.SR) {
+	if ress, err := getSpellResistanceList(db, prefs); err != nil || !slices.Contains(ress, spell.SR.SR) {
 		return fmt.Errorf("invalid SR \"%s\" (database error %v)", spell.SR.SR, err)
 	}
 
 	if spell.Save.SavingThrow != "" {
-		if saves, err := getSavingThrowList(db, prefs); err != nil || !slices.Contains[string](saves, spell.Save.SavingThrow) {
+		if saves, err := getSavingThrowList(db, prefs); err != nil || !slices.Contains(saves, spell.Save.SavingThrow) {
 			return fmt.Errorf("invalid saving throw \"%s\" (database error %v)", spell.Save.SavingThrow, err)
 		}
 	}
 
 	if spell.Save.Effect != "" {
-		if se, err := getSaveEffectsList(db, prefs); err != nil || !slices.Contains[string](se, spell.Save.Effect) {
+		if se, err := getSaveEffectsList(db, prefs); err != nil || !slices.Contains(se, spell.Save.Effect) {
 			return fmt.Errorf("invalid saving throw effect \"%s\" (database error %v)", spell.Save.Effect, err)
 		}
 	}
@@ -4412,7 +4412,7 @@ func ExportSpells(fp *os.File, db *sql.DB, prefs *CorePreferences) error {
 }
 
 /*
-# @[00]@| Go-GMA 5.8.3
+# @[00]@| Go-GMA 5.9.0
 # @[01]@|
 # @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

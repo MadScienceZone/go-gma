@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      _____      ______                #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    / ___  \               #
-# | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )   \/   \  \              #
-# | |      | || || || (___) | Assistant | (____      \     /       ___) /              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \      (___ (               #
-# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )         ) \              #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ /\___/  /              #
-# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)\______/               #
+#  _______  _______  _______             _______      _____      _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    (  __   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   ( (   ) )   | (  )  |              #
+# | |      | || || || (___) | Assistant | (____     ( (___) |   | | /   |              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     \____  |   | (/ /) |              #
+# | | \_  )| |   | || (   ) |                 ) )         ) |   |   / | |              #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\____) ) _ |  (__) |              #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_)(_______)              #
 #                                                                                      #
 ########################################################################################
 */
@@ -30,18 +30,18 @@ package text
 // @@:go:form-preamble:begin:commonPostScriptPreamble@@
 const commonPostScriptPreamble = `%!PS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  _______  _______  _______              ______      ______                           %
-% (  ____ \(       )(  ___  )            / ____ \    / ____ \                          %
-% | (    \/| () () || (   ) |           ( (    \/   ( (    \/                          %
-% | |      | || || || (___) |           | (____     | (____                            %
-% | | ____ | |(_)| ||  ___  |           |  ___ \    |  ___ \                           %
-% | | \_  )| |   | || (   ) | Game      | (   ) )   | (   ) )                          %
-% | (___) || )   ( || )   ( | Master's  ( (___) ) _ ( (___) )                          %
-% (_______)|/     \||/     \| Assistant  \_____/ (_) \_____/                           %
+%  _______  _______  _______              ______      _____          ______   _______  %
+% (  ____ \(       )(  ___  )            / ____ \    / ___ \        (  ___ \ (  ____ \ %
+% | (    \/| () () || (   ) |           ( (    \/   ( (   ) )       | (   ) )| (    \/ %
+% | |      | || || || (___) |           | (____     ( (___) | _____ | (__/ / | (__     %
+% | | ____ | |(_)| ||  ___  |           |  ___ \     \____  |(_____)|  __ (  |  __)    %
+% | | \_  )| |   | || (   ) | Game      | (   ) )         ) |       | (  \ \ | (       %
+% | (___) || )   ( || )   ( | Master's  ( (___) ) _ /\____) )       | )___) )| (____/\ %
+% (_______)|/     \||/     \| Assistant  \_____/ (_)\______/        |/ \___/ (_______/ %
 %                                                                                      %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-% @[00]@| GMA Core 6.6
+% @[00]@| GMA Core 6.9-beta.1
 % @[01]@|
 % @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 % @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
@@ -613,18 +613,18 @@ const commonPostScriptPreamble = `%!PS
 // @@:go:gma-preamble:begin:gmaPostScriptPreamble@@
 const gmaPostScriptPreamble = `%!PS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  _______  _______  _______              ______      ______                           %
-% (  ____ \(       )(  ___  )            / ____ \    / ____ \                          %
-% | (    \/| () () || (   ) |           ( (    \/   ( (    \/                          %
-% | |      | || || || (___) |           | (____     | (____                            %
-% | | ____ | |(_)| ||  ___  |           |  ___ \    |  ___ \                           %
-% | | \_  )| |   | || (   ) | Game      | (   ) )   | (   ) )                          %
-% | (___) || )   ( || )   ( | Master's  ( (___) ) _ ( (___) )                          %
-% (_______)|/     \||/     \| Assistant  \_____/ (_) \_____/                           %
+%  _______  _______  _______              ______      _____          ______   _______  %
+% (  ____ \(       )(  ___  )            / ____ \    / ___ \        (  ___ \ (  ____ \ %
+% | (    \/| () () || (   ) |           ( (    \/   ( (   ) )       | (   ) )| (    \/ %
+% | |      | || || || (___) |           | (____     ( (___) | _____ | (__/ / | (__     %
+% | | ____ | |(_)| ||  ___  |           |  ___ \     \____  |(_____)|  __ (  |  __)    %
+% | | \_  )| |   | || (   ) | Game      | (   ) )         ) |       | (  \ \ | (       %
+% | (___) || )   ( || )   ( | Master's  ( (___) ) _ /\____) )       | )___) )| (____/\ %
+% (_______)|/     \||/     \| Assistant  \_____/ (_)\______/        |/ \___/ (_______/ %
 %                                                                                      %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-% @[00]@| GMA Core 6.6
+% @[00]@| GMA Core 6.9-beta.1
 % @[01]@|
 % @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 % @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
@@ -2440,6 +2440,14 @@ _my_encoding 8#344 /divide        put
     FreeFormTextBlock
 } def
 
+/ConditionsBlock {
+	(CONDITIONS) DividerBlock
+	SetColor_data
+	DataFont 12 20 BeginDataBlock
+	(STARTING CONDITION LIST) BlankHue PageTextWidth DataBlock
+	EndDataBlock
+} def
+
 /TemplateDeclaration {
     SetColor_form
     HeadingFont HeadingFontSize HeadingFontSize 4 add BeginDataBlock
@@ -2449,6 +2457,24 @@ _my_encoding 8#344 /divide        put
     /DB_skill_y Y def
 } def
     
+/BeginExtraMonsterBlock {
+	(EXTRA CREATURES NOT INVOLVED IN COMBAT) DividerBlock
+} def
+
+/EndExtraMonsterBlock {
+	InterBlockGap
+} def
+
+% spawn sizes color tag ExtraMonster -
+/ExtraMonster {
+	SetColor_data
+	DataFont 12 20 BeginDataBlock
+	(IMAGE TAG) BlankHue PageTextWidth 175 sub 75 sub 50 sub DataBlock
+	(COLOR) 50 BlankHue DataBlock
+	(SIZE\(S\)) 175 BlankHue DataBlock
+	(SPAWN POINT) 75 BlankHue DataBlock
+	EndDataBlock
+} def
 /BeginMonsterInstanceBlock {
 } def
 /EndMonsterInstanceBlock {
@@ -2761,7 +2787,7 @@ _my_encoding 8#344 /divide        put
 `
 // @@:go:gma-preamble:end:@@
 
-// @[00]@| Go-GMA 5.8.3
+// @[00]@| Go-GMA 5.9.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

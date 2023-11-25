@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      _____      ______                #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    / ___  \               #
-# | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )   \/   \  \              #
-# | |      | || || || (___) | Assistant | (____      \     /       ___) /              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \      (___ (               #
-# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )         ) \              #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ /\___/  /              #
-# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)\______/               #
+#  _______  _______  _______             _______      _____      _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    (  __   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   ( (   ) )   | (  )  |              #
+# | |      | || || || (___) | Assistant | (____     ( (___) |   | | /   |              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     \____  |   | (/ /) |              #
+# | | \_  )| |   | || (   ) |                 ) )         ) |   |   / | |              #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\____) ) _ |  (__) |              #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_)(_______)              #
 #                                                                                      #
 ########################################################################################
 */
@@ -24,6 +24,7 @@ package mapper
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -53,6 +54,12 @@ const MinimumSupportedMapFileFormat = 17
 // can understand. Saved data will be in this format.
 //
 const MaximumSupportedMapFileFormat = 22
+
+// ErrCreatureNoSizes is the error returned when a creature size code is expected but none given.
+var ErrCreatureNoSizes = errors.New("missing creature size code")
+
+// ErrCreatureInvalidSize is the error returned when a creature size code is expected but the code(s) given are invalid.
+var ErrCreatureInvalidSize = errors.New("invalid creature size code")
 
 func init() {
 	if MinimumSupportedMapFileFormat > GMAMapperFileFormat || MaximumSupportedMapFileFormat < GMAMapperFileFormat {
@@ -637,6 +644,62 @@ const (
 	CreatureTypePlayer
 )
 
+// SetSizes handles the bridge bewteen the deprecated use of the
+// Size field and the new use of SkinSize to handle both polymorph
+// skins and the creature's native size.
+//
+// Given (possibly nil or empty) skinSize, skin, and size values,
+// the SetSizes method gives preference to the SkinSize array,
+// setting Size to the default size from that list for backward
+// compatibility. If SkinSize is empty but Size is populated, the
+// opposite is done. If an explicit default size is listed in
+// SkinSize, that will override a zero value in the Size field.
+// A nonzero Size value will take priority over the default size,
+// however.
+//
+// An error is returned if one of the size codes is invalid. If there
+// is a conflict between the size value and the default size in skinSizes,
+// skinSizes takes priority.
+//
+func (c *CreatureToken) SetSizes(skinSize []string, skin int, size string) error {
+	sizeCodeRE := regexp.MustCompile(`^[fFdDtTsSmMlLhHgGcC](\d+)?(?:->(\d+))?(?:=(\d+))?(?::(\*)?(.*))?$`)
+
+	// If no skinSize list was present, just use size as the single item for that list.
+	if len(skinSize) == 0 {
+		if size == "" {
+			return ErrCreatureNoSizes
+		}
+		if sizeCodeRE.FindStringSubmatch(size) == nil {
+			return ErrCreatureInvalidSize
+		}
+		c.SkinSize = []string{size}
+		c.Skin = 0
+		c.Size = size
+		return nil
+	}
+
+	// If they gave us a list of skin sizes, make sure they're all valid and see if one is
+	// designated as the default one.
+	defaultSkinSize := 0
+	for i, ss := range skinSize {
+		if szFields := sizeCodeRE.FindStringSubmatch(ss); szFields != nil {
+			if szFields[4] == "*" {
+				defaultSkinSize = i
+			}
+		} else {
+			return ErrCreatureInvalidSize
+		}
+	}
+
+	if skin <= 0 || skin >= len(skinSize) {
+		skin = defaultSkinSize
+	}
+	c.SkinSize = skinSize
+	c.Skin = skin
+	c.Size = c.SkinSize[c.Skin]
+	return nil
+}
+
 //
 // CreatureToken is a MapObject (but not a MapElement) which displays a movable
 // token indicating the size and location of a creature in the game.
@@ -655,6 +718,10 @@ type CreatureToken struct {
 
 	// If true, this means the creature token is only visible to the GM.
 	Hidden bool `json:",omitempty"`
+
+	// If true, only the GM may access or manipulate the polymorph capabilities
+	// of this creature.
+	PolyGM bool `json:",omitempty"`
 
 	// The creature type.
 	CreatureType CreatureTypeCode
@@ -718,6 +785,8 @@ type CreatureToken struct {
 	// category while upper-case indicates "tall" versions.
 	//
 	// May also be the size in feet (DEPRECATED USAGE).
+	//
+	// This field is now DEPRECATED. Use SkinSize instead.
 	Size string
 
 	// If DispSize is nonempty, it holds the size category to display
@@ -1993,7 +2062,7 @@ func loadMapFile(input io.Reader, metaDataOnly bool) ([]any, MapMetaData, error)
 	return nil, meta, fmt.Errorf("invalid map file format: unexpected end of file")
 }
 
-// @[00]@| Go-GMA 5.8.3
+// @[00]@| Go-GMA 5.9.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

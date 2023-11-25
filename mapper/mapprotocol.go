@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      _____      ______                #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    / ___  \               #
-# | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )   \/   \  \              #
-# | |      | || || || (___) | Assistant | (____      \     /       ___) /              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \      (___ (               #
-# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )         ) \              #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ /\___/  /              #
-# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)\______/               #
+#  _______  _______  _______             _______      _____      _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    (  __   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   ( (   ) )   | (  )  |              #
+# | |      | || || || (___) | Assistant | (____     ( (___) |   | | /   |              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     \____  |   | (/ /) |              #
+# | | \_  )| |   | || (   ) |                 ) )         ) |   |   / | |              #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\____) ) _ |  (__) |              #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_)(_______)              #
 #                                                                                      #
 ########################################################################################
 */
@@ -44,6 +44,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 )
 
 //
@@ -51,10 +52,10 @@ import (
 // and protocol versions supported by this code.
 //
 const (
-	GMAMapperProtocol=407     // @@##@@ auto-configured
-	GoVersionNumber="5.8.3" // @@##@@ auto-configured
+	GMAMapperProtocol=408     // @@##@@ auto-configured
+	GoVersionNumber="5.9.0" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
-	MaximumSupportedMapProtocol = 407
+	MaximumSupportedMapProtocol = 408
 )
 
 func init() {
@@ -98,6 +99,15 @@ func (c *MapConnection) Close() {
 	if c != nil && c.conn != nil {
 		c.conn.Close()
 	}
+}
+
+//
+// SendEchoWithTimestamp is identical to Send, but only takes an EchoMessagePayload parameter
+// and writes the SentTime value into it as it sends it out.
+//
+func (c *MapConnection) SendEchoWithTimestamp(command ServerMessage, data EchoMessagePayload) error {
+	data.SentTime = time.Now()
+	return c.Send(command, data)
 }
 
 //

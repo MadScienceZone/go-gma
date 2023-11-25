@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      _____      ______                #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    / ___  \               #
-# | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )   \/   \  \              #
-# | |      | || || || (___) | Assistant | (____      \     /       ___) /              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \      (___ (               #
-# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )         ) \              #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ /\___/  /              #
-# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)\______/               #
+#  _______  _______  _______             _______      _____      _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    (  __   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   ( (   ) )   | (  )  |              #
+# | |      | || || || (___) | Assistant | (____     ( (___) |   | | /   |              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     \____  |   | (/ /) |              #
+# | | \_  )| |   | || (   ) |                 ) )         ) |   |   / | |              #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\____) ) _ |  (__) |              #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_)(_______)              #
 #                                                                                      #
 ########################################################################################
 #
@@ -199,7 +199,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.8.3" //@@##@@
+const GoVersionNumber="5.9.0" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -330,6 +330,7 @@ func main() {
 			mapper.ClearFrom,
 			mapper.CombatMode,
 			mapper.Comment,
+			mapper.Echo,
 			mapper.LoadFrom,
 			mapper.LoadArcObject,
 			mapper.LoadCircleObject,
@@ -666,7 +667,7 @@ func describeObject(mono bool, obj any) string {
 			fieldDesc{"elev", o.Elev},
 			fieldDesc{"color", o.Color},
 			fieldDesc{"note", o.Note},
-			fieldDesc{"size", o.Size},
+			//			fieldDesc{"size", o.Size},
 			fieldDesc{"dispsize", o.DispSize},
 			fieldDesc{"statuslist", o.StatusList},
 			fieldDesc{"aoe", describeObject(mono, o.AoE)},
@@ -676,6 +677,7 @@ func describeObject(mono bool, obj any) string {
 			fieldDesc{"dim", o.Dim},
 			fieldDesc{"type", o.CreatureType},
 			fieldDesc{"customreach", o.CustomReach},
+			fieldDesc{"polyGM", o.PolyGM},
 		))
 
 	case mapper.MapElement:
@@ -723,7 +725,8 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"name", m.Name},
 			fieldDesc{"id", m.ObjID()},
 			fieldDesc{"color", m.Color},
-			fieldDesc{"size", m.Size},
+			fieldDesc{"size", m.SkinSize},
+			fieldDesc{"skin", m.Skin},
 		)
 	case mapper.AddImageMessagePayload:
 		if m.Animation != nil {
@@ -802,6 +805,17 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 		fmt.Println(
 			colorize("//", "Cyan", mono),
 			colorize(m.Text, "blue", mono),
+		)
+
+	case mapper.EchoMessagePayload:
+		printFields(mono, "Echo",
+			fieldDesc{"b", m.B},
+			fieldDesc{"i", m.I},
+			fieldDesc{"s", m.S},
+			fieldDesc{"o", describeObject(mono, m.O)},
+			fieldDesc{"ReceivedTime", m.ReceivedTime},
+			fieldDesc{"SentTime", m.SentTime},
+			fieldDesc{"(latency)", m.SentTime.Sub(m.ReceivedTime)},
 		)
 
 	case mapper.LoadFromMessagePayload:
@@ -1749,17 +1763,27 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 					fmt.Println(colorize(fmt.Sprintf("usage ERROR: %v", err), "Red", mono))
 					break
 				}
+				// Size (now SkinSize) can now be a list of sizes
+				ss, err := tcllist.ParseTclList(v[5].(string))
+				if err != nil {
+					fmt.Println(colorize(fmt.Sprintf("usage ERROR: %v reading size list value \"%s\"", err, v[5].(string)), "Red", mono))
+					break
+				}
+
 				c := mapper.CreatureToken{
 					CreatureType: mapper.CreatureTypeUnknown,
 				}
 				c.ID = v[1].(string)
 				c.Color = v[2].(string)
 				c.Name = v[3].(string)
-				//c.Area = v[4].(string)
-				c.Size = v[5].(string)
+				c.SkinSize = ss
 				c.Gx = v[7].(float64)
 				c.Gy = v[8].(float64)
 				c.Reach = v[9].(int)
+				if err := c.SetSizes(c.SkinSize, 0, ""); err != nil {
+					fmt.Println(colorize(fmt.Sprintf("size code error: %v", err), "Red", mono))
+					break handle_input
+				}
 
 				switch v[6].(string) {
 				case "player":
@@ -1886,7 +1910,7 @@ func colorize(text, color string, mono bool) string {
 }
 
 /*
-# @[00]@| Go-GMA 5.8.3
+# @[00]@| Go-GMA 5.9.0
 # @[01]@|
 # @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

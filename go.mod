@@ -10,8 +10,8 @@ require (
 	github.com/lestrrat-go/strftime v1.0.6
 	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/newrelic/go-agent/v3 v3.24.0
-	github.com/newrelic/go-agent/v3/integrations/nrsqlite3 v1.1.1
-	golang.org/x/exp v0.0.0-20221217163422-3c43f8badb15
+	github.com/newrelic/go-agent/v3/integrations/nrsqlite3 v1.2.0
+	golang.org/x/exp v0.0.0-20230801115018-d63ba01acd4b
 )
 
 require (

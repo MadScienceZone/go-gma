@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      _____      ______                #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    / ___  \               #
-# | (    \/| () () || (   ) | Master's  | (    \/   ( (___) )   \/   \  \              #
-# | |      | || || || (___) | Assistant | (____      \     /       ___) /              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     / ___ \      (___ (               #
-# | | \_  )| |   | || (   ) |                 ) )   ( (   ) )         ) \              #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ ( (___) ) _ /\___/  /              #
-# (_______)|/     \||/     \| Client    \______/ (_) \_____/ (_)\______/               #
+#  _______  _______  _______             _______      _____      _______               #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    (  __   )              #
+# | (    \/| () () || (   ) | Master's  | (    \/   ( (   ) )   | (  )  |              #
+# | |      | || || || (___) | Assistant | (____     ( (___) |   | | /   |              #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     \____  |   | (/ /) |              #
+# | | \_  )| |   | || (   ) |                 ) )         ) |   |   / | |              #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\____) ) _ |  (__) |              #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_)(_______)              #
 #                                                                                      #
 ########################################################################################
 */
@@ -231,7 +231,7 @@ func (a *Application) QueryChatHistory(target int, requester *mapper.ClientConne
 			if err := json.Unmarshal([]byte(jdata), &chat); err != nil {
 				return err
 			}
-			if chat.ToAll || (chat.ToGM && requester.Auth.GmMode) || slices.Contains[string](chat.Recipients, requester.Auth.Username) {
+			if chat.ToAll || (chat.ToGM && requester.Auth.GmMode) || slices.Contains(chat.Recipients, requester.Auth.Username) {
 				requester.Conn.Send(mapper.ChatMessage, chat)
 			}
 
@@ -240,7 +240,7 @@ func (a *Application) QueryChatHistory(target int, requester *mapper.ClientConne
 			if err := json.Unmarshal([]byte(jdata), &rr); err != nil {
 				return err
 			}
-			if rr.ToAll || (rr.ToGM && requester.Auth.GmMode) || slices.Contains[string](rr.Recipients, requester.Auth.Username) {
+			if rr.ToAll || (rr.ToGM && requester.Auth.GmMode) || slices.Contains(rr.Recipients, requester.Auth.Username) {
 				requester.Conn.Send(mapper.RollResult, rr)
 			}
 
@@ -440,7 +440,7 @@ func (a *Application) FilterImages(f mapper.FilterImagesMessagePayload) error {
 	return nil
 }
 
-// @[00]@| Go-GMA 5.8.3
+// @[00]@| Go-GMA 5.9.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
