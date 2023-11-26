@@ -796,6 +796,9 @@ func intToStrings(a []int) (as []string) {
 func (d *dieSpec) compute(s *evalStack) error {
 	d.History = nil
 	d.WasMaximized = false
+	if d.Sides <= 0 {
+		return fmt.Errorf("dice cannot have a nonpositive number of sides")
+	}
 	for i := 0; i <= d.Rerolls; i++ {
 		this := []int{}
 		for j := 0; j < d.Numerator; j++ {
@@ -1623,6 +1626,9 @@ func (d *DieRoller) RandFloat64() float64 {
 // affects the outcome of subsequent die rolls just as other die rolls do.
 //
 func (d *DieRoller) RandIntn(n int) int {
+	if n <= 0 {
+		return 0
+	}
 	if d.generator == nil {
 		return rand.Intn(n)
 	}
