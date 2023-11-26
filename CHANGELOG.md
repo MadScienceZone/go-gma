@@ -10,6 +10,11 @@
  * GMA Mapper Protocol: 408		<!-- @@##@@ -->
  * GMA Mapper File Format: 22		<!-- @@##@@ -->
 
+## v5.9.1
+### Fixes
+ * Doesn't allow `d0` in die rolls. This caused the server to panic.
+ * Doesn't allow dividing by 0 in die roll expressions, which also caused the server to panic.
+
 ## v5.9.0
 ### Enhancements
  * Moved protocol to version 408

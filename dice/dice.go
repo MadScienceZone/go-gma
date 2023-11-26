@@ -453,6 +453,9 @@ func (s *evalStack) applyOp() error {
 	case '*', '×':
 		s.push(x * y)
 	case '÷':
+		if y == 0 {
+			return fmt.Errorf("division by zero is not defined")
+		}
 		s.push(x / y)
 	case '≤':
 		if x > y {
