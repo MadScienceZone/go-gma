@@ -30,7 +30,7 @@ import (
 
 const (
 	GMAMapperPreferencesMinimumVersion int = 1
-	GMAMapperPreferencesMaximumVersion int = 3
+	GMAMapperPreferencesMaximumVersion int = 4
 	GMAPreferencesMinimumVersion       int = 1
 	GMAPreferencesMaximumVersion       int = 1
 )
@@ -256,7 +256,7 @@ type DieRollComponent struct {
 //
 // UserPreferences represents the preferences settings for the GMA Mapper.
 //
-// This represents preferences version 3.
+// This represents preferences version 4.
 //
 type UserPreferences struct {
 	GMAMapperPreferencesVersion int        `json:"GMA_Mapper_preferences_version"`
@@ -264,6 +264,7 @@ type UserPreferences struct {
 	ButtonSize                  ButtonSize `json:"button_size,omitempty"`
 	ColorizeDieRolls            bool       `json:"colorize_die_rolls,omitempty"`
 	CurlPath                    string     `json:"curl_path,omitempty"`
+	CurlInsecure                bool       `json:"curl_insecure,omitempty"`
 	CurrentProfile              string     `json:"current_profile,omitempty"`
 	DarkMode                    bool       `json:"dark,omitempty"`
 	DebugLevel                  int        `json:"debug_level,omitempty"`
