@@ -1334,12 +1334,21 @@ func (a *Application) managePreambleData() {
 			}
 			a.AllowedClients = data.Packages
 			if a.AllowedClients != nil {
-				for _, aClient := range a.AllowedClients {
+				for i, aClient := range a.AllowedClients {
 					if aClient.VersionPattern != "" {
-						_ = regexp.MustCompile(aClient.VersionPattern)
+						a.AllowedClients[i].VersionRegex, err = regexp.Compile(aClient.VersionPattern)
+						if err != nil {
+							a.Debugf(DebugInit, "ERROR in %s VersionPattern \"%s\": %v; will not limit this client", aClient.Name, aClient.VersionPattern, err)
+							a.AllowedClients[i].VersionRegex = nil
+						}
+						nSubs := len(a.AllowedClients[i].VersionRegex.SubexpNames())
+						if nSubs != 2 {
+							a.Debugf(DebugInit, "ERROR in %s VersionPattern \"%s\": must have exactly 1 capturing group; this expression has %d; will not limit this client", aClient.Name, aClient.VersionPattern, nSubs-1)
+							a.AllowedClients[i].VersionRegex = nil
+						}
 					}
 					if aClient.MinimumVersion != "" && aClient.VersionPattern == "" {
-						panic("You can't have a minimum client version but not version pattern to match it with.")
+						a.Debugf(DebugInit, "in package %s, you can't have a minimum client version but not version pattern to match it with.", aClient.Name)
 					}
 				}
 			}

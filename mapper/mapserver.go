@@ -21,7 +21,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"regexp"
 	"strings"
 	"time"
 
@@ -548,18 +547,12 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 				if packet.Client != "" && allowed != nil {
 					c.debugf(DebugAuth, "checking for allowed client version")
 					for _, allowedClient := range allowed {
-						if allowedClient.VersionPattern == "" || allowedClient.MinimumVersion == "" {
+						if allowedClient.VersionRegex == nil || allowedClient.MinimumVersion == "" {
 							c.debugf(DebugAuth, "no minimum version set for %s, skipping", allowedClient.Name)
 							continue
 						}
 
-						re, err := regexp.Compile(allowedClient.VersionPattern)
-						if err != nil {
-							c.debugf(DebugAuth, "ERROR in package %s pattern %s (skipped)", allowedClient.Name, allowedClient.VersionPattern)
-							continue
-						}
-
-						fields := re.FindStringSubmatch(packet.Client)
+						fields := allowedClient.VersionRegex.FindStringSubmatch(packet.Client)
 						if fields == nil {
 							c.debugf(DebugAuth, "client %s does not match pattern %s for %s, trying next package", packet.Client, allowedClient.VersionPattern, allowedClient.Name)
 							continue

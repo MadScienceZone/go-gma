@@ -50,6 +50,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
@@ -2608,8 +2609,9 @@ type UpdateVersionsMessagePayload struct {
 
 type PackageUpdate struct {
 	Name           string
-	VersionPattern string `json:",omitempty"`
-	MinimumVersion string `json:",omitempty"`
+	VersionPattern string         `json:"-"`
+	VersionRegex   *regexp.Regexp `json:"-"`
+	MinimumVersion string         `json:"-"`
 	Instances      []PackageVersion
 }
 
