@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __    _______     _______        #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  (  __   )   (  __   )       #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) | (  )  |   | (  )  |       #
-# | |      | || || || (___) | Assistant | (____        | | | | /   |   | | /   |       #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | | | (/ /) |   | (/ /) |       #
-# | | \_  )| |   | || (   ) |                 ) )      | | |   / | |   |   / | |       #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_|  (__) | _ |  (__) |       #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/(_______)(_)(_______)       #
+#  _______  _______  _______             _______      __     __       _______          #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \   /  \     (  __   )         #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) )  \/) )    | (  )  |         #
+# | |      | || || || (___) | Assistant | (____        | |    | |    | | /   |         #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |    | |    | (/ /) |         #
+# | | \_  )| |   | || (   ) |                 ) )      | |    | |    |   / | |         #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_ __) (_ _ |  (__) |         #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/ \____/(_)(_______)         #
 #                                                                                      #
 ########################################################################################
 */
@@ -50,6 +50,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
@@ -2607,8 +2608,11 @@ type UpdateVersionsMessagePayload struct {
 }
 
 type PackageUpdate struct {
-	Name      string
-	Instances []PackageVersion
+	Name           string
+	VersionPattern string         `json:",omitempty"`
+	VersionRegex   *regexp.Regexp `json:"-"`
+	MinimumVersion string         `json:",omitempty"`
+	Instances      []PackageVersion
 }
 
 type PackageVersion struct {
@@ -3546,7 +3550,7 @@ func (c *Connection) CheckVersionOf(packageName, myVersionNumber string) (*Packa
 	return availableVersion, nil
 }
 
-// @[00]@| Go-GMA 5.10.0
+// @[00]@| Go-GMA 5.11.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

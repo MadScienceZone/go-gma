@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __    _______     _______        #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  (  __   )   (  __   )       #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) | (  )  |   | (  )  |       #
-# | |      | || || || (___) | Assistant | (____        | | | | /   |   | | /   |       #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | | | (/ /) |   | (/ /) |       #
-# | | \_  )| |   | || (   ) |                 ) )      | | |   / | |   |   / | |       #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_|  (__) | _ |  (__) |       #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/(_______)(_)(_______)       #
+#  _______  _______  _______             _______      __     __       _______          #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \   /  \     (  __   )         #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) )  \/) )    | (  )  |         #
+# | |      | || || || (___) | Assistant | (____        | |    | |    | | /   |         #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |    | |    | (/ /) |         #
+# | | \_  )| |   | || (   ) |                 ) )      | |    | |    |   / | |         #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_ __) (_ _ |  (__) |         #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/ \____/(_)(_______)         #
 #                                                                                      #
 ########################################################################################
 */
@@ -26,6 +26,7 @@ import (
 
 	"github.com/MadScienceZone/go-gma/v5/auth"
 	"github.com/MadScienceZone/go-gma/v5/dice"
+	"github.com/MadScienceZone/go-gma/v5/util"
 	"github.com/newrelic/go-agent/v3/newrelic"
 	"golang.org/x/exp/slices"
 )
@@ -43,6 +44,7 @@ type MapServer interface {
 	AddClient(*ClientConnection)
 	RemoveClient(*ClientConnection)
 	SendGameState(*ClientConnection)
+	GetAllowedClients() []PackageUpdate
 }
 
 // ClientPreamble contains information given to each client upon
@@ -540,6 +542,57 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 
 			case packet := <-reply:
 				c.debugf(DebugAuth, "received client authentication %v", packet)
+				allowed := c.Server.GetAllowedClients()
+
+				if packet.Client != "" && allowed != nil {
+					c.debugf(DebugAuth, "checking for allowed client version")
+					for _, allowedClient := range allowed {
+						if allowedClient.VersionRegex == nil || allowedClient.MinimumVersion == "" {
+							c.debugf(DebugAuth, "no minimum version set for %s, skipping", allowedClient.Name)
+							continue
+						}
+
+						fields := allowedClient.VersionRegex.FindStringSubmatch(packet.Client)
+						if fields == nil {
+							c.debugf(DebugAuth, "client %s does not match pattern %s for %s, trying next package", packet.Client, allowedClient.VersionPattern, allowedClient.Name)
+							continue
+						}
+
+						if len(fields) != 2 {
+							c.debugf(DebugAuth, "package %s pattern %s is invalid: MUST have exactly one capturing group", allowedClient.Name, allowedClient.VersionPattern)
+							continue
+						}
+
+						if fields[1] == "" {
+							c.debugf(DebugAuth, "client %s matches pattern %s for %s, but does not announce its version; denied", packet.Client, allowedClient.VersionPattern, allowedClient.Name)
+							c.Conn.Send(Denied, DeniedMessagePayload{Reason: "disallowed client version"})
+							_ = c.Conn.Flush()
+							done <- fmt.Errorf("client denied")
+							return
+						}
+
+						relVer, err := util.VersionCompare(fields[1], allowedClient.MinimumVersion)
+						if err != nil {
+							c.debugf(DebugAuth, "Error parsing client version %s and minimum version %s: %v", fields[1], allowedClient.MinimumVersion, err)
+							c.Conn.Send(Denied, DeniedMessagePayload{Reason: "unable to understand client version"})
+							_ = c.Conn.Flush()
+							done <- fmt.Errorf("client version error")
+							return
+						}
+
+						if relVer < 0 {
+							c.debugf(DebugAuth, "%s client version %s is older than minimum version %s; denied", allowedClient.Name, fields[1], allowedClient.MinimumVersion)
+							c.Conn.Send(Denied, DeniedMessagePayload{Reason: allowedClient.Name + " client is older than minimum allowed version"})
+							_ = c.Conn.Flush()
+							done <- fmt.Errorf("client version not allowed")
+							return
+						} else {
+							c.debugf(DebugAuth, "%s client version %s is allowed", allowedClient.Name, fields[1])
+						}
+						break
+					}
+				}
+
 				if newSecret := c.Server.GetPersonalCredentials(packet.User); newSecret != nil {
 					c.Auth.SetSecret(newSecret)
 				}
