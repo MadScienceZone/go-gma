@@ -213,11 +213,18 @@ type Application struct {
 	ServerStarted time.Time
 
 	CPUProfileFile string
+
+	// The AllowedClients list lets us require minimum versions of various clients.
+	AllowedClients []mapper.PackageUpdate
 }
 
 func (a *Application) GetClientPreamble() *mapper.ClientPreamble {
 	a.Debug(DebugInit, "fetching client preamble from generator channel")
 	return <-a.clientPreamble.fetch
+}
+
+func (a Application) GetAllowedClients() []mapper.PackageUpdate {
+	return a.AllowedClients
 }
 
 //
@@ -1322,6 +1329,18 @@ func (a *Application) managePreambleData() {
 
 		case "UPDATES":
 			var data mapper.UpdateVersionsMessagePayload
+			a.AllowedClients = data.Packages
+			if a.AllowedClients != nil {
+				for _, aClient := range a.AllowedClients {
+					if aClient.VersionPattern != "" {
+						_ = regexp.MustCompile(aClient.VersionPattern)
+					}
+					if aClient.MinimumVersion != "" && aClient.VersionPattern == "" {
+						panic("You can't have a minimum client version but not version pattern to match it with.")
+					}
+				}
+			}
+			a.Debugf(DebugInit, "allowed client list is now %v", a.AllowedClients)
 			if err = json.Unmarshal(s, &data); err == nil {
 				b, err = json.Marshal(data)
 			}
