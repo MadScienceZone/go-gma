@@ -1330,29 +1330,40 @@ func (a *Application) managePreambleData() {
 		case "UPDATES":
 			var data mapper.UpdateVersionsMessagePayload
 			if err = json.Unmarshal(s, &data); err == nil {
-				b, err = json.Marshal(data)
-			}
-			a.AllowedClients = data.Packages
-			if a.AllowedClients != nil {
-				for i, aClient := range a.AllowedClients {
-					if aClient.VersionPattern != "" {
-						a.AllowedClients[i].VersionRegex, err = regexp.Compile(aClient.VersionPattern)
-						if err != nil {
-							a.Debugf(DebugInit, "ERROR in %s VersionPattern \"%s\": %v; will not limit this client", aClient.Name, aClient.VersionPattern, err)
-							a.AllowedClients[i].VersionRegex = nil
+				a.AllowedClients = data.Packages
+				if a.AllowedClients != nil {
+					for i, aClient := range a.AllowedClients {
+						if aClient.VersionPattern != "" {
+							a.AllowedClients[i].VersionRegex, err = regexp.Compile(aClient.VersionPattern)
+							if err != nil {
+								a.Debugf(DebugInit, "ERROR in %s VersionPattern \"%s\": %v; will not limit this client", aClient.Name, aClient.VersionPattern, err)
+								a.AllowedClients[i].VersionRegex = nil
+							}
+							nSubs := len(a.AllowedClients[i].VersionRegex.SubexpNames())
+							if nSubs != 2 {
+								a.Debugf(DebugInit, "ERROR in %s VersionPattern \"%s\": must have exactly 1 capturing group; this expression has %d; will not limit this client", aClient.Name, aClient.VersionPattern, nSubs-1)
+								a.AllowedClients[i].VersionRegex = nil
+							}
 						}
-						nSubs := len(a.AllowedClients[i].VersionRegex.SubexpNames())
-						if nSubs != 2 {
-							a.Debugf(DebugInit, "ERROR in %s VersionPattern \"%s\": must have exactly 1 capturing group; this expression has %d; will not limit this client", aClient.Name, aClient.VersionPattern, nSubs-1)
-							a.AllowedClients[i].VersionRegex = nil
+						if aClient.MinimumVersion != "" && aClient.VersionPattern == "" {
+							a.Debugf(DebugInit, "in package %s, you can't have a minimum client version but not version pattern to match it with.", aClient.Name)
 						}
-					}
-					if aClient.MinimumVersion != "" && aClient.VersionPattern == "" {
-						a.Debugf(DebugInit, "in package %s, you can't have a minimum client version but not version pattern to match it with.", aClient.Name)
 					}
 				}
+
+				cpkg := make([]mapper.PackageUpdate, len(data.Packages))
+				copy(cpkg, data.Packages)
+				for i := range cpkg {
+					// redact filters from update messages sent to clients
+					cpkg[i].VersionPattern = ""
+					cpkg[i].VersionRegex = nil
+					cpkg[i].MinimumVersion = ""
+				}
+				b, err = json.Marshal(mapper.UpdateVersionsMessagePayload{
+					Packages: cpkg,
+				})
+				a.Debugf(DebugInit, "allowed client list is now %v", a.AllowedClients)
 			}
-			a.Debugf(DebugInit, "allowed client list is now %v", a.AllowedClients)
 
 		case "WORLD":
 			var data mapper.WorldMessagePayload

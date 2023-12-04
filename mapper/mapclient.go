@@ -2609,9 +2609,9 @@ type UpdateVersionsMessagePayload struct {
 
 type PackageUpdate struct {
 	Name           string
-	VersionPattern string         `json:"-"`
+	VersionPattern string         `json:",omitempty"`
 	VersionRegex   *regexp.Regexp `json:"-"`
-	MinimumVersion string         `json:"-"`
+	MinimumVersion string         `json:",omitempty"`
 	Instances      []PackageVersion
 }
 
