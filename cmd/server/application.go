@@ -1329,6 +1329,9 @@ func (a *Application) managePreambleData() {
 
 		case "UPDATES":
 			var data mapper.UpdateVersionsMessagePayload
+			if err = json.Unmarshal(s, &data); err == nil {
+				b, err = json.Marshal(data)
+			}
 			a.AllowedClients = data.Packages
 			if a.AllowedClients != nil {
 				for _, aClient := range a.AllowedClients {
@@ -1341,9 +1344,6 @@ func (a *Application) managePreambleData() {
 				}
 			}
 			a.Debugf(DebugInit, "allowed client list is now %v", a.AllowedClients)
-			if err = json.Unmarshal(s, &data); err == nil {
-				b, err = json.Marshal(data)
-			}
 
 		case "WORLD":
 			var data mapper.WorldMessagePayload

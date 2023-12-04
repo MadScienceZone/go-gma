@@ -575,7 +575,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 							c.Conn.Send(Denied, DeniedMessagePayload{Reason: "disallowed client version"})
 							_ = c.Conn.Flush()
 							done <- fmt.Errorf("client denied")
-							break
+							return
 						}
 
 						relVer, err := util.VersionCompare(fields[1], allowedClient.MinimumVersion)
@@ -584,7 +584,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 							c.Conn.Send(Denied, DeniedMessagePayload{Reason: "unable to understand client version"})
 							_ = c.Conn.Flush()
 							done <- fmt.Errorf("client version error")
-							break
+							return
 						}
 
 						if relVer < 0 {
@@ -592,6 +592,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 							c.Conn.Send(Denied, DeniedMessagePayload{Reason: allowedClient.Name + " client is older than minimum allowed version"})
 							_ = c.Conn.Flush()
 							done <- fmt.Errorf("client version not allowed")
+							return
 						} else {
 							c.debugf(DebugAuth, "%s client version %s is allowed", allowedClient.Name, fields[1])
 						}
