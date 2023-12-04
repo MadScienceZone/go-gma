@@ -2607,8 +2607,10 @@ type UpdateVersionsMessagePayload struct {
 }
 
 type PackageUpdate struct {
-	Name      string
-	Instances []PackageVersion
+	Name           string
+	VersionPattern string `json:",omitempty"`
+	MinimumVersion string `json:",omitempty"`
+	Instances      []PackageVersion
 }
 
 type PackageVersion struct {

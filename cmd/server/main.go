@@ -133,7 +133,7 @@ import (
 // Auto-configured values
 //
 
-const GoVersionNumber="5.10.0" // @@##@@
+const GoVersionNumber="5.11.0-alpha" // @@##@@
 
 //
 // eventMonitor responds to signals and timers that affect our overall operation
