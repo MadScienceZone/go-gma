@@ -1032,7 +1032,7 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 		reOpSplit := regexp.MustCompile(`[-+*×÷()≤≥]|[^-+*×÷()≤≥]+`)
 		reIsOp := regexp.MustCompile(`^[-+*×÷()≤≥]$`)
 		reIsDie := regexp.MustCompile(`\d+\s*[dD]\d*\d+`)
-		reIsWS := regexp.MustCompile(`\s+`)
+		reIsWS := regexp.MustCompile(`^\s+$`)
 		reConstant := regexp.MustCompile(`^\s*(\d+)\s*(.*?)\s*$`)
 		//                                    max?    numerator    denominator       sides          best/worst         rerolls   label
 		//                                     _1_    __2__          __3__            __4___       _____5_____         __6__     __7__
@@ -1127,6 +1127,9 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 			}
 			// we're not expecting to see an operator here, so if we see a + or -, they must
 			// be a leading unary + or - to apply to what comes next.
+			if reIsWS.MatchString(part) {
+				continue
+			}
 			if part == "+" {
 				// and a unary + is essentially a no-op, so we'll just ignore it.
 				continue
