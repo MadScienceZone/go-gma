@@ -8,10 +8,14 @@ AC {"Name": "Charlie", "ID": "PC3", "Color": "blue", "Size": "M"}
 AC {"Name": "Daria",   "ID": "PC4", "Color": "blue", "Size": "M"}
 UPDATES {
 	"Packages": [
-		{"Name": "core", "Instances": [
+		{"Name": "core", 
+		"VersionPattern": "^\\s*gma\\s+(\\d+\\.\\d+(?:\\.\\d+)?)\\s*$",
+		"Instances": [
 			{"Version": "4.2.2"}
 		]},
-		{"Name": "mapper", "Instances": [
+		{"Name": "mapper", 
+		"VersionPattern": "^\\s*mapper\\s+(\\d+\\.\\d+(?:\\.\\d+)?)\\s*$",
+		"Instances": [
 			{"Version": "4.1.2", "Token": "mapper-4.1.2"},
 			{"Version": "4.1.2", "OS": "freebsd", "Arch": "amd64", "Token": "m412abcde"},
 			{"Version": "4.1.2", "OS": "linux",   "Arch": "amd64", "Token": "l412abcde"}
