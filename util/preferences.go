@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      _____      _______               #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    (  __   )              #
-# | (    \/| () () || (   ) | Master's  | (    \/   ( (   ) )   | (  )  |              #
-# | |      | || || || (___) | Assistant | (____     ( (___) |   | | /   |              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     \____  |   | (/ /) |              #
-# | | \_  )| |   | || (   ) |                 ) )         ) |   |   / | |              #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\____) ) _ |  (__) |              #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_)(_______)              #
+#  _______  _______  _______             _______      __     __        __              #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \   /  \      /  \             #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) )  \/) )     \/) )            #
+# | |      | || || || (___) | Assistant | (____        | |    | |       | |            #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |    | |       | |            #
+# | | \_  )| |   | || (   ) |                 ) )      | |    | |       | |            #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_ __) (_ _  __) (_           #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/ \____/(_) \____/           #
 #                                                                                      #
 ########################################################################################
 */
@@ -30,7 +30,7 @@ import (
 
 const (
 	GMAMapperPreferencesMinimumVersion int = 1
-	GMAMapperPreferencesMaximumVersion int = 3
+	GMAMapperPreferencesMaximumVersion int = 4
 	GMAPreferencesMinimumVersion       int = 1
 	GMAPreferencesMaximumVersion       int = 1
 )
@@ -256,7 +256,7 @@ type DieRollComponent struct {
 //
 // UserPreferences represents the preferences settings for the GMA Mapper.
 //
-// This represents preferences version 3.
+// This represents preferences version 4.
 //
 type UserPreferences struct {
 	GMAMapperPreferencesVersion int        `json:"GMA_Mapper_preferences_version"`
@@ -264,6 +264,7 @@ type UserPreferences struct {
 	ButtonSize                  ButtonSize `json:"button_size,omitempty"`
 	ColorizeDieRolls            bool       `json:"colorize_die_rolls,omitempty"`
 	CurlPath                    string     `json:"curl_path,omitempty"`
+	CurlInsecure                bool       `json:"curl_insecure,omitempty"`
 	CurrentProfile              string     `json:"current_profile,omitempty"`
 	DarkMode                    bool       `json:"dark,omitempty"`
 	DebugLevel                  int        `json:"debug_level,omitempty"`
@@ -930,7 +931,7 @@ func SearchInPath(program string) (string, error) {
 	return "", fmt.Errorf("file not found in PATH")
 }
 
-// @[00]@| Go-GMA 5.9.0
+// @[00]@| Go-GMA 5.11.1
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

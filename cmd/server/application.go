@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      _____      _______               #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    (  __   )              #
-# | (    \/| () () || (   ) | Master's  | (    \/   ( (   ) )   | (  )  |              #
-# | |      | || || || (___) | Assistant | (____     ( (___) |   | | /   |              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     \____  |   | (/ /) |              #
-# | | \_  )| |   | || (   ) |                 ) )         ) |   |   / | |              #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\____) ) _ |  (__) |              #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_)(_______)              #
+#  _______  _______  _______             _______      __     __        __              #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \   /  \      /  \             #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) )  \/) )     \/) )            #
+# | |      | || || || (___) | Assistant | (____        | |    | |       | |            #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |    | |       | |            #
+# | | \_  )| |   | || (   ) |                 ) )      | |    | |       | |            #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_ __) (_ _  __) (_           #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/ \____/(_) \____/           #
 #                                                                                      #
 ########################################################################################
 */
@@ -213,11 +213,18 @@ type Application struct {
 	ServerStarted time.Time
 
 	CPUProfileFile string
+
+	// The AllowedClients list lets us require minimum versions of various clients.
+	AllowedClients []mapper.PackageUpdate
 }
 
 func (a *Application) GetClientPreamble() *mapper.ClientPreamble {
 	a.Debug(DebugInit, "fetching client preamble from generator channel")
 	return <-a.clientPreamble.fetch
+}
+
+func (a Application) GetAllowedClients() []mapper.PackageUpdate {
+	return a.AllowedClients
 }
 
 //
@@ -1323,7 +1330,39 @@ func (a *Application) managePreambleData() {
 		case "UPDATES":
 			var data mapper.UpdateVersionsMessagePayload
 			if err = json.Unmarshal(s, &data); err == nil {
-				b, err = json.Marshal(data)
+				a.AllowedClients = data.Packages
+				if a.AllowedClients != nil {
+					for i, aClient := range a.AllowedClients {
+						if aClient.VersionPattern != "" {
+							a.AllowedClients[i].VersionRegex, err = regexp.Compile(aClient.VersionPattern)
+							if err != nil {
+								a.Debugf(DebugInit, "ERROR in %s VersionPattern \"%s\": %v; will not limit this client", aClient.Name, aClient.VersionPattern, err)
+								a.AllowedClients[i].VersionRegex = nil
+							}
+							nSubs := len(a.AllowedClients[i].VersionRegex.SubexpNames())
+							if nSubs != 2 {
+								a.Debugf(DebugInit, "ERROR in %s VersionPattern \"%s\": must have exactly 1 capturing group; this expression has %d; will not limit this client", aClient.Name, aClient.VersionPattern, nSubs-1)
+								a.AllowedClients[i].VersionRegex = nil
+							}
+						}
+						if aClient.MinimumVersion != "" && aClient.VersionPattern == "" {
+							a.Debugf(DebugInit, "in package %s, you can't have a minimum client version but not version pattern to match it with.", aClient.Name)
+						}
+					}
+				}
+
+				cpkg := make([]mapper.PackageUpdate, len(data.Packages))
+				copy(cpkg, data.Packages)
+				for i := range cpkg {
+					// redact filters from update messages sent to clients
+					cpkg[i].VersionPattern = ""
+					cpkg[i].VersionRegex = nil
+					cpkg[i].MinimumVersion = ""
+				}
+				b, err = json.Marshal(mapper.UpdateVersionsMessagePayload{
+					Packages: cpkg,
+				})
+				a.Debugf(DebugInit, "allowed client list is now %v", a.AllowedClients)
 			}
 
 		case "WORLD":

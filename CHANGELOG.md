@@ -1,14 +1,33 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.9.0                <!-- @@##@@ -->
- * Effective Date: 24-Nov-2023			<!-- @@##@@ -->
+ * This Package Version: 5.11.1                <!-- @@##@@ -->
+ * Effective Date: 04-Dec-2023			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 6.9-beta.1		<!-- @@##@@ -->
- * GMA Mapper Version: 4.17.1		<!-- @@##@@ -->
+ * GMA Core API Library Version: 6.9		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.18		<!-- @@##@@ -->
  * GMA Mapper Protocol: 408		<!-- @@##@@ -->
  * GMA Mapper File Format: 22		<!-- @@##@@ -->
+
+## v5.11.1
+### Fixes
+ * Corrects die-roll syntax error where spaces between open parentheses was not parsed correctly (`((42))` worked but not `(  (  42  )  )`)
+
+## v5.11.0
+### Enhancements
+ * Servers can now filter clients to require a minimum client version number that is allowed to connect.
+    * This is accomplished by adding `MinimumVersion` and `VersionPattern` fields to each `Package` in a server's init file `UPDATES` section.
+    * See the protocol documentation for details on these fields.
+
+## v5.10.0
+### Enhancements
+ * Adds preferences option to run curl in insecure mode (mapper preferences file v4)
+
+## v5.9.1
+### Fixes
+ * Doesn't allow `d0` in die rolls. This caused the server to panic.
+ * Doesn't allow dividing by 0 in die roll expressions, which also caused the server to panic.
 
 ## v5.9.0
 ### Enhancements

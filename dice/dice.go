@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      _____      _______               #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    / ___ \    (  __   )              #
-# | (    \/| () () || (   ) | Master's  | (    \/   ( (   ) )   | (  )  |              #
-# | |      | || || || (___) | Assistant | (____     ( (___) |   | | /   |              #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \     \____  |   | (/ /) |              #
-# | | \_  )| |   | || (   ) |                 ) )         ) |   |   / | |              #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\____) ) _ |  (__) |              #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_)(_______)              #
+#  _______  _______  _______             _______      __     __        __              #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \   /  \      /  \             #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) )  \/) )     \/) )            #
+# | |      | || || || (___) | Assistant | (____        | |    | |       | |            #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |    | |       | |            #
+# | | \_  )| |   | || (   ) |                 ) )      | |    | |       | |            #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_ __) (_ _  __) (_           #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/ \____/(_) \____/           #
 #                                                                                      #
 ########################################################################################
 */
@@ -453,6 +453,9 @@ func (s *evalStack) applyOp() error {
 	case '*', '×':
 		s.push(x * y)
 	case '÷':
+		if y == 0 {
+			return fmt.Errorf("division by zero is not defined")
+		}
 		s.push(x / y)
 	case '≤':
 		if x > y {
@@ -796,6 +799,9 @@ func intToStrings(a []int) (as []string) {
 func (d *dieSpec) compute(s *evalStack) error {
 	d.History = nil
 	d.WasMaximized = false
+	if d.Sides <= 0 {
+		return fmt.Errorf("dice cannot have a nonpositive number of sides")
+	}
 	for i := 0; i <= d.Rerolls; i++ {
 		this := []int{}
 		for j := 0; j < d.Numerator; j++ {
@@ -1026,7 +1032,7 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 		reOpSplit := regexp.MustCompile(`[-+*×÷()≤≥]|[^-+*×÷()≤≥]+`)
 		reIsOp := regexp.MustCompile(`^[-+*×÷()≤≥]$`)
 		reIsDie := regexp.MustCompile(`\d+\s*[dD]\d*\d+`)
-		reIsWS := regexp.MustCompile(`\s+`)
+		reIsWS := regexp.MustCompile(`^\s+$`)
 		reConstant := regexp.MustCompile(`^\s*(\d+)\s*(.*?)\s*$`)
 		//                                    max?    numerator    denominator       sides          best/worst         rerolls   label
 		//                                     _1_    __2__          __3__            __4___       _____5_____         __6__     __7__
@@ -1121,6 +1127,9 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 			}
 			// we're not expecting to see an operator here, so if we see a + or -, they must
 			// be a leading unary + or - to apply to what comes next.
+			if reIsWS.MatchString(part) {
+				continue
+			}
 			if part == "+" {
 				// and a unary + is essentially a no-op, so we'll just ignore it.
 				continue
@@ -1623,6 +1632,9 @@ func (d *DieRoller) RandFloat64() float64 {
 // affects the outcome of subsequent die rolls just as other die rolls do.
 //
 func (d *DieRoller) RandIntn(n int) int {
+	if n <= 0 {
+		return 0
+	}
 	if d.generator == nil {
 		return rand.Intn(n)
 	}
@@ -2972,7 +2984,7 @@ d representation:
 
 */
 
-// @[00]@| Go-GMA 5.9.0
+// @[00]@| Go-GMA 5.11.1
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
