@@ -1,7 +1,7 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.11.0                <!-- @@##@@ -->
+ * This Package Version: 5.11.1                <!-- @@##@@ -->
  * Effective Date: 04-Dec-2023			<!-- @@##@@ -->
 
 ## Compatibility
@@ -9,6 +9,10 @@
  * GMA Mapper Version: 4.18		<!-- @@##@@ -->
  * GMA Mapper Protocol: 408		<!-- @@##@@ -->
  * GMA Mapper File Format: 22		<!-- @@##@@ -->
+
+## v5.11.1
+### Fixes
+ * Corrects die-roll syntax error where spaces between open parentheses was not parsed correctly (`((42))` worked but not `(  (  42  )  )`)
 
 ## v5.11.0
 ### Enhancements

@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __     __       _______          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \   /  \     (  __   )         #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) )  \/) )    | (  )  |         #
-# | |      | || || || (___) | Assistant | (____        | |    | |    | | /   |         #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |    | |    | (/ /) |         #
-# | | \_  )| |   | || (   ) |                 ) )      | |    | |    |   / | |         #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_ __) (_ _ |  (__) |         #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/ \____/(_)(_______)         #
+#  _______  _______  _______             _______      __     __        __              #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \   /  \      /  \             #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) )  \/) )     \/) )            #
+# | |      | || || || (___) | Assistant | (____        | |    | |       | |            #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |    | |       | |            #
+# | | \_  )| |   | || (   ) |                 ) )      | |    | |       | |            #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_ __) (_ _  __) (_           #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/ \____/(_) \____/           #
 #                                                                                      #
 ########################################################################################
 */
@@ -1943,7 +1943,7 @@ func TestDiceOrderOfOperations(t *testing.T) {
 		{Roll: "((15*2)//3", Error: true},
 
 		// 11  (( 15 * 2) // 3) + 12
-		{Roll: "(( 15 * 2) // 3) + 12", Reslist: []StructuredResult{
+		{Roll: "(    ( 15 * 2) // 3) + 12", Reslist: []StructuredResult{
 			{Result: 22, Details: []StructuredDescription{
 				{Type: "result", Value: "22"},
 				{Type: "separator", Value: "="},
@@ -1981,6 +1981,18 @@ func TestDiceOrderOfOperations(t *testing.T) {
 				{Type: "constant", Value: "8"},
 				{Type: "operator", Value: "≥"},
 				{Type: "constant", Value: "3"},
+			}},
+		}},
+		// 13  check for spaces around brackets
+		{Roll: " ( ( 42 ) ) ", Reslist: []StructuredResult{
+			{Result: 42, Details: []StructuredDescription{
+				{Type: "result", Value: "42"},
+				{Type: "separator", Value: "="},
+				{Type: "begingroup", Value: "("},
+				{Type: "begingroup", Value: "("},
+				{Type: "constant", Value: "42"},
+				{Type: "endgroup", Value: ")"},
+				{Type: "endgroup", Value: ")"},
 			}},
 		}},
 	}
@@ -2051,7 +2063,7 @@ func TestDicePrivateRolls(t *testing.T) {
 	}
 }
 
-// @[00]@| Go-GMA 5.11.0
+// @[00]@| Go-GMA 5.11.1
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

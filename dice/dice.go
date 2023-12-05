@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __     __       _______          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \   /  \     (  __   )         #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) )  \/) )    | (  )  |         #
-# | |      | || || || (___) | Assistant | (____        | |    | |    | | /   |         #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |    | |    | (/ /) |         #
-# | | \_  )| |   | || (   ) |                 ) )      | |    | |    |   / | |         #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_ __) (_ _ |  (__) |         #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/ \____/(_)(_______)         #
+#  _______  _______  _______             _______      __     __        __              #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \   /  \      /  \             #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) )  \/) )     \/) )            #
+# | |      | || || || (___) | Assistant | (____        | |    | |       | |            #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |    | |       | |            #
+# | | \_  )| |   | || (   ) |                 ) )      | |    | |       | |            #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_ __) (_ _  __) (_           #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/ \____/(_) \____/           #
 #                                                                                      #
 ########################################################################################
 */
@@ -1032,7 +1032,7 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 		reOpSplit := regexp.MustCompile(`[-+*×÷()≤≥]|[^-+*×÷()≤≥]+`)
 		reIsOp := regexp.MustCompile(`^[-+*×÷()≤≥]$`)
 		reIsDie := regexp.MustCompile(`\d+\s*[dD]\d*\d+`)
-		reIsWS := regexp.MustCompile(`\s+`)
+		reIsWS := regexp.MustCompile(`^\s+$`)
 		reConstant := regexp.MustCompile(`^\s*(\d+)\s*(.*?)\s*$`)
 		//                                    max?    numerator    denominator       sides          best/worst         rerolls   label
 		//                                     _1_    __2__          __3__            __4___       _____5_____         __6__     __7__
@@ -1127,6 +1127,9 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 			}
 			// we're not expecting to see an operator here, so if we see a + or -, they must
 			// be a leading unary + or - to apply to what comes next.
+			if reIsWS.MatchString(part) {
+				continue
+			}
 			if part == "+" {
 				// and a unary + is essentially a no-op, so we'll just ignore it.
 				continue
@@ -2981,7 +2984,7 @@ d representation:
 
 */
 
-// @[00]@| Go-GMA 5.11.0
+// @[00]@| Go-GMA 5.11.1
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
