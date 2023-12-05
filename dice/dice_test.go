@@ -1943,7 +1943,7 @@ func TestDiceOrderOfOperations(t *testing.T) {
 		{Roll: "((15*2)//3", Error: true},
 
 		// 11  (( 15 * 2) // 3) + 12
-		{Roll: "(( 15 * 2) // 3) + 12", Reslist: []StructuredResult{
+		{Roll: "(    ( 15 * 2) // 3) + 12", Reslist: []StructuredResult{
 			{Result: 22, Details: []StructuredDescription{
 				{Type: "result", Value: "22"},
 				{Type: "separator", Value: "="},
@@ -1981,6 +1981,18 @@ func TestDiceOrderOfOperations(t *testing.T) {
 				{Type: "constant", Value: "8"},
 				{Type: "operator", Value: "≥"},
 				{Type: "constant", Value: "3"},
+			}},
+		}},
+		// 13  check for spaces around brackets
+		{Roll: " ( ( 42 ) ) ", Reslist: []StructuredResult{
+			{Result: 42, Details: []StructuredDescription{
+				{Type: "result", Value: "42"},
+				{Type: "separator", Value: "="},
+				{Type: "begingroup", Value: "("},
+				{Type: "begingroup", Value: "("},
+				{Type: "constant", Value: "42"},
+				{Type: "endgroup", Value: ")"},
+				{Type: "endgroup", Value: ")"},
 			}},
 		}},
 	}
