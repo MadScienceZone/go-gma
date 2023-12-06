@@ -1,7 +1,7 @@
 .\" vim:set syntax=nroff:
 '\" <<ital-is-var>>
 '\" <<bold-is-fixed>>
-.TH SERVER 6 "Go-GMA 5.11.1" 04-Dec-2023 "Games" \" @@mp@@
+.TH SERVER 6 "Go-GMA 5.11.2" 05-Dec-2023 "Games" \" @@mp@@
 .SH NAME
 server \- GMA battle grid map server (Go version)
 .SH SYNOPSIS
@@ -321,6 +321,27 @@ from the
 to the end of the line are considered a comment and are
 sent verbatim. This is useful to provide a human-readable
 message to anyone connecting to the game port.
+.RS
+.LP
+Clients may interpret what they see in comment messages from
+the server but are not under any obligation to do so. Currently,
+the following special comment is recognized by the 
+.BR mapper (6)
+client (at least):
+'\" <<list>>
+.TP
+.BI "// notice: " message
+If the comment begins with the string
+.RB \*(lq notice: \*(rq
+(not counting whitespace), then the
+.I message
+following it will be shown to the user. In this way, the GM or other
+server administrator may communicate urgent notices to all the users
+of their game server. This notice comment must appear before the
+.B READY
+command in the server's init file.
+'\" <</>>
+.RE
 .TP
 .B AC
 Add a character to the client's quick-access context
@@ -391,6 +412,53 @@ The name of the package, such as
 .BR go-gma ,
 or
 .BR core .
+'\" <<New>>
+.TP
+.B MinimumVersion
+If a server wishes to limit clients from this package to only those with a minimum version number
+(as self-reported by the client in its
+.B AUTH
+message), then a
+.B MinimumVersion
+and
+.B VersionPattern
+field must be added to that package's information here. The
+.B MinimumVersion
+field is a string with the minimum client version allowed to be used, as a semantic version
+string such as
+.RB \*(lq 1.2 \*(rq,
+.RB \*(lq 1.7.3 \*(rq,
+.RB \*(lq 1.6-alpha.1 \*(rq,
+etc. This will be matched against the value captured from the client's version number
+via the
+.B VersionPattern
+field.
+.TP
+.B VersionPattern
+This gives a regular expression which is matched against the
+.B Client
+field sent by the client as part of its
+.B AUTH
+message when signing on to the server. This expression MUST contain a single capturing group
+which yields the client's version number to be compared against the
+.B MinimumVersion
+field described above.
+.RS
+.LP
+See the
+.B sample.init
+file shipped with the go-gma source code for an example of this, or note that
+the regular expression to match the
+.BR mapper (6)
+client is
+.BR "\[dq]^\e\es*mapper\e\es+(\e\eS+)\[dq]" .
+.LP
+Note that backslashes in the regular expression need to be escaped with another
+backslash (i.e.,
+.BR \e\e )
+to satisfy the encoding requirements for JSON.
+.RE
+'\" <</New>>
 .TP
 .B Instances
 A list of available versions of the package. If multiple
@@ -526,11 +594,20 @@ are so low. It is intended just to discourage cheating at the game by looking
 at spoilers or direct messages intended for other users, not for any more rigorous
 protection.
 .LP
+The challenge/response system employed by the server is designed to resist
+replay attacks since it does not divulge the actual password in the clear
+over the network, although other attacks such as man-in-the-middle remain
+possible. This authentication mechanism is used because at this point the server
+and clients do not support encrypted communications. (If this becomes supported
+in the future, a more robust authentication mechanism will be possible which 
+does not have the weaknesses documented here.)
+.LP
 The main weakness of the system is that passwords are stored in plaintext on the
-server, which means it is critical to secure the password file and the system itself.
+server and on each client, which means it is critical to secure the password file and the system itself.
 Caution your players to use a password for the mapper that is different from any other
 passwords they use (which should be the password practice people observe anyway). A
-breach that reveals passwords from the server's file would then only allow an imposter
+breach that reveals passwords from the server's file, or the client configuration
+files where passwords are stored, would then only allow an imposter
 to log in to your map service, which admittedly is more of an inconvenience than a serious security issue, assuming you use your map server just for playing a game and not for
 the communication of any sensitive information. 
 .LP
@@ -575,5 +652,5 @@ Steve Willoughby / steve@madscience.zone.
 If the server is not configured to require authentication, that means it won't drop
 nuisance connections either, since it's accepting all connections as valid, even if
 it never sends any valid data to the server.
-.SH COPYRGHT
+.SH COPYRIGHT
 Part of the GMA software suite, copyright \(co 1992\-2023 by Steven L. Willoughby, Aloha, Oregon, USA. All Rights Reserved. Distributed under BSD-3-Clause License. \"@m(c)@
