@@ -199,7 +199,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.11.2" //@@##@@
+const GoVersionNumber = "5.11.2" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -531,6 +531,7 @@ func describeBaseMapObject(mono bool, o mapper.MapElement) string {
 		fieldDesc{"points", o.Points},
 		fieldDesc{"line", o.Line},
 		fieldDesc{"fill", o.Fill},
+		fieldDesc{"stipple", o.Stipple},
 		fieldDesc{"width", o.Width},
 		fieldDesc{"layer", o.Layer},
 		fieldDesc{"level", o.Level},

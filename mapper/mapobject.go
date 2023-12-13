@@ -391,8 +391,12 @@ type MapElement struct {
 	// The colors used to draw the element's outline and/or to fill it's interior.
 	// These may be standard color names such as "blue" or an RGB string such as
 	// "#336699". A fill color that is the empty string means not to fill that element.
-	Line string `json:",omitempty"`
-	Fill string `json:",omitempty"`
+	// If Stipple is nonempty, it specifies that the shape should be filled with
+	// a stipple pattern. Pattern names "gray12", "gray25", "gray50", and "gray75"
+	// should be available by default in clients.
+	Line    string `json:",omitempty"`
+	Fill    string `json:",omitempty"`
+	Stipple string `json:",omitempty"`
 
 	// The map layer this element belongs to.
 	Layer string `json:",omitempty"`
