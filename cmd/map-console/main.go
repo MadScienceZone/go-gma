@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __     __       _______          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \   /  \     / ___   )         #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) )  \/) )    \/   )  |         #
-# | |      | || || || (___) | Assistant | (____        | |    | |        /   )         #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |    | |      _/   /          #
-# | | \_  )| |   | || (   ) |                 ) )      | |    | |     /   _/           #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_ __) (_ _ (   (__/\         #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/ \____/(_)\_______/         #
+#  _______  _______  _______             _______      __    _______     _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  / ___   )   (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) \/   )  |   | (  )  |       #
+# | |      | || || || (___) | Assistant | (____        | |     /   )   | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |   _/   /    | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )      | |  /   _/     |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_(   (__/\ _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/\_______/(_)(_______)       #
 #                                                                                      #
 ########################################################################################
 #
@@ -199,7 +199,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.11.2" //@@##@@
+const GoVersionNumber="5.12.0" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -531,6 +531,7 @@ func describeBaseMapObject(mono bool, o mapper.MapElement) string {
 		fieldDesc{"points", o.Points},
 		fieldDesc{"line", o.Line},
 		fieldDesc{"fill", o.Fill},
+		fieldDesc{"stipple", o.Stipple},
 		fieldDesc{"width", o.Width},
 		fieldDesc{"layer", o.Layer},
 		fieldDesc{"level", o.Level},
@@ -1910,7 +1911,7 @@ func colorize(text, color string, mono bool) string {
 }
 
 /*
-# @[00]@| Go-GMA 5.11.2
+# @[00]@| Go-GMA 5.12.0
 # @[01]@|
 # @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

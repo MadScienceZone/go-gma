@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __     __       _______          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \   /  \     / ___   )         #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) )  \/) )    \/   )  |         #
-# | |      | || || || (___) | Assistant | (____        | |    | |        /   )         #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |    | |      _/   /          #
-# | | \_  )| |   | || (   ) |                 ) )      | |    | |     /   _/           #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_ __) (_ _ (   (__/\         #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/ \____/(_)\_______/         #
+#  _______  _______  _______             _______      __    _______     _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  / ___   )   (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) \/   )  |   | (  )  |       #
+# | |      | || || || (___) | Assistant | (____        | |     /   )   | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |   _/   /    | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )      | |  /   _/     |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_(   (__/\ _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/\_______/(_)(_______)       #
 #                                                                                      #
 ########################################################################################
 */
@@ -391,8 +391,12 @@ type MapElement struct {
 	// The colors used to draw the element's outline and/or to fill it's interior.
 	// These may be standard color names such as "blue" or an RGB string such as
 	// "#336699". A fill color that is the empty string means not to fill that element.
-	Line string `json:",omitempty"`
-	Fill string `json:",omitempty"`
+	// If Stipple is nonempty, it specifies that the shape should be filled with
+	// a stipple pattern. Pattern names "gray12", "gray25", "gray50", and "gray75"
+	// should be available by default in clients.
+	Line    string `json:",omitempty"`
+	Fill    string `json:",omitempty"`
+	Stipple string `json:",omitempty"`
 
 	// The map layer this element belongs to.
 	Layer string `json:",omitempty"`
@@ -2062,7 +2066,7 @@ func loadMapFile(input io.Reader, metaDataOnly bool) ([]any, MapMetaData, error)
 	return nil, meta, fmt.Errorf("invalid map file format: unexpected end of file")
 }
 
-// @[00]@| Go-GMA 5.11.2
+// @[00]@| Go-GMA 5.12.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
