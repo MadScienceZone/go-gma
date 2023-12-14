@@ -10,6 +10,11 @@
  * GMA Mapper Protocol: 409		<!-- @@##@@ -->
  * GMA Mapper File Format: 22		<!-- @@##@@ -->
 
+## v5.12.0
+### Enhancements
+ * Adds `Stipple` field to map elements to specify a pattern fill.
+ * Moves to protocol 409.
+
 ## v5.11.1
 ### Fixes
  * Corrects die-roll syntax error where spaces between open parentheses was not parsed correctly (`((42))` worked but not `(  (  42  )  )`)
