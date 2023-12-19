@@ -237,9 +237,9 @@ func (a *Application) AddClient(c *mapper.ClientConnection) {
 }
 
 //
-// RemoveAllClients removes all the clients from the connection list.
+// DropAllClients severs the connection to all clients.
 //
-func (a *Application) RemoveAllClients() {
+func (a *Application) DropAllClients() {
 	clients := a.GetClients()
 	for i, c := range clients {
 		if c.Auth != nil {
@@ -247,6 +247,7 @@ func (a *Application) RemoveAllClients() {
 		} else {
 			a.Logf("removing client #%d (%s)", i, c.Address)
 		}
+		c.Conn.Close()
 		a.RemoveClient(c)
 	}
 }

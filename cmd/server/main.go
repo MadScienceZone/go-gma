@@ -150,7 +150,7 @@ func eventMonitor(sigChan chan os.Signal, stopChan chan int, app *Application) {
 			switch s {
 			case syscall.SIGHUP:
 				app.Debug(DebugEvents, "SIGHUP; dropping all connected clients")
-				app.RemoveAllClients()
+				app.DropAllClients()
 
 			case syscall.SIGUSR1:
 				app.Debug(DebugEvents, "SIGUSR1; reloading configuration data")
