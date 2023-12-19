@@ -1365,6 +1365,12 @@ func (a *Application) managePreambleData() {
 				a.Debugf(DebugInit, "allowed client list is now %v", a.AllowedClients)
 			}
 
+		case "REDIRECT":
+			var data mapper.RedirectMessagePayload
+			if err = json.Unmarshal(s, &data); err == nil {
+				b, err = json.Marshal(data)
+			}
+
 		case "WORLD":
 			var data mapper.WorldMessagePayload
 			if err = json.Unmarshal(s, &data); err == nil {
