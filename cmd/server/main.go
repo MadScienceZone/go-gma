@@ -133,7 +133,7 @@ import (
 // Auto-configured values
 //
 
-const GoVersionNumber="5.12.0" // @@##@@
+const GoVersionNumber = "5.12.0" // @@##@@
 
 //
 // eventMonitor responds to signals and timers that affect our overall operation
@@ -149,8 +149,8 @@ func eventMonitor(sigChan chan os.Signal, stopChan chan int, app *Application) {
 			app.Logf("received signal %v", s)
 			switch s {
 			case syscall.SIGHUP:
-				app.Debug(DebugEvents, "SIGHUP; sending STOP signal to application")
-				stopChan <- 1
+				app.Debug(DebugEvents, "SIGHUP; dropping all connected clients")
+				app.RemoveAllClients()
 
 			case syscall.SIGUSR1:
 				app.Debug(DebugEvents, "SIGUSR1; reloading configuration data")
