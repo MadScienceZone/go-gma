@@ -248,7 +248,6 @@ func (a *Application) DropAllClients() {
 			a.Logf("removing client #%d (%s)", i, c.Address)
 		}
 		c.Conn.Close()
-		a.RemoveClient(c)
 	}
 }
 
