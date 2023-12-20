@@ -237,6 +237,21 @@ func (a *Application) AddClient(c *mapper.ClientConnection) {
 }
 
 //
+// DropAllClients severs the connection to all clients.
+//
+func (a *Application) DropAllClients() {
+	clients := a.GetClients()
+	for i, c := range clients {
+		if c.Auth != nil {
+			a.Logf("removing client #%d (%s,%s,%s)", i, c.Address, c.Auth.Username, c.Auth.Client)
+		} else {
+			a.Logf("removing client #%d (%s)", i, c.Address)
+		}
+		c.Conn.Close()
+	}
+}
+
+//
 // RemoveClients removes the given client from the list of connections.
 //
 func (a *Application) RemoveClient(c *mapper.ClientConnection) {
@@ -1363,6 +1378,12 @@ func (a *Application) managePreambleData() {
 					Packages: cpkg,
 				})
 				a.Debugf(DebugInit, "allowed client list is now %v", a.AllowedClients)
+			}
+
+		case "REDIRECT":
+			var data mapper.RedirectMessagePayload
+			if err = json.Unmarshal(s, &data); err == nil {
+				b, err = json.Marshal(data)
 			}
 
 		case "WORLD":

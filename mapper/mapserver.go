@@ -403,7 +403,7 @@ mainloop:
 
 				case AddCharacterMessagePayload, ChallengeMessagePayload, ProtocolMessagePayload,
 					UpdateDicePresetsMessagePayload, DeniedMessagePayload, GrantedMessagePayload,
-					MarcoMessagePayload, PrivMessagePayload, ReadyMessagePayload,
+					MarcoMessagePayload, PrivMessagePayload, ReadyMessagePayload, RedirectMessagePayload,
 					RollResultMessagePayload, UpdatePeerListMessagePayload, UpdateVersionsMessagePayload,
 					WorldMessagePayload:
 					c.Conn.Send(Priv, PrivMessagePayload{

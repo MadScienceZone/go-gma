@@ -396,6 +396,26 @@ that condition.
 .RE
 '\" <</>>
 .TP
+'\" <<New>>
+.B REDIRECT
+Instructs the client to use a different server for this session. This is used when
+the GM wants to use an alternate server temporarily without requiring the players to
+reconfigure all their clients.
+The JSON payload includes the following values:
+'\" <<list>>
+.RS
+.TP
+.B Host
+The host name or IP address of the server to connect to for this session.
+.TP
+'\" <</ital-is-var>>
+.BI "Port " (int)
+'\" <<ital-is-var>>
+The TCP port number on which to connect to the server.
+.RE
+'\" <</>>
+'\" <</New>>
+.TP
 .B UPDATES
 Advertises to the client the version of each software
 package you recommend for them to use. The JSON
@@ -506,10 +526,43 @@ and
 .RE
 .TP
 .B WORLD
-Sends campaign information. Currently the JSON field
-recognized is
+'\" <<New>>
+Sends campaign information. The fields of the JSON payload include
+'\" <<list>>
+.RS
+.TP
 .B Calendar
-which names the calendar in play.
+Names the calendar in play.
+.TP
+.B ClientSettings
+Overrides some of the server- and game-specific client preference settings.
+The value is a JSON object with the following fields:
+'\" <<list>>
+.RS
+.TP
+.B MkdirPath
+The path to the
+.B mkdir
+program on the server (used for GM uploads of mapper content to the server).
+.TP
+.B ImageBaseURL
+The base URL from which the client will retrieve map and image files.
+.TP
+.B ModuleCode
+The current module's ID code.
+.TP
+.B SCPDestination
+The directory where GM uploads of mapper content should be sent to.
+.TP
+.B ServerHostname
+The hostname (and optionally username in the form
+.IB name @ host\fR)\fP
+for the GM to upload mapper content to the server.
+'\" <</>>
+.RE
+'\" <</>>
+.RE
+'\" <</New>>
 .TP
 .B AUTH
 This command word (without JSON data) in the initialization
@@ -558,6 +611,9 @@ included to be sent to the client:
 .BR OA\- ,
 .BR PROGRESS ,
 .BR PS ,
+'\" <<New>>
+.BR REDIRECT ,
+'\" <</New>>
 .BR ROLL ,
 .BR TB ,
 .BR TO ,
@@ -569,6 +625,9 @@ strongly recommend limiting commands to
 .BR // ,
 .BR AC ,
 .BR DSM ,
+'\" <<New>>
+.BR REDIRECT ,
+'\" <</New>>
 .BR UPDATES ,
 and
 .BR WORLD
