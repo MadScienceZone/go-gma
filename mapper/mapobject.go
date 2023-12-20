@@ -53,7 +53,7 @@ const MinimumSupportedMapFileFormat = 17
 // MaximumSupportedMapFileFormat gives the highest file format this package
 // can understand. Saved data will be in this format.
 //
-const MaximumSupportedMapFileFormat = 22
+const MaximumSupportedMapFileFormat = 23
 
 // ErrCreatureNoSizes is the error returned when a creature size code is expected but none given.
 var ErrCreatureNoSizes = errors.New("missing creature size code")
