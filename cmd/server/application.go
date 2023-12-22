@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __    _______     _______        #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  / ___   )   (  __   )       #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) \/   )  |   | (  )  |       #
-# | |      | || || || (___) | Assistant | (____        | |     /   )   | | /   |       #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |   _/   /    | (/ /) |       #
-# | | \_  )| |   | || (   ) |                 ) )      | |  /   _/     |   / | |       #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_(   (__/\ _ |  (__) |       #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/\_______/(_)(_______)       #
+#  _______  _______  _______             _______      __    ______      _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  / ___  \    (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) \/   \  \   | (  )  |       #
+# | |      | || || || (___) | Assistant | (____        | |    ___) /   | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |   (___ (    | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )      | |       ) \   |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_/\___/  / _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/\______/ (_)(_______)       #
 #                                                                                      #
 ########################################################################################
 */
@@ -223,7 +223,7 @@ func (a *Application) GetClientPreamble() *mapper.ClientPreamble {
 	return <-a.clientPreamble.fetch
 }
 
-func (a Application) GetAllowedClients() []mapper.PackageUpdate {
+func (a *Application) GetAllowedClients() []mapper.PackageUpdate {
 	return a.AllowedClients
 }
 
@@ -234,6 +234,21 @@ func (a Application) GetAllowedClients() []mapper.PackageUpdate {
 func (a *Application) AddClient(c *mapper.ClientConnection) {
 	a.clientData.add <- c
 	//a.SendPeerListToAll()
+}
+
+//
+// DropAllClients severs the connection to all clients.
+//
+func (a *Application) DropAllClients() {
+	clients := a.GetClients()
+	for i, c := range clients {
+		if c.Auth != nil {
+			a.Logf("removing client #%d (%s,%s,%s)", i, c.Address, c.Auth.Username, c.Auth.Client)
+		} else {
+			a.Logf("removing client #%d (%s)", i, c.Address)
+		}
+		c.Conn.Close()
+	}
 }
 
 //
@@ -1363,6 +1378,12 @@ func (a *Application) managePreambleData() {
 					Packages: cpkg,
 				})
 				a.Debugf(DebugInit, "allowed client list is now %v", a.AllowedClients)
+			}
+
+		case "REDIRECT":
+			var data mapper.RedirectMessagePayload
+			if err = json.Unmarshal(s, &data); err == nil {
+				b, err = json.Marshal(data)
 			}
 
 		case "WORLD":

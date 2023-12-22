@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __    _______     _______        #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  / ___   )   (  __   )       #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) \/   )  |   | (  )  |       #
-# | |      | || || || (___) | Assistant | (____        | |     /   )   | | /   |       #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |   _/   /    | (/ /) |       #
-# | | \_  )| |   | || (   ) |                 ) )      | |  /   _/     |   / | |       #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_(   (__/\ _ |  (__) |       #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/\_______/(_)(_______)       #
+#  _______  _______  _______             _______      __    ______      _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  / ___  \    (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) \/   \  \   | (  )  |       #
+# | |      | || || || (___) | Assistant | (____        | |    ___) /   | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |   (___ (    | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )      | |       ) \   |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_/\___/  / _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/\______/ (_)(_______)       #
 #                                                                                      #
 ########################################################################################
 #
@@ -199,7 +199,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.12.0" //@@##@@
+const GoVersionNumber="5.13.0" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -410,6 +410,30 @@ func main() {
 			} else {
 				fmt.Println(colorize(fmt.Sprintf("Server active; last ping event was %s ago.", activeSince), "Green", mono))
 			}
+		}
+	}
+
+	if server.ClientSettings != nil {
+		log.Printf("Server requests client settings changes")
+		if server.ClientSettings.MkdirPath != "" {
+			log.Printf("server requests MkdirPath change %s->%s", prefs.Prefs.Profiles[prefs.SelectedIdx].ServerMkdir, server.ClientSettings.MkdirPath)
+			prefs.Prefs.Profiles[prefs.SelectedIdx].ServerMkdir = server.ClientSettings.MkdirPath
+		}
+		if server.ClientSettings.ImageBaseURL != "" {
+			log.Printf("server requests ImageBaseURL change %s->%s", prefs.Prefs.Profiles[prefs.SelectedIdx].CurlServer, server.ClientSettings.ImageBaseURL)
+			prefs.Prefs.Profiles[prefs.SelectedIdx].CurlServer = server.ClientSettings.ImageBaseURL
+		}
+		if server.ClientSettings.ModuleCode != "" {
+			log.Printf("server requests ModuleCode change %s->%s", prefs.Prefs.Profiles[prefs.SelectedIdx].ModuleID, server.ClientSettings.ModuleCode)
+			prefs.Prefs.Profiles[prefs.SelectedIdx].ModuleID = server.ClientSettings.ModuleCode
+		}
+		if server.ClientSettings.SCPDestination != "" {
+			log.Printf("server requests SCPDestination change %s->%s", prefs.Prefs.Profiles[prefs.SelectedIdx].ScpDest, server.ClientSettings.SCPDestination)
+			prefs.Prefs.Profiles[prefs.SelectedIdx].ScpDest = server.ClientSettings.SCPDestination
+		}
+		if server.ClientSettings.ServerHostname != "" {
+			log.Printf("server requests ServerHostname change %s->%s", prefs.Prefs.Profiles[prefs.SelectedIdx].ScpServer, server.ClientSettings.ServerHostname)
+			prefs.Prefs.Profiles[prefs.SelectedIdx].ScpServer = server.ClientSettings.ServerHostname
 		}
 	}
 
@@ -1911,7 +1935,7 @@ func colorize(text, color string, mono bool) string {
 }
 
 /*
-# @[00]@| Go-GMA 5.12.0
+# @[00]@| Go-GMA 5.13.0
 # @[01]@|
 # @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

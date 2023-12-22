@@ -1,14 +1,24 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.12.0                <!-- @@##@@ -->
- * Effective Date: 13-Dec-2023			<!-- @@##@@ -->
+ * This Package Version: 5.13.0                <!-- @@##@@ -->
+ * Effective Date: 21-Dec-2023			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 6.10		<!-- @@##@@ -->
- * GMA Mapper Version: 4.19		<!-- @@##@@ -->
- * GMA Mapper Protocol: 409		<!-- @@##@@ -->
- * GMA Mapper File Format: 22		<!-- @@##@@ -->
+ * GMA Core API Library Version: 6.11		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.20		<!-- @@##@@ -->
+ * GMA Mapper Protocol: 410		<!-- @@##@@ -->
+ * GMA Mapper File Format: 23		<!-- @@##@@ -->
+
+## v5.13.0
+ * Implements protocol 410.
+   * Adds `REDIRECT` command to protocol and server init file
+   * Adds server-side configuration extension to `WORLD` command to allow server admin/GM to set a limited number of client preferences, overriding local user preferences.
+      * `MkdirPath`, `SCPDestination`, `ServerHostname` GM settings for uploading content to the server.
+      * `ImageBaseURL` setting which tells clients where to find images and maps on the server.
+      * `ModuleCode` setting which specifies the adventure module in play.
+   * Adds client code to accept `REDIRECT` and server-side configuration, implemented in `map-console`.
+ * Server now interprets the `HUP` signal as a request to hang up on all connected clients but leave the server running and accepting new connections. `INT` remains as the signal to shut down the server itself (previously, `HUP` and `INT` both shut down the server).
 
 ## v5.12.0
 ### Enhancements

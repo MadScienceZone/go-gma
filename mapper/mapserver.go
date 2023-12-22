@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __    _______     _______        #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  / ___   )   (  __   )       #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) \/   )  |   | (  )  |       #
-# | |      | || || || (___) | Assistant | (____        | |     /   )   | | /   |       #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |   _/   /    | (/ /) |       #
-# | | \_  )| |   | || (   ) |                 ) )      | |  /   _/     |   / | |       #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_(   (__/\ _ |  (__) |       #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/\_______/(_)(_______)       #
+#  _______  _______  _______             _______      __    ______      _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  / ___  \    (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) \/   \  \   | (  )  |       #
+# | |      | || || || (___) | Assistant | (____        | |    ___) /   | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |   (___ (    | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )      | |       ) \   |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_/\___/  / _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/\______/ (_)(_______)       #
 #                                                                                      #
 ########################################################################################
 */
@@ -403,7 +403,7 @@ mainloop:
 
 				case AddCharacterMessagePayload, ChallengeMessagePayload, ProtocolMessagePayload,
 					UpdateDicePresetsMessagePayload, DeniedMessagePayload, GrantedMessagePayload,
-					MarcoMessagePayload, PrivMessagePayload, ReadyMessagePayload,
+					MarcoMessagePayload, PrivMessagePayload, ReadyMessagePayload, RedirectMessagePayload,
 					RollResultMessagePayload, UpdatePeerListMessagePayload, UpdateVersionsMessagePayload,
 					WorldMessagePayload:
 					c.Conn.Send(Priv, PrivMessagePayload{

@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __    _______     _______        #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  / ___   )   (  __   )       #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) \/   )  |   | (  )  |       #
-# | |      | || || || (___) | Assistant | (____        | |     /   )   | | /   |       #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |   _/   /    | (/ /) |       #
-# | | \_  )| |   | || (   ) |                 ) )      | |  /   _/     |   / | |       #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_(   (__/\ _ |  (__) |       #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/\_______/(_)(_______)       #
+#  _______  _______  _______             _______      __    ______      _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  / ___  \    (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) \/   \  \   | (  )  |       #
+# | |      | || || || (___) | Assistant | (____        | |    ___) /   | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |   (___ (    | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )      | |       ) \   |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_/\___/  / _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/\______/ (_)(_______)       #
 #                                                                                      #
 ########################################################################################
 */
@@ -133,7 +133,7 @@ import (
 // Auto-configured values
 //
 
-const GoVersionNumber="5.12.0" // @@##@@
+const GoVersionNumber="5.13.0" // @@##@@
 
 //
 // eventMonitor responds to signals and timers that affect our overall operation
@@ -149,8 +149,8 @@ func eventMonitor(sigChan chan os.Signal, stopChan chan int, app *Application) {
 			app.Logf("received signal %v", s)
 			switch s {
 			case syscall.SIGHUP:
-				app.Debug(DebugEvents, "SIGHUP; sending STOP signal to application")
-				stopChan <- 1
+				app.Debug(DebugEvents, "SIGHUP; dropping all connected clients")
+				app.DropAllClients()
 
 			case syscall.SIGUSR1:
 				app.Debug(DebugEvents, "SIGUSR1; reloading configuration data")
@@ -337,7 +337,7 @@ func acceptIncomingConnections(incoming net.Listener, app *Application) {
 	}
 }
 
-// @[00]@| Go-GMA 5.12.0
+// @[00]@| Go-GMA 5.13.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

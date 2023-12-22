@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __    _______     _______        #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  / ___   )   (  __   )       #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) \/   )  |   | (  )  |       #
-# | |      | || || || (___) | Assistant | (____        | |     /   )   | | /   |       #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |   _/   /    | (/ /) |       #
-# | | \_  )| |   | || (   ) |                 ) )      | |  /   _/     |   / | |       #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_(   (__/\ _ |  (__) |       #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/\_______/(_)(_______)       #
+#  _______  _______  _______             _______      __    ______      _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  / ___  \    (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) \/   \  \   | (  )  |       #
+# | |      | || || || (___) | Assistant | (____        | |    ___) /   | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |   (___ (    | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )      | |       ) \   |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_/\___/  / _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/\______/ (_)(_______)       #
 #                                                                                      #
 ########################################################################################
 */
@@ -69,6 +69,10 @@ var ErrAuthenticationFailed = errors.New("access denied to server")
 // ErrServerProtocolError is the error returned when something fundamental about the server's conversation
 // with us is so wrong we can't even deal with the conversation any further.
 var ErrServerProtocolError = errors.New("server protocol error; unable to continue")
+
+// ErrRetryConnection is returned when the attempt to establish a connection to the server
+// fails in such a way that simply trying again would be the right thing to do.
+var ErrRetryConnection = errors.New("please retry the server connection")
 
 //
 // Debugging information is enabled by selecting a nummber
@@ -234,6 +238,9 @@ type Connection struct {
 
 	// The calendar system the server indicated as preferred, if any
 	CalendarSystem string
+
+	// Server overrides to client settings (if non-nil)
+	ClientSettings *ClientSettingsOverrides
 
 	// The context for our session, either one we created in the
 	// NewConnection function or one we received from the caller.
@@ -478,20 +485,12 @@ func WithDebugging(flags DebugFlags) ConnectionOption {
 //
 func NewConnection(endpoint string, opts ...ConnectionOption) (Connection, error) {
 	newCon := Connection{
-		Context:                 context.Background(),
-		Endpoint:                endpoint,
-		Subscriptions:           make(map[ServerMessage]chan MessagePayload),
-		Characters:              make(map[string]PlayerToken),
-		Conditions:              make(map[string]StatusMarkerDefinition),
-		Retries:                 1,
-		Logger:                  log.Default(),
-		Gauges:                  make(map[string]*UpdateProgressMessagePayload),
-		PackageUpdatesAvailable: make(map[string][]PackageVersion),
-		serverConn: MapConnection{
-			sendChan: make(chan string, 16),
-		},
+		Context:  context.Background(),
+		Endpoint: endpoint,
+		Retries:  1,
+		Logger:   log.Default(),
 	}
-
+	newCon.Reset()
 	newCon.serverConn.debug = newCon.debug
 	newCon.serverConn.debugf = newCon.debugf
 
@@ -502,6 +501,22 @@ func NewConnection(endpoint string, opts ...ConnectionOption) (Connection, error
 	}
 
 	return newCon, nil
+}
+
+// Reset returns an existing Connection object to an appropriate pre-connect state.
+func (c *Connection) Reset() {
+	if c == nil {
+		return
+	}
+	c.signedOn = false
+	c.Subscriptions = make(map[ServerMessage]chan MessagePayload)
+	c.Characters = make(map[string]PlayerToken)
+	c.Conditions = make(map[string]StatusMarkerDefinition)
+	c.Gauges = make(map[string]*UpdateProgressMessagePayload)
+	c.PackageUpdatesAvailable = make(map[string][]PackageVersion)
+	c.serverConn.sendChan = make(chan string, 16)
+	c.Preamble = nil
+	c.ClientSettings = nil
 }
 
 //
@@ -670,6 +685,7 @@ const (
 	QueryImage
 	QueryPeers
 	Ready
+	Redirect
 	RemoveObjAttributes
 	RollDice
 	RollResult
@@ -732,6 +748,7 @@ var ServerMessageByName = map[string]ServerMessage{
 	"QueryImage":                  QueryImage,
 	"QueryPeers":                  QueryPeers,
 	"Ready":                       Ready,
+	"Redirect":                    Redirect,
 	"RemoveObjAttributes":         RemoveObjAttributes,
 	"RollDice":                    RollDice,
 	"RollResult":                  RollResult,
@@ -2622,9 +2639,25 @@ type PackageVersion struct {
 	Token   string `json:",omitempty"`
 }
 
+type ClientSettingsOverrides struct {
+	MkdirPath      string `json:",omitempty"`
+	ImageBaseURL   string `json:",omitempty"`
+	ModuleCode     string `json:",omitempty"`
+	SCPDestination string `json:",omitempty"`
+	ServerHostname string `json:",omitempty"`
+}
+
 type WorldMessagePayload struct {
 	BaseMessagePayload
-	Calendar string
+	Calendar       string
+	ClientSettings *ClientSettingsOverrides `json:",omitempty"`
+}
+
+type RedirectMessagePayload struct {
+	BaseMessagePayload
+	Host   string
+	Port   int
+	Reason string `json:",omitempty"`
 }
 
 //
@@ -2700,6 +2733,9 @@ func (c *Connection) Dial() {
 				c.Logf("mapper interact failure: %v", err)
 			}
 			c.signedOn = false
+		} else if errors.Is(err, ErrRetryConnection) {
+			c.Logf("retrying connection...")
+			continue
 		}
 
 		if c.Context.Err() != nil || !c.StayConnected {
@@ -2837,11 +2873,11 @@ func (c *Connection) login(done chan error) {
 
 		// Protocol sequence:
 		// <- PROTOCOL v
-		// <- AC, DSM, UPDATES, WORLD, // messages
+		// <- AC, DSM, REDIRECT, UPDATES, WORLD, // messages
 		// <- OK
 		// -> AUTH (if authentication required)
 		// <- GRANTED or DENIED (if AUTH required and given)
-		// <- AC, DSM, UPDATES, WORLD, // messages
+		// <- AC, DSM, REDIRECT, UPDATES, WORLD, // messages
 		// <- READY
 
 		switch response := incomingPacket.(type) {
@@ -2891,11 +2927,38 @@ func (c *Connection) login(done chan error) {
 		case AddCharacterMessagePayload:
 			c.receiveAddCharacter(response)
 
+		case RedirectMessagePayload:
+			c.Logf("server requests that we connect instead to %s port %d", response.Host, response.Port)
+			if response.Reason != "" {
+				c.Logf("reason for server redirect request: %s", response.Reason)
+			}
+			if err = c.serverConn.conn.Close(); err != nil {
+				c.Logf("error closing existing socket to server: %v", err)
+			}
+			c.Reset()
+			c.Endpoint = fmt.Sprintf("%s:%d", response.Host, response.Port)
+			done <- ErrRetryConnection
+			return
+
 		case UpdateStatusMarkerMessagePayload:
 			c.receiveDSM(response)
 
 		case WorldMessagePayload:
 			c.CalendarSystem = response.Calendar
+			c.ClientSettings = nil
+			if response.ClientSettings != nil && (response.ClientSettings.MkdirPath != "" ||
+				response.ClientSettings.ImageBaseURL != "" ||
+				response.ClientSettings.ModuleCode != "" ||
+				response.ClientSettings.SCPDestination != "" ||
+				response.ClientSettings.ServerHostname != "") {
+				c.ClientSettings = &ClientSettingsOverrides{
+					MkdirPath:      response.ClientSettings.MkdirPath,
+					ImageBaseURL:   response.ClientSettings.ImageBaseURL,
+					ModuleCode:     response.ClientSettings.ModuleCode,
+					SCPDestination: response.ClientSettings.SCPDestination,
+					ServerHostname: response.ClientSettings.ServerHostname,
+				}
+			}
 
 		case UpdateVersionsMessagePayload:
 			c.receiveUpdateVersions(response)
@@ -2976,8 +3039,35 @@ waitForReady:
 		case UpdateStatusMarkerMessagePayload:
 			c.receiveDSM(response)
 
+		case RedirectMessagePayload:
+			c.Logf("server requests that we connect instead to %s port %d", response.Host, response.Port)
+			if response.Reason != "" {
+				c.Logf("reason for server redirect request: %s", response.Reason)
+			}
+			if err = c.serverConn.conn.Close(); err != nil {
+				c.Logf("error closing existing socket to server: %v", err)
+			}
+			c.Reset()
+			c.Endpoint = fmt.Sprintf("%s:%d", response.Host, response.Port)
+			done <- ErrRetryConnection
+			return
+
 		case WorldMessagePayload:
 			c.CalendarSystem = response.Calendar
+			c.ClientSettings = nil
+			if response.ClientSettings != nil && (response.ClientSettings.MkdirPath != "" ||
+				response.ClientSettings.ImageBaseURL != "" ||
+				response.ClientSettings.ModuleCode != "" ||
+				response.ClientSettings.SCPDestination != "" ||
+				response.ClientSettings.ServerHostname != "") {
+				c.ClientSettings = &ClientSettingsOverrides{
+					MkdirPath:      response.ClientSettings.MkdirPath,
+					ImageBaseURL:   response.ClientSettings.ImageBaseURL,
+					ModuleCode:     response.ClientSettings.ModuleCode,
+					SCPDestination: response.ClientSettings.SCPDestination,
+					ServerHostname: response.ClientSettings.ServerHostname,
+				}
+			}
 
 		case UpdateVersionsMessagePayload:
 			c.receiveUpdateVersions(response)
@@ -3009,6 +3099,15 @@ waitForReady:
 		c.debug(DebugIO, fmt.Sprintf("Defined Status Markers:\n%s", StatusMarkerDefinitions(c.Conditions).Text()))
 		c.debug(DebugIO, "Preamble:\n"+strings.Join(c.Preamble, "\n"))
 		c.debug(DebugIO, fmt.Sprintf("Last error: %v", c.LastError))
+	}
+	if c.ClientSettings != nil {
+		c.debug(DebugIO, fmt.Sprintf("Server requests client settings overrides MkdirPath=%s, ImageBaseURL=%s, ModuleCode=%s, SCPDestination=%s, ServerHostname=%s",
+			c.ClientSettings.MkdirPath,
+			c.ClientSettings.ImageBaseURL,
+			c.ClientSettings.ModuleCode,
+			c.ClientSettings.SCPDestination,
+			c.ClientSettings.ServerHostname,
+		))
 	}
 	if c.ReadySignal != nil {
 		c.ReadySignal <- 0
@@ -3288,7 +3387,7 @@ func (c *Connection) listen(done chan error) {
 
 		case AddCharacterMessagePayload, ChallengeMessagePayload, DeniedMessagePayload,
 			GrantedMessagePayload, ProtocolMessagePayload, ReadyMessagePayload,
-			UpdateVersionsMessagePayload, WorldMessagePayload:
+			UpdateVersionsMessagePayload, RedirectMessagePayload, WorldMessagePayload:
 
 			c.reportError(fmt.Errorf("message type %v should not be sent to client at this stage in the session", cmd.MessageType()))
 
@@ -3430,6 +3529,7 @@ func (c *Connection) filterSubscriptions() error {
 		//QueryDicePresets (client)
 		//QueryPeers (client)
 		//Ready (forbidden)
+		//Redirect (forbidden)
 		//RollDice (client)
 		//Sync (client)
 		//SyncChat (client)
@@ -3550,7 +3650,7 @@ func (c *Connection) CheckVersionOf(packageName, myVersionNumber string) (*Packa
 	return availableVersion, nil
 }
 
-// @[00]@| Go-GMA 5.12.0
+// @[00]@| Go-GMA 5.13.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
