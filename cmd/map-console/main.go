@@ -6,8 +6,8 @@
 #  _______  _______  _______             _______      __    ______      _______        #
 # (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  / ___  \    (  __   )       #
 # | (    \/| () () || (   ) | Master's  | (    \/    \/) ) \/   \  \   | (  )  |       #
-# | |      | || || || (___) | Assistant | (____        | |    ___) /   | | /   | _____ #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |   (___ (    | (/ /) |(_____ #
+# | |      | || || || (___) | Assistant | (____        | |    ___) /   | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |   (___ (    | (/ /) |       #
 # | | \_  )| |   | || (   ) |                 ) )      | |       ) \   |   / | |       #
 # | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_/\___/  / _ |  (__) |       #
 # (_______)|/     \||/     \| Client    \______/ (_) \____/\______/ (_)(_______)       #
@@ -199,7 +199,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.13.0-alpha" //@@##@@
+const GoVersionNumber="5.13.0" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -1935,7 +1935,7 @@ func colorize(text, color string, mono bool) string {
 }
 
 /*
-# @[00]@| Go-GMA 5.13.0-alpha
+# @[00]@| Go-GMA 5.13.0
 # @[01]@|
 # @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

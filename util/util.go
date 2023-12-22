@@ -6,8 +6,8 @@
 #  _______  _______  _______             _______      __    ______      _______        #
 # (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  / ___  \    (  __   )       #
 # | (    \/| () () || (   ) | Master's  | (    \/    \/) ) \/   \  \   | (  )  |       #
-# | |      | || || || (___) | Assistant | (____        | |    ___) /   | | /   | _____ #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |   (___ (    | (/ /) |(_____ #
+# | |      | || || || (___) | Assistant | (____        | |    ___) /   | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |   (___ (    | (/ /) |       #
 # | | \_  )| |   | || (   ) |                 ) )      | |       ) \   |   / | |       #
 # | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_/\___/  / _ |  (__) |       #
 # (_______)|/     \||/     \| Client    \______/ (_) \____/\______/ (_)(_______)       #
@@ -239,7 +239,7 @@ func PluralizeCustom(base, singularSuffix, pluralSuffix string, qty int) string 
 	return base + pluralSuffix
 }
 
-// @[00]@| Go-GMA 5.13.0-alpha
+// @[00]@| Go-GMA 5.13.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

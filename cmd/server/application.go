@@ -6,8 +6,8 @@
 #  _______  _______  _______             _______      __    ______      _______        #
 # (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  / ___  \    (  __   )       #
 # | (    \/| () () || (   ) | Master's  | (    \/    \/) ) \/   \  \   | (  )  |       #
-# | |      | || || || (___) | Assistant | (____        | |    ___) /   | | /   | _____ #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |   (___ (    | (/ /) |(_____ #
+# | |      | || || || (___) | Assistant | (____        | |    ___) /   | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |   (___ (    | (/ /) |       #
 # | | \_  )| |   | || (   ) |                 ) )      | |       ) \   |   / | |       #
 # | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_/\___/  / _ |  (__) |       #
 # (_______)|/     \||/     \| Client    \______/ (_) \____/\______/ (_)(_______)       #
@@ -223,7 +223,7 @@ func (a *Application) GetClientPreamble() *mapper.ClientPreamble {
 	return <-a.clientPreamble.fetch
 }
 
-func (a Application) GetAllowedClients() []mapper.PackageUpdate {
+func (a *Application) GetAllowedClients() []mapper.PackageUpdate {
 	return a.AllowedClients
 }
 
