@@ -133,7 +133,7 @@ import (
 // Auto-configured values
 //
 
-const GoVersionNumber="5.13.0" // @@##@@
+const GoVersionNumber = "5.13.1-alpha.0" // @@##@@
 
 //
 // eventMonitor responds to signals and timers that affect our overall operation
@@ -159,6 +159,7 @@ func eventMonitor(sigChan chan os.Signal, stopChan chan int, app *Application) {
 					app.Logf("WARNING: authenticator initialization file reload failed: %v", err)
 					app.Log("WARNING: client credentials may be incomplete or incorrect now")
 				}
+				app.MessageIDReset <- 0
 
 			case syscall.SIGUSR2:
 				app.Debug(DebugEvents, "SIGUSR2 (dump database out to logfile)")
@@ -187,12 +188,21 @@ func eventMonitor(sigChan chan os.Signal, stopChan chan int, app *Application) {
 	}
 }
 
-func generateMessageIDs(logf func(format string, args ...any), c chan int) {
+func generateMessageIDs(logf func(format string, args ...any), c, reset chan int) {
 	// Start off with the time on the clock, on the assumption
 	// that on average there won't be more than a chat message per
 	// second since the server was started, so when the server is
 	// restarted, this should give us a safe margin to start a new
 	// set of IDs. It's simplistic, but works for our purposes.
+	//
+	// Sending an int to the reset channel causes the nextMessageID to jump
+	// forward to the current time, putting it (most likely) ahead of
+	// any other running servers, which could be important if we
+	// are redirecting users to a temporary server and they had previously
+	// been reading messages from a different one. This keeps us from
+	// losing messages due to the new server issuing message IDs that are
+	// less than other previously-known ones.
+	//
 	var nextMessageID int = int(time.Now().Unix())
 	logf("starting messsageID generator at %v", nextMessageID)
 	defer logf("stopping messageID generator")
@@ -200,8 +210,13 @@ func generateMessageIDs(logf func(format string, args ...any), c chan int) {
 	// Now just feed these numbers to the channel as fast as they are
 	// consumed.
 	for {
-		c <- nextMessageID
-		nextMessageID++
+		select {
+		case <-reset:
+			nextMessageID = int(time.Now().Unix())
+			logf("resetting nextMessageID to %v", nextMessageID)
+		case c <- nextMessageID:
+			nextMessageID++
+		}
 	}
 }
 
@@ -231,7 +246,7 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 
-	go generateMessageIDs(app.Logf, app.MessageIDGenerator)
+	go generateMessageIDs(app.Logf, app.MessageIDGenerator, app.MessageIDReset)
 	go app.managePreambleData()
 	go app.manageClientList()
 	go app.manageGameState()

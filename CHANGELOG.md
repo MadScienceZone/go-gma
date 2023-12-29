@@ -10,6 +10,9 @@
  * GMA Mapper Protocol: 410		<!-- @@##@@ -->
  * GMA Mapper File Format: 23		<!-- @@##@@ -->
 
+## Unreleased
+ * When the server receives the `USR1` signal to reload its configuration files, it now also jumps the chat/die-roll message IDs to the current UNIX timestamp value, which should put it ahead of other concurrently-running servers (unless you have a server that's been spewing a message per second since it started, which is really unlikely, or your server's clock is wrong).
+
 ## v5.13.0
  * Implements protocol 410.
    * Adds `REDIRECT` command to protocol and server init file

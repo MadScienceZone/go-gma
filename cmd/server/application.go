@@ -197,6 +197,7 @@ type Application struct {
 	}
 
 	MessageIDGenerator chan int
+	MessageIDReset     chan int
 
 	// Current game state
 	gameState struct {
@@ -1133,7 +1134,8 @@ func (a *Application) SendToAll(cmd mapper.ServerMessage, data any) error {
 func NewApplication() *Application {
 	app := Application{
 		Logger:             log.Default(),
-		MessageIDGenerator: make(chan int, 1),
+		MessageIDGenerator: make(chan int),
+		MessageIDReset:     make(chan int),
 	}
 	app.clientPreamble.reload = make(chan byte, 1)
 	app.clientPreamble.fetch = make(chan *mapper.ClientPreamble, 1)
