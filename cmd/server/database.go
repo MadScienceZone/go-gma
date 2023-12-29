@@ -36,6 +36,12 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+const (
+	MsgTypeClearChat = 0
+	MsgTypeChatMessage = 1
+	MsgTypeRollResult = 2
+)
+
 func (a *Application) dbOpen() error {
 	var err error
 
@@ -219,14 +225,14 @@ func (a *Application) QueryChatHistory(target int, requester *mapper.ClientConne
 		}
 
 		switch msgtype {
-		case int(mapper.ClearChat):
+		case MsgTypeClearChat:
 			var cc mapper.ClearChatMessagePayload
 			if err := json.Unmarshal([]byte(jdata), &cc); err != nil {
 				return err
 			}
 			requester.Conn.Send(mapper.ClearChat, cc)
 
-		case int(mapper.ChatMessage):
+		case MsgTypeChatMessage:
 			var chat mapper.ChatMessageMessagePayload
 			if err := json.Unmarshal([]byte(jdata), &chat); err != nil {
 				return err
@@ -235,7 +241,7 @@ func (a *Application) QueryChatHistory(target int, requester *mapper.ClientConne
 				requester.Conn.Send(mapper.ChatMessage, chat)
 			}
 
-		case int(mapper.RollResult):
+		case MsgTypeRollResult:
 			var rr mapper.RollResultMessagePayload
 			if err := json.Unmarshal([]byte(jdata), &rr); err != nil {
 				return err
@@ -343,11 +349,25 @@ func (a *Application) SendDicePresets(user string) error {
 }
 
 func (a *Application) AddToChatHistory(id int, chatType mapper.ServerMessage, chatData any) error {
+	var dbMessageType int
+
+	switch chatType {
+	case mapper.ClearChat:
+		dbMessageType = 0
+	case mapper.ChatMessage:
+		dbMessageType = 1
+	case mapper.RollResult:
+		dbMessageType = 2
+	default:
+		a.Logf("ERROR in AddToChatHistory: Invalid chatType value %v (entry not added to history database)", chatType)
+		return fmt.Errorf("invalid chatType value %v", chatType)
+	}
+
 	jdata, err := json.Marshal(chatData)
 	if err != nil {
 		return err
 	}
-	result, err := a.sqldb.Exec(`insert into chats (msgid, msgtype, rawdata) values (?, ?, ?)`, id, int(chatType), string(jdata))
+	result, err := a.sqldb.Exec(`insert into chats (msgid, msgtype, rawdata) values (?, ?, ?)`, id, dbMessageType, string(jdata))
 	if err != nil {
 		return err
 	}
