@@ -1,7 +1,7 @@
 .\" vim:set syntax=nroff:
 '\" <<ital-is-var>>
 '\" <<bold-is-fixed>>
-.TH SERVER 6 "Go-GMA 5.13.0" 21-Dec-2023 "Games" \" @@mp@@
+.TH SERVER 6 "Go-GMA 5.13.1" 29-Dec-2023 "Games" \" @@mp@@
 .SH NAME
 server \- GMA battle grid map server (Go version)
 .SH SYNOPSIS
@@ -412,6 +412,9 @@ The host name or IP address of the server to connect to for this session.
 .BI "Port " (int)
 '\" <<ital-is-var>>
 The TCP port number on which to connect to the server.
+.TP
+.B Reason
+An explanation of why the redirect is being performed (optional).
 .RE
 '\" <</>>
 '\" <</New>>
@@ -679,16 +682,20 @@ These actions may not be taken immediately but should happen within a few second
 '\" <<desc>>
 .TP 8
 .B HUP
-This signal causes the server to gracefully exit.
+This signal terminates all existing client connections but leaves the server up and
+ready to accept new incoming connections.
 .TP
 .B INT
-Currently equivalent to the
-.B HUP
-signal.
+Gracefully shuts down the server.
 .TP
 .B USR1
 Causes the server to re-read its initialization file. Clients which connect after this
-will see the new initialization information.
+will see the new initialization information. This also jumps the next message ID for
+chat messages and die roll results to most likely be a larger ID than other servers
+(it sets the next ID to the current UNIX timestamp value, just as the server does when
+it starts; this will make it ahead of other servers on the assumption that server clocks
+are correct and no server will sustain a message rate of >= one message per second
+since it was started).
 .TP
 .B USR2
 This signal causes the server to dump a human-readable description of the current game state

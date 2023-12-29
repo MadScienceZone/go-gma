@@ -1,0 +1,22 @@
+#!/bin/sh
+echo "Upgrading database(s) to 5.13.1+ schema (static chat history message type codes)"
+if [ "$1" == "" ]; then
+	echo "Usage: $0 databasefile"
+	exit 1
+fi
+if [ -f "$1" ]; then
+	/bin/echo -n "Upgrading database file $1 to 5.13.1 schema in"
+	for count in 10 9 8 7 6 5 4 3 2 1
+	do
+		/bin/echo -n " $count..."
+		sleep 1
+	done
+	echo ""
+else
+	echo "$1 does not exist. Please specify the path to your database file."
+	exit 1
+fi
+sqlite3 "$1" 'update chats set msgtype=0 where msgtype=11'
+sqlite3 "$1" 'update chats set msgtype=1 where msgtype=9'
+sqlite3 "$1" 'update chats set msgtype=2 where msgtype=42 or msgtype=43'
+echo Done.
