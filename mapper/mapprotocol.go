@@ -52,8 +52,8 @@ import (
 // and protocol versions supported by this code.
 //
 const (
-	GMAMapperProtocol           = 410              // @@##@@ auto-configured
-	GoVersionNumber             = "5.13.2-alpha.0" // @@##@@ auto-configured
+	GMAMapperProtocol=410              // @@##@@ auto-configured
+	GoVersionNumber="5.13.1" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
 	MaximumSupportedMapProtocol = 410
 )
