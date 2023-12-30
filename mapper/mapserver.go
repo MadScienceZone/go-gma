@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __    ______       __            #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  / ___  \     /  \           #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) \/   \  \    \/) )          #
-# | |      | || || || (___) | Assistant | (____        | |    ___) /      | |          #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |   (___ (       | |          #
-# | | \_  )| |   | || (   ) |                 ) )      | |       ) \      | |          #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_/\___/  / _  __) (_         #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/\______/ (_) \____/         #
+#  _______  _______  _______             _______      __    ______      _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  / ___  \    / ___   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) \/   \  \   \/   )  |       #
+# | |      | || || || (___) | Assistant | (____        | |    ___) /       /   )       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |   (___ (      _/   /        #
+# | | \_  )| |   | || (   ) |                 ) )      | |       ) \    /   _/         #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_/\___/  / _ (   (__/\       #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/\______/ (_)\_______/       #
 #                                                                                      #
 ########################################################################################
 */
@@ -478,6 +478,15 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 			c.Conn.sendRaw(line)
 			if err := c.Conn.Flush(); err != nil {
 				done <- err
+				return
+			}
+			if strings.HasPrefix(line, "REDIRECT ") {
+				c.debugf(DebugIO, "preamble includes REDIRECT statement; not continuing further")
+				time.Sleep(time.Second * 5)
+				c.Conn.sendRaw("// Disconnecting now. See you on the other server!")
+				c.Conn.Flush()
+				time.Sleep(time.Second * 2)
+				done <- fmt.Errorf("login cancelled due to redirect")
 				return
 			}
 		}

@@ -1,7 +1,7 @@
 .\" vim:set syntax=nroff:
 '\" <<ital-is-var>>
 '\" <<bold-is-fixed>>
-.TH SERVER 6 "Go-GMA 5.13.1" 29-Dec-2023 "Games" \" @@mp@@
+.TH SERVER 6 "Go-GMA 5.13.2" 30-Dec-2023 "Games" \" @@mp@@
 .SH NAME
 server \- GMA battle grid map server (Go version)
 .SH SYNOPSIS
@@ -415,6 +415,10 @@ The TCP port number on which to connect to the server.
 .TP
 .B Reason
 An explanation of why the redirect is being performed (optional).
+.LP
+The server will disconnect from the client immediately after issuing the
+.B REDIRECT
+command to it.
 .RE
 '\" <</>>
 '\" <</New>>
