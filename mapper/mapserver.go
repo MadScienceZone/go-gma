@@ -480,6 +480,15 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 				done <- err
 				return
 			}
+			if strings.HasPrefix(line, "REDIRECT ") {
+				c.debugf(DebugIO, "preamble includes REDIRECT statement; not continuing further")
+				time.Sleep(time.Second * 5)
+				c.Conn.sendRaw("// Disconnecting now. See you on the other server!")
+				c.Conn.Flush()
+				time.Sleep(time.Second * 2)
+				done <- fmt.Errorf("login cancelled due to redirect")
+				return
+			}
 		}
 	}
 
