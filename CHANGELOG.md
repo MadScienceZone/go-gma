@@ -1,17 +1,22 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.13.2                <!-- @@##@@ -->
- * Effective Date: 30-Dec-2023			<!-- @@##@@ -->
+ * This Package Version: 5.14.0                <!-- @@##@@ -->
+ * Effective Date: 31-Dec-2023			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 6.11		<!-- @@##@@ -->
- * GMA Mapper Version: 4.20.1		<!-- @@##@@ -->
- * GMA Mapper Protocol: 410		<!-- @@##@@ -->
+ * GMA Core API Library Version: 6.12		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.21		<!-- @@##@@ -->
+ * GMA Mapper Protocol: 411		<!-- @@##@@ -->
  * GMA Mapper File Format: 23		<!-- @@##@@ -->
 
 # Notice
 When upgrading an existing server to version 5.13.1 or later, be sure to run `scripts/upgrade-5.13.1` on each database file to update it to the new chat history encoding scheme introduced at 5.13.1. If you don't, the server will ignore some or all of your historic chat and die roll messages. Alternatively, you can delete the old database and make a new one with the current server.
+
+## v5.14.0
+### Enhanced
+ * Implements protocol 411.
+   * Adds timestamps to chat messages and die-roll results.
 
 ## v5.13.2
 ### Fixed
