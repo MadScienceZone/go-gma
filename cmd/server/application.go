@@ -702,6 +702,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			requester.Conn.Send(mapper.RollResult, mapper.RollResultMessagePayload{
 				ChatCommon: mapper.ChatCommon{
 					MessageID: <-a.MessageIDGenerator,
+					Sent: time.Now(),
 				},
 				RequestID: p.RequestID,
 				Result: dice.StructuredResult{
@@ -724,6 +725,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 					ToAll:      p.ToAll,
 					ToGM:       p.ToGM,
 					Sender:     requester.Auth.Username,
+					Sent: time.Now(),
 				},
 				RequestID: p.RequestID,
 				Result: dice.StructuredResult{
@@ -751,6 +753,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				Recipients: p.Recipients,
 				ToAll:      p.ToAll,
 				ToGM:       p.ToGM,
+				Sent: time.Now(),
 			},
 			Title:     label,
 			RequestID: p.RequestID,
@@ -788,6 +791,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 					MessageID: receiptMessageID,
 					Sender:    requester.Auth.Username,
 					ToAll:     true,
+					Sent: time.Now(),
 				},
 				RequestID: p.RequestID,
 				Title:     receiptLabel,
@@ -966,6 +970,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			_ = requester.Conn.Send(mapper.ChatMessage, mapper.ChatMessageMessagePayload{
 				ChatCommon: mapper.ChatCommon{
 					MessageID: <-a.MessageIDGenerator,
+					Sent: time.Now(),
 				},
 				Text: "I can't accept that chat message since I don't know who you even are.",
 			})
@@ -974,6 +979,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 
 		p.Sender = requester.Auth.Username
 		p.MessageID = <-a.MessageIDGenerator
+		p.Sent = time.Now()
 
 		if err := a.AddToChatHistory(p.MessageID, mapper.ChatMessage, p); err != nil {
 			a.Logf("unable to add ChatMessage event to chat history: %v", err)

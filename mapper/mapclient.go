@@ -1146,6 +1146,9 @@ type ChatCommon struct {
 
 	// True if this message was sent only to the GM.
 	ToGM bool `json:",omitempty"`
+
+	// The date/time the message was sent
+	Sent time.Time `json:",omitempty"`
 }
 
 //
