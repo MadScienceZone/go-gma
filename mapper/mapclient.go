@@ -2182,6 +2182,18 @@ func (c *Connection) DefineDicePresetDelegates(delegates []string) error {
 	})
 }
 
+// DefineDicePresetDelegatesFor is just like DefineDicePresetDelegates
+// but performs the operation for another user (GM only).
+func (c *Connection) DefineDicePresetDelegatesFor(user string, delegates []string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(DefineDicePresetDelegates, DefineDicePresetDelegatesMessagePayload{
+		For:       user,
+		Delegates: delegates,
+	})
+}
+
 // DefineDicePresetsFor is just like DefineDicePresets but performs the operation
 // for another user (GM only).
 func (c *Connection) DefineDicePresetsFor(user string, presets []dice.DieRollPreset) error {
@@ -2202,7 +2214,8 @@ type DefineDicePresetsMessagePayload struct {
 
 type DefineDicePresetDelegatesMessagePayload struct {
 	BaseMessagePayload
-	Delegates []string 	`json:",omitempty"`
+	For       string   `json:",omitempty"`
+	Delegates []string `json:",omitempty"`
 }
 
 //
@@ -2297,8 +2310,8 @@ func (c *Connection) UpdateClock(absolute, relative int64, keepRunning bool) err
 //
 type UpdateDicePresetsMessagePayload struct {
 	BaseMessagePayload
-	Presets []dice.DieRollPreset
-	For string `json:",omitempty"`
+	Presets   []dice.DieRollPreset
+	For       string   `json:",omitempty"`
 	Delegates []string `json:",omitempty"`
 }
 
