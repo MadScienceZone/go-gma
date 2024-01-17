@@ -189,6 +189,10 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 		if dd, ok := data.(DefineDicePresetsMessagePayload); ok {
 			return c.sendJSON("DD", dd)
 		}
+	case DefineDicePresetDelegatess:
+		if dd, ok := data.(DefineDicePresetDelegatessMessagePayload); ok {
+			return c.sendJSON("DDD", dd)
+		}
 	case Denied:
 		if reason, ok := data.(DeniedMessagePayload); ok {
 			return c.sendJSON("DENIED", reason)
@@ -643,6 +647,16 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = DefineDicePresets
+		return p, nil
+
+	case "DDD":
+		p := DefineDicePresetDelegatesMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
+		p.messageType = DefineDicePresetDelegates
 		return p, nil
 
 	case "DD+":

@@ -661,6 +661,7 @@ const (
 	CombatMode
 	Comment
 	DefineDicePresets
+	DefineDicePresetDelegates
 	Denied
 	Echo
 	FilterDicePresets
@@ -724,6 +725,7 @@ var ServerMessageByName = map[string]ServerMessage{
 	"CombatMode":                  CombatMode,
 	"Comment":                     Comment,
 	"DefineDicePresets":           DefineDicePresets,
+	"DefineDicePresetDelegates":   DefineDicePresetDelegates,
 	"Denied":                      Denied,
 	"Echo":                        Echo,
 	"FilterDicePresets":           FilterDicePresets,
@@ -2167,6 +2169,19 @@ func (c *Connection) DefineDicePresets(presets []dice.DieRollPreset) error {
 	})
 }
 
+//
+// DefineDicePresetDelegates changes the current list of users allowed to view and
+// change a user's stored presets. The new list replaces any and all previous ones.
+//
+func (c *Connection) DefineDicePresetDelegates(delegates []string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(DefineDicePresetDelegates, DefineDicePresetDelegatesMessagePayload{
+		Delegates: delegates,
+	})
+}
+
 // DefineDicePresetsFor is just like DefineDicePresets but performs the operation
 // for another user (GM only).
 func (c *Connection) DefineDicePresetsFor(user string, presets []dice.DieRollPreset) error {
@@ -2183,6 +2198,11 @@ type DefineDicePresetsMessagePayload struct {
 	BaseMessagePayload
 	For     string               `json:",omitempty"`
 	Presets []dice.DieRollPreset `json:",omitempty"`
+}
+
+type DefineDicePresetDelegatesMessagePayload struct {
+	BaseMessagePayload
+	Delegates []string 	`json:",omitempty"`
 }
 
 //
@@ -3395,7 +3415,7 @@ func (c *Connection) listen(done chan error) {
 			c.reportError(fmt.Errorf("message type %v should not be sent to client at this stage in the session", cmd.MessageType()))
 
 		case AcceptMessagePayload, AddDicePresetsMessagePayload, AllowMessagePayload,
-			AuthMessagePayload, DefineDicePresetsMessagePayload,
+			AuthMessagePayload, DefineDicePresetsMessagePayload, DefineDicePresetDelegatesMessagePayload,
 			FilterDicePresetsMessagePayload, FilterImagesMessagePayload, PoloMessagePayload,
 			QueryDicePresetsMessagePayload, QueryPeersMessagePayload,
 			RollDiceMessagePayload, SyncMessagePayload, SyncChatMessagePayload:
@@ -3521,6 +3541,7 @@ func (c *Connection) filterSubscriptions() error {
 		//Auth (client)
 		//Challenge (forbidden)
 		//DefineDicePresets (client)
+		//DefineDicePresetDelegates (client)
 		//Denied (forbidden)
 		//FilterDicePresets (client)
 		//FilterImages (client)
