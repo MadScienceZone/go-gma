@@ -37,9 +37,9 @@ import (
 )
 
 const (
-	MsgTypeClearChat = 0
+	MsgTypeClearChat   = 0
 	MsgTypeChatMessage = 1
-	MsgTypeRollResult = 2
+	MsgTypeRollResult  = 2
 )
 
 func (a *Application) dbOpen() error {
@@ -203,7 +203,7 @@ func (a *Application) QueryPresetDelegates(user string) ([]string, error) {
 	a.Debugf(DebugDB, "query of delegates for %s", user)
 	rows, err := a.sqldb.Query(`SELECT delegate FROM delegates WHERE user=?`, user)
 	if err != nil {
-		return resultSet, err
+		return delegates, err
 	}
 	defer rows.Close()
 
@@ -214,7 +214,7 @@ func (a *Application) QueryPresetDelegates(user string) ([]string, error) {
 			return delegates, err
 		}
 		delegates = append(delegates, d)
-		a.Debugf(DebugDB, "result: %s", delegate)
+		a.Debugf(DebugDB, "result: %s", d)
 	}
 	return delegates, rows.Err()
 }
@@ -297,11 +297,11 @@ func (a *Application) StoreDicePresetDelegates(user string, delegates []string) 
 		if err != nil {
 			return err
 		}
-		a.debugDbAffected(resuult, fmt.Sprintf("add delegate #%d (%s) for %s", i, delegate, user))
+		a.debugDbAffected(result, fmt.Sprintf("add delegate #%d (%s) for %s", i, delegate, user))
 	}
 	return nil
 }
-	
+
 func (a *Application) StoreDicePresets(user string, presets []dice.DieRollPreset, deleteOld bool) error {
 	if deleteOld {
 		a.Debugf(DebugDB, "removing existing die-roll presets for %s", user)
@@ -366,6 +366,11 @@ func (a *Application) FilterDicePresets(user string, f mapper.FilterDicePresetsM
 }
 
 func (a *Application) SendDicePresets(user string) error {
+	delegates, err := a.QueryPresetDelegates(user)
+	if err != nil {
+		return err
+	}
+
 	rows, err := a.sqldb.Query(`select name, description, rollspec from dicepresets where user = ?`, user)
 	if err != nil {
 		return err
@@ -384,9 +389,11 @@ func (a *Application) SendDicePresets(user string) error {
 	if err := rows.Err(); err != nil {
 		return err
 	}
+	pset.Delegates = delegates
+	pset.For = user
 
 	for _, peer := range a.GetClients() {
-		if peer.Auth != nil && peer.Auth.Username == user {
+		if peer.Auth != nil && (peer.Auth.Username == user || slices.Contains(delegates, peer.Auth.Username)) {
 			peer.Conn.Send(mapper.UpdateDicePresets, pset)
 		}
 	}

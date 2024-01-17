@@ -52,8 +52,8 @@ import (
 // and protocol versions supported by this code.
 //
 const (
-	GMAMapperProtocol=411              // @@##@@ auto-configured
-	GoVersionNumber="5.14.0" // @@##@@ auto-configured
+	GMAMapperProtocol           = 411      // @@##@@ auto-configured
+	GoVersionNumber             = "5.14.0" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
 	MaximumSupportedMapProtocol = 411
 )
@@ -189,8 +189,8 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 		if dd, ok := data.(DefineDicePresetsMessagePayload); ok {
 			return c.sendJSON("DD", dd)
 		}
-	case DefineDicePresetDelegatess:
-		if dd, ok := data.(DefineDicePresetDelegatessMessagePayload); ok {
+	case DefineDicePresetDelegates:
+		if dd, ok := data.(DefineDicePresetDelegatesMessagePayload); ok {
 			return c.sendJSON("DDD", dd)
 		}
 	case Denied:

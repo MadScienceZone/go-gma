@@ -132,6 +132,7 @@ Each typed command line must conform to the Tcl list syntax (space-separated lis
   DD {{name desc roll} ...} Replace your die-roll presets
   DD+ ...                   Same as DD but append to presets
   DD/ regex                 Delete presets matching regex
+  DDD {name name ...}       Set delegate list to the specified names
   DR                        Retrieve die-roll presets
   EXIT|QUIT                 Exit map-console
   HELP|?                    Prints out a command summary
@@ -199,7 +200,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.14.0" //@@##@@
+const GoVersionNumber = "5.14.0" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -963,7 +964,10 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 		)
 
 	case mapper.UpdateDicePresetsMessagePayload:
-		printFields(mono, "UpdateDicePresets")
+		printFields(mono, "UpdateDicePresets",
+			fieldDesc{"for", m.For},
+			fieldDesc{"delegates", m.Delegates},
+		)
 		for i, dp := range m.Presets {
 			printFields(mono, colorize(fmt.Sprintf("  [%02d] ", i), "Blue", mono),
 				fieldDesc{"name", dp.Name},
@@ -1106,7 +1110,13 @@ func configureApp() (AppPreferences, error) {
 		log.Println("Loading user preferences from", preferencesPath)
 		prefs.Prefs, err = util.LoadPreferencesWithDefaults(prefsFile)
 		if err != nil {
-			return prefs, err
+			var uv util.UnsupportedPreferencesVersionError
+			if errors.As(err, &uv) {
+				log.Printf("(warning) %v", err)
+				fmt.Printf("WARNING: The preferences file is version %d, which I don't support.\nHowever, I'll try to continue anyway with what I can understand of that file.\n", uv.DataVersion)
+			} else {
+				return prefs, err
+			}
 		}
 	} else if Fconf == "" {
 		log.Println("No user preferences found; trying old-style config file")
@@ -1521,6 +1531,21 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 						fmt.Println(colorize(fmt.Sprintf("server ERROR: %v", err), "Red", mono))
 						break
 					}
+				}
+
+			case "DDD":
+				if len(fields) != 2 {
+					fmt.Println(colorize("usage ERROR: wrong number of fields: DDD {[<name> ...]}", "Red", mono))
+					break
+				}
+				p, err := tcllist.ParseTclList(fields[1])
+				if err != nil {
+					fmt.Println(colorize(fmt.Sprintf("ERROR in delegate list: %v", err), "Red", mono))
+					break
+				}
+				if err := server.DefineDicePresetDelegates(p); err != nil {
+					fmt.Println(colorize(fmt.Sprintf("server ERROR: %v", err), "Red", mono))
+					break
 				}
 
 			case "DD", "DD+":
