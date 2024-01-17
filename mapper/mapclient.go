@@ -2298,6 +2298,8 @@ func (c *Connection) UpdateClock(absolute, relative int64, keepRunning bool) err
 type UpdateDicePresetsMessagePayload struct {
 	BaseMessagePayload
 	Presets []dice.DieRollPreset
+	For string `json:",omitempty"`
+	Delegates []string `json:",omitempty"`
 }
 
 //
