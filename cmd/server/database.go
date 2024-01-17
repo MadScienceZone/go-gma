@@ -68,6 +68,11 @@ func (a *Application) dbOpen() error {
 				rollspec    text    not null,
 					primary key (user, name)
 			);
+			create table delegates (
+				user        text    not null,
+				delegate    text    not null,
+					primary key (user, delegate)
+			);
 			create table chats (
 				msgid   integer primary key,
 				msgtype integer,
@@ -192,6 +197,28 @@ func (a *Application) QueryImageData(img mapper.ImageDefinition) (mapper.ImageDe
 	return resultSet, rows.Err()
 }
 
+func (a *Application) QueryPresetDelegates(user string) ([]string, error) {
+	var delegates []string
+
+	a.Debugf(DebugDB, "query of delegates for %s", user)
+	rows, err := a.sqldb.Query(`SELECT delegate FROM delegates WHERE user=?`, user)
+	if err != nil {
+		return resultSet, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var d string
+
+		if err := rows.Scan(&d); err != nil {
+			return delegates, err
+		}
+		delegates = append(delegates, d)
+		a.Debugf(DebugDB, "result: %s", delegate)
+	}
+	return delegates, rows.Err()
+}
+
 func (a *Application) QueryChatHistory(target int, requester *mapper.ClientConnection) error {
 	var rows *sql.Rows
 	var err error
@@ -257,6 +284,24 @@ func (a *Application) QueryChatHistory(target int, requester *mapper.ClientConne
 	return rows.Err()
 }
 
+func (a *Application) StoreDicePresetDelegates(user string, delegates []string) error {
+	result, err := a.sqldb.Exec(`delete from delegates where user = ?`, user)
+	if err != nil {
+		return err
+	}
+	a.debugDbAffected(result, fmt.Sprintf("clear old delegates for %s", user))
+
+	for i, delegate := range delegates {
+		a.Debugf(DebugDB, "adding die-roll delegate %s for %s", delegate, user)
+		result, err := a.sqldb.Exec("insert into delegates (user, delegate) values (?, ?)", user, delegate)
+		if err != nil {
+			return err
+		}
+		a.debugDbAffected(resuult, fmt.Sprintf("add delegate #%d (%s) for %s", i, delegate, user))
+	}
+	return nil
+}
+	
 func (a *Application) StoreDicePresets(user string, presets []dice.DieRollPreset, deleteOld bool) error {
 	if deleteOld {
 		a.Debugf(DebugDB, "removing existing die-roll presets for %s", user)
