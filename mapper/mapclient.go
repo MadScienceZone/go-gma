@@ -2312,6 +2312,7 @@ type UpdateDicePresetsMessagePayload struct {
 	BaseMessagePayload
 	Presets   []dice.DieRollPreset
 	For       string   `json:",omitempty"`
+	DelegateFor []string `json:",omitempty"`
 	Delegates []string `json:",omitempty"`
 }
 

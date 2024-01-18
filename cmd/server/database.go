@@ -219,6 +219,28 @@ func (a *Application) QueryPresetDelegates(user string) ([]string, error) {
 	return delegates, rows.Err()
 }
 
+func (a *Application) QueryPresetDelegateFor(user string) ([]string, error) {
+	var delegates []string
+
+	a.Debugf(DebugDB, "query of who %s is a delegate for", user)
+	rows, err := a.sqldb.Query(`SELECT user FROM delegates WHERE delegate=?`, user)
+	if err != nil {
+		return delegates, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var d string
+
+		if err := rows.Scan(&d); err != nil {
+			return delegates, err
+		}
+		delegates = append(delegates, d)
+		a.Debugf(DebugDB, "result: %s", d)
+	}
+	return delegates, rows.Err()
+}
+
 func (a *Application) QueryChatHistory(target int, requester *mapper.ClientConnection) error {
 	var rows *sql.Rows
 	var err error
@@ -370,6 +392,10 @@ func (a *Application) SendDicePresets(user string) error {
 	if err != nil {
 		return err
 	}
+	delegateFor, err := a.QueryPresetDelegateFor(user)
+	if err != nil {
+		return err
+	}
 
 	rows, err := a.sqldb.Query(`select name, description, rollspec from dicepresets where user = ?`, user)
 	if err != nil {
@@ -390,6 +416,7 @@ func (a *Application) SendDicePresets(user string) error {
 		return err
 	}
 	pset.Delegates = delegates
+	pset.DelegateFor = delegateFor
 	pset.For = user
 
 	for _, peer := range a.GetClients() {
