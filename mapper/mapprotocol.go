@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __       ___       _______       #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \     /   )     (  __   )      #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) )   / /) |     | (  )  |      #
-# | |      | || || || (___) | Assistant | (____        | |  / (_) (_    | | /   |      #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | | (____   _)   | (/ /) |      #
-# | | \_  )| |   | || (   ) |                 ) )      | |      ) (     |   / | |      #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_     | |   _ |  (__) |      #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/     (_)  (_)(_______)      #
+#  _______  _______  _______             _______      __    _______     _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  (  ____ \   (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) | (    \/   | (  )  |       #
+# | |      | || || || (___) | Assistant | (____        | | | (____     | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | | (_____ \    | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )      | |       ) )   |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_/\____) ) _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/\______/ (_)(_______)       #
 #                                                                                      #
 ########################################################################################
 */
@@ -52,10 +52,10 @@ import (
 // and protocol versions supported by this code.
 //
 const (
-	GMAMapperProtocol=411              // @@##@@ auto-configured
-	GoVersionNumber="5.14.0" // @@##@@ auto-configured
+	GMAMapperProtocol=412            // @@##@@ auto-configured
+	GoVersionNumber="5.15.0" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
-	MaximumSupportedMapProtocol = 411
+	MaximumSupportedMapProtocol = 412
 )
 
 func init() {
@@ -188,6 +188,10 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 	case DefineDicePresets:
 		if dd, ok := data.(DefineDicePresetsMessagePayload); ok {
 			return c.sendJSON("DD", dd)
+		}
+	case DefineDicePresetDelegates:
+		if dd, ok := data.(DefineDicePresetDelegatesMessagePayload); ok {
+			return c.sendJSON("DDD", dd)
 		}
 	case Denied:
 		if reason, ok := data.(DeniedMessagePayload); ok {
@@ -643,6 +647,16 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = DefineDicePresets
+		return p, nil
+
+	case "DDD":
+		p := DefineDicePresetDelegatesMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
+		p.messageType = DefineDicePresetDelegates
 		return p, nil
 
 	case "DD+":

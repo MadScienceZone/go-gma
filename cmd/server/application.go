@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __       ___       _______       #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \     /   )     (  __   )      #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) )   / /) |     | (  )  |      #
-# | |      | || || || (___) | Assistant | (____        | |  / (_) (_    | | /   |      #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | | (____   _)   | (/ /) |      #
-# | | \_  )| |   | || (   ) |                 ) )      | |      ) (     |   / | |      #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_     | |   _ |  (__) |      #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/     (_)  (_)(_______)      #
+#  _______  _______  _______             _______      __    _______     _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  (  ____ \   (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) | (    \/   | (  )  |       #
+# | |      | || || || (___) | Assistant | (____        | | | (____     | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | | (_____ \    | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )      | |       ) )   |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_/\____) ) _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/\______/ (_)(_______)       #
 #                                                                                      #
 ########################################################################################
 */
@@ -702,7 +702,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			requester.Conn.Send(mapper.RollResult, mapper.RollResultMessagePayload{
 				ChatCommon: mapper.ChatCommon{
 					MessageID: <-a.MessageIDGenerator,
-					Sent: time.Now(),
+					Sent:      time.Now(),
 				},
 				RequestID: p.RequestID,
 				Result: dice.StructuredResult{
@@ -725,7 +725,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 					ToAll:      p.ToAll,
 					ToGM:       p.ToGM,
 					Sender:     requester.Auth.Username,
-					Sent: time.Now(),
+					Sent:       time.Now(),
 				},
 				RequestID: p.RequestID,
 				Result: dice.StructuredResult{
@@ -753,7 +753,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				Recipients: p.Recipients,
 				ToAll:      p.ToAll,
 				ToGM:       p.ToGM,
-				Sent: time.Now(),
+				Sent:       time.Now(),
 			},
 			Title:     label,
 			RequestID: p.RequestID,
@@ -791,7 +791,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 					MessageID: receiptMessageID,
 					Sender:    requester.Auth.Username,
 					ToAll:     true,
-					Sent: time.Now(),
+					Sent:      time.Now(),
 				},
 				RequestID: p.RequestID,
 				Title:     receiptLabel,
@@ -863,12 +863,32 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		}
 
 		target := requester.Auth.Username
-		if p.For != "" {
+		if p.For != "" && p.For != target {
 			if requester.Auth.GmMode {
 				target = p.For
 				a.Debugf(DebugIO, "GM requests storage of die-roll presets for %s", target)
 			} else {
-				a.Logf("non-GM request to change die-roll presets for %s ignored", p.For)
+				delegates, err := a.QueryPresetDelegates(p.For)
+				if err != nil {
+					a.Logf("error getting delegate list for %s: %v", p.For, err)
+					requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+						Command: p.RawMessage(),
+						Reason:  "we were unable to verify if you are a delegate for the target user",
+					})
+					return
+				} else {
+					if slices.Contains(delegates, requester.Auth.Username) {
+						target = p.For
+						a.Debugf(DebugIO, "Delegate %s requests storage of die-roll presets for %s", requester.Auth.Username, target)
+					} else {
+						a.Logf("refusing to execute privileged command %v %v for non-GM, non-delegate user %s", p.MessageType(), p, requester.Auth.Username)
+						requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+							Command: p.RawMessage(),
+							Reason:  "You are not authorized to change the presets for that user",
+						})
+						return
+					}
+				}
 			}
 		}
 
@@ -879,6 +899,34 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			a.Logf("error sending die-roll presets after changing them: %v", err)
 		}
 
+	case mapper.DefineDicePresetDelegatesMessagePayload:
+		if requester.Auth == nil {
+			a.Logf("Unable to store die-roll preset delegates for unauthenticated user")
+			return
+		}
+
+		target := requester.Auth.Username
+		if p.For != "" && p.For != target {
+			if requester.Auth.GmMode {
+				target = p.For
+				a.Debugf(DebugIO, "GM requests storage of die-roll preset delegates for %s", target)
+			} else {
+				a.Logf("refusing to execute privileged command %v %v for non-GM, non-delegate user %s", p.MessageType(), p, requester.Auth.Username)
+				requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+					Command: p.RawMessage(),
+					Reason:  "You are not authorized to change the preset delegates for that user",
+				})
+				return
+			}
+		}
+
+		if err := a.StoreDicePresetDelegates(target, p.Delegates); err != nil {
+			a.Logf("error storing die-roll preset delegates: %v", err)
+		}
+		if err := a.SendDicePresets(target); err != nil {
+			a.Logf("error sending die-roll presets after changing delegates: %v", err)
+		}
+
 	case mapper.AddDicePresetsMessagePayload:
 		if requester.Auth == nil {
 			a.Logf("Unable to store die-roll preset for unauthenticated user")
@@ -886,12 +934,32 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		}
 
 		target := requester.Auth.Username
-		if p.For != "" {
+		if p.For != "" && p.For != target {
 			if requester.Auth.GmMode {
 				target = p.For
 				a.Debugf(DebugIO, "GM requests add to die-roll presets for %s", target)
 			} else {
-				a.Logf("non-GM request to add to die-roll presets for %s ignored", p.For)
+				delegates, err := a.QueryPresetDelegates(p.For)
+				if err != nil {
+					a.Logf("error getting delegate list for %s: %v", p.For, err)
+					requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+						Command: p.RawMessage(),
+						Reason:  "we were unable to verify if you are a delegate for the target user",
+					})
+					return
+				} else {
+					if slices.Contains(delegates, requester.Auth.Username) {
+						target = p.For
+						a.Debugf(DebugIO, "Delegate %s requests to add to die-roll presets for %s", requester.Auth.Username, target)
+					} else {
+						a.Logf("refusing to execute privileged command %v %v for non-GM, non-delegate user %s", p.MessageType(), p, requester.Auth.Username)
+						requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+							Command: p.RawMessage(),
+							Reason:  "You are not authorized to add to the presets for that user",
+						})
+						return
+					}
+				}
 			}
 		}
 
@@ -914,12 +982,32 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		}
 
 		target := requester.Auth.Username
-		if p.For != "" {
+		if p.For != "" && p.For != target {
 			if requester.Auth.GmMode {
 				target = p.For
 				a.Debugf(DebugIO, "GM requests filter of die-roll presets for %s", target)
 			} else {
-				a.Logf("non-GM request to filter die-roll presets for %s ignored", p.For)
+				delegates, err := a.QueryPresetDelegates(p.For)
+				if err != nil {
+					a.Logf("error getting delegate list for %s: %v", p.For, err)
+					requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+						Command: p.RawMessage(),
+						Reason:  "we were unable to verify if you are a delegate for the target user",
+					})
+					return
+				} else {
+					if slices.Contains(delegates, requester.Auth.Username) {
+						target = p.For
+						a.Debugf(DebugIO, "Delegate %s requests filter of die-roll presets for %s", requester.Auth.Username, target)
+					} else {
+						a.Logf("refusing to execute privileged command %v %v for non-GM, non-delegate user %s", p.MessageType(), p, requester.Auth.Username)
+						requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+							Command: p.RawMessage(),
+							Reason:  "You are not authorized to filter the presets for that user",
+						})
+						return
+					}
+				}
 			}
 		}
 
@@ -952,14 +1040,35 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		}
 
 		target := requester.Auth.Username
-		if p.For != "" {
+		if p.For != "" && p.For != target {
 			if requester.Auth.GmMode {
 				target = p.For
-				a.Debugf(DebugIO, "GM requests die-roll presets for %s", target)
+				a.Debugf(DebugIO, "GM requests retrieval of die-roll presets for %s", target)
 			} else {
-				a.Logf("non-GM request to get die-roll presets for %s ignored", p.For)
+				delegates, err := a.QueryPresetDelegates(p.For)
+				if err != nil {
+					a.Logf("error getting delegate list for %s: %v", p.For, err)
+					requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+						Command: p.RawMessage(),
+						Reason:  "we were unable to verify if you are a delegate for the target user",
+					})
+					return
+				} else {
+					if slices.Contains(delegates, requester.Auth.Username) {
+						target = p.For
+						a.Debugf(DebugIO, "Delegate %s requests retrieval of die-roll presets for %s", requester.Auth.Username, target)
+					} else {
+						a.Logf("refusing to execute privileged command %v %v for non-GM, non-delegate user %s", p.MessageType(), p, requester.Auth.Username)
+						requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+							Command: p.RawMessage(),
+							Reason:  "You are not authorized to retrieve the presets for that user",
+						})
+						return
+					}
+				}
 			}
 		}
+
 		if err := a.SendDicePresets(target); err != nil {
 			a.Logf("error sending die-roll presets: %v", err)
 		}
@@ -970,7 +1079,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			_ = requester.Conn.Send(mapper.ChatMessage, mapper.ChatMessageMessagePayload{
 				ChatCommon: mapper.ChatCommon{
 					MessageID: <-a.MessageIDGenerator,
-					Sent: time.Now(),
+					Sent:      time.Now(),
 				},
 				Text: "I can't accept that chat message since I don't know who you even are.",
 			})

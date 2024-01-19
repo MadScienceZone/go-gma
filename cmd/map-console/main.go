@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __       ___       _______       #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \     /   )     (  __   )      #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) )   / /) |     | (  )  |      #
-# | |      | || || || (___) | Assistant | (____        | |  / (_) (_    | | /   |      #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | | (____   _)   | (/ /) |      #
-# | | \_  )| |   | || (   ) |                 ) )      | |      ) (     |   / | |      #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_     | |   _ |  (__) |      #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/     (_)  (_)(_______)      #
+#  _______  _______  _______             _______      __    _______     _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  (  ____ \   (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) | (    \/   | (  )  |       #
+# | |      | || || || (___) | Assistant | (____        | | | (____     | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | | (_____ \    | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )      | |       ) )   |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_/\____) ) _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/\______/ (_)(_______)       #
 #                                                                                      #
 ########################################################################################
 #
@@ -132,6 +132,7 @@ Each typed command line must conform to the Tcl list syntax (space-separated lis
   DD {{name desc roll} ...} Replace your die-roll presets
   DD+ ...                   Same as DD but append to presets
   DD/ regex                 Delete presets matching regex
+  DDD {name name ...}       Set delegate list to the specified names
   DR                        Retrieve die-roll presets
   EXIT|QUIT                 Exit map-console
   HELP|?                    Prints out a command summary
@@ -199,7 +200,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.14.0" //@@##@@
+const GoVersionNumber="5.15.0" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -963,7 +964,10 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 		)
 
 	case mapper.UpdateDicePresetsMessagePayload:
-		printFields(mono, "UpdateDicePresets")
+		printFields(mono, "UpdateDicePresets",
+			fieldDesc{"for", m.For},
+			fieldDesc{"delegates", m.Delegates},
+		)
 		for i, dp := range m.Presets {
 			printFields(mono, colorize(fmt.Sprintf("  [%02d] ", i), "Blue", mono),
 				fieldDesc{"name", dp.Name},
@@ -1106,7 +1110,13 @@ func configureApp() (AppPreferences, error) {
 		log.Println("Loading user preferences from", preferencesPath)
 		prefs.Prefs, err = util.LoadPreferencesWithDefaults(prefsFile)
 		if err != nil {
-			return prefs, err
+			var uv util.UnsupportedPreferencesVersionError
+			if errors.As(err, &uv) {
+				log.Printf("(warning) %v", err)
+				fmt.Printf("WARNING: The preferences file is version %d, which I don't support.\nHowever, I'll try to continue anyway with what I can understand of that file.\n", uv.DataVersion)
+			} else {
+				return prefs, err
+			}
 		}
 	} else if Fconf == "" {
 		log.Println("No user preferences found; trying old-style config file")
@@ -1523,6 +1533,21 @@ TO {<recip>|@|*|% ...} <message>        Send chat message
 					}
 				}
 
+			case "DDD":
+				if len(fields) != 2 {
+					fmt.Println(colorize("usage ERROR: wrong number of fields: DDD {[<name> ...]}", "Red", mono))
+					break
+				}
+				p, err := tcllist.ParseTclList(fields[1])
+				if err != nil {
+					fmt.Println(colorize(fmt.Sprintf("ERROR in delegate list: %v", err), "Red", mono))
+					break
+				}
+				if err := server.DefineDicePresetDelegates(p); err != nil {
+					fmt.Println(colorize(fmt.Sprintf("server ERROR: %v", err), "Red", mono))
+					break
+				}
+
 			case "DD", "DD+":
 				// DD {{name desc dice} ...}
 				// DD+ {{name desc dice} ...}
@@ -1935,7 +1960,7 @@ func colorize(text, color string, mono bool) string {
 }
 
 /*
-# @[00]@| Go-GMA 5.14.0
+# @[00]@| Go-GMA 5.15.0
 # @[01]@|
 # @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

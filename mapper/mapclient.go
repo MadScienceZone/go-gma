@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __       ___       _______       #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \     /   )     (  __   )      #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) )   / /) |     | (  )  |      #
-# | |      | || || || (___) | Assistant | (____        | |  / (_) (_    | | /   |      #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | | (____   _)   | (/ /) |      #
-# | | \_  )| |   | || (   ) |                 ) )      | |      ) (     |   / | |      #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_     | |   _ |  (__) |      #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/     (_)  (_)(_______)      #
+#  _______  _______  _______             _______      __    _______     _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  (  ____ \   (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) | (    \/   | (  )  |       #
+# | |      | || || || (___) | Assistant | (____        | | | (____     | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | | (_____ \    | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )      | |       ) )   |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_/\____) ) _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/\______/ (_)(_______)       #
 #                                                                                      #
 ########################################################################################
 */
@@ -508,8 +508,18 @@ func (c *Connection) Reset() {
 	if c == nil {
 		return
 	}
-	c.signedOn = false
+	c.PartialReset()
 	c.Subscriptions = make(map[ServerMessage]chan MessagePayload)
+}
+
+// PartialReset returns an existing Connection object with the connection-related values
+// reset to their pre-connect state, but leaving other things like the subscription list
+// intact.
+func (c *Connection) PartialReset() {
+	if c == nil {
+		return
+	}
+	c.signedOn = false
 	c.Characters = make(map[string]PlayerToken)
 	c.Conditions = make(map[string]StatusMarkerDefinition)
 	c.Gauges = make(map[string]*UpdateProgressMessagePayload)
@@ -661,6 +671,7 @@ const (
 	CombatMode
 	Comment
 	DefineDicePresets
+	DefineDicePresetDelegates
 	Denied
 	Echo
 	FilterDicePresets
@@ -724,6 +735,7 @@ var ServerMessageByName = map[string]ServerMessage{
 	"CombatMode":                  CombatMode,
 	"Comment":                     Comment,
 	"DefineDicePresets":           DefineDicePresets,
+	"DefineDicePresetDelegates":   DefineDicePresetDelegates,
 	"Denied":                      Denied,
 	"Echo":                        Echo,
 	"FilterDicePresets":           FilterDicePresets,
@@ -2167,6 +2179,31 @@ func (c *Connection) DefineDicePresets(presets []dice.DieRollPreset) error {
 	})
 }
 
+//
+// DefineDicePresetDelegates changes the current list of users allowed to view and
+// change a user's stored presets. The new list replaces any and all previous ones.
+//
+func (c *Connection) DefineDicePresetDelegates(delegates []string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(DefineDicePresetDelegates, DefineDicePresetDelegatesMessagePayload{
+		Delegates: delegates,
+	})
+}
+
+// DefineDicePresetDelegatesFor is just like DefineDicePresetDelegates
+// but performs the operation for another user (GM only).
+func (c *Connection) DefineDicePresetDelegatesFor(user string, delegates []string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(DefineDicePresetDelegates, DefineDicePresetDelegatesMessagePayload{
+		For:       user,
+		Delegates: delegates,
+	})
+}
+
 // DefineDicePresetsFor is just like DefineDicePresets but performs the operation
 // for another user (GM only).
 func (c *Connection) DefineDicePresetsFor(user string, presets []dice.DieRollPreset) error {
@@ -2183,6 +2220,12 @@ type DefineDicePresetsMessagePayload struct {
 	BaseMessagePayload
 	For     string               `json:",omitempty"`
 	Presets []dice.DieRollPreset `json:",omitempty"`
+}
+
+type DefineDicePresetDelegatesMessagePayload struct {
+	BaseMessagePayload
+	For       string   `json:",omitempty"`
+	Delegates []string `json:",omitempty"`
 }
 
 //
@@ -2277,7 +2320,10 @@ func (c *Connection) UpdateClock(absolute, relative int64, keepRunning bool) err
 //
 type UpdateDicePresetsMessagePayload struct {
 	BaseMessagePayload
-	Presets []dice.DieRollPreset
+	Presets   []dice.DieRollPreset
+	For       string   `json:",omitempty"`
+	DelegateFor []string `json:",omitempty"`
+	Delegates []string `json:",omitempty"`
 }
 
 //
@@ -2938,7 +2984,7 @@ func (c *Connection) login(done chan error) {
 			if err = c.serverConn.conn.Close(); err != nil {
 				c.Logf("error closing existing socket to server: %v", err)
 			}
-			c.Reset()
+			c.PartialReset()
 			c.Endpoint = fmt.Sprintf("%s:%d", response.Host, response.Port)
 			done <- ErrRetryConnection
 			return
@@ -3050,7 +3096,7 @@ waitForReady:
 			if err = c.serverConn.conn.Close(); err != nil {
 				c.Logf("error closing existing socket to server: %v", err)
 			}
-			c.Reset()
+			c.PartialReset()
 			c.Endpoint = fmt.Sprintf("%s:%d", response.Host, response.Port)
 			done <- ErrRetryConnection
 			return
@@ -3395,7 +3441,7 @@ func (c *Connection) listen(done chan error) {
 			c.reportError(fmt.Errorf("message type %v should not be sent to client at this stage in the session", cmd.MessageType()))
 
 		case AcceptMessagePayload, AddDicePresetsMessagePayload, AllowMessagePayload,
-			AuthMessagePayload, DefineDicePresetsMessagePayload,
+			AuthMessagePayload, DefineDicePresetsMessagePayload, DefineDicePresetDelegatesMessagePayload,
 			FilterDicePresetsMessagePayload, FilterImagesMessagePayload, PoloMessagePayload,
 			QueryDicePresetsMessagePayload, QueryPeersMessagePayload,
 			RollDiceMessagePayload, SyncMessagePayload, SyncChatMessagePayload:
@@ -3521,6 +3567,7 @@ func (c *Connection) filterSubscriptions() error {
 		//Auth (client)
 		//Challenge (forbidden)
 		//DefineDicePresets (client)
+		//DefineDicePresetDelegates (client)
 		//Denied (forbidden)
 		//FilterDicePresets (client)
 		//FilterImages (client)
@@ -3653,7 +3700,7 @@ func (c *Connection) CheckVersionOf(packageName, myVersionNumber string) (*Packa
 	return availableVersion, nil
 }
 
-// @[00]@| Go-GMA 5.14.0
+// @[00]@| Go-GMA 5.15.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __       ___       _______       #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \     /   )     (  __   )      #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) )   / /) |     | (  )  |      #
-# | |      | || || || (___) | Assistant | (____        | |  / (_) (_    | | /   |      #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | | (____   _)   | (/ /) |      #
-# | | \_  )| |   | || (   ) |                 ) )      | |      ) (     |   / | |      #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_     | |   _ |  (__) |      #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/     (_)  (_)(_______)      #
+#  _______  _______  _______             _______      __    _______     _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  (  ____ \   (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) | (    \/   | (  )  |       #
+# | |      | || || || (___) | Assistant | (____        | | | (____     | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | | (_____ \    | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )      | |       ) )   |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_/\____) ) _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/\______/ (_)(_______)       #
 #                                                                                      #
 ########################################################################################
 */
@@ -30,10 +30,23 @@ import (
 
 const (
 	GMAMapperPreferencesMinimumVersion int = 1
-	GMAMapperPreferencesMaximumVersion int = 4
+	GMAMapperPreferencesMaximumVersion int = 5
 	GMAPreferencesMinimumVersion       int = 1
 	GMAPreferencesMaximumVersion       int = 1
 )
+
+type UnsupportedPreferencesVersionError struct {
+	MinimumVersion int
+	MaximumVersion int
+	DataVersion    int
+}
+
+func (e UnsupportedPreferencesVersionError) Error() string {
+	if e.MinimumVersion == e.MaximumVersion {
+		return fmt.Sprintf("preferences data version %d is not the supported version (%d)", e.DataVersion, e.MaximumVersion)
+	}
+	return fmt.Sprintf("preferences data version %d is not a supported version (%d-%d)", e.DataVersion, e.MinimumVersion, e.MaximumVersion)
+}
 
 //
 // GridOffsets provide x and y offsets for grid guides
@@ -262,6 +275,7 @@ type UserPreferences struct {
 	GMAMapperPreferencesVersion int        `json:"GMA_Mapper_preferences_version"`
 	Animate                     bool       `json:"animate,omitempty"`
 	ButtonSize                  ButtonSize `json:"button_size,omitempty"`
+	ChatTimestamp				bool       `json:"chat_timestamp,omitempty"`
 	ColorizeDieRolls            bool       `json:"colorize_die_rolls,omitempty"`
 	CurlPath                    string     `json:"curl_path,omitempty"`
 	CurlInsecure                bool       `json:"curl_insecure,omitempty"`
@@ -434,8 +448,11 @@ func DefaultPreferences() UserPreferences {
 
 	return UserPreferences{
 		ButtonSize:     SmallButtons,
+		ChatTimestamp:  true,
+		ColorizeDieRolls: true,
 		CurlPath:       curlPath,
 		CurrentProfile: "offline",
+		ImageFormat:    PNG,
 		Profiles: []ServerProfile{
 			ServerProfile{
 				Name:    "offline",
@@ -473,6 +490,10 @@ func DefaultPreferences() UserPreferences {
 				Family: "Times",
 				Size:   10,
 				Slant:  Italic,
+			},
+			"Tiny": UserFont{
+				Family: "Helvetica",
+				Size: 8,
 			},
 			"ClockTime": UserFont{
 				Family: "Helvetica",
@@ -719,7 +740,11 @@ func LoadGMAPreferencesWithDefaults(stream io.Reader) (GMAPreferences, error) {
 		return prefs, err
 	}
 	if prefs.GMAPreferencesVersion < GMAPreferencesMinimumVersion || prefs.GMAPreferencesVersion > GMAPreferencesMaximumVersion {
-		return prefs, fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAPreferencesVersion)
+		return prefs, UnsupportedPreferencesVersionError{
+			MinimumVersion: GMAPreferencesMinimumVersion,
+			MaximumVersion: GMAPreferencesMaximumVersion,
+			DataVersion:    prefs.GMAPreferencesVersion,
+		}
 	}
 	return prefs, nil
 }
@@ -736,7 +761,11 @@ func LoadPreferencesWithDefaults(stream io.Reader) (UserPreferences, error) {
 		return prefs, err
 	}
 	if prefs.GMAMapperPreferencesVersion < GMAMapperPreferencesMinimumVersion || prefs.GMAMapperPreferencesVersion > GMAMapperPreferencesMaximumVersion {
-		return prefs, fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAMapperPreferencesVersion)
+		return prefs, UnsupportedPreferencesVersionError{
+			MinimumVersion: GMAMapperPreferencesMinimumVersion,
+			MaximumVersion: GMAMapperPreferencesMaximumVersion,
+			DataVersion:    prefs.GMAMapperPreferencesVersion,
+		}
 	}
 	return prefs, nil
 }
@@ -753,7 +782,11 @@ func LoadPreferences(stream io.Reader) (UserPreferences, error) {
 		return prefs, err
 	}
 	if prefs.GMAMapperPreferencesVersion < GMAMapperPreferencesMinimumVersion || prefs.GMAMapperPreferencesVersion > GMAMapperPreferencesMaximumVersion {
-		return prefs, fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAMapperPreferencesVersion)
+		return prefs, UnsupportedPreferencesVersionError{
+			MinimumVersion: GMAMapperPreferencesMinimumVersion,
+			MaximumVersion: GMAMapperPreferencesMaximumVersion,
+			DataVersion:    prefs.GMAMapperPreferencesVersion,
+		}
 	}
 	return prefs, nil
 }
@@ -769,7 +802,11 @@ func (prefs *UserPreferences) Update(stream io.Reader) error {
 		return err
 	}
 	if prefs.GMAMapperPreferencesVersion < GMAMapperPreferencesMinimumVersion || prefs.GMAMapperPreferencesVersion > GMAMapperPreferencesMaximumVersion {
-		return fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAMapperPreferencesVersion)
+		return UnsupportedPreferencesVersionError{
+			MinimumVersion: GMAMapperPreferencesMinimumVersion,
+			MaximumVersion: GMAMapperPreferencesMaximumVersion,
+			DataVersion:    prefs.GMAMapperPreferencesVersion,
+		}
 	}
 	return nil
 }
@@ -785,7 +822,11 @@ func (prefs *GMAPreferences) Update(stream io.Reader) error {
 		return err
 	}
 	if prefs.GMAPreferencesVersion < GMAPreferencesMinimumVersion || prefs.GMAPreferencesVersion > GMAPreferencesMaximumVersion {
-		return fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAPreferencesVersion)
+		return UnsupportedPreferencesVersionError{
+			MinimumVersion: GMAPreferencesMinimumVersion,
+			MaximumVersion: GMAPreferencesMaximumVersion,
+			DataVersion:    prefs.GMAPreferencesVersion,
+		}
 	}
 	return nil
 }
@@ -931,7 +972,7 @@ func SearchInPath(program string) (string, error) {
 	return "", fmt.Errorf("file not found in PATH")
 }
 
-// @[00]@| Go-GMA 5.14.0
+// @[00]@| Go-GMA 5.15.0
 // @[01]@|
 // @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
