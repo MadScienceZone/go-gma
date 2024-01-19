@@ -1,17 +1,30 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.14.0                <!-- @@##@@ -->
- * Effective Date: 31-Dec-2023			<!-- @@##@@ -->
+ * This Package Version: 5.15.0                <!-- @@##@@ -->
+ * Effective Date: 18-Jan-2024			<!-- @@##@@ -->
 
 ## Compatibility
  * GMA Core API Library Version: 6.12		<!-- @@##@@ -->
  * GMA Mapper Version: 4.21		<!-- @@##@@ -->
- * GMA Mapper Protocol: 411		<!-- @@##@@ -->
+ * GMA Mapper Protocol: 412		<!-- @@##@@ -->
  * GMA Mapper File Format: 23		<!-- @@##@@ -->
 
 # Notice
+When upgrading an existing server to version 5.15.0 or later, be sure to run `scripts/upgrade-5.15.0` on each database file to update it to the new die-roll preset delegate capability.
+
+In addition, if your server didn't have the following update installed previously, do it as well:
+
 When upgrading an existing server to version 5.13.1 or later, be sure to run `scripts/upgrade-5.13.1` on each database file to update it to the new chat history encoding scheme introduced at 5.13.1. If you don't, the server will ignore some or all of your historic chat and die roll messages. Alternatively, you can delete the old database and make a new one with the current server.
+
+## v5.15.0
+### Enhanced
+ * Implements protocol 412.
+   * Adds the ability for users to designate authorized delegates to manage their die-roll presets.
+ * Adds support for mapper preferences file format version 5.
+
+### Fixed
+ * Corrected an error in the client library which lost subscription information when following a `REDIRECT` directive from a server.
 
 ## v5.14.0
 ### Enhanced
