@@ -508,8 +508,18 @@ func (c *Connection) Reset() {
 	if c == nil {
 		return
 	}
-	c.signedOn = false
+	c.PartialReset()
 	c.Subscriptions = make(map[ServerMessage]chan MessagePayload)
+}
+
+// PartialReset returns an existing Connection object with the connection-related values
+// reset to their pre-connect state, but leaving other things like the subscription list
+// intact.
+func (c *Connection) PartialReset() {
+	if c == nil {
+		return
+	}
+	c.signedOn = false
 	c.Characters = make(map[string]PlayerToken)
 	c.Conditions = make(map[string]StatusMarkerDefinition)
 	c.Gauges = make(map[string]*UpdateProgressMessagePayload)
@@ -2974,7 +2984,7 @@ func (c *Connection) login(done chan error) {
 			if err = c.serverConn.conn.Close(); err != nil {
 				c.Logf("error closing existing socket to server: %v", err)
 			}
-			c.Reset()
+			c.PartialReset()
 			c.Endpoint = fmt.Sprintf("%s:%d", response.Host, response.Port)
 			done <- ErrRetryConnection
 			return
@@ -3086,7 +3096,7 @@ waitForReady:
 			if err = c.serverConn.conn.Close(); err != nil {
 				c.Logf("error closing existing socket to server: %v", err)
 			}
-			c.Reset()
+			c.PartialReset()
 			c.Endpoint = fmt.Sprintf("%s:%d", response.Host, response.Port)
 			done <- ErrRetryConnection
 			return

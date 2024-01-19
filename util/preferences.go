@@ -30,7 +30,7 @@ import (
 
 const (
 	GMAMapperPreferencesMinimumVersion int = 1
-	GMAMapperPreferencesMaximumVersion int = 4
+	GMAMapperPreferencesMaximumVersion int = 5
 	GMAPreferencesMinimumVersion       int = 1
 	GMAPreferencesMaximumVersion       int = 1
 )
@@ -275,6 +275,7 @@ type UserPreferences struct {
 	GMAMapperPreferencesVersion int        `json:"GMA_Mapper_preferences_version"`
 	Animate                     bool       `json:"animate,omitempty"`
 	ButtonSize                  ButtonSize `json:"button_size,omitempty"`
+	ChatTimestamp				bool       `json:"chat_timestamp,omitempty"`
 	ColorizeDieRolls            bool       `json:"colorize_die_rolls,omitempty"`
 	CurlPath                    string     `json:"curl_path,omitempty"`
 	CurlInsecure                bool       `json:"curl_insecure,omitempty"`
@@ -447,8 +448,11 @@ func DefaultPreferences() UserPreferences {
 
 	return UserPreferences{
 		ButtonSize:     SmallButtons,
+		ChatTimestamp:  true,
+		ColorizeDieRolls: true,
 		CurlPath:       curlPath,
 		CurrentProfile: "offline",
+		ImageFormat:    PNG,
 		Profiles: []ServerProfile{
 			ServerProfile{
 				Name:    "offline",
@@ -486,6 +490,10 @@ func DefaultPreferences() UserPreferences {
 				Family: "Times",
 				Size:   10,
 				Slant:  Italic,
+			},
+			"Tiny": UserFont{
+				Family: "Helvetica",
+				Size: 8,
 			},
 			"ClockTime": UserFont{
 				Family: "Helvetica",
