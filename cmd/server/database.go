@@ -37,9 +37,9 @@ import (
 )
 
 const (
-	MsgTypeClearChat = 0
+	MsgTypeClearChat   = 0
 	MsgTypeChatMessage = 1
-	MsgTypeRollResult = 2
+	MsgTypeRollResult  = 2
 )
 
 func (a *Application) dbOpen() error {
@@ -67,6 +67,11 @@ func (a *Application) dbOpen() error {
 				description text    not null,
 				rollspec    text    not null,
 					primary key (user, name)
+			);
+			create table delegates (
+				user        text    not null,
+				delegate    text    not null,
+					primary key (user, delegate)
 			);
 			create table chats (
 				msgid   integer primary key,
@@ -192,6 +197,50 @@ func (a *Application) QueryImageData(img mapper.ImageDefinition) (mapper.ImageDe
 	return resultSet, rows.Err()
 }
 
+func (a *Application) QueryPresetDelegates(user string) ([]string, error) {
+	var delegates []string
+
+	a.Debugf(DebugDB, "query of delegates for %s", user)
+	rows, err := a.sqldb.Query(`SELECT delegate FROM delegates WHERE user=?`, user)
+	if err != nil {
+		return delegates, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var d string
+
+		if err := rows.Scan(&d); err != nil {
+			return delegates, err
+		}
+		delegates = append(delegates, d)
+		a.Debugf(DebugDB, "result: %s", d)
+	}
+	return delegates, rows.Err()
+}
+
+func (a *Application) QueryPresetDelegateFor(user string) ([]string, error) {
+	var delegates []string
+
+	a.Debugf(DebugDB, "query of who %s is a delegate for", user)
+	rows, err := a.sqldb.Query(`SELECT user FROM delegates WHERE delegate=?`, user)
+	if err != nil {
+		return delegates, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var d string
+
+		if err := rows.Scan(&d); err != nil {
+			return delegates, err
+		}
+		delegates = append(delegates, d)
+		a.Debugf(DebugDB, "result: %s", d)
+	}
+	return delegates, rows.Err()
+}
+
 func (a *Application) QueryChatHistory(target int, requester *mapper.ClientConnection) error {
 	var rows *sql.Rows
 	var err error
@@ -255,6 +304,24 @@ func (a *Application) QueryChatHistory(target int, requester *mapper.ClientConne
 		}
 	}
 	return rows.Err()
+}
+
+func (a *Application) StoreDicePresetDelegates(user string, delegates []string) error {
+	result, err := a.sqldb.Exec(`delete from delegates where user = ?`, user)
+	if err != nil {
+		return err
+	}
+	a.debugDbAffected(result, fmt.Sprintf("clear old delegates for %s", user))
+
+	for i, delegate := range delegates {
+		a.Debugf(DebugDB, "adding die-roll delegate %s for %s", delegate, user)
+		result, err := a.sqldb.Exec("insert into delegates (user, delegate) values (?, ?)", user, delegate)
+		if err != nil {
+			return err
+		}
+		a.debugDbAffected(result, fmt.Sprintf("add delegate #%d (%s) for %s", i, delegate, user))
+	}
+	return nil
 }
 
 func (a *Application) StoreDicePresets(user string, presets []dice.DieRollPreset, deleteOld bool) error {
@@ -321,6 +388,15 @@ func (a *Application) FilterDicePresets(user string, f mapper.FilterDicePresetsM
 }
 
 func (a *Application) SendDicePresets(user string) error {
+	delegates, err := a.QueryPresetDelegates(user)
+	if err != nil {
+		return err
+	}
+	delegateFor, err := a.QueryPresetDelegateFor(user)
+	if err != nil {
+		return err
+	}
+
 	rows, err := a.sqldb.Query(`select name, description, rollspec from dicepresets where user = ?`, user)
 	if err != nil {
 		return err
@@ -339,9 +415,12 @@ func (a *Application) SendDicePresets(user string) error {
 	if err := rows.Err(); err != nil {
 		return err
 	}
+	pset.Delegates = delegates
+	pset.DelegateFor = delegateFor
+	pset.For = user
 
 	for _, peer := range a.GetClients() {
-		if peer.Auth != nil && peer.Auth.Username == user {
+		if peer.Auth != nil && (peer.Auth.Username == user || slices.Contains(delegates, peer.Auth.Username)) {
 			peer.Conn.Send(mapper.UpdateDicePresets, pset)
 		}
 	}

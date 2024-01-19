@@ -35,6 +35,19 @@ const (
 	GMAPreferencesMaximumVersion       int = 1
 )
 
+type UnsupportedPreferencesVersionError struct {
+	MinimumVersion int
+	MaximumVersion int
+	DataVersion    int
+}
+
+func (e UnsupportedPreferencesVersionError) Error() string {
+	if e.MinimumVersion == e.MaximumVersion {
+		return fmt.Sprintf("preferences data version %d is not the supported version (%d)", e.DataVersion, e.MaximumVersion)
+	}
+	return fmt.Sprintf("preferences data version %d is not a supported version (%d-%d)", e.DataVersion, e.MinimumVersion, e.MaximumVersion)
+}
+
 //
 // GridOffsets provide x and y offsets for grid guides
 //
@@ -719,7 +732,11 @@ func LoadGMAPreferencesWithDefaults(stream io.Reader) (GMAPreferences, error) {
 		return prefs, err
 	}
 	if prefs.GMAPreferencesVersion < GMAPreferencesMinimumVersion || prefs.GMAPreferencesVersion > GMAPreferencesMaximumVersion {
-		return prefs, fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAPreferencesVersion)
+		return prefs, UnsupportedPreferencesVersionError{
+			MinimumVersion: GMAPreferencesMinimumVersion,
+			MaximumVersion: GMAPreferencesMaximumVersion,
+			DataVersion:    prefs.GMAPreferencesVersion,
+		}
 	}
 	return prefs, nil
 }
@@ -736,7 +753,11 @@ func LoadPreferencesWithDefaults(stream io.Reader) (UserPreferences, error) {
 		return prefs, err
 	}
 	if prefs.GMAMapperPreferencesVersion < GMAMapperPreferencesMinimumVersion || prefs.GMAMapperPreferencesVersion > GMAMapperPreferencesMaximumVersion {
-		return prefs, fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAMapperPreferencesVersion)
+		return prefs, UnsupportedPreferencesVersionError{
+			MinimumVersion: GMAMapperPreferencesMinimumVersion,
+			MaximumVersion: GMAMapperPreferencesMaximumVersion,
+			DataVersion:    prefs.GMAMapperPreferencesVersion,
+		}
 	}
 	return prefs, nil
 }
@@ -753,7 +774,11 @@ func LoadPreferences(stream io.Reader) (UserPreferences, error) {
 		return prefs, err
 	}
 	if prefs.GMAMapperPreferencesVersion < GMAMapperPreferencesMinimumVersion || prefs.GMAMapperPreferencesVersion > GMAMapperPreferencesMaximumVersion {
-		return prefs, fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAMapperPreferencesVersion)
+		return prefs, UnsupportedPreferencesVersionError{
+			MinimumVersion: GMAMapperPreferencesMinimumVersion,
+			MaximumVersion: GMAMapperPreferencesMaximumVersion,
+			DataVersion:    prefs.GMAMapperPreferencesVersion,
+		}
 	}
 	return prefs, nil
 }
@@ -769,7 +794,11 @@ func (prefs *UserPreferences) Update(stream io.Reader) error {
 		return err
 	}
 	if prefs.GMAMapperPreferencesVersion < GMAMapperPreferencesMinimumVersion || prefs.GMAMapperPreferencesVersion > GMAMapperPreferencesMaximumVersion {
-		return fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAMapperPreferencesVersion)
+		return UnsupportedPreferencesVersionError{
+			MinimumVersion: GMAMapperPreferencesMinimumVersion,
+			MaximumVersion: GMAMapperPreferencesMaximumVersion,
+			DataVersion:    prefs.GMAMapperPreferencesVersion,
+		}
 	}
 	return nil
 }
@@ -785,7 +814,11 @@ func (prefs *GMAPreferences) Update(stream io.Reader) error {
 		return err
 	}
 	if prefs.GMAPreferencesVersion < GMAPreferencesMinimumVersion || prefs.GMAPreferencesVersion > GMAPreferencesMaximumVersion {
-		return fmt.Errorf("preferences data version %v not supported by this program", prefs.GMAPreferencesVersion)
+		return UnsupportedPreferencesVersionError{
+			MinimumVersion: GMAPreferencesMinimumVersion,
+			MaximumVersion: GMAPreferencesMaximumVersion,
+			DataVersion:    prefs.GMAPreferencesVersion,
+		}
 	}
 	return nil
 }

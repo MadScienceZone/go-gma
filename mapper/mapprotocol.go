@@ -52,10 +52,10 @@ import (
 // and protocol versions supported by this code.
 //
 const (
-	GMAMapperProtocol=411              // @@##@@ auto-configured
-	GoVersionNumber="5.14.0" // @@##@@ auto-configured
+	GMAMapperProtocol           = 412            // @@##@@ auto-configured
+	GoVersionNumber             = "5.15.0-alpha" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
-	MaximumSupportedMapProtocol = 411
+	MaximumSupportedMapProtocol = 412
 )
 
 func init() {
@@ -188,6 +188,10 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 	case DefineDicePresets:
 		if dd, ok := data.(DefineDicePresetsMessagePayload); ok {
 			return c.sendJSON("DD", dd)
+		}
+	case DefineDicePresetDelegates:
+		if dd, ok := data.(DefineDicePresetDelegatesMessagePayload); ok {
+			return c.sendJSON("DDD", dd)
 		}
 	case Denied:
 		if reason, ok := data.(DeniedMessagePayload); ok {
@@ -643,6 +647,16 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = DefineDicePresets
+		return p, nil
+
+	case "DDD":
+		p := DefineDicePresetDelegatesMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
+		p.messageType = DefineDicePresetDelegates
 		return p, nil
 
 	case "DD+":
