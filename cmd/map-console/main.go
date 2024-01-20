@@ -967,6 +967,7 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 		printFields(mono, "UpdateDicePresets",
 			fieldDesc{"for", m.For},
 			fieldDesc{"delegates", m.Delegates},
+			fieldDesc{"delegate for", m.DelegateFor},
 		)
 		for i, dp := range m.Presets {
 			printFields(mono, colorize(fmt.Sprintf("  [%02d] ", i), "Blue", mono),
