@@ -1,4 +1,4 @@
-DIRS=map-console map-update preset-update server upload-presets coredb
+DIRS=map-console map-update preset-update server upload-presets coredb session-stats
 DESTDIR=/opt/gma
 
 binaries:
@@ -34,7 +34,7 @@ manpages:
 	(cd man && $(MAKE))
 
 test:
-	go test ./...
+	go test ./... && go vet ./...
 
 telemetry:
 	@echo "Building server with telemetry instrumentation enabled..."
