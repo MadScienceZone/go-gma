@@ -30,7 +30,7 @@ import (
 
 const (
 	GMAMapperPreferencesMinimumVersion int = 1
-	GMAMapperPreferencesMaximumVersion int = 5
+	GMAMapperPreferencesMaximumVersion int = 6
 	GMAPreferencesMinimumVersion       int = 1
 	GMAPreferencesMaximumVersion       int = 1
 )
@@ -275,7 +275,7 @@ type UserPreferences struct {
 	GMAMapperPreferencesVersion int        `json:"GMA_Mapper_preferences_version"`
 	Animate                     bool       `json:"animate,omitempty"`
 	ButtonSize                  ButtonSize `json:"button_size,omitempty"`
-	ChatTimestamp				bool       `json:"chat_timestamp,omitempty"`
+	ChatTimestamp               bool       `json:"chat_timestamp,omitempty"`
 	ColorizeDieRolls            bool       `json:"colorize_die_rolls,omitempty"`
 	CurlPath                    string     `json:"curl_path,omitempty"`
 	CurlInsecure                bool       `json:"curl_insecure,omitempty"`
@@ -283,6 +283,7 @@ type UserPreferences struct {
 	DarkMode                    bool       `json:"dark,omitempty"`
 	DebugLevel                  int        `json:"debug_level,omitempty"`
 	DebugProtocol               bool       `json:"debug_proto,omitempty"`
+	FlashUpdates                bool       `json:"flash_updates,omitempty"`
 	GuideLines                  struct {
 		Major GridGuide `json:"major,omitempty"`
 		Minor GridGuide `json:"minor,omitempty"`
@@ -447,12 +448,12 @@ func DefaultPreferences() UserPreferences {
 	}
 
 	return UserPreferences{
-		ButtonSize:     SmallButtons,
-		ChatTimestamp:  true,
+		ButtonSize:       SmallButtons,
+		ChatTimestamp:    true,
 		ColorizeDieRolls: true,
-		CurlPath:       curlPath,
-		CurrentProfile: "offline",
-		ImageFormat:    PNG,
+		CurlPath:         curlPath,
+		CurrentProfile:   "offline",
+		ImageFormat:      PNG,
 		Profiles: []ServerProfile{
 			ServerProfile{
 				Name:    "offline",
@@ -493,7 +494,7 @@ func DefaultPreferences() UserPreferences {
 			},
 			"Tiny": UserFont{
 				Family: "Helvetica",
-				Size: 8,
+				Size:   8,
 			},
 			"ClockTime": UserFont{
 				Family: "Helvetica",
