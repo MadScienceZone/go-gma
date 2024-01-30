@@ -30,7 +30,7 @@ import (
 
 const (
 	GMAMapperPreferencesMinimumVersion int = 1
-	GMAMapperPreferencesMaximumVersion int = 6
+	GMAMapperPreferencesMaximumVersion int = 7
 	GMAPreferencesMinimumVersion       int = 1
 	GMAPreferencesMaximumVersion       int = 2
 )
@@ -295,6 +295,7 @@ type UserPreferences struct {
 	PreloadImages bool                `json:"preload,omitempty"`
 	Profiles      []ServerProfile     `json:"profiles,omitempty"`
 	Fonts         map[string]UserFont `json:"fonts,omitempty"`
+	Scaling	      float64             `json:"scaling,omitempty"`
 	Styles        StyleDescription    `json:"styles,omitempty"`
 }
 
@@ -328,6 +329,7 @@ type GMAPreferences struct {
 	CoreDBPath            string `json:"core_db"`
 	Appearance            struct {
 		DarkMode bool `json:"dark_mode"`
+		Scaling float64 `json:"scaling"`
 	} `json:"appearance"`
 	Worlds             map[string]GMAWorld          `json:"worlds"`
 	Networks           map[string]GMANetworkProfile `json:"networks"`
