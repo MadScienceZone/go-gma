@@ -32,7 +32,7 @@ const (
 	GMAMapperPreferencesMinimumVersion int = 1
 	GMAMapperPreferencesMaximumVersion int = 6
 	GMAPreferencesMinimumVersion       int = 1
-	GMAPreferencesMaximumVersion       int = 1
+	GMAPreferencesMaximumVersion       int = 2
 )
 
 type UnsupportedPreferencesVersionError struct {
@@ -308,6 +308,8 @@ type InitiativeSeedData struct {
 	InitAdj      int    `json:"init_adj"`
 	HP           int    `json:"hp"`
 	BlurHP       int    `json:"blur_hp"`
+	IsPC         bool   `json:"is_pc"`
+	DieSpec      string `json:"die_spec"`
 }
 
 //
