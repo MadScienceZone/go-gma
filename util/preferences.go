@@ -30,9 +30,9 @@ import (
 
 const (
 	GMAMapperPreferencesMinimumVersion int = 1
-	GMAMapperPreferencesMaximumVersion int = 6
+	GMAMapperPreferencesMaximumVersion int = 7
 	GMAPreferencesMinimumVersion       int = 1
-	GMAPreferencesMaximumVersion       int = 1
+	GMAPreferencesMaximumVersion       int = 2
 )
 
 type UnsupportedPreferencesVersionError struct {
@@ -295,6 +295,7 @@ type UserPreferences struct {
 	PreloadImages bool                `json:"preload,omitempty"`
 	Profiles      []ServerProfile     `json:"profiles,omitempty"`
 	Fonts         map[string]UserFont `json:"fonts,omitempty"`
+	Scaling	      float64             `json:"scaling,omitempty"`
 	Styles        StyleDescription    `json:"styles,omitempty"`
 }
 
@@ -308,6 +309,8 @@ type InitiativeSeedData struct {
 	InitAdj      int    `json:"init_adj"`
 	HP           int    `json:"hp"`
 	BlurHP       int    `json:"blur_hp"`
+	IsPC         bool   `json:"is_pc"`
+	DieSpec      string `json:"die_spec"`
 }
 
 //
@@ -326,6 +329,7 @@ type GMAPreferences struct {
 	CoreDBPath            string `json:"core_db"`
 	Appearance            struct {
 		DarkMode bool `json:"dark_mode"`
+		Scaling float64 `json:"scaling"`
 	} `json:"appearance"`
 	Worlds             map[string]GMAWorld          `json:"worlds"`
 	Networks           map[string]GMANetworkProfile `json:"networks"`
