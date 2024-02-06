@@ -9,6 +9,8 @@
  * GMA Mapper Version: 4.22-beta		<!-- @@##@@ -->
  * GMA Mapper Protocol: 412		<!-- @@##@@ -->
  * GMA Mapper File Format: 23		<!-- @@##@@ -->
+ * GMA Mapper Preferences File Format: 0 <!-- @@##@@ -->
+ * GMA User Preferences File Format: 0 <!-- @@##@@ -->
 
 # Notice
 When upgrading an existing server to version 5.15.0 or later, be sure to run `scripts/upgrade-5.15.0` on each database file to update it to the new die-roll preset delegate capability.
