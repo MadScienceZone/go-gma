@@ -129,7 +129,7 @@ func main() {
 	var totalSessions int
 	var totalDuration time.Duration
 	for i, session := range stats.GameSessions {
-		fmt.Printf("\t\t<tr><td align=right>%d</td><td>%s</td><td><a target=\"_blank\" href=\"https://www.youtube.com/watch?v=%s&t=0s\">%d:%02d:%02d %s</a></td></tr>\n",
+		fmt.Printf("\t\t<tr><td align=right>%d</td><td align=center>%s</td><td><a target=\"_blank\" href=\"https://www.youtube.com/watch?v=%s&t=0s\">%d:%02d:%02d %s</a></td></tr>\n",
 			i+1, session.Date.Format("02-Jan-2006"), session.VideoToken,
 			int(session.Duration.Hours()),
 			int(session.Duration.Minutes())%60,
