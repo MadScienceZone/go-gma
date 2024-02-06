@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __    _______     _______        #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  (  ____ \   (  __   )       #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) | (    \/   | (  )  |       #
+#  _______  _______  _______             _______      __     ______     _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \   / ____ \   (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) ( (    \/   | (  )  |       #
 # | |      | || || || (___) | Assistant | (____        | | | (____     | | /   |       #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | | (_____ \    | (/ /) |       #
-# | | \_  )| |   | || (   ) |                 ) )      | |       ) )   |   / | |       #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_/\____) ) _ |  (__) |       #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/\______/ (_)(_______)       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | | |  ___ \    | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )      | | | (   ) )   |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_( (___) ) _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/ \_____/ (_)(_______)       #
 #                                                                                      #
 ########################################################################################
 */
@@ -30,7 +30,7 @@ import (
 
 const (
 	GMAMapperPreferencesMinimumVersion int = 1
-	GMAMapperPreferencesMaximumVersion int = 5
+	GMAMapperPreferencesMaximumVersion int = 6
 	GMAPreferencesMinimumVersion       int = 1
 	GMAPreferencesMaximumVersion       int = 1
 )
@@ -275,7 +275,7 @@ type UserPreferences struct {
 	GMAMapperPreferencesVersion int        `json:"GMA_Mapper_preferences_version"`
 	Animate                     bool       `json:"animate,omitempty"`
 	ButtonSize                  ButtonSize `json:"button_size,omitempty"`
-	ChatTimestamp				bool       `json:"chat_timestamp,omitempty"`
+	ChatTimestamp               bool       `json:"chat_timestamp,omitempty"`
 	ColorizeDieRolls            bool       `json:"colorize_die_rolls,omitempty"`
 	CurlPath                    string     `json:"curl_path,omitempty"`
 	CurlInsecure                bool       `json:"curl_insecure,omitempty"`
@@ -283,6 +283,7 @@ type UserPreferences struct {
 	DarkMode                    bool       `json:"dark,omitempty"`
 	DebugLevel                  int        `json:"debug_level,omitempty"`
 	DebugProtocol               bool       `json:"debug_proto,omitempty"`
+	FlashUpdates                bool       `json:"flash_updates,omitempty"`
 	GuideLines                  struct {
 		Major GridGuide `json:"major,omitempty"`
 		Minor GridGuide `json:"minor,omitempty"`
@@ -447,12 +448,12 @@ func DefaultPreferences() UserPreferences {
 	}
 
 	return UserPreferences{
-		ButtonSize:     SmallButtons,
-		ChatTimestamp:  true,
+		ButtonSize:       SmallButtons,
+		ChatTimestamp:    true,
 		ColorizeDieRolls: true,
-		CurlPath:       curlPath,
-		CurrentProfile: "offline",
-		ImageFormat:    PNG,
+		CurlPath:         curlPath,
+		CurrentProfile:   "offline",
+		ImageFormat:      PNG,
 		Profiles: []ServerProfile{
 			ServerProfile{
 				Name:    "offline",
@@ -493,7 +494,7 @@ func DefaultPreferences() UserPreferences {
 			},
 			"Tiny": UserFont{
 				Family: "Helvetica",
-				Size: 8,
+				Size:   8,
 			},
 			"ClockTime": UserFont{
 				Family: "Helvetica",
@@ -972,15 +973,16 @@ func SearchInPath(program string) (string, error) {
 	return "", fmt.Errorf("file not found in PATH")
 }
 
-// @[00]@| Go-GMA 5.15.0
+// @[00]@| Go-GMA 5.16.0
 // @[01]@|
-// @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
+// @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
-// @[12]@| Aloha, Oregon, USA. All Rights Reserved.
-// @[13]@| Distributed under the terms and conditions of the BSD-3-Clause
-// @[14]@| License as described in the accompanying LICENSE file distributed
-// @[15]@| with GMA.
-// @[16]@|
+// @[12]@| Aloha, Oregon, USA. All Rights Reserved. Some components were introduced at different
+// @[13]@| points along that historical time line.
+// @[14]@| Distributed under the terms and conditions of the BSD-3-Clause
+// @[15]@| License as described in the accompanying LICENSE file distributed
+// @[16]@| with GMA.
+// @[17]@|
 // @[20]@| Redistribution and use in source and binary forms, with or without
 // @[21]@| modification, are permitted provided that the following conditions
 // @[22]@| are met:
