@@ -52,10 +52,10 @@ import (
 // and protocol versions supported by this code.
 //
 const (
-	GMAMapperProtocol=412            // @@##@@ auto-configured
-	GoVersionNumber="5.16.0" // @@##@@ auto-configured
+	GMAMapperProtocol           = 413      // @@##@@ auto-configured
+	GoVersionNumber             = "5.17.0" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
-	MaximumSupportedMapProtocol = 412
+	MaximumSupportedMapProtocol = 413
 )
 
 func init() {
@@ -201,6 +201,10 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 		if e, ok := data.(EchoMessagePayload); ok {
 			return c.sendJSON("ECHO", e)
 		}
+	case FilterCoreData:
+		if fi, ok := data.(FilterCoreDataMessagePayload); ok {
+			return c.sendJSON("CORE/", fi)
+		}
 	case FilterDicePresets:
 		if fi, ok := data.(FilterDicePresetsMessagePayload); ok {
 			return c.sendJSON("DD/", fi)
@@ -300,6 +304,10 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 		}
 	case Protocol:
 		return c.sendln("PROTOCOL", fmt.Sprintf("%v", data))
+	case QueryCoreData:
+		if q, ok := data.(QueryCoreDataMessagePayload); ok {
+			return c.sendJSON("CORE", q)
+		}
 	case QueryDicePresets:
 		return c.sendln("DR", "")
 	case QueryImage:
@@ -342,6 +350,10 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 	case UpdateClock:
 		if uc, ok := data.(UpdateClockMessagePayload); ok {
 			return c.sendJSON("CS", uc)
+		}
+	case UpdateCoreData:
+		if uc, ok := data.(UpdateCoreDataMessagePayload); ok {
+			return c.sendJSON("CORE=", uc)
 		}
 	case UpdateDicePresets:
 		if dd, ok := data.(UpdateDicePresetsMessagePayload); ok {
@@ -617,6 +629,36 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = UpdatePeerList
+		return p, nil
+
+	case "CORE":
+		p := QueryCoreDataMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
+		p.messageType = QueryCoreData
+		return p, nil
+
+	case "CORE/":
+		p := FilterCoreDataMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
+		p.messageType = FilterCoreData
+		return p, nil
+
+	case "CORE=":
+		p := UpdateCoreDataMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
+		p.messageType = UpdateCoreData
 		return p, nil
 
 	case "CS":

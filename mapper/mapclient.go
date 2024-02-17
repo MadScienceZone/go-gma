@@ -674,6 +674,7 @@ const (
 	DefineDicePresetDelegates
 	Denied
 	Echo
+	FilterCoreData
 	FilterDicePresets
 	FilterImages
 	Granted
@@ -692,6 +693,7 @@ const (
 	Polo
 	Priv
 	Protocol
+	QueryCoreData
 	QueryDicePresets
 	QueryImage
 	QueryPeers
@@ -704,6 +706,7 @@ const (
 	SyncChat
 	Toolbar
 	UpdateClock
+	UpdateCoreData
 	UpdateDicePresets
 	UpdateInitiative
 	UpdateObjAttributes
@@ -738,6 +741,7 @@ var ServerMessageByName = map[string]ServerMessage{
 	"DefineDicePresetDelegates":   DefineDicePresetDelegates,
 	"Denied":                      Denied,
 	"Echo":                        Echo,
+	"FilterCoreData":              FilterCoreData,
 	"FilterDicePresets":           FilterDicePresets,
 	"FilterImages":                FilterImages,
 	"Granted":                     Granted,
@@ -756,6 +760,7 @@ var ServerMessageByName = map[string]ServerMessage{
 	"Polo":                        Polo,
 	"Priv":                        Priv,
 	"Protocol":                    Protocol,
+	"QueryCoreData":               QueryCoreData,
 	"QueryDicePresets":            QueryDicePresets,
 	"QueryImage":                  QueryImage,
 	"QueryPeers":                  QueryPeers,
@@ -768,6 +773,7 @@ var ServerMessageByName = map[string]ServerMessage{
 	"SyncChat":                    SyncChat,
 	"Toolbar":                     Toolbar,
 	"UpdateClock":                 UpdateClock,
+	"UpdateCoreData":              UpdateCoreData,
 	"UpdateDicePresets":           UpdateDicePresets,
 	"UpdateInitiative":            UpdateInitiative,
 	"UpdateObjAttributes":         UpdateObjAttributes,
@@ -1425,6 +1431,119 @@ func (c *Connection) Toolbar(enabled bool) error {
 type CommentMessagePayload struct {
 	BaseMessagePayload
 	Text string
+}
+
+//   ____               ____        _
+//  / ___|___  _ __ ___|  _ \  __ _| |_ __ _
+// | |   / _ \| '__/ _ \ | | |/ _` | __/ _` |
+// | |__| (_) | | |  __/ |_| | (_| | || (_| |
+//  \____\___/|_|  \___|____/ \__,_|\__\__,_|
+//
+// Functions related to the retrieval of core SRD data from
+// the server.
+//
+
+//
+// FilterCoreDataMessagePayload holds the request to the server to change
+// player visibility of core data items.
+//
+type FilterCoreDataMessagePayload struct {
+	BaseMessagePayload
+	InvertSelection bool `json:",omitempty"`
+	IsHidden        bool `json:",omitempty"`
+	Type            string
+	Filter          string
+}
+
+//
+// FilterCoreData requests that the server change the visibility of all core database items
+// of the specified type whose code matches the filter regular expression. If isHidden
+// is true, those items will be visible to players; otherwise they will be hidden from
+// player view.
+//
+func (c *Connection) FilterCoreData(itemType, filterRegex string, isHidden bool) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(FilterCoreData, FilterCoreDataMessagePayload{
+		IsHidden: isHidden,
+		Type:     itemType,
+		Filter:   filterRegex,
+	})
+}
+
+//
+// FilterCoreDataInverted is like FilterCoreData, but it affects all core database items
+// of the given type which do NOT match the filter expression.
+//
+func (c *Connection) FilterCoreDataInverted(itemType, filterRegex string, isHidden bool) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(FilterCoreData, FilterCoreDataMessagePayload{
+		IsHidden:        isHidden,
+		Type:            itemType,
+		Filter:          filterRegex,
+		InvertSelection: true,
+	})
+}
+
+//
+// QueryCoreDataMessagePayload holds the request for a core data item.
+//
+type QueryCoreDataMessagePayload struct {
+	BaseMessagePayload
+	Type      string
+	Code      string `json:",omitempty"`
+	Name      string `json:",omitempty"`
+	RequestID string `json:",omitempty"`
+}
+
+//
+// QueryCoreData asks the server to retrieve an item from the core database
+// of the specified type whose name and/or code match the strings given here.
+// The server will respond with an UpdateCoreData message.
+//
+func (c *Connection) QueryCoreData(itemType, code, name string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(QueryCoreData, QueryCoreDataMessagePayload{
+		Type: itemType,
+		Code: code,
+		Name: name,
+	})
+}
+
+//
+// QueryCoreDataWithID is like QueryCoreData but it also sends an arbitrary ID string
+// which will be returned in the server's reply.
+//
+func (c *Connection) QueryCoreDataWithID(itemType, code, name, requestID string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(QueryCoreData, QueryCoreDataMessagePayload{
+		Type:      itemType,
+		Code:      code,
+		Name:      name,
+		RequestID: requestID,
+	})
+}
+
+//
+// UpdateCoreDataMessagePayload contains the server response to a QueryCoreData request.
+//
+type UpdateCoreDataMessagePayload struct {
+	BaseMessagePayload
+	// If NoSuchEntry is true, none of the other fields should be considered valid except RequestID.
+	NoSuchEntry bool   `json:",omitempty"`
+	IsHidden    bool   `json:",omitempty"`
+	IsLocal     bool   `json:",omitempty"`
+	Code        string `json:",omitempty"`
+	Name        string `json:",omitempty"`
+	Type        string `json:",omitempty"`
+	RequestID   string `json:",omitempty"`
 }
 
 //  ____             _          _
@@ -2320,10 +2439,10 @@ func (c *Connection) UpdateClock(absolute, relative int64, keepRunning bool) err
 //
 type UpdateDicePresetsMessagePayload struct {
 	BaseMessagePayload
-	Presets   []dice.DieRollPreset
-	For       string   `json:",omitempty"`
+	Presets     []dice.DieRollPreset
+	For         string   `json:",omitempty"`
 	DelegateFor []string `json:",omitempty"`
-	Delegates []string `json:",omitempty"`
+	Delegates   []string `json:",omitempty"`
 }
 
 //
@@ -2467,6 +2586,10 @@ type UpdateProgressMessagePayload struct {
 	// and should not expect further updates about it.
 	IsDone bool `json:",omitempty"`
 
+	// If true, this is not an operation progress meter, but is a view of
+	// the status of a running timer.
+	IsTimer bool `json:",omitempty"`
+
 	// The current progress toward MaxValue.
 	Value int
 
@@ -2481,6 +2604,9 @@ type UpdateProgressMessagePayload struct {
 
 	// Description of the operation in progress, suitable for display.
 	Title string `json:",omitempty"`
+
+	// If this relates to specific characters, their names will be listed here.
+	Targets []string `json:",omitempty"`
 }
 
 //
@@ -3418,6 +3544,11 @@ func (c *Connection) listen(done chan error) {
 				ch <- cmd
 			}
 
+		case UpdateCoreDataMessagePayload:
+			if ch, ok := c.Subscriptions[UpdateCoreData]; ok {
+				ch <- cmd
+			}
+
 		case UpdateProgressMessagePayload:
 			if ch, ok := c.Subscriptions[UpdateProgress]; ok {
 				ch <- cmd
@@ -3569,6 +3700,7 @@ func (c *Connection) filterSubscriptions() error {
 		//DefineDicePresets (client)
 		//DefineDicePresetDelegates (client)
 		//Denied (forbidden)
+		//FilterCoreData (client)
 		//FilterDicePresets (client)
 		//FilterImages (client)
 		//Granted (forbidden)
@@ -3576,6 +3708,7 @@ func (c *Connection) filterSubscriptions() error {
 		//Polo (client)
 		//Priv (mandatory)
 		//Protocol (forbidden)
+		//QueryCoreData (client)
 		//QueryDicePresets (client)
 		//QueryPeers (client)
 		//Ready (forbidden)
@@ -3638,6 +3771,8 @@ func (c *Connection) filterSubscriptions() error {
 			subList = append(subList, "TB")
 		case UpdateClock:
 			subList = append(subList, "CS")
+		case UpdateCoreData:
+			subList = append(subList, "CORE")
 		case UpdateDicePresets:
 			subList = append(subList, "DD=")
 		case UpdateInitiative:

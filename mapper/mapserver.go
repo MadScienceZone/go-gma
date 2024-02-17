@@ -404,8 +404,8 @@ mainloop:
 				case AddCharacterMessagePayload, ChallengeMessagePayload, ProtocolMessagePayload,
 					UpdateDicePresetsMessagePayload, DeniedMessagePayload, GrantedMessagePayload,
 					MarcoMessagePayload, PrivMessagePayload, ReadyMessagePayload, RedirectMessagePayload,
-					RollResultMessagePayload, UpdatePeerListMessagePayload, UpdateVersionsMessagePayload,
-					WorldMessagePayload:
+					RollResultMessagePayload, UpdateCoreDataMessagePayload, UpdatePeerListMessagePayload,
+					UpdateVersionsMessagePayload, WorldMessagePayload:
 					c.Conn.Send(Priv, PrivMessagePayload{
 						Command: p.RawMessage(),
 						Reason:  "I get to send that command, not you.",
@@ -444,6 +444,17 @@ mainloop:
 				case EchoMessagePayload:
 					p.ReceivedTime = time.Now()
 					c.Server.HandleServerMessage(p, c)
+
+				case FilterCoreDataMessagePayload:
+					c.Conn.Send(Comment, CommentMessagePayload{
+						Text: "FilterCoreData message ignored since the core database is not yet implemented.",
+					})
+
+				case QueryCoreDataMessagePayload:
+					c.Conn.Send(UpdateCoreData, UpdateCoreDataMessagePayload{
+						RequestID:   p.RequestID,
+						NoSuchEntry: true,
+					})
 
 				default:
 					c.Server.HandleServerMessage(packet, c)
