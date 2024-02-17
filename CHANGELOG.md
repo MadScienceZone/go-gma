@@ -1,16 +1,16 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.16.0                <!-- @@##@@ -->
- * Effective Date: 27-Jan-2024			<!-- @@##@@ -->
+ * This Package Version: 5.17.0                <!-- @@##@@ -->
+ * Effective Date: 17-Feb-2024			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 6.13		<!-- @@##@@ -->
- * GMA Mapper Version: 4.22-beta		<!-- @@##@@ -->
- * GMA Mapper Protocol: 412		<!-- @@##@@ -->
+ * GMA Core API Library Version: 6.15.1		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.22.3		<!-- @@##@@ -->
+ * GMA Mapper Protocol: 413		<!-- @@##@@ -->
  * GMA Mapper File Format: 23		<!-- @@##@@ -->
- * GMA Mapper Preferences File Format: 0 <!-- @@##@@ -->
- * GMA User Preferences File Format: 0 <!-- @@##@@ -->
+ * GMA Mapper Preferences File Format: 7 <!-- @@##@@ -->
+ * GMA User Preferences File Format: 2 <!-- @@##@@ -->
 
 # Notice
 When upgrading an existing server to version 5.15.0 or later, be sure to run `scripts/upgrade-5.15.0` on each database file to update it to the new die-roll preset delegate capability.
@@ -18,6 +18,12 @@ When upgrading an existing server to version 5.15.0 or later, be sure to run `sc
 In addition, if your server didn't have the following update installed previously, do it as well:
 
 When upgrading an existing server to version 5.13.1 or later, be sure to run `scripts/upgrade-5.13.1` on each database file to update it to the new chat history encoding scheme introduced at 5.13.1. If you don't, the server will ignore some or all of your historic chat and die roll messages. Alternatively, you can delete the old database and make a new one with the current server.
+
+## v5.17.0
+### Enhanced
+ * Implements protocol 413.
+    * Expands fields in the `PROGRESS` message to track game timers as well as operation progress.
+    * Adds message definitions for `CORE`, `CORE/`, and `CORE=` messages. Note that the core database is not yet implemented, so while the protocol messages are understood, no actual data can be retrieved using them yet.
 
 ## v5.16.0
 ### Enhanced

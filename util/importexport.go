@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __    _______     _______        #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  (  ____ \   (  __   )       #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) | (    \/   | (  )  |       #
-# | |      | || || || (___) | Assistant | (____        | | | (____     | | /   |       #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | | (_____ \    | (/ /) |       #
-# | | \_  )| |   | || (   ) |                 ) )      | |       ) )   |   / | |       #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_/\____) ) _ |  (__) |       #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/\______/ (_)(_______)       #
+#  _______  _______  _______             _______      __    ______      _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  / ___  \    (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) \/   )  )   | (  )  |       #
+# | |      | || || || (___) | Assistant | (____        | |     /  /    | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |    /  /     | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )      | |   /  /      |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_ /  /     _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/ \_/     (_)(_______)       #
 #                                                                                      #
 ########################################################################################
 #
@@ -4636,15 +4636,16 @@ func ExportSpells(fp *os.File, db *sql.DB, prefs *CorePreferences) error {
 }
 
 /*
-# @[00]@| Go-GMA 5.15.0
+# @[00]@| Go-GMA 5.17.0
 # @[01]@|
-# @[10]@| Copyright © 1992–2023 by Steven L. Willoughby (AKA MadScienceZone)
+# @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
-# @[12]@| Aloha, Oregon, USA. All Rights Reserved.
-# @[13]@| Distributed under the terms and conditions of the BSD-3-Clause
-# @[14]@| License as described in the accompanying LICENSE file distributed
-# @[15]@| with GMA.
-# @[16]@|
+# @[12]@| Aloha, Oregon, USA. All Rights Reserved. Some components were introduced at different
+# @[13]@| points along that historical time line.
+# @[14]@| Distributed under the terms and conditions of the BSD-3-Clause
+# @[15]@| License as described in the accompanying LICENSE file distributed
+# @[16]@| with GMA.
+# @[17]@|
 # @[20]@| Redistribution and use in source and binary forms, with or without
 # @[21]@| modification, are permitted provided that the following conditions
 # @[22]@| are met:
