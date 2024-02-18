@@ -200,7 +200,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.17.0" //@@##@@
+const GoVersionNumber = "5.17.0" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -349,6 +349,7 @@ func main() {
 			mapper.RollResult,
 			mapper.Toolbar,
 			mapper.UpdateClock,
+			mapper.UpdateCoreData,
 			mapper.UpdateDicePresets,
 			mapper.UpdateInitiative,
 			mapper.UpdateObjAttributes,
@@ -963,6 +964,25 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"relative", cal.DeltaString(m.Relative, false)},
 		)
 
+	case mapper.UpdateCoreDataMessagePayload:
+		if m.IsHidden {
+			printFields(mono, "UpdateCoreData reply suppressed by GM",
+				fieldDesc{"RequestID", m.RequestID},
+			)
+		} else if m.NoSuchEntry {
+			printFields(mono, "UpdateCoreData no such entry found in database",
+				fieldDesc{"RequestID", m.RequestID},
+			)
+		} else {
+			printFields(mono, "UpdateCoreData",
+				fieldDesc{"IsLocal", m.IsLocal},
+				fieldDesc{"Code", m.Code},
+				fieldDesc{"Name", m.Name},
+				fieldDesc{"Type", m.Type},
+				fieldDesc{"Data", "..."},
+			)
+		}
+
 	case mapper.UpdateDicePresetsMessagePayload:
 		printFields(mono, "UpdateDicePresets",
 			fieldDesc{"for", m.For},
@@ -1045,13 +1065,24 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 		}
 
 	case mapper.UpdateProgressMessagePayload:
-		printFields(mono, "UpdateProgress",
-			fieldDesc{"ID", m.OperationID},
-			fieldDesc{"title", m.Title},
-			fieldDesc{"value", m.Value},
-			fieldDesc{"max", m.MaxValue},
-			fieldDesc{"done", m.IsDone},
-		)
+		if m.IsTimer {
+			printFields(mono, "UpdateProgress(Timer)",
+				fieldDesc{"ID", m.OperationID},
+				fieldDesc{"title", m.Title},
+				fieldDesc{"targets", m.Targets},
+				fieldDesc{"value", m.Value},
+				fieldDesc{"max", m.MaxValue},
+				fieldDesc{"done", m.IsDone},
+			)
+		} else {
+			printFields(mono, "UpdateProgress",
+				fieldDesc{"ID", m.OperationID},
+				fieldDesc{"title", m.Title},
+				fieldDesc{"value", m.Value},
+				fieldDesc{"max", m.MaxValue},
+				fieldDesc{"done", m.IsDone},
+			)
+		}
 
 	case mapper.UpdateStatusMarkerMessagePayload:
 		printFields(mono, "UpdateStatusMarker",

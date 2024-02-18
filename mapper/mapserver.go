@@ -446,9 +446,7 @@ mainloop:
 					c.Server.HandleServerMessage(p, c)
 
 				case FilterCoreDataMessagePayload:
-					c.Conn.Send(Comment, CommentMessagePayload{
-						Text: "FilterCoreData message ignored since the core database is not yet implemented.",
-					})
+					c.Conn.Send(Comment, "FilterCoreData message ignored since the core database is not yet implemented.")
 
 				case QueryCoreDataMessagePayload:
 					c.Conn.Send(UpdateCoreData, UpdateCoreDataMessagePayload{
