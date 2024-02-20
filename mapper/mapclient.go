@@ -694,6 +694,7 @@ const (
 	Priv
 	Protocol
 	QueryCoreData
+	QueryCoreIndex
 	QueryDicePresets
 	QueryImage
 	QueryPeers
@@ -707,6 +708,7 @@ const (
 	Toolbar
 	UpdateClock
 	UpdateCoreData
+	UpdateCoreIndex
 	UpdateDicePresets
 	UpdateInitiative
 	UpdateObjAttributes
@@ -761,6 +763,7 @@ var ServerMessageByName = map[string]ServerMessage{
 	"Priv":                        Priv,
 	"Protocol":                    Protocol,
 	"QueryCoreData":               QueryCoreData,
+	"QueryCoreIndex":              QueryCoreIndex,
 	"QueryDicePresets":            QueryDicePresets,
 	"QueryImage":                  QueryImage,
 	"QueryPeers":                  QueryPeers,
@@ -774,6 +777,7 @@ var ServerMessageByName = map[string]ServerMessage{
 	"Toolbar":                     Toolbar,
 	"UpdateClock":                 UpdateClock,
 	"UpdateCoreData":              UpdateCoreData,
+	"UpdateCoreIndex":             UpdateCoreIndex,
 	"UpdateDicePresets":           UpdateDicePresets,
 	"UpdateInitiative":            UpdateInitiative,
 	"UpdateObjAttributes":         UpdateObjAttributes,
@@ -1544,6 +1548,95 @@ type UpdateCoreDataMessagePayload struct {
 	Name        string `json:",omitempty"`
 	Type        string `json:",omitempty"`
 	RequestID   string `json:",omitempty"`
+}
+
+//
+// QueryCoreIndexMessagePayload holds the request for a core data index.
+//
+type QueryCoreIndexMessagePayload struct {
+	BaseMessagePayload
+	Type      string
+	CodeRegex string    `json:",omitempty"`
+	NameRegex string    `json:",omitempty"`
+	Since     time.Time `json:",omitempty"`
+	RequestID string    `json:",omitempty"`
+}
+
+//
+// QueryCoreIndex asks the server to retrieve all the names and codes for
+// a type of entry from the database.
+//
+func (c *Connection) QueryCoreIndex(itemType, codeRegex, nameRegex string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(QueryCoreIndex, QueryCoreIndexMessagePayload{
+		Type:      itemType,
+		CodeRegex: codeRegex,
+		NameRegex: nameRegex,
+	})
+}
+
+//
+// QueryCoreIndexWithID is like QueryCoreIndex but also sends an arbitrary ID string
+// which will be returned in the server's reply.
+//
+func (c *Connection) QueryCoreIndexWithID(itemType, codeRegex, nameRegex, requestID string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(QueryCoreIndex, QueryCoreIndexMessagePayload{
+		Type:      itemType,
+		CodeRegex: codeRegex,
+		NameRegex: nameRegex,
+		RequestID: requestID,
+	})
+}
+
+//
+// QueryCoreIndexSince is like QueryCoreIndex but limits the responses to those modified since a given date.
+//
+func (c *Connection) QueryCoreIndexSince(itemType, codeRegex, nameRegex string, since time.Time) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(QueryCoreIndex, QueryCoreIndexMessagePayload{
+		Type:      itemType,
+		CodeRegex: codeRegex,
+		NameRegex: nameRegex,
+		Since:     since,
+	})
+}
+
+//
+// QueryCoreIndexSinceWithID is like QueryCoreIndex but limits the responses to those modified since a given date,
+// and sends a requestID.
+//
+func (c *Connection) QueryCoreIndexSinceWithID(itemType, codeRegex, nameRegex string, since time.Time, requestID string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(QueryCoreIndex, QueryCoreIndexMessagePayload{
+		Type:      itemType,
+		CodeRegex: codeRegex,
+		NameRegex: nameRegex,
+		Since:     since,
+		RequestID: requestID,
+	})
+}
+
+//
+// UpdateCoreIndexMessagePayload contains the server response to a QueryCoreIndex request.
+//
+type UpdateCoreIndexMessagePayload struct {
+	BaseMessagePayload
+	IsDone    bool   `json:",omitempty"`
+	N         int    `json:",omitempty"`
+	Of        int    `json:",omitempty"`
+	Code      string `json:",omitempty"`
+	Name      string `json:",omitempty"`
+	Type      string `json:",omitempty"`
+	RequestID string `json:",omitempty"`
 }
 
 //  ____             _          _
@@ -3549,6 +3642,11 @@ func (c *Connection) listen(done chan error) {
 				ch <- cmd
 			}
 
+		case UpdateCoreIndexMessagePayload:
+			if ch, ok := c.Subscriptions[UpdateCoreIndex]; ok {
+				ch <- cmd
+			}
+
 		case UpdateProgressMessagePayload:
 			if ch, ok := c.Subscriptions[UpdateProgress]; ok {
 				ch <- cmd
@@ -3772,7 +3870,9 @@ func (c *Connection) filterSubscriptions() error {
 		case UpdateClock:
 			subList = append(subList, "CS")
 		case UpdateCoreData:
-			subList = append(subList, "CORE")
+			subList = append(subList, "CORE=")
+		case UpdateCoreIndex:
+			subList = append(subList, "COREIDX=")
 		case UpdateDicePresets:
 			subList = append(subList, "DD=")
 		case UpdateInitiative:

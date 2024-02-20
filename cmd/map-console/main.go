@@ -350,6 +350,7 @@ func main() {
 			mapper.Toolbar,
 			mapper.UpdateClock,
 			mapper.UpdateCoreData,
+			mapper.UpdateCoreIndex,
 			mapper.UpdateDicePresets,
 			mapper.UpdateInitiative,
 			mapper.UpdateObjAttributes,
@@ -982,6 +983,16 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 				fieldDesc{"Data", "..."},
 			)
 		}
+
+	case mapper.UpdateCoreIndexMessagePayload:
+		printFields(mono, "UpdateCoreIndex",
+			fieldDesc{"Type", m.Type},
+			fieldDesc{"N", m.N},
+			fieldDesc{"Of", m.Of},
+			fieldDesc{"Name", m.Name},
+			fieldDesc{"Code", m.Code},
+			fieldDesc{"IsDone", m.IsDone},
+		)
 
 	case mapper.UpdateDicePresetsMessagePayload:
 		printFields(mono, "UpdateDicePresets",

@@ -404,7 +404,8 @@ mainloop:
 				case AddCharacterMessagePayload, ChallengeMessagePayload, ProtocolMessagePayload,
 					UpdateDicePresetsMessagePayload, DeniedMessagePayload, GrantedMessagePayload,
 					MarcoMessagePayload, PrivMessagePayload, ReadyMessagePayload, RedirectMessagePayload,
-					RollResultMessagePayload, UpdateCoreDataMessagePayload, UpdatePeerListMessagePayload,
+					RollResultMessagePayload, UpdateCoreDataMessagePayload, UpdateCoreIndexMessagePayload,
+					UpdatePeerListMessagePayload,
 					UpdateVersionsMessagePayload, WorldMessagePayload:
 					c.Conn.Send(Priv, PrivMessagePayload{
 						Command: p.RawMessage(),
@@ -452,6 +453,15 @@ mainloop:
 					c.Conn.Send(UpdateCoreData, UpdateCoreDataMessagePayload{
 						RequestID:   p.RequestID,
 						NoSuchEntry: true,
+					})
+
+				case QueryCoreIndexMessagePayload:
+					c.Conn.Send(UpdateCoreIndex, UpdateCoreIndexMessagePayload{
+						RequestID: p.RequestID,
+						Type:      p.Type,
+						IsDone:    true,
+						N:         0,
+						Of:        0,
 					})
 
 				default:

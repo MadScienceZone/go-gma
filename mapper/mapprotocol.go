@@ -52,8 +52,8 @@ import (
 // and protocol versions supported by this code.
 //
 const (
-	GMAMapperProtocol=413      // @@##@@ auto-configured
-	GoVersionNumber="5.17.0" // @@##@@ auto-configured
+	GMAMapperProtocol           = 413      // @@##@@ auto-configured
+	GoVersionNumber             = "5.17.0" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
 	MaximumSupportedMapProtocol = 413
 )
@@ -308,6 +308,10 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 		if q, ok := data.(QueryCoreDataMessagePayload); ok {
 			return c.sendJSON("CORE", q)
 		}
+	case QueryCoreIndex:
+		if q, ok := data.(QueryCoreIndexMessagePayload); ok {
+			return c.sendJSON("COREIDX", q)
+		}
 	case QueryDicePresets:
 		return c.sendln("DR", "")
 	case QueryImage:
@@ -354,6 +358,10 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 	case UpdateCoreData:
 		if uc, ok := data.(UpdateCoreDataMessagePayload); ok {
 			return c.sendJSON("CORE=", uc)
+		}
+	case UpdateCoreIndex:
+		if uc, ok := data.(UpdateCoreIndexMessagePayload); ok {
+			return c.sendJSON("COREIDX=", uc)
 		}
 	case UpdateDicePresets:
 		if dd, ok := data.(UpdateDicePresetsMessagePayload); ok {
@@ -641,6 +649,16 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 		p.messageType = QueryCoreData
 		return p, nil
 
+	case "COREIDX":
+		p := QueryCoreIndexMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
+		p.messageType = QueryCoreIndex
+		return p, nil
+
 	case "CORE/":
 		p := FilterCoreDataMessagePayload{BaseMessagePayload: payload}
 		if hasJsonPart {
@@ -659,6 +677,16 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = UpdateCoreData
+		return p, nil
+
+	case "COREIDX=":
+		p := UpdateCoreIndexMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
+		p.messageType = UpdateCoreIndex
 		return p, nil
 
 	case "CS":
