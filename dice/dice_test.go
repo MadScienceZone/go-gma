@@ -26,6 +26,7 @@ package dice
 import (
 	"log"
 	"sort"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -514,6 +515,58 @@ func TestDicePercentile(t *testing.T) {
 		}
 		if label != "" {
 			t.Fatalf("test #%d label was %v, expected it to be empty", i, label)
+		}
+	}
+}
+
+func TestDicePermutations(t *testing.T) {
+	d, err := NewDieRoller(WithSeed(12345))
+	if err != nil {
+		t.Fatalf("Error creating new DieRoller: %v", err)
+	}
+
+	type testcase struct {
+		Roll string
+		PermutedRolls []string
+	}
+
+	testcases := []testcase{
+		{Roll: "2+{1/2/3/4}/{5/6}", PermutedRolls: []string{
+			"[3] = 2+1 /5",
+			"[3] = 2+1 /6",
+			"[4] = 2+2 /5",
+			"[4] = 2+2 /6",
+			"[5] = 2+3 /5",
+			"[5] = 2+3 /6",
+			"[6] = 2+4 /5",
+			"[6] = 2+4 /6",
+		}},
+		{Roll: "2+{1/2//3/4}", PermutedRolls: []string{
+			"[2] = 2+2÷3",
+			"[3] = 2+1",
+			"[6] = 2+4",
+		}},
+	}
+
+	for i, test := range testcases {
+		_, results, err := d.DoRoll(test.Roll)
+		if err != nil {
+			t.Fatalf("test case %d: DoRoll: %v", i, err)
+		}
+		var pr []string
+		for ri, r := range results {
+			if r.InvalidRequest {
+				t.Fatalf("test case %d, result %d: invalid request", i, ri)
+			}
+			s, err := r.Details.Text()
+			if err != nil {
+				t.Fatalf("test case %d, result %d: Error getting detail text: %v", i, ri, err)
+			}
+			pr = append(pr, s)
+		}
+		slices.Sort(pr)
+		if !slices.Equal(pr, test.PermutedRolls) {
+			t.Fatalf("test case %d results don't match: %q", i, pr)
 		}
 	}
 }
