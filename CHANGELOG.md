@@ -24,6 +24,11 @@ When upgrading an existing server to version 5.13.1 or later, be sure to run `sc
  * Implements protocol 413.
     * Expands fields in the `PROGRESS` message to track game timers as well as operation progress.
     * Adds message definitions for `CORE`, `CORE/`, and `CORE=` messages. Note that the core database is not yet implemented, so while the protocol messages are understood, no actual data can be retrieved using them yet.
+### Fixed
+ * Corrects issues with die-roll syntax parsing.
+    * `//` inside a `{ ... / ... }` permutation was confused as a separator. It is now correctly seen as a division operator.
+    * Labels are now allowed where operators are expected, so something like `(2+2) bonus` will now work as expected.
+    * The definition of a label has been restricted since the looser definition had a tendency to swallow invalid expressions as labels. A label must now be a space-separated series of one or more words, where a word begins with a Unicode letter or underscore followed by zero or more Unicode letters, digits, underscores, periods (full stops), and/or commas.
 
 ## v5.16.0
 ### Enhanced
