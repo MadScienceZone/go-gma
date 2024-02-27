@@ -1762,6 +1762,24 @@ func TestDiceStructured(t *testing.T) {
 				{Type: "label", Value: "cold"},
 			}},
 		}},
+		// 67
+		{Roll: "(2+3) fire+(3)force", Reslist: []StructuredResult{
+			{Result: 8, Details: []StructuredDescription{
+				{Type: "result", Value: "8"},
+				{Type: "separator", Value: "="},
+				{Type: "begingroup", Value: "("},
+				{Type: "constant", Value: "2"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "3"},
+				{Type: "endgroup", Value: ")"},
+				{Type: "label", Value: "fire"},
+				{Type: "operator", Value: "+"},
+				{Type: "begingroup", Value: "("},
+				{Type: "constant", Value: "3"},
+				{Type: "endgroup", Value: ")"},
+				{Type: "label", Value: "force"},
+			}},
+		}},
 
 		// 66
 		/* test removed because the cartesian product routine doesn't return

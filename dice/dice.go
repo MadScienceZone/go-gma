@@ -527,6 +527,35 @@ type dieComponent interface {
 	naturalRoll() (int, int)
 }
 
+// dieLabel represents a bare label appearing outside the normal expression context.
+type dieLabel string
+
+func (l dieLabel) compute(s *evalStack) error {
+	return nil
+}
+
+func (l dieLabel) computeMaxValue(s *evalStack) error {
+	return nil
+}
+
+func (l dieLabel) lastValue() int {
+	return 0
+}
+
+func (l dieLabel) description() string {
+	return string(l)
+}
+
+func (l dieLabel) structuredDescribeRoll(resultSuppressed bool) []StructuredDescription {
+	return []StructuredDescription{
+		StructuredDescription{Type: "label", Value: string(l)},
+	}
+}
+
+func (l dieLabel) naturalRoll() (int, int) {
+	return 0, 0
+}
+
 // dieOperator represents an algebraic operator in our expression.
 type dieOperator rune
 
@@ -1063,6 +1092,7 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 				}
 
 				if !reIsOp.MatchString(part) {
+					// TODO If it's a bare label, allow it here
 					return nil, fmt.Errorf("expected operator before \"%v\" in die-roll expression", part)
 				}
 
