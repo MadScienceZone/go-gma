@@ -1026,7 +1026,7 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 		reIsOp := regexp.MustCompile(`^[-+*×÷()≤≥]$`)
 		reIsDie := regexp.MustCompile(`\d+\s*[dD]\d*\d+`)
 		reIsWS := regexp.MustCompile(`^\s+$`)
-		reIsBareLabel := regexp.MustCompile(`^\s*[\p{L}_][\p{L}\p{N}_]*\s*$`)
+		reIsBareLabel := regexp.MustCompile(`^\s*([\p{L}_][\p{L}\p{N}_,.]*\s*)+\s*$`)
 		reConstant := regexp.MustCompile(`^\s*(\d+)\s*(.*?)\s*$`)
 		//                                  max?    numerator    denominator       sides          best/worst         rerolls   label
 		//                                   _1_    __2__          __3__            __4___       _____5_____         __6__     __7__
@@ -1243,7 +1243,7 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 				if !reIsBareLabel.MatchString(xValues[7]) {
 					return nil, fmt.Errorf("label \"%v\" has illegal characters", xValues[7])
 				}
-				ds.Label = xValues[7]
+				ds.Label = strings.TrimSpace(xValues[7])
 			}
 			d.multiDice = append(d.multiDice, ds)
 		}

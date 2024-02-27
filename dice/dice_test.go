@@ -1785,6 +1785,45 @@ func TestDiceStructured(t *testing.T) {
 		{Roll: "(2+3) d10+(3)force", ErrorExpected: true},
 		// 69
 		{Roll: "3d6 label.here!", ErrorExpected: true},
+		// 70
+		{Roll: "2d10+12 this is a label, too.", Reslist: []StructuredResult{
+			{Result: 25, Details: []StructuredDescription{
+				{Type: "result", Value: "25"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "2d10"},
+				{Type: "subtotal", Value: "13"},
+				{Type: "roll", Value: "8,5"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "12"},
+				{Type: "label", Value: "this is a label, too."},
+			}},
+		}},
+		// 71
+		{Roll: "2 this is a label, too.", Reslist: []StructuredResult{
+			{Result: 2, Details: []StructuredDescription{
+				{Type: "result", Value: "2"},
+				{Type: "separator", Value: "="},
+				{Type: "constant", Value: "2"},
+				{Type: "label", Value: "this is a label, too."},
+			}},
+		}},
+		// 72
+		{Roll: "(2+1) this is a label, too.", Reslist: []StructuredResult{
+			{Result: 3, Details: []StructuredDescription{
+				{Type: "result", Value: "3"},
+				{Type: "separator", Value: "="},
+				{Type: "begingroup", Value: "("},
+				{Type: "constant", Value: "2"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "1"},
+				{Type: "endgroup", Value: ")"},
+				{Type: "label", Value: "this is a label, too."},
+			}},
+		}},
+		// 73
+		{Roll: "3 5label", ErrorExpected: true},
+		// 74
+		{Roll: "3 .5label", ErrorExpected: true},
 	}
 
 	for i, test := range testcases {
