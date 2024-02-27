@@ -25,8 +25,8 @@ package dice
 
 import (
 	"log"
-	"sort"
 	"slices"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -526,20 +526,20 @@ func TestDicePermutations(t *testing.T) {
 	}
 
 	type testcase struct {
-		Roll string
+		Roll          string
 		PermutedRolls []string
 	}
 
 	testcases := []testcase{
-		{Roll: "2+{1/2/3/4}/{5/6}", PermutedRolls: []string{
-			"[3] = 2+1 /5",
-			"[3] = 2+1 /6",
-			"[4] = 2+2 /5",
-			"[4] = 2+2 /6",
-			"[5] = 2+3 /5",
-			"[5] = 2+3 /6",
-			"[6] = 2+4 /5",
-			"[6] = 2+4 /6",
+		{Roll: "2+{1/2/3/4}//{5/6}", PermutedRolls: []string{
+			"[2] = 2+1÷5",
+			"[2] = 2+1÷6",
+			"[2] = 2+2÷5",
+			"[2] = 2+2÷6",
+			"[2] = 2+3÷5",
+			"[2] = 2+3÷6",
+			"[2] = 2+4÷5",
+			"[2] = 2+4÷6",
 		}},
 		{Roll: "2+{1/2//3/4}", PermutedRolls: []string{
 			"[2] = 2+2÷3",
@@ -579,8 +579,9 @@ func TestDiceStructured(t *testing.T) {
 	}
 
 	type testcase struct {
-		Roll    string
-		Reslist []StructuredResult
+		Roll          string
+		Reslist       []StructuredResult
+		ErrorExpected bool
 	}
 
 	testcases := []testcase{
@@ -1780,140 +1781,28 @@ func TestDiceStructured(t *testing.T) {
 				{Type: "label", Value: "force"},
 			}},
 		}},
-
-		// 66
-		/* test removed because the cartesian product routine doesn't return
-		   the same ordering of values consistently
-			{Roll: "d20{+15/+10/+5}+4|c18", Reslist: []StructuredResult{
-				{Result: 27, Details: []StructuredDescription{
-					{Type: "result", Value: "27"},
-					{Type: "separator", Value: "="},
-					{Type: "diespec", Value: "1d20"},
-					{Type: "roll", Value: "8"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "15"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "4"},
-					{Type: "moddelim", Value: "|"},
-					{Type: "critspec", Value: "c18"},
-				}},
-				{Result: 30, Details: []StructuredDescription{
-					{Type: "result", Value: "30"},
-					{Type: "separator", Value: "="},
-					{Type: "diespec", Value: "1d20"},
-					{Type: "roll", Value: "16"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "10"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "4"},
-					{Type: "moddelim", Value: "|"},
-					{Type: "critspec", Value: "c18"},
-				}},
-				{Result: 23, Details: []StructuredDescription{
-					{Type: "result", Value: "23"},
-					{Type: "separator", Value: "="},
-					{Type: "diespec", Value: "1d20"},
-					{Type: "roll", Value: "14"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "5"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "4"},
-					{Type: "moddelim", Value: "|"},
-					{Type: "critspec", Value: "c18"},
-				}},
-			}},
-		*/
-		// 67
-		/* test removed because the cartesian product routine doesn't return
-		   the same ordering of values consistently
-
-			{Roll: "d20{+15/+10/+5}+{2/3}", Reslist: []StructuredResult{
-				{Result: 24, Details: []StructuredDescription{	// 15 3
-					{Type: "result", Value: "24"},
-					{Type: "separator", Value: "="},
-					{Type: "diespec", Value: "1d20"},
-					{Type: "roll", Value: "6"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "15"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "3"},
-					{Type: "moddelim", Value: "|"},
-					{Type: "critspec", Value: "c18"},
-				}},
-				{Result: 25, Details: []StructuredDescription{	// 5 3
-					{Type: "result", Value: "25"},
-					{Type: "separator", Value: "="},
-					{Type: "diespec", Value: "1d20"},
-					{Type: "roll", Value: "17"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "5"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "3"},
-					{Type: "moddelim", Value: "|"},
-					{Type: "critspec", Value: "c18"},
-				}},
-				{Result: 24, Details: []StructuredDescription{	// 5 2
-					{Type: "result", Value: "24"},
-					{Type: "separator", Value: "="},
-					{Type: "diespec", Value: "1d20"},
-					{Type: "roll", Value: "17"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "5"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "2"},
-					{Type: "moddelim", Value: "|"},
-					{Type: "critspec", Value: "c18"},
-				}},
-				{Result: 31, Details: []StructuredDescription{	// 15 2
-					{Type: "result", Value: "31"},
-					{Type: "separator", Value: "="},
-					{Type: "diespec", Value: "1d20"},
-					{Type: "roll", Value: "14"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "15"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "2"},
-					{Type: "moddelim", Value: "|"},
-					{Type: "critspec", Value: "c18"},
-				}},
-				{Result: 24, Details: []StructuredDescription{	// 10 3
-					{Type: "result", Value: "24"},
-					{Type: "separator", Value: "="},
-					{Type: "diespec", Value: "1d20"},
-					{Type: "roll", Value: "11"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "10"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "3"},
-					{Type: "moddelim", Value: "|"},
-					{Type: "critspec", Value: "c18"},
-				}},
-				{Result: 26, Details: []StructuredDescription{	// 10 2
-					{Type: "result", Value: "26"},
-					{Type: "separator", Value: "="},
-					{Type: "diespec", Value: "1d20"},
-					{Type: "roll", Value: "14"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "10"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "2"},
-					{Type: "moddelim", Value: "|"},
-					{Type: "critspec", Value: "c18"},
-				}},
-			}},
-		*/
+		// 68
+		{Roll: "(2+3) d10+(3)force", ErrorExpected: true},
+		// 69
+		{Roll: "3d6 label.here!", ErrorExpected: true},
 	}
 
 	for i, test := range testcases {
 		label, results, err := d.DoRoll(test.Roll)
-		if err != nil {
-			t.Fatalf("test #%d error %v", i, err)
-		}
-		if !compareResults(results, test.Reslist) {
-			t.Fatalf("test #%d result %v, expected %v", i, results, test.Reslist)
-		}
-		if label != "" {
-			t.Fatalf("test #%d label was %v, expected it to be empty", i, label)
+		if test.ErrorExpected {
+			if err == nil {
+				t.Fatalf("test #%d error expected, but none was raised", i)
+			}
+		} else {
+			if err != nil {
+				t.Fatalf("test #%d error %v", i, err)
+			}
+			if !compareResults(results, test.Reslist) {
+				t.Fatalf("test #%d result %v, expected %v", i, results, test.Reslist)
+			}
+			if label != "" {
+				t.Fatalf("test #%d label was %v, expected it to be empty", i, label)
+			}
 		}
 	}
 }

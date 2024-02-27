@@ -1026,9 +1026,10 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 		reIsOp := regexp.MustCompile(`^[-+*×÷()≤≥]$`)
 		reIsDie := regexp.MustCompile(`\d+\s*[dD]\d*\d+`)
 		reIsWS := regexp.MustCompile(`^\s+$`)
+		reIsBareLabel := regexp.MustCompile(`^\s*[\p{L}_][\p{L}\p{N}_]*\s*$`)
 		reConstant := regexp.MustCompile(`^\s*(\d+)\s*(.*?)\s*$`)
-		//                                    max?    numerator    denominator       sides          best/worst         rerolls   label
-		//                                     _1_    __2__          __3__            __4___       _____5_____         __6__     __7__
+		//                                  max?    numerator    denominator       sides          best/worst         rerolls   label
+		//                                   _1_    __2__          __3__            __4___       _____5_____         __6__     __7__
 		reDieSpec := regexp.MustCompile(`^\s*(>)?\s*(\d*)\s*(?:/\s*(\d+))?\s*[Dd]\s*(%|\d+)\s*(?:(best|worst)\s*of\s*(\d+))?\s*(.*?)\s*$`)
 
 		//
@@ -1092,7 +1093,15 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 				}
 
 				if !reIsOp.MatchString(part) {
-					// TODO If it's a bare label, allow it here
+					// If it's a bare label, allow it here
+					if reIsBareLabel.MatchString(part) {
+						if reDieSpec.MatchString(part) {
+							return nil, fmt.Errorf("\"%v\" looks suspiciously like a die-roll specification but appears as a label; did you forget an operator?", part)
+						}
+						var bareLabel dieLabel = (dieLabel)(strings.TrimSpace(part))
+						d.multiDice = append(d.multiDice, &bareLabel)
+						continue
+					}
 					return nil, fmt.Errorf("expected operator before \"%v\" in die-roll expression", part)
 				}
 
@@ -1157,7 +1166,11 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 					if err != nil {
 						return nil, fmt.Errorf("value error in die roll subexpression \"%s\" in \"%s\"; %v", part, d.desc, err)
 					}
-					d.multiDice = append(d.multiDice, &dieConstant{Value: v, Label: xValues[2]})
+					labelText := strings.TrimSpace(xValues[2])
+					if labelText != "" && !reIsBareLabel.MatchString(labelText) {
+						return nil, fmt.Errorf("constant label \"%v\" has illegal characters", labelText)
+					}
+					d.multiDice = append(d.multiDice, &dieConstant{Value: v, Label: labelText})
 					continue
 				}
 				//
@@ -1226,6 +1239,9 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 			if xValues[7] != "" {
 				if reIsDie.MatchString(xValues[7]) {
 					return nil, fmt.Errorf("label following die roll in \"%s\" looks like another die roll--did you forget an operator?", part)
+				}
+				if !reIsBareLabel.MatchString(xValues[7]) {
+					return nil, fmt.Errorf("label \"%v\" has illegal characters", xValues[7])
 				}
 				ds.Label = xValues[7]
 			}
