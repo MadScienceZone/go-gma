@@ -24,6 +24,8 @@ When upgrading an existing server to version 5.13.1 or later, be sure to run `sc
  * Implements protocol 413.
     * Expands fields in the `PROGRESS` message to track game timers as well as operation progress.
     * Adds message definitions for `CORE`, `CORE/`, and `CORE=` messages. Note that the core database is not yet implemented, so while the protocol messages are understood, no actual data can be retrieved using them yet.
+ * Die rolls are now evaluated using floating-point instead of integer values. This means that constant values in die-roll expressions may include a fractional part, including formats like `123`, `1.23`, and `.123` but not `12.` (trailing periods aren't recognized unless following digits).
+    * The result of binary math operators involving real numbers are truncated to the greatest integer value less than or equal to the result, as per typical d20 game mechanics.
 ### Fixed
  * Corrects issues with die-roll syntax parsing.
     * `//` inside a `{ ... / ... }` permutation was confused as a separator. It is now correctly seen as a division operator.
