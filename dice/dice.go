@@ -59,6 +59,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"math/big"
 	"math/rand"
 	"os"
@@ -358,7 +359,7 @@ type StructuredResult struct {
 // An evalStack is used when parsing the die-roll expression's algebraic
 // operators using the standard order of operation and brackets.
 type evalStack struct {
-	stack   []int
+	stack   []float64
 	opStack []rune
 }
 
@@ -366,11 +367,11 @@ func (s *evalStack) isOpEmpty() bool {
 	return len(s.opStack) == 0
 }
 
-func (s *evalStack) push(v int) {
+func (s *evalStack) push(v float64) {
 	s.stack = append(s.stack, v)
 }
 
-func (s *evalStack) pop() (int, error) {
+func (s *evalStack) pop() (float64, error) {
 	stackLen := len(s.stack)
 	if stackLen == 0 {
 		return 0, fmt.Errorf("stack underflow")
@@ -401,7 +402,7 @@ func (s *evalStack) discardOp() {
 }
 
 func (s *evalStack) applyOp() error {
-	var x, y int
+	var x, y float64
 
 	op, err := s.popOp()
 	if err != nil {
@@ -428,16 +429,16 @@ func (s *evalStack) applyOp() error {
 
 	switch op {
 	case '+':
-		s.push(x + y)
+		s.push(math.Floor(x + y))
 	case '-':
-		s.push(x - y)
+		s.push(math.Floor(x - y))
 	case '*', '×':
-		s.push(x * y)
+		s.push(math.Floor(x * y))
 	case '÷':
 		if y == 0 {
 			return fmt.Errorf("division by zero is not defined")
 		}
-		s.push(x / y)
+		s.push(math.Floor(x / y))
 	case '≤':
 		if x > y {
 			s.push(y)
@@ -481,7 +482,7 @@ func (s *evalStack) evaluate() (int, error) {
 	if len(s.stack) > 0 {
 		return 0, fmt.Errorf("expression stack not empty at end of evaluation")
 	}
-	return value, nil
+	return int(value), nil
 }
 
 func (s *evalStack) reset() {
@@ -511,7 +512,9 @@ type dieComponent interface {
 	computeMaxValue(s *evalStack) error
 
 	// Return the most recently calculated value. (This can be used to
-	// get the random value rolled for diespecs.)
+	// get the random value rolled for diespecs.) This legacy method
+	// is not currently used anymore except in a unit test. For non-
+	// integer values it returns 0 (including floating-point constants).
 	lastValue() int
 
 	// Describe the die-roll component as a string.
@@ -678,7 +681,7 @@ func (b dieEndGroup) naturalRoll() (int, int) {
 // value that is part of an expression.
 type dieConstant struct {
 	// The constant value itself.
-	Value int
+	Value float64
 
 	// An optional label to indicate what the constant actually represents.
 	Label string
@@ -694,7 +697,7 @@ func (d *dieConstant) computeMaxValue(s *evalStack) error {
 }
 
 func (d *dieConstant) lastValue() int {
-	return d.Value
+	return int(d.Value)
 }
 
 func (d *dieConstant) naturalRoll() (int, int) {
@@ -702,12 +705,12 @@ func (d *dieConstant) naturalRoll() (int, int) {
 }
 
 func (d *dieConstant) description() string {
-	return strconv.Itoa(d.Value) + d.Label
+	return strconv.FormatFloat(d.Value, 'g', -1, 64) + d.Label
 }
 
 func (d *dieConstant) structuredDescribeRoll(resultSuppressed bool) []StructuredDescription {
 	var desc []StructuredDescription
-	desc = append(desc, StructuredDescription{Type: "constant", Value: strconv.Itoa(d.Value)})
+	desc = append(desc, StructuredDescription{Type: "constant", Value: strconv.FormatFloat(d.Value, 'g', -1, 64)})
 	if d.Label != "" {
 		desc = append(desc, StructuredDescription{Type: "label", Value: d.Label})
 	}
@@ -849,7 +852,7 @@ func (d *dieSpec) compute(s *evalStack) error {
 		}
 	}
 
-	s.push(d.Value)
+	s.push(float64(d.Value))
 	return nil
 }
 
@@ -869,7 +872,7 @@ func (d *dieSpec) computeMaxValue(s *evalStack) error {
 	}
 	d.History = append(d.History, this)
 	d.Value = reduceSums(d.History)[0]
-	s.push(d.Value)
+	s.push(float64(d.Value))
 	return nil
 }
 
@@ -1027,7 +1030,7 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 		reIsDie := regexp.MustCompile(`\d+\s*[dD]\d*\d+`)
 		reIsWS := regexp.MustCompile(`^\s+$`)
 		reIsBareLabel := regexp.MustCompile(`^\s*([\p{L}_][\p{L}\p{N}_,.]*\s*)+\s*$`)
-		reConstant := regexp.MustCompile(`^\s*(\d+)\s*(.*?)\s*$`)
+		reConstant := regexp.MustCompile(`^\s*(\d+(?:\.\d+)?|\.\d+)\s*(.*?)\s*$`)
 		//                                  max?    numerator    denominator       sides          best/worst         rerolls   label
 		//                                   _1_    __2__          __3__            __4___       _____5_____         __6__     __7__
 		reDieSpec := regexp.MustCompile(`^\s*(>)?\s*(\d*)\s*(?:/\s*(\d+))?\s*[Dd]\s*(%|\d+)\s*(?:(best|worst)\s*of\s*(\d+))?\s*(.*?)\s*$`)
@@ -1162,7 +1165,7 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 				//
 				xValues = reConstant.FindStringSubmatch(part)
 				if xValues != nil {
-					v, err := strconv.Atoi(xValues[1])
+					v, err := strconv.ParseFloat(xValues[1], 64)
 					if err != nil {
 						return nil, fmt.Errorf("value error in die roll subexpression \"%s\" in \"%s\"; %v", part, d.desc, err)
 					}
@@ -1267,10 +1270,10 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 	}
 	if d.bonus < 0 {
 		var do dieOperator = (dieOperator)('-')
-		d.multiDice = append(d.multiDice, &do, &dieConstant{Value: -d.bonus})
+		d.multiDice = append(d.multiDice, &do, &dieConstant{Value: float64(-d.bonus)})
 	} else if d.bonus > 0 {
 		var do dieOperator = (dieOperator)('+')
-		d.multiDice = append(d.multiDice, &do, &dieConstant{Value: d.bonus})
+		d.multiDice = append(d.multiDice, &do, &dieConstant{Value: float64(d.bonus)})
 	}
 
 	if d.factor != 0 {
@@ -1278,7 +1281,7 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 		var md []dieComponent
 		md = append(md, new(dieBeginGroup))
 		md = append(md, d.multiDice...)
-		d.multiDice = append(md, new(dieEndGroup), &do, &dieConstant{Value: d.factor})
+		d.multiDice = append(md, new(dieEndGroup), &do, &dieConstant{Value: float64(d.factor)})
 	}
 
 	return d, nil
