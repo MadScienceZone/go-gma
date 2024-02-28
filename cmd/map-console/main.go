@@ -200,7 +200,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber = "5.17.0" //@@##@@
+const GoVersionNumber="5.17.0" //@@##@@
 
 var Fhost string
 var Fport uint
