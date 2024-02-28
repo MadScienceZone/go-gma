@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __     ______     _______        #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \   / ____ \   (  __   )       #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) ( (    \/   | (  )  |       #
-# | |      | || || || (___) | Assistant | (____        | | | (____     | | /   |       #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | | |  ___ \    | (/ /) |       #
-# | | \_  )| |   | || (   ) |                 ) )      | | | (   ) )   |   / | |       #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_( (___) ) _ |  (__) |       #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/ \_____/ (_)(_______)       #
+#  _______  _______  _______             _______      __    ______      _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  / ___  \    (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) \/   )  )   | (  )  |       #
+# | |      | || || || (___) | Assistant | (____        | |     /  /    | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |    /  /     | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )      | |   /  /      |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_ /  /     _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/ \_/     (_)(_______)       #
 #                                                                                      #
 ########################################################################################
 #
@@ -200,7 +200,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.16.0" //@@##@@
+const GoVersionNumber="5.17.0" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -349,6 +349,8 @@ func main() {
 			mapper.RollResult,
 			mapper.Toolbar,
 			mapper.UpdateClock,
+			mapper.UpdateCoreData,
+			mapper.UpdateCoreIndex,
 			mapper.UpdateDicePresets,
 			mapper.UpdateInitiative,
 			mapper.UpdateObjAttributes,
@@ -963,6 +965,35 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"relative", cal.DeltaString(m.Relative, false)},
 		)
 
+	case mapper.UpdateCoreDataMessagePayload:
+		if m.IsHidden {
+			printFields(mono, "UpdateCoreData reply suppressed by GM",
+				fieldDesc{"RequestID", m.RequestID},
+			)
+		} else if m.NoSuchEntry {
+			printFields(mono, "UpdateCoreData no such entry found in database",
+				fieldDesc{"RequestID", m.RequestID},
+			)
+		} else {
+			printFields(mono, "UpdateCoreData",
+				fieldDesc{"IsLocal", m.IsLocal},
+				fieldDesc{"Code", m.Code},
+				fieldDesc{"Name", m.Name},
+				fieldDesc{"Type", m.Type},
+				fieldDesc{"Data", "..."},
+			)
+		}
+
+	case mapper.UpdateCoreIndexMessagePayload:
+		printFields(mono, "UpdateCoreIndex",
+			fieldDesc{"Type", m.Type},
+			fieldDesc{"N", m.N},
+			fieldDesc{"Of", m.Of},
+			fieldDesc{"Name", m.Name},
+			fieldDesc{"Code", m.Code},
+			fieldDesc{"IsDone", m.IsDone},
+		)
+
 	case mapper.UpdateDicePresetsMessagePayload:
 		printFields(mono, "UpdateDicePresets",
 			fieldDesc{"for", m.For},
@@ -1045,13 +1076,24 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 		}
 
 	case mapper.UpdateProgressMessagePayload:
-		printFields(mono, "UpdateProgress",
-			fieldDesc{"ID", m.OperationID},
-			fieldDesc{"title", m.Title},
-			fieldDesc{"value", m.Value},
-			fieldDesc{"max", m.MaxValue},
-			fieldDesc{"done", m.IsDone},
-		)
+		if m.IsTimer {
+			printFields(mono, "UpdateProgress(Timer)",
+				fieldDesc{"ID", m.OperationID},
+				fieldDesc{"title", m.Title},
+				fieldDesc{"targets", m.Targets},
+				fieldDesc{"value", m.Value},
+				fieldDesc{"max", m.MaxValue},
+				fieldDesc{"done", m.IsDone},
+			)
+		} else {
+			printFields(mono, "UpdateProgress",
+				fieldDesc{"ID", m.OperationID},
+				fieldDesc{"title", m.Title},
+				fieldDesc{"value", m.Value},
+				fieldDesc{"max", m.MaxValue},
+				fieldDesc{"done", m.IsDone},
+			)
+		}
 
 	case mapper.UpdateStatusMarkerMessagePayload:
 		printFields(mono, "UpdateStatusMarker",
@@ -1961,7 +2003,7 @@ func colorize(text, color string, mono bool) string {
 }
 
 /*
-# @[00]@| Go-GMA 5.16.0
+# @[00]@| Go-GMA 5.17.0
 # @[01]@|
 # @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

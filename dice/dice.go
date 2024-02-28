@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __     ______     _______        #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \   / ____ \   (  __   )       #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) ( (    \/   | (  )  |       #
-# | |      | || || || (___) | Assistant | (____        | | | (____     | | /   |       #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | | |  ___ \    | (/ /) |       #
-# | | \_  )| |   | || (   ) |                 ) )      | | | (   ) )   |   / | |       #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_( (___) ) _ |  (__) |       #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/ \_____/ (_)(_______)       #
+#  _______  _______  _______             _______      __    ______      _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  / ___  \    (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) \/   )  )   | (  )  |       #
+# | |      | || || || (___) | Assistant | (____        | |     /  /    | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |    /  /     | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )      | |   /  /      |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_ /  /     _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/ \_/     (_)(_______)       #
 #                                                                                      #
 ########################################################################################
 */
@@ -32,17 +32,17 @@
 // The preferred usage model is to use the higher-level abstraction provided by
 // DieRoller, which rolls dice as described by strings. For example:
 //
-//    label, results, err := Roll("d20+16 | c")
-//    label, result, err := RollOnce("15d6 + 15 fire + 1 acid")
+//	label, results, err := Roll("d20+16 | c")
+//	label, result, err := RollOnce("15d6 + 15 fire + 1 acid")
 //
 // If you need to keep the die roller itself around after the dice are rolled,
 // to query its status, or to produce a repeatable string of die rolls given
 // a custom seed or number generator, create a new DieRoller value and reuse
 // that as needed:
 //
-//    dr, err := NewDieRoller()
-//    label, results, err := dr.DoRoll("d20+16 | c")
-//    label, result, err := dr.DoRollOnce("15d6 + 15 fire + 1 acid")
+//	dr, err := NewDieRoller()
+//	label, results, err := dr.DoRoll("d20+16 | c")
+//	label, result, err := dr.DoRollOnce("15d6 + 15 fire + 1 acid")
 //
 // There is also a lower-level abstraction of dice available via the Dice
 // type, created by the New function, if for some reason the DieRoller
@@ -51,7 +51,6 @@
 // NEW in version 5.3: The die-roll expressions now honor the usual algebraic
 // order of operations instead of simply evaluating left-to-right. Parentheses
 // (round brackets) can be used for grouping in the usual sense for math expressions.
-//
 package dice
 
 import (
@@ -60,6 +59,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"math/big"
 	"math/rand"
 	"os"
@@ -76,9 +76,7 @@ import (
 const MinimumSupportedDieRollPresetFileFormat = 1
 const MaximumSupportedDieRollPresetFileFormat = 2
 
-//
 // Seed the random number generator with a very random seed.
-//
 func init() {
 	s, err := cryptorand.Int(cryptorand.Reader, big.NewInt(0xffffffff))
 	if err != nil {
@@ -141,7 +139,6 @@ type Dice struct {
 	_onlydie *dieSpec // for single-die rolls, this is the lone die
 }
 
-//
 // ByDescription sets up a Dice value based on the
 // text description given. This is the preferred way to make
 // a low-level Dice value, since it is a flexible human-readable
@@ -172,7 +169,8 @@ type Dice struct {
 // (Internally, these operators are converted to the non-ASCII Unicode runes, so ‘//‘ will appear as ‘÷’ in any output details about the die roll.)
 //
 // Each die‐roll expression has the general form
-//   [>] [<n>[/<div>]] d <sides> [best|worst of <r>] [<label>]
+//
+//	[>] [<n>[/<div>]] d <sides> [best|worst of <r>] [<label>]
 //
 // This calls for <n> dice with the given number of <sides> (which  may  be  a
 // number  or the character “%” which means percentile dice or d100).  The
@@ -196,14 +194,15 @@ type Dice struct {
 //
 // These force the final result to be no smaller than <a> and/or  no  larger
 // than <b>, where <a> and <b> are integer values. For example:
-//    2d6 + 1d4 | min 6
+//
+//	2d6 + 1d4 | min 6
+//
 // which  rolls 2d6 and 1d4 to get a random value between 3 and 16, but if
 // the result is less than 6, it will return 6 anyway.
 //
-//
 // For example:
-//     d, err := New(ByDescription("3d6 + 12"))
 //
+//	d, err := New(ByDescription("3d6 + 12"))
 func ByDescription(desc string) func(*Dice) error {
 	return func(o *Dice) error {
 		o.desc = desc
@@ -211,15 +210,14 @@ func ByDescription(desc string) func(*Dice) error {
 	}
 }
 
-//
 // ByDieType sets the Dice up by
 // discrete values which determine the number of dice to roll,
 // how many sides they each have, and a bonus to add to their
 // sum.
 //
 // For example, to create a Dice value for "3d6+10", you could do:
-//    d, err := New(ByDieType(3, 6, 10))
 //
+//	d, err := New(ByDieType(3, 6, 10))
 func ByDieType(qty, sides, bonus int) func(*Dice) error {
 	return func(o *Dice) error {
 		o.qty = qty
@@ -229,10 +227,8 @@ func ByDieType(qty, sides, bonus int) func(*Dice) error {
 	}
 }
 
-//
 // WithDieBonus adds a per-die bonus of n which will be
 // added to every single die rolled.
-//
 func WithDieBonus(n int) func(*Dice) error {
 	return func(o *Dice) error {
 		o.diebonus = n
@@ -240,13 +236,11 @@ func WithDieBonus(n int) func(*Dice) error {
 	}
 }
 
-//
 // WithDiv causes the total die-roll to be divided by n
 // (as an integer division, truncated toward zero).
 //
 // Deprecated: use WithDescription("... // n")
 // or WithDescription("... ÷ n") instead.
-//
 func WithDiv(n int) func(*Dice) error {
 	return func(o *Dice) error {
 		o.div = n
@@ -254,13 +248,11 @@ func WithDiv(n int) func(*Dice) error {
 	}
 }
 
-//
 // WithFactor causes the total die-roll to be multiplied by
 // n.
 //
 // Deprecated: use WithDescription("... * n")
 // or WithDescription("... × n") instead.
-//
 func WithFactor(n int) func(*Dice) error {
 	return func(o *Dice) error {
 		o.factor = n
@@ -268,12 +260,10 @@ func WithFactor(n int) func(*Dice) error {
 	}
 }
 
-//
 // WithSeed sets up the Dice value to use a random
 // number generator with the given seed value.
 // (Per rand, this generator will not be safe for concurrent
 // use by multiple goroutines.)
-//
 func WithSeed(s int64) func(*Dice) error {
 	return func(o *Dice) error {
 		o.generator = rand.New(rand.NewSource(s))
@@ -281,11 +271,9 @@ func WithSeed(s int64) func(*Dice) error {
 	}
 }
 
-//
 // WithGenerator sets up the Dice value to use a random
 // number generator created by the caller and passed in to this
 // option.
-//
 func WithGenerator(source rand.Source) func(*Dice) error {
 	return func(o *Dice) error {
 		o.generator = rand.New(source)
@@ -314,12 +302,9 @@ type StructuredDescription struct {
 	Value string
 }
 
-//
 // A StructuredDescriptionSet is simply a collection of StructuredDescriptions.
-//
 type StructuredDescriptionSet []StructuredDescription
 
-//
 // StructuredResult provides a full, detailed report of the die-roll
 // operation.
 // See the documentation in dice(3) for full details.
@@ -328,36 +313,35 @@ type StructuredDescriptionSet []StructuredDescription
 // might result in the following StructuredResult slice, which contains
 // a fully-described breakdown of how those results were arrived at:
 //
-//   []StructuredResult{{
-//     Result: 23,
-//     Details: StructuredDescriptionSet{
-//       {Type: "result",    Value: "23"},
-//       {Type: "success",   Value: "HIT"},
-//       {Type: "separator", Value: "="},
-//       {Type: "diespec",   Value: "1d20"},
-//       {Type: "roll",      Value: "20"},
-//       {Type: "operator",  Value: "+"},
-//       {Type: "constant",  Value: "3"},
-//       {Type: "moddelim",  Value: "|"},
-//       {Type: "min",       Value: "5"},
-//       {Type: "moddelim",  Value: "|"},
-//       {Type: "critspec",  Value: "c"},
-//     }
-//    }, {
-//     Result: 13,
-//     Details: StructuredDescriptionSet{
-//       {Type: "critlabel", Value: "Confirm:"},
-//       {Type: "result",    Value: "13"},
-//       {Type: "separator", Value: "="},
-//       {Type: "diespec",   Value: "1d20"},
-//       {Type: "roll",      Value: "10"},
-//       {Type: "operator",  Value: "+"},
-//       {Type: "constant",  Value: "3"},
-//       {Type: "moddelim",  Value: "|"},
-//       {Type: "min",       Value: "5"},
-//    }
-//  }}
-//
+//	 []StructuredResult{{
+//	   Result: 23,
+//	   Details: StructuredDescriptionSet{
+//	     {Type: "result",    Value: "23"},
+//	     {Type: "success",   Value: "HIT"},
+//	     {Type: "separator", Value: "="},
+//	     {Type: "diespec",   Value: "1d20"},
+//	     {Type: "roll",      Value: "20"},
+//	     {Type: "operator",  Value: "+"},
+//	     {Type: "constant",  Value: "3"},
+//	     {Type: "moddelim",  Value: "|"},
+//	     {Type: "min",       Value: "5"},
+//	     {Type: "moddelim",  Value: "|"},
+//	     {Type: "critspec",  Value: "c"},
+//	   }
+//	  }, {
+//	   Result: 13,
+//	   Details: StructuredDescriptionSet{
+//	     {Type: "critlabel", Value: "Confirm:"},
+//	     {Type: "result",    Value: "13"},
+//	     {Type: "separator", Value: "="},
+//	     {Type: "diespec",   Value: "1d20"},
+//	     {Type: "roll",      Value: "10"},
+//	     {Type: "operator",  Value: "+"},
+//	     {Type: "constant",  Value: "3"},
+//	     {Type: "moddelim",  Value: "|"},
+//	     {Type: "min",       Value: "5"},
+//	  }
+//	}}
 type StructuredResult struct {
 	// True if there is no actual result generated (and the Result field should be ignored)
 	ResultSuppressed bool `json:",omitempty"`
@@ -372,12 +356,10 @@ type StructuredResult struct {
 	Details StructuredDescriptionSet
 }
 
-//
 // An evalStack is used when parsing the die-roll expression's algebraic
 // operators using the standard order of operation and brackets.
-//
 type evalStack struct {
-	stack   []int
+	stack   []float64
 	opStack []rune
 }
 
@@ -385,11 +367,11 @@ func (s *evalStack) isOpEmpty() bool {
 	return len(s.opStack) == 0
 }
 
-func (s *evalStack) push(v int) {
+func (s *evalStack) push(v float64) {
 	s.stack = append(s.stack, v)
 }
 
-func (s *evalStack) pop() (int, error) {
+func (s *evalStack) pop() (float64, error) {
 	stackLen := len(s.stack)
 	if stackLen == 0 {
 		return 0, fmt.Errorf("stack underflow")
@@ -420,7 +402,7 @@ func (s *evalStack) discardOp() {
 }
 
 func (s *evalStack) applyOp() error {
-	var x, y int
+	var x, y float64
 
 	op, err := s.popOp()
 	if err != nil {
@@ -447,16 +429,16 @@ func (s *evalStack) applyOp() error {
 
 	switch op {
 	case '+':
-		s.push(x + y)
+		s.push(math.Floor(x + y))
 	case '-':
-		s.push(x - y)
+		s.push(math.Floor(x - y))
 	case '*', '×':
-		s.push(x * y)
+		s.push(math.Floor(x * y))
 	case '÷':
 		if y == 0 {
 			return fmt.Errorf("division by zero is not defined")
 		}
-		s.push(x / y)
+		s.push(math.Floor(x / y))
 	case '≤':
 		if x > y {
 			s.push(y)
@@ -500,7 +482,7 @@ func (s *evalStack) evaluate() (int, error) {
 	if len(s.stack) > 0 {
 		return 0, fmt.Errorf("expression stack not empty at end of evaluation")
 	}
-	return value, nil
+	return int(value), nil
 }
 
 func (s *evalStack) reset() {
@@ -508,29 +490,31 @@ func (s *evalStack) reset() {
 	s.opStack = nil
 }
 
-//
 // A dieComponent is something that can be assembled with other dieComponents
 // to form a full die-roll spec expression.
 //
 // E.g., if a die roll specification consists of the components
-//     dieOperator +
-//     diespec 1d20
-//	   dieOperator -
-//     constant 2
-//	   dieOperator +
-//     diespec 2d6
+//
+//	    dieOperator +
+//	    diespec 1d20
+//		   dieOperator -
+//	    constant 2
+//		   dieOperator +
+//	    diespec 2d6
+//
 // then the evaluation of the overall die-roll spec ("+1d20-2+2d6") is
 // performed by evaluating the list of operators and values left to right
 // (with algebraic order of operations) resulting in the effective value
 // (1d20 - 2) + 2d6, with random values substituted for 1d20 and 2d6.
-//
 type dieComponent interface {
 	// Feed this value into the expression evaluation in progress.
 	compute(s *evalStack) error
 	computeMaxValue(s *evalStack) error
 
 	// Return the most recently calculated value. (This can be used to
-	// get the random value rolled for diespecs.)
+	// get the random value rolled for diespecs.) This legacy method
+	// is not currently used anymore except in a unit test. For non-
+	// integer values it returns 0 (including floating-point constants).
 	lastValue() int
 
 	// Describe the die-roll component as a string.
@@ -546,9 +530,36 @@ type dieComponent interface {
 	naturalRoll() (int, int)
 }
 
-//
+// dieLabel represents a bare label appearing outside the normal expression context.
+type dieLabel string
+
+func (l dieLabel) compute(s *evalStack) error {
+	return nil
+}
+
+func (l dieLabel) computeMaxValue(s *evalStack) error {
+	return nil
+}
+
+func (l dieLabel) lastValue() int {
+	return 0
+}
+
+func (l dieLabel) description() string {
+	return string(l)
+}
+
+func (l dieLabel) structuredDescribeRoll(resultSuppressed bool) []StructuredDescription {
+	return []StructuredDescription{
+		StructuredDescription{Type: "label", Value: string(l)},
+	}
+}
+
+func (l dieLabel) naturalRoll() (int, int) {
+	return 0, 0
+}
+
 // dieOperator represents an algebraic operator in our expression.
-//
 type dieOperator rune
 
 func precedence(op dieOperator) int {
@@ -600,9 +611,7 @@ func (o dieOperator) naturalRoll() (int, int) {
 	return 0, 0
 }
 
-//
 // dieBeginGroup and dieEndGroup start and end grouped sub-expressions.
-//
 type dieBeginGroup byte
 type dieEndGroup byte
 
@@ -668,13 +677,11 @@ func (b dieEndGroup) naturalRoll() (int, int) {
 	return 0, 0
 }
 
-//
 // dieConstant is a kind of dieComponent that provides a constant
 // value that is part of an expression.
-//
 type dieConstant struct {
 	// The constant value itself.
-	Value int
+	Value float64
 
 	// An optional label to indicate what the constant actually represents.
 	Label string
@@ -690,7 +697,7 @@ func (d *dieConstant) computeMaxValue(s *evalStack) error {
 }
 
 func (d *dieConstant) lastValue() int {
-	return d.Value
+	return int(d.Value)
 }
 
 func (d *dieConstant) naturalRoll() (int, int) {
@@ -698,22 +705,20 @@ func (d *dieConstant) naturalRoll() (int, int) {
 }
 
 func (d *dieConstant) description() string {
-	return strconv.Itoa(d.Value) + d.Label
+	return strconv.FormatFloat(d.Value, 'g', -1, 64) + d.Label
 }
 
 func (d *dieConstant) structuredDescribeRoll(resultSuppressed bool) []StructuredDescription {
 	var desc []StructuredDescription
-	desc = append(desc, StructuredDescription{Type: "constant", Value: strconv.Itoa(d.Value)})
+	desc = append(desc, StructuredDescription{Type: "constant", Value: strconv.FormatFloat(d.Value, 'g', -1, 64)})
 	if d.Label != "" {
 		desc = append(desc, StructuredDescription{Type: "label", Value: d.Label})
 	}
 	return desc
 }
 
-//
 // dieSpec is a part of a die-roll expression that specifies a single
 // roll (NdS+B, etc) in a chain of other components.
-//
 type dieSpec struct {
 	// Various boolean flags
 	BestReroll   bool // if making multiple rolls, are we taking the best (vs worst)?
@@ -746,11 +751,9 @@ type dieSpec struct {
 	generator *rand.Rand
 }
 
-//
 // Assuming the die (and it must be a single die) for this component
 // has already been rolled, return the natural value of that die
 // and the number of sides.
-//
 func (d *dieSpec) naturalRoll() (int, int) {
 	return d._natural, d.Sides
 }
@@ -849,7 +852,7 @@ func (d *dieSpec) compute(s *evalStack) error {
 		}
 	}
 
-	s.push(d.Value)
+	s.push(float64(d.Value))
 	return nil
 }
 
@@ -869,7 +872,7 @@ func (d *dieSpec) computeMaxValue(s *evalStack) error {
 	}
 	d.History = append(d.History, this)
 	d.Value = reduceSums(d.History)[0]
-	s.push(d.Value)
+	s.push(float64(d.Value))
 	return nil
 }
 
@@ -903,26 +906,20 @@ func (d *dieSpec) description() string {
 	return desc
 }
 
-//
 // Returns true if the value rolled for this component was a 1.
-//
 func (d *dieSpec) isMinRoll() bool {
 	return d.Value == 1
 }
 
-//
 // Returns true if the value rolled for this component is the same as
 // the number of sides on the die.
-//
 func (d *dieSpec) isMaxRoll() bool {
 	return d.Value == d.Sides
 }
 
-//
 // Given a dieSpec value, the StructuredDescribeRoll method
 // returns a detailed description of that component of the roll,
 // as a number of StructuredDescription values.
-//
 func (d *dieSpec) structuredDescribeRoll(resultSuppressed bool) []StructuredDescription {
 	var desc []StructuredDescription
 	var rollType string
@@ -988,7 +985,6 @@ func (d *dieSpec) structuredDescribeRoll(resultSuppressed bool) []StructuredDesc
 	return desc
 }
 
-//
 // New creates a new set of dice (using the low-level representation Dice type;
 // for a more user-friendly interface use NewDieRoller instead).
 //
@@ -998,10 +994,10 @@ func (d *dieSpec) structuredDescribeRoll(resultSuppressed bool) []StructuredDesc
 // WithSeed(s).
 //
 // For example,
-//    d, err := New()
-//    d, err := New(ByDescription("15d6 + 12"))
-//    d, err := New(ByDieType(15, 6, 12))
 //
+//	d, err := New()
+//	d, err := New(ByDescription("15d6 + 12"))
+//	d, err := New(ByDieType(15, 6, 12))
 func New(options ...func(*Dice) error) (*Dice, error) {
 	d := new(Dice)
 
@@ -1033,9 +1029,10 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 		reIsOp := regexp.MustCompile(`^[-+*×÷()≤≥]$`)
 		reIsDie := regexp.MustCompile(`\d+\s*[dD]\d*\d+`)
 		reIsWS := regexp.MustCompile(`^\s+$`)
-		reConstant := regexp.MustCompile(`^\s*(\d+)\s*(.*?)\s*$`)
-		//                                    max?    numerator    denominator       sides          best/worst         rerolls   label
-		//                                     _1_    __2__          __3__            __4___       _____5_____         __6__     __7__
+		reIsBareLabel := regexp.MustCompile(`^\s*([\p{L}_][\p{L}\p{N}_,.]*\s*)+\s*$`)
+		reConstant := regexp.MustCompile(`^\s*(\d+(?:\.\d+)?|\.\d+)\s*(.*?)\s*$`)
+		//                                  max?    numerator    denominator       sides          best/worst         rerolls   label
+		//                                   _1_    __2__          __3__            __4___       _____5_____         __6__     __7__
 		reDieSpec := regexp.MustCompile(`^\s*(>)?\s*(\d*)\s*(?:/\s*(\d+))?\s*[Dd]\s*(%|\d+)\s*(?:(best|worst)\s*of\s*(\d+))?\s*(.*?)\s*$`)
 
 		//
@@ -1099,6 +1096,15 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 				}
 
 				if !reIsOp.MatchString(part) {
+					// If it's a bare label, allow it here
+					if reIsBareLabel.MatchString(part) {
+						if reDieSpec.MatchString(part) {
+							return nil, fmt.Errorf("\"%v\" looks suspiciously like a die-roll specification but appears as a label; did you forget an operator?", part)
+						}
+						var bareLabel dieLabel = (dieLabel)(strings.TrimSpace(part))
+						d.multiDice = append(d.multiDice, &bareLabel)
+						continue
+					}
 					return nil, fmt.Errorf("expected operator before \"%v\" in die-roll expression", part)
 				}
 
@@ -1159,11 +1165,15 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 				//
 				xValues = reConstant.FindStringSubmatch(part)
 				if xValues != nil {
-					v, err := strconv.Atoi(xValues[1])
+					v, err := strconv.ParseFloat(xValues[1], 64)
 					if err != nil {
 						return nil, fmt.Errorf("value error in die roll subexpression \"%s\" in \"%s\"; %v", part, d.desc, err)
 					}
-					d.multiDice = append(d.multiDice, &dieConstant{Value: v, Label: xValues[2]})
+					labelText := strings.TrimSpace(xValues[2])
+					if labelText != "" && !reIsBareLabel.MatchString(labelText) {
+						return nil, fmt.Errorf("constant label \"%v\" has illegal characters", labelText)
+					}
+					d.multiDice = append(d.multiDice, &dieConstant{Value: v, Label: labelText})
 					continue
 				}
 				//
@@ -1233,7 +1243,10 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 				if reIsDie.MatchString(xValues[7]) {
 					return nil, fmt.Errorf("label following die roll in \"%s\" looks like another die roll--did you forget an operator?", part)
 				}
-				ds.Label = xValues[7]
+				if !reIsBareLabel.MatchString(xValues[7]) {
+					return nil, fmt.Errorf("label \"%v\" has illegal characters", xValues[7])
+				}
+				ds.Label = strings.TrimSpace(xValues[7])
 			}
 			d.multiDice = append(d.multiDice, ds)
 		}
@@ -1257,10 +1270,10 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 	}
 	if d.bonus < 0 {
 		var do dieOperator = (dieOperator)('-')
-		d.multiDice = append(d.multiDice, &do, &dieConstant{Value: -d.bonus})
+		d.multiDice = append(d.multiDice, &do, &dieConstant{Value: float64(-d.bonus)})
 	} else if d.bonus > 0 {
 		var do dieOperator = (dieOperator)('+')
-		d.multiDice = append(d.multiDice, &do, &dieConstant{Value: d.bonus})
+		d.multiDice = append(d.multiDice, &do, &dieConstant{Value: float64(d.bonus)})
 	}
 
 	if d.factor != 0 {
@@ -1268,7 +1281,7 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 		var md []dieComponent
 		md = append(md, new(dieBeginGroup))
 		md = append(md, d.multiDice...)
-		d.multiDice = append(md, new(dieEndGroup), &do, &dieConstant{Value: d.factor})
+		d.multiDice = append(md, new(dieEndGroup), &do, &dieConstant{Value: float64(d.factor)})
 	}
 
 	return d, nil
@@ -1282,19 +1295,15 @@ func (d *Dice) Roll() (int, error) {
 	return d.RollToConfirm(false, 0, 0)
 }
 
-//
 // MaxRoll is an alternative to Roll where
 // instead of rolling the dice, it just assumes they all came up at their maximum
 // possible values. This does NOT set up for subsequent critical rolls.
-//
 func (d *Dice) MaxRoll() (int, error) {
 	return d.MaxRollToConfirm(0)
 }
 
-//
 // MaxRollToConfirm is the analog to RollToConfirm but just assumes all
 // dice come up with their maximum values rather than rolling anything.
-//
 func (d *Dice) MaxRollToConfirm(bonus int) (int, error) {
 	d._natural = 0
 	d.Rolled = false
@@ -1324,7 +1333,6 @@ func (d *Dice) MaxRollToConfirm(bonus int) (int, error) {
 	return rollSum, nil
 }
 
-//
 // RollToConfirm rolls the dice specified in the Dice value, with support
 // for making critical confirmation rolls.
 //
@@ -1342,7 +1350,6 @@ func (d *Dice) MaxRollToConfirm(bonus int) (int, error) {
 //
 // Calling d.RollToConfirm(false, 0, 0) is equivalent to calling d.Roll().
 // Confirm a critical roll by rolling again against the normal to-hit target.
-//
 func (d *Dice) RollToConfirm(confirm bool, threat int, bonus int) (int, error) {
 	if confirm {
 		// we're confirming if the previous roll was critical; so first of
@@ -1444,19 +1451,16 @@ type sdrOptions struct {
 	failureMessage   string
 }
 
-//
 // WithRollBonus augments the operation of a StructuredDescribeRoll call by
 // indicating that this roll included an extra bonus (not indicated by the user).
 //
 // This is not done if the bonus is 0 (zero).
-//
 func WithRollBonus(bonus int) func(*sdrOptions) {
 	return func(o *sdrOptions) {
 		o.rollBonus = bonus
 	}
 }
 
-//
 // WithAutoSF augments the operation of a StructuredDescribeRoll call by
 // indicating that a natural 1 indicates failure regardless of the modified
 // result's value, and a natural maximum roll similarly indicates success.
@@ -1467,7 +1471,6 @@ func WithRollBonus(bonus int) func(*sdrOptions) {
 //
 // This behavior is enabled if the enabled parameter is true. Otherwise
 // no automatic success or failure interpretation will be made.
-//
 func WithAutoSF(enabled bool, successMessage, failureMessage string) func(*sdrOptions) {
 	return func(o *sdrOptions) {
 		o.autoSF = enabled
@@ -1476,17 +1479,14 @@ func WithAutoSF(enabled bool, successMessage, failureMessage string) func(*sdrOp
 	}
 }
 
-//
 // WithNoResults tells StructuredDescribeRoll to assume that no actual die roll was
 // made, and report only the request itself, ignoring results.
-//
 func WithNoResults() func(*sdrOptions) {
 	return func(o *sdrOptions) {
 		o.resultSuppressed = true
 	}
 }
 
-//
 // StructuredDescribeRoll produces a detailed structured description of the result of rolling
 // the Dice, in a way that a caller can format as they see fit.
 //
@@ -1498,7 +1498,6 @@ func WithNoResults() func(*sdrOptions) {
 // If this die roll included a bonus added to it for some reason (e.g., a
 // confirmation bonus on dice rolled to confirm a critical threat),
 // then add a WithRollBonus function call to the end of the argument list.
-//
 func (d *Dice) StructuredDescribeRoll(options ...func(*sdrOptions)) ([]StructuredDescription, error) {
 	var desc []StructuredDescription
 	var opts sdrOptions
@@ -1614,11 +1613,9 @@ type DieRoller struct {
 	d         *Dice // underlying Dice object
 }
 
-//
 // RandFloat64 generates a pseudorandom number in the range [0.0, 1.0) using
 // the same random number generator as used for die rolls. This means that it
 // affects the outcome of subsequent die rolls just as other die rolls do.
-//
 func (d *DieRoller) RandFloat64() float64 {
 	if d.generator == nil {
 		return rand.Float64()
@@ -1626,11 +1623,9 @@ func (d *DieRoller) RandFloat64() float64 {
 	return d.generator.Float64()
 }
 
-//
 // RandIntn generates a pseudorandom integer in the range [0, n) using
 // the same random number generator as used for die rolls. This means that it
 // affects the outcome of subsequent die rolls just as other die rolls do.
-//
 func (d *DieRoller) RandIntn(n int) int {
 	if n <= 0 {
 		return 0
@@ -1641,7 +1636,6 @@ func (d *DieRoller) RandIntn(n int) int {
 	return d.generator.Intn(n)
 }
 
-//
 // NewDieRoller creates a new DieRoller value, which provides the recommended
 // higher-level interface for rolling dice. This value can
 // then be used for as many die rolls as needed by calling its DoRoll
@@ -1653,7 +1647,6 @@ func (d *DieRoller) RandIntn(n int) int {
 //
 // Initially it is set up to roll a single d20, but this can be changed with
 // each DoRoll call.
-//
 func NewDieRoller(options ...func(*Dice) error) (*DieRoller, error) {
 	var err error
 	dr := new(DieRoller)
@@ -1864,6 +1857,7 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 	//  "d20+10+2d6+2"
 	//  "d20+5+2d6+2"
 	//
+	spec = strings.Replace(spec, "//", "÷", -1)
 	if permList := rePermutations.FindAllStringSubmatch(spec, -1); permList != nil {
 		for _, perm := range permList {
 			valueset := strings.Split(perm[1], "/")
@@ -1927,7 +1921,6 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 	return nil
 }
 
-//
 // DoRoll rolls dice as described by the specification string. If this string is empty,
 // it re-rolls the previously-used specification. Initially, "1d20" is assumed.
 //
@@ -1936,9 +1929,12 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 //
 // In this more comprehensive interface, the spec string is a string of
 // the form
-//    [<title>=] <expression> [|<options>...]
+//
+//	[<title>=] <expression> [|<options>...]
+//
 // or
-//    [<title>=] <chance>% [<success>[/<fail>]] [|<options>...]
+//
+//	[<title>=] <chance>% [<success>[/<fail>]] [|<options>...]
 //
 // where []s indicate optional parameters, the given words in angle brackets
 // (<title>, etc) represent values to be placed into the string, and the other
@@ -1950,8 +1946,10 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 //
 // Note that this module does not interpret the <title> value further, but by
 // convention two special characters are significant to some clients:
-//   ‖ (U+2016) separates multiple titles in the <title> string
-//   ≡ (U+2261) separates the title text on the left with a color on the right.
+//
+//	‖ (U+2016) separates multiple titles in the <title> string
+//	≡ (U+2261) separates the title text on the left with a color on the right.
+//
 // This means that a <title> string of "monster≡blue‖damage≡red" will display
 // a title for the die roll as two separate title values, "monster" in blue
 // and "damage" in red.
@@ -1962,13 +1960,16 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 //
 // These options may be any of the following:
 //
-//   | min <n>
+//	| min <n>
+//
 // The result will be at least <n>.
 //
-//   | max <n>
+//	| max <n>
+//
 // The result will be no more than <n>.
 //
-//   | c[<t>[±<b>]]
+//	| c[<t>[±<b>]]
+//
 // This indicates that the roll may need a critical
 // confirmation roll to follow it. This will appear
 // as an additional result in the list of results returned
@@ -1980,11 +1981,13 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 // (The notation "±" here means either a "-" or "+" may appear at that
 // position in the string.)
 //
-//   | dc <n>
+//	| dc <n>
+//
 // This is a roll against a known difficulty class <n>. If the
 // result is at least <n>, the roll is "successful".
 //
-//   | sf [<success>[/<fail>]]
+//	| sf [<success>[/<fail>]]
+//
 // Auto-success/fail: the roll, which must involve only a single
 // die, will be considered successful if it's a natural maximum
 // value (e.g., 20 on a d20 before modifiers are applied), or
@@ -1993,14 +1996,17 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 // may be specified. Suitable defaults will be used or derived if
 // one or both of those strings is not given.
 //
-//   | until <n>
+//	| until <n>
+//
 // Continue making die rolls, adding their results to the returned output,
 // until a result of at least <n> is obtained.
 //
-//   | repeat <n>
+//	| repeat <n>
+//
 // Make <n> die rolls, reporting their results.
 //
-//   | maximized
+//	| maximized
+//
 // Assume all dice roll at their maximum possible values. For example,
 // the spec "3d6 | maximized" will always return the result 18, as if
 // all three dice rolled sixes.
@@ -2039,29 +2045,29 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 // roll of the dice that was performed.
 //
 // Example die-roll specifications:
-//   "d20"             Roll 1d20.
-//   "3d6"             Roll 3d6 (3 six-sided dice, adding their values).
-//   "15d6+15"         Roll 15d6, add 15 to their sum.
-//   "1d10+5*10"       Roll 1d10, add 5, then multiply the result by 10.
-//   "1/2 d6"          Roll 1d6, divide result by 2 (truncating toward zero).
-//   "2d10+3d6+12"     Roll 2d10, 3d6, add their results and add 12 to the sum.
-//   "d20+15|c"        Roll d20+15, automatically rolling to confirm on a natural 20.
-//   "d20+15|c19+2"    Roll d20+15, rolling to confirm on natural 19 or 20 with +2 bonus.
-//   "d%"              Roll percentile dice, giving result 1-100.
-//   "40%"             Roll percentile dice, giving result 1 with 40% probability.
-//   "d20+12|max20"    Roll d20+12 but any result > 20 is capped at 20.
-//   "d20 best of 2"   Roll d20 twice, discarding the worse result.
-//   "d20+4|dc 10"     Roll d20+4, signalling success if the result is 10 or greater.
-//   "3d6 fire+1d4 acid+2 bonus"
-//                     Roll 3d6+1d4+2. In the structured results, it will show the values
-//                     rolled for the 3d6 fire, 1d4 acid, and 2 bonus individually.
-//   "40% hit"         Reports success ("hit") with a 40% probability; otherwise reports
-//                     failure ("miss").
-//   "13% red/blue"    Reports success ("red") with a 13% probability; otherwise reports
-//                     failure ("blue").
-//   "2d10+3|until 19" Repeatedly rolls 2d10+3, adding each result to the set of die rolls
-//                     returned, until a roll totals at least 19.
 //
+//	"d20"             Roll 1d20.
+//	"3d6"             Roll 3d6 (3 six-sided dice, adding their values).
+//	"15d6+15"         Roll 15d6, add 15 to their sum.
+//	"1d10+5*10"       Roll 1d10, add 5, then multiply the result by 10.
+//	"1/2 d6"          Roll 1d6, divide result by 2 (truncating toward zero).
+//	"2d10+3d6+12"     Roll 2d10, 3d6, add their results and add 12 to the sum.
+//	"d20+15|c"        Roll d20+15, automatically rolling to confirm on a natural 20.
+//	"d20+15|c19+2"    Roll d20+15, rolling to confirm on natural 19 or 20 with +2 bonus.
+//	"d%"              Roll percentile dice, giving result 1-100.
+//	"40%"             Roll percentile dice, giving result 1 with 40% probability.
+//	"d20+12|max20"    Roll d20+12 but any result > 20 is capped at 20.
+//	"d20 best of 2"   Roll d20 twice, discarding the worse result.
+//	"d20+4|dc 10"     Roll d20+4, signalling success if the result is 10 or greater.
+//	"3d6 fire+1d4 acid+2 bonus"
+//	                  Roll 3d6+1d4+2. In the structured results, it will show the values
+//	                  rolled for the 3d6 fire, 1d4 acid, and 2 bonus individually.
+//	"40% hit"         Reports success ("hit") with a 40% probability; otherwise reports
+//	                  failure ("miss").
+//	"13% red/blue"    Reports success ("red") with a 13% probability; otherwise reports
+//	                  failure ("blue").
+//	"2d10+3|until 19" Repeatedly rolls 2d10+3, adding each result to the set of die rolls
+//	                  returned, until a roll totals at least 19.
 func (d *DieRoller) DoRoll(spec string) (string, []StructuredResult, error) {
 	var err error
 	//
@@ -2125,7 +2131,6 @@ func (d *DieRoller) DoRoll(spec string) (string, []StructuredResult, error) {
 	return d.LabelText, overallResults, nil
 }
 
-//
 // ExplainSecretRoll takes a dieroll spec as DoRoll does, along with a string explaining
 // why the roll is secret. It returns the same result data as DoRoll, including a broken-out
 // description of the dieroll spec, except that no actual die roll is made and no results
@@ -2138,7 +2143,6 @@ func (d *DieRoller) DoRoll(spec string) (string, []StructuredResult, error) {
 // back to the requester of a die roll that their request for the roll was sent on to another party
 // (typically the GM) who will be the only person to see the actual results (which must be obtained
 // by a separate roll to the DoRoll method).
-//
 func (d *DieRoller) ExplainSecretRoll(spec, notice string) (string, StructuredResult, error) {
 	var thisResult []StructuredDescription
 
@@ -2272,11 +2276,9 @@ func (d *DieRoller) ExplainSecretRoll(spec, notice string) (string, StructuredRe
 	return d.LabelText, StructuredResult{ResultSuppressed: true, Details: thisResult}, nil
 }
 
-//
 // utility function to replace placeholders {0}, {1}, {2}, ... in an input string
 // with corresponding values taken from a list of substitution values, returning
 // the resulting string.
-//
 func substituteTemplateValues(template string, values []any) string {
 	result := template
 	for place, value := range values {
@@ -2285,11 +2287,9 @@ func substituteTemplateValues(template string, values []any) string {
 	return result
 }
 
-//
 // This does the work of performing a die roll (possibly two, if we're confirming
 // a critical roll) based on the exact specifications already set in place by
 // the caller.
-//
 func (d *DieRoller) rollDice(repeatIter, repeatCount int) (int, []StructuredResult, error) {
 	var results []StructuredResult
 	var thisResult []StructuredDescription
@@ -2531,9 +2531,9 @@ func (d *DieRoller) rollDice(repeatIter, repeatCount int) (int, []StructuredResu
 // requiring a separate step to create a DieRoller first.
 //
 // Calling Roll(spec) is equivalent to the sequence
-//  dr = NewDieRoller()
-//  dr.DoRoll(spec)
 //
+//	dr = NewDieRoller()
+//	dr.DoRoll(spec)
 func Roll(spec string) (string, []StructuredResult, error) {
 	d, err := NewDieRoller()
 	if err != nil {
@@ -2561,10 +2561,8 @@ func RollOnce(spec string) (string, StructuredResult, error) {
 	return l, r[0], nil
 }
 
-//
 // DoRollOnce is just like the DoRoll method but adds the constraint that there may only be one result
 // returned, in the same way the RollOnce function differs from the Roll() function.
-//
 func (d *DieRoller) DoRollOnce(spec string) (string, StructuredResult, error) {
 	l, r, err := d.DoRoll(spec)
 	if err != nil {
@@ -2577,7 +2575,6 @@ func (d *DieRoller) DoRollOnce(spec string) (string, StructuredResult, error) {
 	return l, r[0], nil
 }
 
-//
 // IsNaturalMax returns true if the DieRoller has been rolled already, and contains but a single die
 // in its specification, and that die was rolled
 // to the maximum possible value (i.e., a 20 on a d20).
@@ -2585,12 +2582,10 @@ func (d *DieRoller) DoRollOnce(spec string) (string, StructuredResult, error) {
 // It returns false if that was not true, even if that was for reasons that it
 // could not possibly be true (no die was rolled, the die-roll spec contained multiple
 // dice, etc.)
-//
 func (d *DieRoller) IsNaturalMax() (result bool) {
 	return d.isNatural(true)
 }
 
-//
 // IsNatural1 returns true if the DieRoller has been rolled already, and contains but a single die
 // in its specification, and that die was rolled
 // as a natural 1.
@@ -2598,7 +2593,6 @@ func (d *DieRoller) IsNaturalMax() (result bool) {
 // It returns false if that was not true, even if that was for reasons that it
 // could not possibly be true (no die was rolled, the die-roll spec contained multiple
 // dice, etc.)
-//
 func (d *DieRoller) IsNatural1() (result bool) {
 	return d.isNatural(false)
 }
@@ -2726,11 +2720,9 @@ func (sr StructuredDescriptionSet) Text() (string, error) {
 // |_|   |_| \_\_____|____/|_____| |_| |____/
 //
 
-//
 // DieRollPreset describes each die-roll specification the user
 // has stored on the server or in a file as a ready-to-go preset value which will
 // be used often, and needs to be persistent across gaming sessions.
-//
 type DieRollPreset struct {
 	// The name by which this die-roll preset is identified to the user.
 	// This must be unique among that user's presets.
@@ -2759,9 +2751,7 @@ type DieRollPresetMetaData struct {
 	FileVersion uint   `json:"-"`
 }
 
-//
 // WriteDieRollPresetFile writes a slice of presets to the named file.
-//
 func WriteDieRollPresetFile(path string, presets []DieRollPreset, meta DieRollPresetMetaData) error {
 	file, err := os.Create(path)
 	if err != nil {
@@ -2777,9 +2767,7 @@ func WriteDieRollPresetFile(path string, presets []DieRollPreset, meta DieRollPr
 	return SaveDieRollPresetFile(file, presets, meta)
 }
 
-//
 // SaveDieRollPresetFile writes a slice of presets to an open stream.
-//
 func SaveDieRollPresetFile(output io.Writer, presets []DieRollPreset, meta DieRollPresetMetaData) error {
 	writer := bufio.NewWriter(output)
 	writer.WriteString("__DICE__:2\n")
@@ -2815,10 +2803,8 @@ func SaveDieRollPresetFile(output io.Writer, presets []DieRollPreset, meta DieRo
 	return nil
 }
 
-//
 // ReadDieRollPresetFile reads in and returns a slice of die-roll presets from
 // the named file.
-//
 func ReadDieRollPresetFile(path string) ([]DieRollPreset, DieRollPresetMetaData, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -2871,10 +2857,8 @@ func loadLegacyDieRollPresetFile(scanner *bufio.Scanner, meta DieRollPresetMetaD
 	return presets, meta, nil
 }
 
-//
 // LoadDieRollPresetFile reads in and returns a slice of die-roll presets from
 // an open stream.
-//
 func LoadDieRollPresetFile(input io.Reader) ([]DieRollPreset, DieRollPresetMetaData, error) {
 	var meta DieRollPresetMetaData
 	var presets []DieRollPreset
@@ -2984,7 +2968,7 @@ d representation:
 
 */
 
-// @[00]@| Go-GMA 5.16.0
+// @[00]@| Go-GMA 5.17.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

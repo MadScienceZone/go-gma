@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __     ______     _______        #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \   / ____ \   (  __   )       #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) ( (    \/   | (  )  |       #
-# | |      | || || || (___) | Assistant | (____        | | | (____     | | /   |       #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | | |  ___ \    | (/ /) |       #
-# | | \_  )| |   | || (   ) |                 ) )      | | | (   ) )   |   / | |       #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_( (___) ) _ |  (__) |       #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/ \_____/ (_)(_______)       #
+#  _______  _______  _______             _______      __    ______      _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  / ___  \    (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) \/   )  )   | (  )  |       #
+# | |      | || || || (___) | Assistant | (____        | |     /  /    | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |    /  /     | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )      | |   /  /      |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_ /  /     _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/ \_/     (_)(_______)       #
 #                                                                                      #
 ########################################################################################
 */
@@ -25,6 +25,7 @@ package dice
 
 import (
 	"log"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -518,6 +519,58 @@ func TestDicePercentile(t *testing.T) {
 	}
 }
 
+func TestDicePermutations(t *testing.T) {
+	d, err := NewDieRoller(WithSeed(12345))
+	if err != nil {
+		t.Fatalf("Error creating new DieRoller: %v", err)
+	}
+
+	type testcase struct {
+		Roll          string
+		PermutedRolls []string
+	}
+
+	testcases := []testcase{
+		{Roll: "2+{1/2/3/4}//{5/6}", PermutedRolls: []string{
+			"[2] = 2+1÷5",
+			"[2] = 2+1÷6",
+			"[2] = 2+2÷5",
+			"[2] = 2+2÷6",
+			"[2] = 2+3÷5",
+			"[2] = 2+3÷6",
+			"[2] = 2+4÷5",
+			"[2] = 2+4÷6",
+		}},
+		{Roll: "2+{1/2//3/4}", PermutedRolls: []string{
+			"[2] = 2+2÷3",
+			"[3] = 2+1",
+			"[6] = 2+4",
+		}},
+	}
+
+	for i, test := range testcases {
+		_, results, err := d.DoRoll(test.Roll)
+		if err != nil {
+			t.Fatalf("test case %d: DoRoll: %v", i, err)
+		}
+		var pr []string
+		for ri, r := range results {
+			if r.InvalidRequest {
+				t.Fatalf("test case %d, result %d: invalid request", i, ri)
+			}
+			s, err := r.Details.Text()
+			if err != nil {
+				t.Fatalf("test case %d, result %d: Error getting detail text: %v", i, ri, err)
+			}
+			pr = append(pr, s)
+		}
+		slices.Sort(pr)
+		if !slices.Equal(pr, test.PermutedRolls) {
+			t.Fatalf("test case %d results don't match: %q", i, pr)
+		}
+	}
+}
+
 func TestDiceStructured(t *testing.T) {
 	//rand.Seed(12345) // static seed so our results will be the same every run
 	d, err := NewDieRoller(WithSeed(12345))
@@ -526,8 +579,9 @@ func TestDiceStructured(t *testing.T) {
 	}
 
 	type testcase struct {
-		Roll    string
-		Reslist []StructuredResult
+		Roll          string
+		Reslist       []StructuredResult
+		ErrorExpected bool
 	}
 
 	testcases := []testcase{
@@ -1709,140 +1763,127 @@ func TestDiceStructured(t *testing.T) {
 				{Type: "label", Value: "cold"},
 			}},
 		}},
-
-		// 66
-		/* test removed because the cartesian product routine doesn't return
-		   the same ordering of values consistently
-			{Roll: "d20{+15/+10/+5}+4|c18", Reslist: []StructuredResult{
-				{Result: 27, Details: []StructuredDescription{
-					{Type: "result", Value: "27"},
-					{Type: "separator", Value: "="},
-					{Type: "diespec", Value: "1d20"},
-					{Type: "roll", Value: "8"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "15"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "4"},
-					{Type: "moddelim", Value: "|"},
-					{Type: "critspec", Value: "c18"},
-				}},
-				{Result: 30, Details: []StructuredDescription{
-					{Type: "result", Value: "30"},
-					{Type: "separator", Value: "="},
-					{Type: "diespec", Value: "1d20"},
-					{Type: "roll", Value: "16"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "10"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "4"},
-					{Type: "moddelim", Value: "|"},
-					{Type: "critspec", Value: "c18"},
-				}},
-				{Result: 23, Details: []StructuredDescription{
-					{Type: "result", Value: "23"},
-					{Type: "separator", Value: "="},
-					{Type: "diespec", Value: "1d20"},
-					{Type: "roll", Value: "14"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "5"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "4"},
-					{Type: "moddelim", Value: "|"},
-					{Type: "critspec", Value: "c18"},
-				}},
-			}},
-		*/
 		// 67
-		/* test removed because the cartesian product routine doesn't return
-		   the same ordering of values consistently
-
-			{Roll: "d20{+15/+10/+5}+{2/3}", Reslist: []StructuredResult{
-				{Result: 24, Details: []StructuredDescription{	// 15 3
-					{Type: "result", Value: "24"},
-					{Type: "separator", Value: "="},
-					{Type: "diespec", Value: "1d20"},
-					{Type: "roll", Value: "6"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "15"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "3"},
-					{Type: "moddelim", Value: "|"},
-					{Type: "critspec", Value: "c18"},
-				}},
-				{Result: 25, Details: []StructuredDescription{	// 5 3
-					{Type: "result", Value: "25"},
-					{Type: "separator", Value: "="},
-					{Type: "diespec", Value: "1d20"},
-					{Type: "roll", Value: "17"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "5"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "3"},
-					{Type: "moddelim", Value: "|"},
-					{Type: "critspec", Value: "c18"},
-				}},
-				{Result: 24, Details: []StructuredDescription{	// 5 2
-					{Type: "result", Value: "24"},
-					{Type: "separator", Value: "="},
-					{Type: "diespec", Value: "1d20"},
-					{Type: "roll", Value: "17"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "5"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "2"},
-					{Type: "moddelim", Value: "|"},
-					{Type: "critspec", Value: "c18"},
-				}},
-				{Result: 31, Details: []StructuredDescription{	// 15 2
-					{Type: "result", Value: "31"},
-					{Type: "separator", Value: "="},
-					{Type: "diespec", Value: "1d20"},
-					{Type: "roll", Value: "14"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "15"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "2"},
-					{Type: "moddelim", Value: "|"},
-					{Type: "critspec", Value: "c18"},
-				}},
-				{Result: 24, Details: []StructuredDescription{	// 10 3
-					{Type: "result", Value: "24"},
-					{Type: "separator", Value: "="},
-					{Type: "diespec", Value: "1d20"},
-					{Type: "roll", Value: "11"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "10"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "3"},
-					{Type: "moddelim", Value: "|"},
-					{Type: "critspec", Value: "c18"},
-				}},
-				{Result: 26, Details: []StructuredDescription{	// 10 2
-					{Type: "result", Value: "26"},
-					{Type: "separator", Value: "="},
-					{Type: "diespec", Value: "1d20"},
-					{Type: "roll", Value: "14"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "10"},
-					{Type: "operator", Value: "+"},
-					{Type: "constant", Value: "2"},
-					{Type: "moddelim", Value: "|"},
-					{Type: "critspec", Value: "c18"},
-				}},
+		{Roll: "(2+3) fire+(3)force", Reslist: []StructuredResult{
+			{Result: 8, Details: []StructuredDescription{
+				{Type: "result", Value: "8"},
+				{Type: "separator", Value: "="},
+				{Type: "begingroup", Value: "("},
+				{Type: "constant", Value: "2"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "3"},
+				{Type: "endgroup", Value: ")"},
+				{Type: "label", Value: "fire"},
+				{Type: "operator", Value: "+"},
+				{Type: "begingroup", Value: "("},
+				{Type: "constant", Value: "3"},
+				{Type: "endgroup", Value: ")"},
+				{Type: "label", Value: "force"},
 			}},
-		*/
+		}},
+		// 68
+		{Roll: "(2+3) d10+(3)force", ErrorExpected: true},
+		// 69
+		{Roll: "3d6 label.here!", ErrorExpected: true},
+		// 70
+		{Roll: "2d10+12 this is a label, too.", Reslist: []StructuredResult{
+			{Result: 25, Details: []StructuredDescription{
+				{Type: "result", Value: "25"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "2d10"},
+				{Type: "subtotal", Value: "13"},
+				{Type: "roll", Value: "8,5"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "12"},
+				{Type: "label", Value: "this is a label, too."},
+			}},
+		}},
+		// 71
+		{Roll: "2 this is a label, too.", Reslist: []StructuredResult{
+			{Result: 2, Details: []StructuredDescription{
+				{Type: "result", Value: "2"},
+				{Type: "separator", Value: "="},
+				{Type: "constant", Value: "2"},
+				{Type: "label", Value: "this is a label, too."},
+			}},
+		}},
+		// 72
+		{Roll: "(2+1) this is a label, too.", Reslist: []StructuredResult{
+			{Result: 3, Details: []StructuredDescription{
+				{Type: "result", Value: "3"},
+				{Type: "separator", Value: "="},
+				{Type: "begingroup", Value: "("},
+				{Type: "constant", Value: "2"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "1"},
+				{Type: "endgroup", Value: ")"},
+				{Type: "label", Value: "this is a label, too."},
+			}},
+		}},
+		// 73
+		{Roll: "3 5label", ErrorExpected: true},
+		// 74
+		{Roll: "3 .5label", ErrorExpected: true},
+		// 75 12+2.5*3.7 => 12+9.25 => 12+9 => 21
+		{Roll: "12+2.5*3.7", Reslist: []StructuredResult{
+			{Result: 21, Details: []StructuredDescription{
+				{Type: "result", Value: "21"},
+				{Type: "separator", Value: "="},
+				{Type: "constant", Value: "12"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "2.5"},
+				{Type: "operator", Value: "×"},
+				{Type: "constant", Value: "3.7"},
+			}},
+		}},
+		// 76 (12-2.5)*15.75*-(-1.2) => (9)*15.75*1.2 => 141*1.2 => 169
+		{Roll: "(12-2.5)*15.72*-(-1.2)", Reslist: []StructuredResult{
+			{Result: 169, Details: []StructuredDescription{
+				{Type: "result", Value: "169"},
+				{Type: "separator", Value: "="},
+				{Type: "begingroup", Value: "("},
+				{Type: "constant", Value: "12"},
+				{Type: "operator", Value: "-"},
+				{Type: "constant", Value: "2.5"},
+				{Type: "endgroup", Value: ")"},
+				{Type: "operator", Value: "×"},
+				{Type: "constant", Value: "15.72"},
+				{Type: "operator", Value: "×"},
+				{Type: "operator", Value: "-"},
+				{Type: "begingroup", Value: "("},
+				{Type: "operator", Value: "-"},
+				{Type: "constant", Value: "1.2"},
+				{Type: "endgroup", Value: ")"},
+			}},
+		}},
+		// 77
+		{Roll: "5*.5", Reslist: []StructuredResult{
+			{Result: 2, Details: []StructuredDescription{
+				{Type: "result", Value: "2"},
+				{Type: "separator", Value: "="},
+				{Type: "constant", Value: "5"},
+				{Type: "operator", Value: "×"},
+				{Type: "constant", Value: "0.5"},
+			}},
+		}},
 	}
 
 	for i, test := range testcases {
 		label, results, err := d.DoRoll(test.Roll)
-		if err != nil {
-			t.Fatalf("test #%d error %v", i, err)
-		}
-		if !compareResults(results, test.Reslist) {
-			t.Fatalf("test #%d result %v, expected %v", i, results, test.Reslist)
-		}
-		if label != "" {
-			t.Fatalf("test #%d label was %v, expected it to be empty", i, label)
+		if test.ErrorExpected {
+			if err == nil {
+				t.Fatalf("test #%d error expected, but none was raised", i)
+			}
+		} else {
+			if err != nil {
+				t.Fatalf("test #%d error %v", i, err)
+			}
+			if !compareResults(results, test.Reslist) {
+				t.Fatalf("test #%d result %v, expected %v", i, results, test.Reslist)
+			}
+			if label != "" {
+				t.Fatalf("test #%d label was %v, expected it to be empty", i, label)
+			}
 		}
 	}
 }
@@ -2063,7 +2104,7 @@ func TestDicePrivateRolls(t *testing.T) {
 	}
 }
 
-// @[00]@| Go-GMA 5.16.0
+// @[00]@| Go-GMA 5.17.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

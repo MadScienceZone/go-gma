@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __     ______     _______        #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \   / ____ \   (  __   )       #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) ( (    \/   | (  )  |       #
-# | |      | || || || (___) | Assistant | (____        | | | (____     | | /   |       #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | | |  ___ \    | (/ /) |       #
-# | | \_  )| |   | || (   ) |                 ) )      | | | (   ) )   |   / | |       #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_( (___) ) _ |  (__) |       #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/ \_____/ (_)(_______)       #
+#  _______  _______  _______             _______      __    ______      _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  / ___  \    (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) \/   )  )   | (  )  |       #
+# | |      | || || || (___) | Assistant | (____        | |     /  /    | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |    /  /     | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )      | |   /  /      |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_ /  /     _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/ \_/     (_)(_______)       #
 #                                                                                      #
 ########################################################################################
 */
@@ -404,8 +404,9 @@ mainloop:
 				case AddCharacterMessagePayload, ChallengeMessagePayload, ProtocolMessagePayload,
 					UpdateDicePresetsMessagePayload, DeniedMessagePayload, GrantedMessagePayload,
 					MarcoMessagePayload, PrivMessagePayload, ReadyMessagePayload, RedirectMessagePayload,
-					RollResultMessagePayload, UpdatePeerListMessagePayload, UpdateVersionsMessagePayload,
-					WorldMessagePayload:
+					RollResultMessagePayload, UpdateCoreDataMessagePayload, UpdateCoreIndexMessagePayload,
+					UpdatePeerListMessagePayload,
+					UpdateVersionsMessagePayload, WorldMessagePayload:
 					c.Conn.Send(Priv, PrivMessagePayload{
 						Command: p.RawMessage(),
 						Reason:  "I get to send that command, not you.",
@@ -444,6 +445,24 @@ mainloop:
 				case EchoMessagePayload:
 					p.ReceivedTime = time.Now()
 					c.Server.HandleServerMessage(p, c)
+
+				case FilterCoreDataMessagePayload:
+					c.Conn.Send(Comment, "FilterCoreData message ignored since the core database is not yet implemented.")
+
+				case QueryCoreDataMessagePayload:
+					c.Conn.Send(UpdateCoreData, UpdateCoreDataMessagePayload{
+						RequestID:   p.RequestID,
+						NoSuchEntry: true,
+					})
+
+				case QueryCoreIndexMessagePayload:
+					c.Conn.Send(UpdateCoreIndex, UpdateCoreIndexMessagePayload{
+						RequestID: p.RequestID,
+						Type:      p.Type,
+						IsDone:    true,
+						N:         0,
+						Of:        0,
+					})
 
 				default:
 					c.Server.HandleServerMessage(packet, c)

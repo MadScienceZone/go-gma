@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __     ______     _______        #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \   / ____ \   (  __   )       #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) ( (    \/   | (  )  |       #
-# | |      | || || || (___) | Assistant | (____        | | | (____     | | /   |       #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | | |  ___ \    | (/ /) |       #
-# | | \_  )| |   | || (   ) |                 ) )      | | | (   ) )   |   / | |       #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_( (___) ) _ |  (__) |       #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/ \_____/ (_)(_______)       #
+#  _______  _______  _______             _______      __    ______      _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  / ___  \    (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) \/   )  )   | (  )  |       #
+# | |      | || || || (___) | Assistant | (____        | |     /  /    | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |    /  /     | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )      | |   /  /      |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_ /  /     _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/ \_/     (_)(_______)       #
 #                                                                                      #
 ########################################################################################
 */
@@ -30,9 +30,9 @@ import (
 
 const (
 	GMAMapperPreferencesMinimumVersion int = 1
-	GMAMapperPreferencesMaximumVersion int = 6
+	GMAMapperPreferencesMaximumVersion int = 7
 	GMAPreferencesMinimumVersion       int = 1
-	GMAPreferencesMaximumVersion       int = 1
+	GMAPreferencesMaximumVersion       int = 2
 )
 
 type UnsupportedPreferencesVersionError struct {
@@ -295,6 +295,7 @@ type UserPreferences struct {
 	PreloadImages bool                `json:"preload,omitempty"`
 	Profiles      []ServerProfile     `json:"profiles,omitempty"`
 	Fonts         map[string]UserFont `json:"fonts,omitempty"`
+	Scaling	      float64             `json:"scaling,omitempty"`
 	Styles        StyleDescription    `json:"styles,omitempty"`
 }
 
@@ -308,6 +309,8 @@ type InitiativeSeedData struct {
 	InitAdj      int    `json:"init_adj"`
 	HP           int    `json:"hp"`
 	BlurHP       int    `json:"blur_hp"`
+	IsPC         bool   `json:"is_pc"`
+	DieSpec      string `json:"die_spec"`
 }
 
 //
@@ -326,6 +329,7 @@ type GMAPreferences struct {
 	CoreDBPath            string `json:"core_db"`
 	Appearance            struct {
 		DarkMode bool `json:"dark_mode"`
+		Scaling float64 `json:"scaling"`
 	} `json:"appearance"`
 	Worlds             map[string]GMAWorld          `json:"worlds"`
 	Networks           map[string]GMANetworkProfile `json:"networks"`
@@ -973,7 +977,7 @@ func SearchInPath(program string) (string, error) {
 	return "", fmt.Errorf("file not found in PATH")
 }
 
-// @[00]@| Go-GMA 5.16.0
+// @[00]@| Go-GMA 5.17.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

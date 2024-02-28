@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______      __     ______     _______        #
-# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \   / ____ \   (  __   )       #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) ( (    \/   | (  )  |       #
-# | |      | || || || (___) | Assistant | (____        | | | (____     | | /   |       #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | | |  ___ \    | (/ /) |       #
-# | | \_  )| |   | || (   ) |                 ) )      | | | (   ) )   |   / | |       #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_( (___) ) _ |  (__) |       #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/ \_____/ (_)(_______)       #
+#  _______  _______  _______             _______      __    ______      _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \    /  \  / ___  \    (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) \/   )  )   | (  )  |       #
+# | |      | || || || (___) | Assistant | (____        | |     /  /    | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |    /  /     | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )      | |   /  /      |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_ /  /     _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/ \_/     (_)(_______)       #
 #                                                                                      #
 ########################################################################################
 #
@@ -1508,9 +1508,9 @@ type Weapon struct {
 	Damage   map[string]string
 	Critical struct {
 		// If true, no critical information is available / weapon can't inflict critical damage.
-		CantCritical bool   `json:",omitempty"`
-		Multiplier   string `json:",omitempty"`
-		Threat       string `json:",omitempty"`
+		CantCritical bool `json:",omitempty"`
+		Multiplier   int  `json:",omitempty"`
+		Threat       int  `json:",omitempty"`
 	}
 	Ranged struct {
 		Increment     int  `json:",omitempty"`
@@ -1519,10 +1519,234 @@ type Weapon struct {
 	} `json:",omitempty"`
 	// Weight is in units of grams.
 	Weight int `json:",omitempty"`
-	// DamageTypes is a string of single letters which each specify a type of damage dealt.
-	DamageTypes string `json:",omitempty"`
-	// Qualities is a string of single letters which each specify a weapon quality.
-	Qualities string `json:",omitempty"`
+	// DamageTypes is a bitmap of types of damage done by this weapon
+	DamageTypes WeaponDamageType `json:",omitempty"`
+	// Qualities is a bitmap of weapon qualities
+	Qualities WeaponQuality `json:",omitempty"`
+}
+
+type WeaponDamageType byte
+
+// DO NOT add new items in the middle of this list without completely rebuilding
+// the core database; adding to the end is fine.
+const (
+	BludgeoningDamage WeaponDamageType = 1 << iota
+	PiercingDamage
+	SlashingDamage
+)
+
+// MarshalJSON represents the bitmapped set of weapon damage
+// types as a list of strings so the JSON version is easily
+// understood and managed by other programs.
+func (w WeaponDamageType) MarshalJSON() ([]byte, error) {
+	var damageList []string
+	if w&BludgeoningDamage != 0 {
+		damageList = append(damageList, "B")
+	}
+	if w&PiercingDamage != 0 {
+		damageList = append(damageList, "P")
+	}
+	if w&SlashingDamage != 0 {
+		damageList = append(damageList, "S")
+	}
+
+	return json.Marshal(damageList)
+}
+
+func (w *WeaponDamageType) UnmarshalJSON(input []byte) error {
+	var damageList []string
+	if err := json.Unmarshal(input, &damageList); err != nil {
+		return err
+	}
+	*w = 0
+	for _, t := range damageList {
+		switch t {
+		case "B":
+			*w |= BludgeoningDamage
+		case "P":
+			*w |= PiercingDamage
+		case "S":
+			*w |= SlashingDamage
+		default:
+			return fmt.Errorf("cannot unmarshal value \"%s\" to type WeaponDamageType", t)
+		}
+	}
+	return nil
+}
+
+type WeaponQuality uint32
+
+// DO NOT add new items in the middle of this list without completely rebuilding
+// the core database; adding to the end is fine.
+const (
+	BraceWeapon WeaponQuality = 1 << iota
+	DeadlyWeapon
+	DisarmWeapon
+	DoubleWeapon
+	DwarvenWeapon
+	ElvenWeapon
+	ExoticWeapon
+	FragileWeapon
+	GnomeWeapon
+	GrappleWeapon
+	HalflingWeapon
+	LightWeapon
+	MartialWeapon
+	MasterworkWeapon
+	MonkWeapon
+	NonLethalWeapon
+	OneHandedWeapon
+	OrcWeapon
+	RangedWeapon
+	ReachWeapon
+	SimpleWeapon
+	TripWeapon
+	TwoHandedWeapon
+	UnarmedWeapon
+)
+
+// MarshalJSON represents the bitmapped set of weapon qualities
+// as a list of strings so the JSON version is easily
+// understood and managed by other programs.
+func (q WeaponQuality) MarshalJSON() ([]byte, error) {
+	var damageList []string
+	if q&OneHandedWeapon != 0 {
+		damageList = append(damageList, "1")
+	}
+	if q&TwoHandedWeapon != 0 {
+		damageList = append(damageList, "2")
+	}
+	if q&BraceWeapon != 0 {
+		damageList = append(damageList, "b")
+	}
+	if q&DisarmWeapon != 0 {
+		damageList = append(damageList, "D")
+	}
+	if q&DoubleWeapon != 0 {
+		damageList = append(damageList, "d")
+	}
+	if q&ElvenWeapon != 0 {
+		damageList = append(damageList, "E")
+	}
+	if q&FragileWeapon != 0 {
+		damageList = append(damageList, "f")
+	}
+	if q&GnomeWeapon != 0 {
+		damageList = append(damageList, "G")
+	}
+	if q&GrappleWeapon != 0 {
+		damageList = append(damageList, "g")
+	}
+	if q&HalflingWeapon != 0 {
+		damageList = append(damageList, "H")
+	}
+	if q&LightWeapon != 0 {
+		damageList = append(damageList, "L")
+	}
+	if q&MonkWeapon != 0 {
+		damageList = append(damageList, "M")
+	}
+	if q&MartialWeapon != 0 {
+		damageList = append(damageList, "m")
+	}
+	if q&OrcWeapon != 0 {
+		damageList = append(damageList, "O")
+	}
+	if q&RangedWeapon != 0 {
+		damageList = append(damageList, "R")
+	}
+	if q&ReachWeapon != 0 {
+		damageList = append(damageList, "r")
+	}
+	if q&NonLethalWeapon != 0 {
+		damageList = append(damageList, "S")
+	}
+	if q&SimpleWeapon != 0 {
+		damageList = append(damageList, "s")
+	}
+	if q&TripWeapon != 0 {
+		damageList = append(damageList, "t")
+	}
+	if q&UnarmedWeapon != 0 {
+		damageList = append(damageList, "U")
+	}
+	if q&DwarvenWeapon != 0 {
+		damageList = append(damageList, "W")
+	}
+	if q&ExoticWeapon != 0 {
+		damageList = append(damageList, "X")
+	}
+	if q&DeadlyWeapon != 0 {
+		damageList = append(damageList, "x")
+	}
+	if q&MasterworkWeapon != 0 {
+		damageList = append(damageList, "Z")
+	}
+
+	return json.Marshal(damageList)
+}
+
+func (q *WeaponQuality) UnmarshalJSON(input []byte) error {
+	var qualityList []string
+	if err := json.Unmarshal(input, &qualityList); err != nil {
+		return err
+	}
+	*q = 0
+	for _, t := range qualityList {
+		switch t {
+		case "1":
+			*q |= OneHandedWeapon
+		case "2":
+			*q |= TwoHandedWeapon
+		case "b":
+			*q |= BraceWeapon
+		case "D":
+			*q |= DisarmWeapon
+		case "d":
+			*q |= DoubleWeapon
+		case "E":
+			*q |= ElvenWeapon
+		case "f":
+			*q |= FragileWeapon
+		case "G":
+			*q |= GnomeWeapon
+		case "g":
+			*q |= GrappleWeapon
+		case "H":
+			*q |= HalflingWeapon
+		case "L":
+			*q |= LightWeapon
+		case "M":
+			*q |= MonkWeapon
+		case "m":
+			*q |= MartialWeapon
+		case "O":
+			*q |= OrcWeapon
+		case "R":
+			*q |= RangedWeapon
+		case "r":
+			*q |= ReachWeapon
+		case "S":
+			*q |= NonLethalWeapon
+		case "s":
+			*q |= SimpleWeapon
+		case "t":
+			*q |= TripWeapon
+		case "U":
+			*q |= UnarmedWeapon
+		case "W":
+			*q |= DwarvenWeapon
+		case "X":
+			*q |= ExoticWeapon
+		case "x":
+			*q |= DeadlyWeapon
+		case "Z":
+			*q |= MasterworkWeapon
+		default:
+			return fmt.Errorf("cannot unmarshal value \"%s\" to type WeaponQuality", t)
+		}
+	}
+	return nil
 }
 
 // ImportWeapon reads a weapon from the JSON input stream, writing it to the database.
@@ -1532,8 +1756,8 @@ func ImportWeapon(decoder *json.Decoder, db *sql.DB, prefs *CorePreferences) err
 	var id int64
 	var exists, ok bool
 	var res sql.Result
-	var cost, ri, rmax, wt sql.NullInt32
-	var dt, ds, dm, dl, cm, ct, dtype, q sql.NullString
+	var cost, ri, rmax, wt, cm, ct, dtype, q sql.NullInt32
+	var dt, ds, dm, dl sql.NullString
 	var s string
 
 	if err = decoder.Decode(&weap); err != nil {
@@ -1574,9 +1798,9 @@ func ImportWeapon(decoder *json.Decoder, db *sql.DB, prefs *CorePreferences) err
 		ct.Valid = false
 	} else {
 		cm.Valid = true
-		cm.String = weap.Critical.Multiplier
+		cm.Int32 = int32(weap.Critical.Multiplier)
 		ct.Valid = true
-		ct.String = weap.Critical.Threat
+		ct.Int32 = int32(weap.Critical.Threat)
 	}
 	if s, ok = weap.Damage["T"]; !ok || s == "" {
 		dt.Valid = false
@@ -1602,17 +1826,17 @@ func ImportWeapon(decoder *json.Decoder, db *sql.DB, prefs *CorePreferences) err
 		dl.Valid = true
 		dl.String = s
 	}
-	if weap.DamageTypes == "" {
+	if weap.DamageTypes == 0 {
 		dtype.Valid = false
 	} else {
 		dtype.Valid = true
-		dtype.String = weap.DamageTypes
+		dtype.Int32 = int32(weap.DamageTypes)
 	}
-	if weap.Qualities == "" {
+	if weap.Qualities == 0 {
 		q.Valid = false
 	} else {
 		q.Valid = true
-		q.String = weap.Qualities
+		q.Int32 = int32(weap.Qualities)
 	}
 
 	if exists {
@@ -1675,8 +1899,8 @@ func ExportWeapons(fp *os.File, db *sql.DB, prefs *CorePreferences) error {
 	firstLine := true
 	for rows.Next() {
 		var weap Weapon
-		var cost, ri, rmax, wt sql.NullInt32
-		var dt, ct, cm, ds, dm, dl, dtyp, q sql.NullString
+		var cost, ri, rmax, wt, cm, ct, dtyp, q sql.NullInt32
+		var dt, ds, dm, dl sql.NullString
 
 		if err := rows.Scan(&weap.IsLocal, &weap.Code, &cost, &weap.Name,
 			&dt, &ds, &dm, &dl, &cm, &ct, &ri, &rmax, &wt, &dtyp, &q); err != nil {
@@ -1701,10 +1925,10 @@ func ExportWeapons(fp *os.File, db *sql.DB, prefs *CorePreferences) error {
 			weap.Weight = int(wt.Int32)
 		}
 		if dtyp.Valid {
-			weap.DamageTypes = dtyp.String
+			weap.DamageTypes = WeaponDamageType(dtyp.Int32)
 		}
 		if q.Valid {
-			weap.Qualities = q.String
+			weap.Qualities = WeaponQuality(q.Int32)
 		}
 		if cost.Valid {
 			weap.Cost = int(cost.Int32)
@@ -1723,10 +1947,10 @@ func ExportWeapons(fp *os.File, db *sql.DB, prefs *CorePreferences) error {
 		}
 		if ct.Valid || cm.Valid {
 			if ct.Valid {
-				weap.Critical.Threat = ct.String
+				weap.Critical.Threat = int(ct.Int32)
 			}
 			if cm.Valid {
-				weap.Critical.Multiplier = cm.String
+				weap.Critical.Multiplier = int(cm.Int32)
 			}
 		} else {
 			weap.Critical.CantCritical = true
@@ -2289,9 +2513,9 @@ type AttackMode struct {
 	// omitted entirely from the extra damage.
 	Damage   string `json:",omitempty"`
 	Critical struct {
-		CantCritical bool   `json:",omitempty"`
-		Threat       string `json:",omitempty"`
-		Multiplier   string `json:",omitempty"`
+		CantCritical bool `json:",omitempty"`
+		Threat       int  `json:",omitempty"`
+		Multiplier   int  `json:",omitempty"`
 	} `json:",omitempty"`
 	Ranged struct {
 		IsRanged      bool `json:",omitempty"`
@@ -2819,8 +3043,8 @@ func ImportMonster(decoder *json.Decoder, db *sql.DB, prefs *CorePreferences) er
 			return fmt.Errorf("monster %s attack %s (tier %d, seq %d) references unknown mode %s (database error %v)", mob.Species, amode.Name, amode.Tier, seq, amode.Mode, err)
 		}
 
-		var attack, damage, threat, critical, spec sql.NullString
-		var ri, rmax sql.NullInt32
+		var attack, damage, spec sql.NullString
+		var ri, rmax, threat, critical sql.NullInt32
 
 		if amode.Attack != "" {
 			attack.Valid = true
@@ -2833,8 +3057,8 @@ func ImportMonster(decoder *json.Decoder, db *sql.DB, prefs *CorePreferences) er
 		if !amode.Critical.CantCritical {
 			threat.Valid = true
 			critical.Valid = true
-			threat.String = amode.Critical.Threat
-			critical.String = amode.Critical.Multiplier
+			threat.Int32 = int32(amode.Critical.Threat)
+			critical.Int32 = int32(amode.Critical.Multiplier)
 		}
 		if amode.Ranged.IsRanged {
 			ri.Valid = true
@@ -3457,8 +3681,8 @@ FROM
 			defer rows.Close()
 			for rows.Next() {
 				var am AttackMode
-				var weap, att, dam, spec, threat, mult sql.NullString
-				var ri, rmax sql.NullInt32
+				var weap, att, dam, spec sql.NullString
+				var ri, rmax, threat, mult sql.NullInt32
 
 				if err := rows.Scan(&am.Tier, &weap, &am.Multiple, &am.Name, &att, &dam,
 					&threat, &mult, &ri, &rmax, &am.IsReach, &spec, &am.Mode); err != nil {
@@ -3478,14 +3702,14 @@ FROM
 				}
 				if threat.Valid || mult.Valid {
 					if threat.Valid {
-						am.Critical.Threat = threat.String
+						am.Critical.Threat = int(threat.Int32)
 					} else {
-						am.Critical.Threat = "20"
+						am.Critical.Threat = 20
 					}
 					if mult.Valid {
-						am.Critical.Multiplier = mult.String
+						am.Critical.Multiplier = int(mult.Int32)
 					} else {
-						am.Critical.Multiplier = "2"
+						am.Critical.Multiplier = 2
 					}
 				} else {
 					am.Critical.CantCritical = true
@@ -4412,7 +4636,7 @@ func ExportSpells(fp *os.File, db *sql.DB, prefs *CorePreferences) error {
 }
 
 /*
-# @[00]@| Go-GMA 5.16.0
+# @[00]@| Go-GMA 5.17.0
 # @[01]@|
 # @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
