@@ -1824,6 +1824,48 @@ func TestDiceStructured(t *testing.T) {
 		{Roll: "3 5label", ErrorExpected: true},
 		// 74
 		{Roll: "3 .5label", ErrorExpected: true},
+		// 75 12+2.5*3.7 => 12+9.25 => 12+9 => 21
+		{Roll: "12+2.5*3.7", Reslist: []StructuredResult{
+			{Result: 21, Details: []StructuredDescription{
+				{Type: "result", Value: "21"},
+				{Type: "separator", Value: "="},
+				{Type: "constant", Value: "12"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "2.5"},
+				{Type: "operator", Value: "×"},
+				{Type: "constant", Value: "3.7"},
+			}},
+		}},
+		// 76 (12-2.5)*15.75*-(-1.2) => (9)*15.75*1.2 => 141*1.2 => 169
+		{Roll: "(12-2.5)*15.72*-(-1.2)", Reslist: []StructuredResult{
+			{Result: 169, Details: []StructuredDescription{
+				{Type: "result", Value: "169"},
+				{Type: "separator", Value: "="},
+				{Type: "begingroup", Value: "("},
+				{Type: "constant", Value: "12"},
+				{Type: "operator", Value: "-"},
+				{Type: "constant", Value: "2.5"},
+				{Type: "endgroup", Value: ")"},
+				{Type: "operator", Value: "×"},
+				{Type: "constant", Value: "15.72"},
+				{Type: "operator", Value: "×"},
+				{Type: "operator", Value: "-"},
+				{Type: "begingroup", Value: "("},
+				{Type: "operator", Value: "-"},
+				{Type: "constant", Value: "1.2"},
+				{Type: "endgroup", Value: ")"},
+			}},
+		}},
+		// 77
+		{Roll: "5*.5", Reslist: []StructuredResult{
+			{Result: 2, Details: []StructuredDescription{
+				{Type: "result", Value: "2"},
+				{Type: "separator", Value: "="},
+				{Type: "constant", Value: "5"},
+				{Type: "operator", Value: "×"},
+				{Type: "constant", Value: "0.5"},
+			}},
+		}},
 	}
 
 	for i, test := range testcases {
