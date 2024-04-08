@@ -36,10 +36,14 @@ The JSON file consists of an object with the following field:
 
 	   game_sessions
 	      This is a list of objects representing each game, each with the fields:
-		     date     The game date in mm-ddd-yyyy format
-			 video    The YouTube video link (just the token after "v=" in the URL)
-			 duration Game session length, e.g. 4h30m5s
-			 title    Title for the game session
+		     date        The game date in mm-ddd-yyyy format
+			 video       The YouTube video link (just the token after "v=" in the URL)
+			 duration    Game session length, e.g. 4h30m5s
+			 title       Title for the game session
+			 world_dates The date(s) in the game world where the events took place
+			 book        The AP "book" number (integer)
+			 synopsis    Brief synopsis of what happened in the game session
+			 url         URL to the full game session summary write-up
 
 More data values may be defined in the future as this program grows.
 
@@ -110,12 +114,12 @@ func (d *GameTime) UnmarshalJSON(b []byte) error {
 }
 
 func main() {
+	var reverseOrder = flag.Bool("r", false, "reverse synopsis order")
 	var generateSynopsis = flag.Bool("s", false, "generate synopsis of games")
 	var generateVidList = flag.Bool("v", false, "generate list of video links for games")
 	flag.Parse()
 
 	if len(flag.Args()) != 1 {
-		fmt.Println(len(flag.Args()), flag.Args())
 		fmt.Printf("Usage: %s [-sv] json-file\n", os.Args[0])
 		os.Exit(1)
 	}
@@ -136,11 +140,11 @@ func main() {
 		generateGameSummary(stats)
 	}
 	if *generateSynopsis {
-		generateGameSynopsis(stats)
+		generateGameSynopsis(stats, *reverseOrder)
 	}
 }
 
-func generateGameSynopsis(stats SessionStats) {
+func generateGameSynopsis(stats SessionStats, reverseOrder bool) {
 	fmt.Println(`[html]
 <link rel="stylesheet" href="/gpbp/local.css" />
 <table class="pftable">
@@ -154,6 +158,8 @@ func generateGameSynopsis(stats SessionStats) {
 <tbody>`)
 	current_book := 0
 	extra := ""
+	synopses := []string{}
+
 	for i, session := range stats.GameSessions {
 		if current_book < session.BookNumber {
 			current_book = session.BookNumber
@@ -170,7 +176,7 @@ func generateGameSynopsis(stats SessionStats) {
 		} else {
 			extra = ""
 		}
-		fmt.Printf(`<tr>
+		synopses = append(synopses, fmt.Sprintf(`<tr>
 <td align=center valign=top><a href="%s">%d</a></td>
 <td align=center valign=top><a href="%s">%s</a></td>
 <td valign=top>%s</td>
@@ -181,7 +187,17 @@ func generateGameSynopsis(stats SessionStats) {
 			html.EscapeString(session.Title),
 			session.WorldDates,
 			extra, session.Synopsis,
-		)
+		))
+	}
+
+	if reverseOrder {
+		for i := len(synopses)-1; i >= 0; i-- {
+			fmt.Println(synopses[i])
+		}
+	} else {
+		for _, s := range synopses {
+			fmt.Println(s)
+		}
 	}
 
 	fmt.Println(`	</tbody>
