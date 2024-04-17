@@ -19,6 +19,10 @@ In addition, if your server didn't have the following update installed previousl
 
 When upgrading an existing server to version 5.13.1 or later, be sure to run `scripts/upgrade-5.13.1` on each database file to update it to the new chat history encoding scheme introduced at 5.13.1. If you don't, the server will ignore some or all of your historic chat and die roll messages. Alternatively, you can delete the old database and make a new one with the current server.
 
+## v5.18.0
+### Enhanced
+ * Improves functionality of `session-stats` command to use expanded JSON input file and generate the full game synopsis and video link list.
+
 ## v5.17.0
 ### Enhanced
  * Implements protocol 413.
