@@ -1,12 +1,12 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.17.0                <!-- @@##@@ -->
- * Effective Date: 27-Feb-2024			<!-- @@##@@ -->
+ * This Package Version: 5.18.0                <!-- @@##@@ -->
+ * Effective Date: 16-Apr-2024			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 6.16		<!-- @@##@@ -->
- * GMA Mapper Version: 4.22.3		<!-- @@##@@ -->
+ * GMA Core API Library Version: 6.17.1		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.23.2		<!-- @@##@@ -->
  * GMA Mapper Protocol: 413		<!-- @@##@@ -->
  * GMA Mapper File Format: 23		<!-- @@##@@ -->
  * GMA Mapper Preferences File Format: 7 <!-- @@##@@ -->
@@ -18,6 +18,10 @@ When upgrading an existing server to version 5.15.0 or later, be sure to run `sc
 In addition, if your server didn't have the following update installed previously, do it as well:
 
 When upgrading an existing server to version 5.13.1 or later, be sure to run `scripts/upgrade-5.13.1` on each database file to update it to the new chat history encoding scheme introduced at 5.13.1. If you don't, the server will ignore some or all of your historic chat and die roll messages. Alternatively, you can delete the old database and make a new one with the current server.
+
+## v5.18.0
+### Enhanced
+ * Improves functionality of `session-stats` command to use expanded JSON input file and generate the full game synopsis and video link list.
 
 ## v5.17.0
 ### Enhanced

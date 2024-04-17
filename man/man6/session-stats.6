@@ -1,0 +1,167 @@
+'\" <<ital-is-var>>
+'\" <<bold-is-fixed>>
+.TH SESSION-STATS 6 "Go-GMA 5.18.0" 16-Apr-2024 "Games" \" @@mp@@
+.SH NAME
+session-stats \- Generate web forum summaries of game sessions
+.SH SYNOPSIS
+'\" <<usage>>
+.LP
+(If using the full GMA core tool suite)
+.LP
+.na
+.B gma
+.B go
+.B session-stats
+[options as described below...]
+.ad
+.LP
+(Otherwise)
+.LP
+.na
+.B session-stats
+.B \-h
+.LP
+.B session-stats
+.B \-help
+.LP
+.B session-stats
+.RB [ \-r ]
+.B \-s
+.I inputfile
+.LP
+.B session-stats
+.B \-v
+.I inputfile
+.ad
+'\" <</usage>>
+.SH DESCRIPTION
+.LP
+When completing a game session that is part of a larger overall
+campaign, the GM can collect some basic statistics about the game
+session in a JSON-formatted data file. This has the overall format:
+.LP
+.na
+.nf
+.B "{\[dq]game_sessions\[dq]: ["
+.I "\ \ \ each game session described in a list here..."
+.B "]}"
+.fi
+.ad
+.LP
+Each game session is described by a JSON object in the form
+.LP
+.na
+.nf
+.B "\ \ \ {"
+.B "\ \ \ \ \ \ \[dq]date\[dq]: \[dq]18-Feb-2023\[dq],"
+.B "\ \ \ \ \ \ \[dq]video\[dq]: \[dq]ABCDEFGHIJKL\[dq],"
+.B "\ \ \ \ \ \ \[dq]duration\[dq]: \[dq]5h56m34s\[dq],"
+.B "\ \ \ \ \ \ \[dq]title\[dq]: \[dq]The Plot Thickens...\[dq],"
+.B "\ \ \ \ \ \ \[dq]world_dates\[dq]: \[dq]Desnus 4, 4722\[dq],"
+.B "\ \ \ \ \ \ \[dq]book\[dq]: 1,"
+.B "\ \ \ \ \ \ \[dq]url\[dq]: \[dq]https://forum.example.org/games/1.html\[dq],"
+.B "\ \ \ \ \ \ \[dq]synopsis\[dq]: \[dq]The party stumbles upon a dark hidden secret\[dq]"
+.B "\ \ \ },"
+.fi
+.ad
+.LP
+Note that, to be a valid JSON file, the trailing comma must be omitted from
+the last game entry in the list.
+.LP
+The meaning of the fields are described below.
+.TP 13
+.B date
+The real-world date of the game session, in
+.IB dd - month - yyyy
+format.
+.TP
+.B video
+If your game sessions are recorded on YouTube, the video ID (the part of the
+video's URL that appears just after the
+.RB \*(lq v= \*(rq
+but before the next
+.RB \*(lq & \*(rq)
+is entered here. If you don't have a video, leave this field out.
+.TP
+.B duration
+The total duration of the session (or of the edited video, if there is one)
+in Go's duration type format.
+.TP
+.B title
+The title by which you wish to refer to this game session.
+.TP
+.B world_dates
+The in-game date(s) in which the events of the game session take place.
+This is an arbitrary-formatted string value.
+.TP
+.B book
+The integer book number of a multi-book campaign or Adventure Path. The
+synopsis list will indicate the start of each new book in the list.
+.TP
+.B url
+The URL to the web forum post where you have written a full summary of the
+game session events.
+.TP
+.B synopsis
+A string value which contains an HTML-formatted brief synopsis of the events
+of the game session.
+.LP
+With this information in place,
+.B session-stats
+provides a way to generate two different summaries of the session information
+which you can post to your game forum site: a synopsis list and a video/session
+list.
+.SS "Synopsis List"
+.LP
+By running
+.B session-stats
+with a
+.B \-s
+option, it produces on its standard output an HTML-formatted list of game
+session synopses, with links to the full description entries in your forum.
+The HTML output is bracked inside
+.RB \*(lq [html] \*(rq
+and
+.RB \*(lq [/html] \*(rq
+BBC tags to facilitate its use in a BBC-enabled web forum. Ignore these
+tags in a pure HTML environment.
+.SS "Video/Session List"
+.LP
+By running
+.B session-stats
+with a
+.B \-v
+option, it produces on its standard output an HTML-formatted list of game
+sessions and video links.  
+The HTML output is bracked inside
+.RB \*(lq [html] \*(rq
+and
+.RB \*(lq [/html] \*(rq
+BBC tags to facilitate its use in a BBC-enabled web forum. Ignore these
+tags in a pure HTML environment.
+.SH OPTIONS
+.TP
+.B \-h
+.TP
+.B \-help
+Print a summary of options and exit.
+.TP
+.B \-r
+Reverse the order of the output produced by
+.B \-s
+so that it reads from most recent to earliest game session.
+.TP
+.B \-s
+Produce the list of game synopses.
+.TP
+.B \-v
+Produce the list of session video links.
+.SH "SEE ALSO"
+.LP
+.BR gma (6).
+.SH AUTHOR
+.LP
+Steve Willoughby / steve@madscience.zone.
+.SH BUGS
+.SH COPYRIGHT
+Part of the GMA software suite, copyright \(co 1992\-2024 by Steven L. Willoughby, Aloha, Oregon, USA. All Rights Reserved. Distributed under BSD-3-Clause License. \"@m(c)@
