@@ -397,6 +397,70 @@ that condition.
 '\" <</>>
 .TP
 '\" <<New>>
+.B QOS
+Sets quality of service limits in the server. If a client session violates any of these
+limits, its session will be immediately terminated. Make sure that whatever values you
+configure here are far enough out of bounds to justify ejecting the offending client.
+The value for this item is a JSON object where each entry is a QoS rule to enforce,
+and the corresponding value for the rule is a set of fields as described below.
+If any of these rules are not included in the
+.B QOS
+payload, that rule will not be enforced at all.
+.RS
+.TP 16
+.B QueryImage
+Reject clients which excessively ask for the same images after being informed of where
+to find them by the server. There may be a brief period where a client could ask again
+if the image wasn't downloaded fast enough, but that shouldn't be a very long time. This
+rule's value is a JSON object with these fields:
+.RS
+.TP
+.BI "Count " (int)
+The maximum number of
+.B AI?
+requests a client can send for the same image after it's already been answered by the server.
+.TP
+.BI "Window " (duration)
+The window of time during which the client's repeated requests must be received in order to trigger
+this rule. If not specified or blank, no time window is considered. If
+.B Count
+duplicate requests are ever received, the rule is triggered.
+.TP
+.RE
+.TP 
+.B MessageRate
+Reject clients which send more than a certain number of requests during a given window of time.
+This rule's value is a JSON object with these fields:
+.RS
+.TP
+.BI "Count " (int)
+The maximum number of messages allowed for the client to send during
+.B Window
+before the rule is triggered.
+.TP
+.BI "Window " (duration)
+The amount of time during which
+.B Count
+messages must be received in order to trigger the rule. Note that the exact way these are counted
+is implementation dependent and subject to change (e.g.,
+this may not be precisely
+a rolling window of time; to avoid excessive processing overhead, a server may simply sample
+the messages arriving within the given window, and then start a new count for another window
+later).
+.RE
+.TP 
+.B MessageBacklog
+Reject clients if the number of unanswered messages exceeds a threshold. This prevents a client
+from overwhelming the server with a storm of requests faster than the server can answer them.
+This rule's value is a JSON object with these field:
+.RS
+.TP
+.BI "Count " (int)
+The maximum number of messages in the backlog.
+.RE
+.RE
+'\" <</New>>
+.TP
 .B REDIRECT
 Instructs the client to use a different server for this session. This is used when
 the GM wants to use an alternate server temporarily without requiring the players to
