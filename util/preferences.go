@@ -30,7 +30,7 @@ import (
 
 const (
 	GMAMapperPreferencesMinimumVersion int = 1
-	GMAMapperPreferencesMaximumVersion int = 7
+	GMAMapperPreferencesMaximumVersion int = 8
 	GMAPreferencesMinimumVersion       int = 1
 	GMAPreferencesMaximumVersion       int = 2
 )
@@ -62,6 +62,45 @@ type GridOffsets struct {
 type GridGuide struct {
 	Interval int         `json:"interval,omitempty"`
 	Offsets  GridOffsets `json:"offsets,omitempty"`
+}
+
+//
+// TimerVisibility represents which timers a user wishes to see on their client's display.
+//
+type TimerVisibility byte
+
+const (
+	ShowNoTimers TimerVisibility = iota
+	ShowMyTimers
+	ShowAllTimers
+)
+
+func (tv *TimerVisibility) MarshalJSON() ([]byte, error) {
+	if tv != nil {
+		switch *tv {
+		case ShowNoTimers:
+			return json.Marshal("none")
+		case ShowAllTimers:
+			return json.Marshal("all")
+		}
+	}
+	return json.Marshal("mine")
+}
+
+func (tv *TimerVisibility) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	switch s {
+	case "none":
+		*tv = ShowNoTimers
+	case "all":
+		*tv = ShowAllTimers
+	default:
+		*tv = ShowMyTimers
+	}
+	return nil
 }
 
 //
@@ -295,7 +334,8 @@ type UserPreferences struct {
 	PreloadImages bool                `json:"preload,omitempty"`
 	Profiles      []ServerProfile     `json:"profiles,omitempty"`
 	Fonts         map[string]UserFont `json:"fonts,omitempty"`
-	Scaling	      float64             `json:"scaling,omitempty"`
+	Scaling       float64             `json:"scaling,omitempty"`
+	ShowTimers    TimerVisibility     `json:"show_timers,omitempty"`
 	Styles        StyleDescription    `json:"styles,omitempty"`
 }
 
@@ -328,8 +368,8 @@ type GMAPreferences struct {
 	GMAPreferencesVersion int    `json:"gma_preferences_file_version"`
 	CoreDBPath            string `json:"core_db"`
 	Appearance            struct {
-		DarkMode bool `json:"dark_mode"`
-		Scaling float64 `json:"scaling"`
+		DarkMode bool    `json:"dark_mode"`
+		Scaling  float64 `json:"scaling"`
 	} `json:"appearance"`
 	Worlds             map[string]GMAWorld          `json:"worlds"`
 	Networks           map[string]GMANetworkProfile `json:"networks"`
@@ -458,6 +498,7 @@ func DefaultPreferences() UserPreferences {
 		CurlPath:         curlPath,
 		CurrentProfile:   "offline",
 		ImageFormat:      PNG,
+		ShowTimers:       ShowMyTimers,
 		Profiles: []ServerProfile{
 			ServerProfile{
 				Name:    "offline",
