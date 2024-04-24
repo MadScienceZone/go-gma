@@ -5,12 +5,12 @@
 # \_|(_)                                                                               #
 #  _______  _______  _______             _______      __     _____      _______        #
 # (  ____ \(       )(  ___  ) Game      (  ____ \    /  \   / ___ \    (  __   )       #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) ( (___) )   | (  )  |       #
-# | |      | || || || (___) | Assistant | (____        | |  \     /    | | /   |       #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |  / ___ \    | (/ /) |       #
-# | | \_  )| |   | || (   ) |                 ) )      | | ( (   ) )   |   / | |       #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_( (___) ) _ |  (__) |       #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/ \_____/ (_)(_______)       #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) ( (   ) )   | (  )  |       #
+# | |      | || || || (___) | Assistant | (____        | | ( (___) |   | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |  \____  |   | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )      | |       ) |   |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_/\____) ) _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/\______/ (_)(_______)       #
 #                                                                                      #
 ########################################################################################
 */
@@ -48,6 +48,7 @@ const (
 	DebugInit
 	DebugMessages
 	DebugMisc
+	DebugQoS
 	DebugState
 	DebugAll DebugFlags = 0xffffffff
 )
@@ -76,6 +77,7 @@ func DebugFlagNameSlice(flags DebugFlags) []string {
 		{bits: DebugInit, name: "init"},
 		{bits: DebugMessages, name: "messages"},
 		{bits: DebugMisc, name: "misc"},
+		{bits: DebugQoS, name: "qos"},
 		{bits: DebugState, name: "state"},
 	} {
 		if (flags & f.bits) != 0 {
@@ -132,6 +134,8 @@ func NamedDebugFlags(names ...string) (DebugFlags, error) {
 				d |= DebugMessages
 			case "misc":
 				d |= DebugMisc
+			case "qos":
+				d |= DebugQoS
 			case "state":
 				d |= DebugState
 			default:
@@ -217,6 +221,26 @@ type Application struct {
 
 	// The AllowedClients list lets us require minimum versions of various clients.
 	AllowedClients []mapper.PackageUpdate
+
+	// The QoS settings as configured for the server
+	QoSLimits QoSLimitsDescription
+}
+
+type QoSLimitsDescription struct {
+	QueryImage struct {
+		Count        uint64
+		WindowString string        `json:"Window,omitempty"`
+		window       time.Duration `json:"-"`
+	}
+	MessageRate struct {
+		Count        uint64
+		WindowString string        `json:"Window,omitempty"`
+		window       time.Duration `json:"-"`
+	}
+	Log struct {
+		WindowString string        `json:"Window,omitempty"`
+		window       time.Duration `json:"-"`
+	}
 }
 
 func (a *Application) GetClientPreamble() *mapper.ClientPreamble {
@@ -680,6 +704,15 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		if len(questions.Sizes) > 0 {
 			if err := a.SendToAllExcept(requester, mapper.QueryImage, questions); err != nil {
 				a.Logf("error asking QueryImage query out to other peers: %v", err)
+			}
+		}
+
+		if requester.QoS.QueryImage.Threshold > 0 {
+			for _, sz := range answers.Sizes {
+				id := fmt.Sprintf("%s:%v", answers.Name, sz.Zoom)
+				if _, alreadyAnswered := requester.QoS.QueryImage.Count[id]; !alreadyAnswered {
+					requester.QoS.QueryImage.Count[id] = 0
+				}
 			}
 		}
 
@@ -1458,6 +1491,40 @@ func (a *Application) managePreambleData() {
 			if err = json.Unmarshal(s, &data); err == nil {
 				b, err = json.Marshal(data)
 			}
+
+		case "QOS":
+			var data QoSLimitsDescription
+			if err = json.Unmarshal(s, &data); err == nil {
+				a.QoSLimits.QueryImage.Count = data.QueryImage.Count
+				if data.QueryImage.WindowString != "" {
+					if a.QoSLimits.QueryImage.window, err = time.ParseDuration(data.QueryImage.WindowString); err != nil {
+						a.Debugf(DebugInit, "ERROR in QOS QueryImage Window duration: %v", err)
+						return err
+					}
+				}
+				a.QoSLimits.MessageRate.Count = data.MessageRate.Count
+				if data.MessageRate.WindowString != "" {
+					if a.QoSLimits.MessageRate.window, err = time.ParseDuration(data.MessageRate.WindowString); err != nil {
+						a.Debugf(DebugInit, "ERROR in QOS MessageRate Window duration: %v", err)
+						return err
+					}
+				}
+				if data.Log.WindowString != "" {
+					if a.QoSLimits.Log.window, err = time.ParseDuration(data.Log.WindowString); err != nil {
+						a.Debugf(DebugInit, "ERROR in QOS Log Window duration: %v", err)
+						return err
+					}
+				}
+			}
+			a.Logf("Set QoS Limits img=%d/%s rate=%d/%s log=%s",
+				a.QoSLimits.QueryImage.Count,
+				a.QoSLimits.QueryImage.window.String(),
+				a.QoSLimits.MessageRate.Count,
+				a.QoSLimits.MessageRate.window.String(),
+				a.QoSLimits.Log.window.String(),
+			)
+
+			return nil
 
 		case "UPDATES":
 			var data mapper.UpdateVersionsMessagePayload

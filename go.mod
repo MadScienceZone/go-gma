@@ -1,6 +1,6 @@
 module github.com/MadScienceZone/go-gma/v5
 
-go 1.18
+go 1.21
 
 //	github.com/mattn/goveralls v0.0.9 // indirect
 require github.com/schwarmco/go-cartesian-product v0.0.0-20180515110546-d5ee747a6dc9

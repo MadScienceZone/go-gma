@@ -1,15 +1,15 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.18.0                <!-- @@##@@ -->
- * Effective Date: 16-Apr-2024			<!-- @@##@@ -->
+ * This Package Version: 5.19.0                <!-- @@##@@ -->
+ * Effective Date: 24-Apr-2024			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 6.17.1		<!-- @@##@@ -->
- * GMA Mapper Version: 4.23.2		<!-- @@##@@ -->
- * GMA Mapper Protocol: 413		<!-- @@##@@ -->
+ * GMA Core API Library Version: 6.17.2		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.24-alpha.0		<!-- @@##@@ -->
+ * GMA Mapper Protocol: 414		<!-- @@##@@ -->
  * GMA Mapper File Format: 23		<!-- @@##@@ -->
- * GMA Mapper Preferences File Format: 7 <!-- @@##@@ -->
+ * GMA Mapper Preferences File Format: 8 <!-- @@##@@ -->
  * GMA User Preferences File Format: 2 <!-- @@##@@ -->
 
 # Notice
@@ -18,6 +18,15 @@ When upgrading an existing server to version 5.15.0 or later, be sure to run `sc
 In addition, if your server didn't have the following update installed previously, do it as well:
 
 When upgrading an existing server to version 5.13.1 or later, be sure to run `scripts/upgrade-5.13.1` on each database file to update it to the new chat history encoding scheme introduced at 5.13.1. If you don't, the server will ignore some or all of your historic chat and die roll messages. Alternatively, you can delete the old database and make a new one with the current server.
+
+## v5.19.0
+### Enhanced
+ * Added Quality-of-service (QoS) limits. By default these are not enabled, but by adding a `QOS` entry in the server's `.init` file, one or more of the following limits may be enabled, which allow the server to eject misbehaving clients, helping to prevent denial of service situations where a client can overburden or deadlock the server:
+    * Limit on the number of times a client can ask for the same image *after* the server has told it where to find it. This indicates a problem with the client's ability to obtain images which may result in a packet storm as it keeps asking for the same image forever.
+    * Limit on the overall volume of packets received in a given span of time.
+    * A log entry which shows the QoS metrics gathered so far from each client.
+ * Implements protocol 414, which now allows `DENIED` messages to be sent from the server at any time (not just during the authentication phase), for the server to indicate that it now denies access to the client (say, for QoS rule violations).
+ * Updates mapper client preferences format to include a new field to set the default timer visibility for the client.
 
 ## v5.18.0
 ### Enhanced
