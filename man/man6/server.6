@@ -404,7 +404,7 @@ that condition.
 '\" <<New>>
 .B QOS
 Sets quality of service limits in the server. If a client session violates any of these
-limits, its session will be immediately terminated. Make sure that whatever values you
+limits, its session will be terminated immediately. Make sure that whatever values you
 configure here are far enough out of bounds to justify ejecting the offending client.
 The value for this item is a JSON object where each entry is a QoS rule to enforce,
 and the corresponding value for the rule is a set of fields as described below.
@@ -415,9 +415,10 @@ payload, that rule will not be enforced at all.
 .TP 16
 .B QueryImage
 Reject clients which excessively ask for the same images after being informed of where
-to find them by the server. There may be a brief period where a client could ask again
-if the image wasn't downloaded fast enough, but that shouldn't be a very long time. This
-rule's value is a JSON object with these fields:
+to find them by the server. There should be a little allowance for the client to take the time
+to obtain the image, so a small number of repeated requests is ok, but a properly functioning
+client should stop asking for the same image right away.
+This rule's value is a JSON object with these fields:
 .RS
 .TP
 .BI "Count " (int)
@@ -426,10 +427,17 @@ The maximum number of
 requests a client can send for the same image after it's already been answered by the server.
 .TP
 .BI "Window " (duration)
-The window of time during which the client's repeated requests must be received in order to trigger
-this rule. If not specified or blank, no time window is considered. If
+If this field is omitted or is blank, the client will be ejected if it ever exceeds
 .B Count
-duplicate requests are ever received, the rule is triggered.
+requests for the same image after the server has answered it. Otherwise, this
+specifies a duration in a form such as
+.RB \*(lq 15m \*(rq
+or
+.RB \*(lq 1h30m \*(rq
+which indicates that in order to trigger the rule,
+.B Count
+repeated requests must arrive during this period of time. (The server will reset the counters
+every time this much time elapses.)
 .TP
 .RE
 .TP 
@@ -440,28 +448,41 @@ This rule's value is a JSON object with these fields:
 .TP
 .BI "Count " (int)
 The maximum number of messages allowed for the client to send during
+a time
 .B Window
 before the rule is triggered.
 .TP
 .BI "Window " (duration)
-The amount of time during which
-.B Count
-messages must be received in order to trigger the rule. Note that the exact way these are counted
-is implementation dependent and subject to change (e.g.,
-this may not be precisely
-a rolling window of time; to avoid excessive processing overhead, a server may simply sample
-the messages arriving within the given window, and then start a new count for another window
-later).
+Just as with the
+.B QueryImage
+rule, this specifies the time frame in which the threshold number of messages
+isn't allowed to be exceeded.
 .RE
-.TP 
-.B MessageBacklog
-Reject clients if the number of unanswered messages exceeds a threshold. This prevents a client
-from overwhelming the server with a storm of requests faster than the server can answer them.
-This rule's value is a JSON object with these field:
+.TP
+.B "Log"
+Enables a periodic logfile record of QoS metrics. If QoS
+debugging is enabled
+.RB ( \-debug
+.BR qos )
+or
+.RB ( \-debug
+.BR all ),
+details about the data collected for each of the enabled rules is logged. Otherwise
+a single line is logged per client connection, in the form
+.RB \*(lq QoS
+.BI img= icount ,
+.BI rate= rcount / rmax\fR\*(rq,\fP
+where
+.I icount
+is the number of different image requests currently being tracked,
+.I rcount
+is the number of packets received so far in the current time window, and
+.I rmax
+is the threshold number of packets allowed before the client is rejected.
 .RS
 .TP
-.BI "Count " (int)
-The maximum number of messages in the backlog.
+.BI "Window " (duration)
+The time interval after which to print each log message.
 .RE
 .RE
 '\" <</New>>
@@ -673,14 +694,14 @@ included to be sent to the client:
 .BR I ,
 .BR IL ,
 .BR L ,
-.BR LS\-ARC ,
-.BR LS\-CIRC ,
-.BR LS\-LINE ,
-.BR LS\-POLY ,
-.BR LS\-RECT ,
-.BR LS\-SAOE ,
-.BR LS\-TEXT ,
-.BR LS\-TILE ,
+.BR LS-ARC ,
+.BR LS-CIRC ,
+.BR LS-LINE ,
+.BR LS-POLY ,
+.BR LS-RECT ,
+.BR LS-SAOE ,
+.BR LS-TEXT ,
+.BR LS-TILE ,
 .BR MARK ,
 .BR OA ,
 .BR OA+ ,
@@ -707,7 +728,7 @@ strongly recommend limiting commands to
 .BR UPDATES ,
 and
 .BR WORLD
-in all stages except the final (sync) stage.
+in all stages except the final (sync) stage.)
 .RE
 .TP
 .B SYNC
