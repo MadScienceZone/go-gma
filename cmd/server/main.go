@@ -66,6 +66,7 @@ Usage:
          init     Client initialization.
          messages Message traffic between the server and clients.
          misc     Miscellaneous debugging.
+		 qos      Quality of Service controls.
          state    Changes to the game state.
 
    -endpoint [hostname]:port
@@ -133,7 +134,7 @@ import (
 // Auto-configured values
 //
 
-const GoVersionNumber="5.18.0" // @@##@@
+const GoVersionNumber = "5.19.0-alpha.0" // @@##@@
 
 //
 // eventMonitor responds to signals and timers that affect our overall operation
@@ -342,6 +343,9 @@ func acceptIncomingConnections(incoming net.Listener, app *Application) {
 			mapper.WithServer(app),
 			mapper.WithClientDebuggingLevel(debugFlags),
 			mapper.WithClientAuthenticator(auth),
+			mapper.WithQoSLogWindow(app.QoSLimits.Log.window),
+			mapper.WithQoSMessageRateLimit(app.QoSLimits.MessageRate.Count, app.QoSLimits.MessageRate.window),
+			mapper.WithQoSQueryImageLimit(app.QoSLimits.QueryImage.Count, app.QoSLimits.QueryImage.window),
 		)
 		if err != nil {
 			app.Logf("unable to initialize client session: %v", err)

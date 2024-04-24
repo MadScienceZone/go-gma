@@ -90,6 +90,26 @@ type ClientConnection struct {
 
 	Conn MapConnection
 	D    *dice.DieRoller
+
+	// Quality of Service tracking
+	QoS struct {
+		QueryImage struct {
+			Threshold uint64
+			Window    time.Duration
+			Count     map[string]uint64
+			Ticker    *time.Ticker
+		}
+		MessageRate struct {
+			Count     uint64
+			Threshold uint64
+			Window    time.Duration
+			Ticker    *time.Ticker
+		}
+		Log struct {
+			Window time.Duration
+			Ticker *time.Ticker
+		}
+	}
 }
 
 func NewClientConnection(socket net.Conn, opts ...ClientConnectionOption) (ClientConnection, error) {
@@ -111,6 +131,21 @@ func NewClientConnection(socket net.Conn, opts ...ClientConnectionOption) (Clien
 			return newCon, err
 		}
 	}
+
+	// if we don't have QoS timers, create some stopped ones so we can still
+	// include them in the select without hitting a nil pointer.
+	if newCon.QoS.QueryImage.Ticker == nil {
+		newCon.QoS.QueryImage.Ticker = time.NewTicker(100 * time.Second)
+		newCon.QoS.QueryImage.Ticker.Stop()
+	}
+	if newCon.QoS.MessageRate.Ticker == nil {
+		newCon.QoS.MessageRate.Ticker = time.NewTicker(100 * time.Second)
+		newCon.QoS.MessageRate.Ticker.Stop()
+	}
+	if newCon.QoS.Log.Ticker == nil {
+		newCon.QoS.Log.Ticker = time.NewTicker(100 * time.Second)
+		newCon.QoS.Log.Ticker.Stop()
+	}
 	return newCon, nil
 }
 
@@ -119,6 +154,57 @@ type ClientConnectionOption func(*ClientConnection) error
 func WithServer(s MapServer) ClientConnectionOption {
 	return func(c *ClientConnection) error {
 		c.Server = s
+		return nil
+	}
+}
+
+//
+// WithQoSQueryImageLimit imposes a limit on the number of
+// AI? requests for any image which the server has already answered
+// within a given time duration.
+//
+func WithQoSQueryImageLimit(limit uint64, window time.Duration) ClientConnectionOption {
+	return func(c *ClientConnection) error {
+		c.QoS.QueryImage.Threshold = limit
+		if limit > 0 {
+			c.QoS.QueryImage.Window = window
+			c.QoS.QueryImage.Count = make(map[string]uint64)
+			if window > 0 {
+				c.QoS.QueryImage.Ticker = time.NewTicker(window)
+			}
+		}
+		return nil
+	}
+}
+
+//
+// WithQoSMessageRateLimit imposes a limit on the number of
+// requests received within a given time duration.
+//
+func WithQoSMessageRateLimit(limit uint64, window time.Duration) ClientConnectionOption {
+	return func(c *ClientConnection) error {
+		c.QoS.MessageRate.Threshold = limit
+		if limit > 0 {
+			c.QoS.MessageRate.Window = window
+			c.QoS.MessageRate.Count = 0
+			if window > 0 {
+				c.QoS.MessageRate.Ticker = time.NewTicker(window)
+			}
+		}
+		return nil
+	}
+}
+
+//
+// WithQoSLogWindow schedules a log report at intervals to log the
+// client's QoS stats.
+//
+func WithQoSLogWindow(window time.Duration) ClientConnectionOption {
+	return func(c *ClientConnection) error {
+		c.QoS.Log.Window = window
+		if window > 0 {
+			c.QoS.Log.Ticker = time.NewTicker(window)
+		}
 		return nil
 	}
 }
@@ -206,6 +292,17 @@ func (c *ClientConnection) ServeToClient(ctx context.Context, serverStarted, las
 
 	c.debug(DebugIO, "serveToClient() started")
 	defer c.debug(DebugIO, "serveToClient() ended")
+
+	if c.QoS.QueryImage.Ticker != nil {
+		defer c.QoS.QueryImage.Ticker.Stop()
+	}
+	if c.QoS.MessageRate.Ticker != nil {
+		defer c.QoS.MessageRate.Ticker.Stop()
+	}
+	if c.QoS.Log.Ticker != nil {
+		defer c.QoS.Log.Ticker.Stop()
+	}
+
 	loginDone := make(chan error, 1)
 	loginctx, loginCancel := context.WithTimeout(ctx, 1*time.Minute)
 	defer loginCancel()
@@ -374,6 +471,71 @@ func (c *ClientConnection) ServeToClient(ctx context.Context, serverStarted, las
 mainloop:
 	for {
 		select {
+		case <-c.QoS.Log.Ticker.C:
+			var trackedImages int
+			if c.QoS.QueryImage.Threshold > 0 {
+				for q, cnt := range c.QoS.QueryImage.Count {
+					if cnt > 0 {
+						c.debugf(DebugQoS, "QueryImage: %d repeated %s for \"%s\"",
+							cnt, util.PluralizeString("request", int(cnt)), q)
+					}
+				}
+				if trackedImages = len(c.QoS.QueryImage.Count); trackedImages > 0 {
+					c.debugf(DebugQoS, "Tracking %d repeated QueryImage %s",
+						trackedImages,
+						util.PluralizeString("request", trackedImages))
+				}
+			}
+			if c.QoS.MessageRate.Threshold > 0 && c.QoS.MessageRate.Count > 0 {
+				c.debugf(DebugQoS, "Message rate within %v = %d", c.QoS.MessageRate.Window, c.QoS.MessageRate.Count)
+			}
+			c.Logf("QoS img=%d rate=%d/%d", trackedImages,
+				c.QoS.MessageRate.Count, c.QoS.MessageRate.Threshold)
+
+		case <-c.QoS.QueryImage.Ticker.C:
+			// at the end of the time window, abandon the client if they've violated the
+			// QueryImage request limit.
+			if c.QoS.QueryImage.Threshold > 0 {
+				for q, cnt := range c.QoS.QueryImage.Count {
+					if cnt > c.QoS.QueryImage.Threshold {
+						c.Logf("QoS violation: Asked for image \"%s\" %d %s (allowed %d in %s)",
+							q, cnt, util.PluralizeString("time", int(cnt)),
+							c.QoS.QueryImage.Threshold,
+							c.QoS.QueryImage.Window.String())
+
+						c.Conn.Send(Denied, DeniedMessagePayload{
+							Reason: fmt.Sprintf("You are sending too many repeated requests for the image \"%s\"; this probably means your client is unable to continue running and it flooding the server with requests.", q),
+						})
+						time.Sleep(2 * time.Second)
+						break mainloop
+					}
+				}
+
+				// reset the counters
+				clear(c.QoS.QueryImage.Count)
+			}
+
+		case <-c.QoS.MessageRate.Ticker.C:
+			// at the end of the time window, abandon the client if they've violated the
+			// overall message rate limit.
+			if c.QoS.MessageRate.Threshold > 0 {
+				if c.QoS.MessageRate.Count > c.QoS.MessageRate.Threshold {
+					c.Logf("QoS violation: Received %d %s within %s",
+						c.QoS.MessageRate.Count,
+						util.PluralizeString("message", int(c.QoS.MessageRate.Count)),
+						c.QoS.MessageRate.Window.String())
+
+					c.Conn.Send(Denied, DeniedMessagePayload{
+						Reason: fmt.Sprintf("You are sending too many messages, too fast, to the server."),
+					})
+					time.Sleep(2 * time.Second)
+					break mainloop
+				}
+
+				// reset the counter
+				c.QoS.MessageRate.Count = 0
+			}
+
 		case <-ctx.Done():
 			c.Log("client task signalled to stop")
 			break mainloop
@@ -391,7 +553,22 @@ mainloop:
 				break mainloop
 			}
 			c.debugf(DebugIO, "received packet %v", packet)
-			func() {
+			if c.QoS.MessageRate.Threshold > 0 {
+				c.QoS.MessageRate.Count++
+				if c.QoS.MessageRate.Count > c.QoS.MessageRate.Threshold {
+					c.Logf("QoS violation: Received %d %s within %s",
+						c.QoS.MessageRate.Count,
+						util.PluralizeString("message", int(c.QoS.MessageRate.Count)),
+						c.QoS.MessageRate.Window.String())
+
+					c.Conn.Send(Denied, DeniedMessagePayload{
+						Reason: fmt.Sprintf("You are sending too many messages, too fast, to the server."),
+					})
+					time.Sleep(2 * time.Second)
+					break mainloop
+				}
+			}
+			if func() error {
 				if InstrumentCode {
 					if nrApp != nil {
 						txn := nrApp.StartTransaction("handle_request")
@@ -464,10 +641,37 @@ mainloop:
 						Of:        0,
 					})
 
+				case QueryImageMessagePayload:
+					if c.QoS.QueryImage.Threshold > 0 {
+						for _, requestedSize := range p.Sizes {
+							id := fmt.Sprintf("%s:%v", p.Name, requestedSize.Zoom)
+							if _, alreadyAnswered := c.QoS.QueryImage.Count[id]; alreadyAnswered {
+								if c.QoS.QueryImage.Count[id]++; c.QoS.QueryImage.Count[id] > c.QoS.QueryImage.Threshold {
+									c.Logf("QoS violation: Asked for image \"%s\" %d %s (allowed %d in %s)",
+										id,
+										c.QoS.QueryImage.Count[id],
+										util.PluralizeString("time", int(c.QoS.QueryImage.Count[id])),
+										c.QoS.QueryImage.Threshold,
+										c.QoS.QueryImage.Window.String())
+
+									c.Conn.Send(Denied, DeniedMessagePayload{
+										Reason: fmt.Sprintf("You are sending too many repeated requests for the image \"%s\"; this probably means your client is unable to continue running and it flooding the server with requests.", id),
+									})
+									time.Sleep(2 * time.Second)
+									return fmt.Errorf("QoS violation")
+								}
+							}
+						}
+					}
+					c.Server.HandleServerMessage(packet, c)
+
 				default:
 					c.Server.HandleServerMessage(packet, c)
 				}
-			}()
+				return nil
+			}() != nil {
+				break mainloop
+			}
 		}
 	}
 }

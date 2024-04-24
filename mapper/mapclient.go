@@ -90,6 +90,7 @@ const (
 	DebugIO
 	DebugMessages
 	DebugMisc
+	DebugQoS
 	DebugAll DebugFlags = 0xffffffff
 )
 
@@ -116,6 +117,7 @@ func DebugFlagNameSlice(flags DebugFlags) []string {
 		{bits: DebugIO, name: "i/o"},
 		{bits: DebugMessages, name: "messages"},
 		{bits: DebugMisc, name: "misc"},
+		{bits: DebugQoS, name: "qos"},
 	} {
 		if (flags & f.bits) != 0 {
 			list = append(list, f.name)
@@ -170,6 +172,8 @@ func NamedDebugFlags(names ...string) (DebugFlags, error) {
 				d |= DebugMessages
 			case "misc":
 				d |= DebugMisc
+			case "qos":
+				d |= DebugQoS
 			default:
 				err = fmt.Errorf("invalid debug flag name")
 				// but keep processing the rest
@@ -3663,11 +3667,15 @@ func (c *Connection) listen(done chan error) {
 				ch <- cmd
 			}
 
-		case AddCharacterMessagePayload, ChallengeMessagePayload, DeniedMessagePayload,
+		case AddCharacterMessagePayload, ChallengeMessagePayload,
 			GrantedMessagePayload, ProtocolMessagePayload, ReadyMessagePayload,
 			UpdateVersionsMessagePayload, RedirectMessagePayload, WorldMessagePayload:
 
 			c.reportError(fmt.Errorf("message type %v should not be sent to client at this stage in the session", cmd.MessageType()))
+
+		case DeniedMessagePayload:
+			c.reportError(fmt.Errorf("server has terminated our session: %s", cmd.Reason))
+			return
 
 		case AcceptMessagePayload, AddDicePresetsMessagePayload, AllowMessagePayload,
 			AuthMessagePayload, DefineDicePresetsMessagePayload, DefineDicePresetDelegatesMessagePayload,
