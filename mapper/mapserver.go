@@ -504,7 +504,7 @@ mainloop:
 							c.QoS.QueryImage.Window.String())
 
 						c.Conn.Send(Denied, DeniedMessagePayload{
-							Reason: fmt.Sprintf("You are sending too many repeated requests for the image \"%s\"; this probably means your client is unable to continue running and it flooding the server with requests.", q),
+							Reason: fmt.Sprintf("You are sending too many repeated requests for the image \"%s\"; this probably means your client is unable to continue running and is flooding the server with requests.", q),
 						})
 						time.Sleep(2 * time.Second)
 						break mainloop
@@ -655,7 +655,7 @@ mainloop:
 										c.QoS.QueryImage.Window.String())
 
 									c.Conn.Send(Denied, DeniedMessagePayload{
-										Reason: fmt.Sprintf("You are sending too many repeated requests for the image \"%s\"; this probably means your client is unable to continue running and it flooding the server with requests.", id),
+										Reason: fmt.Sprintf("You are sending too many repeated requests for the image \"%s\"; this probably means your client is unable to continue running and is flooding the server with requests.", id),
 									})
 									time.Sleep(2 * time.Second)
 									return fmt.Errorf("QoS violation")
