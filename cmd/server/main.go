@@ -5,12 +5,12 @@
 # \_|(_)                                                                               #
 #  _______  _______  _______             _______      __     _____      _______        #
 # (  ____ \(       )(  ___  ) Game      (  ____ \    /  \   / ___ \    (  __   )       #
-# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) ( (___) )   | (  )  |       #
-# | |      | || || || (___) | Assistant | (____        | |  \     /    | | /   |       #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |  / ___ \    | (/ /) |       #
-# | | \_  )| |   | || (   ) |                 ) )      | | ( (   ) )   |   / | |       #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_( (___) ) _ |  (__) |       #
-# (_______)|/     \||/     \| Client    \______/ (_) \____/ \_____/ (_)(_______)       #
+# | (    \/| () () || (   ) | Master's  | (    \/    \/) ) ( (   ) )   | (  )  |       #
+# | |      | || || || (___) | Assistant | (____        | | ( (___) |   | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \       | |  \____  |   | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )      | |       ) |   |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _  __) (_/\____) ) _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_) \____/\______/ (_)(_______)       #
 #                                                                                      #
 ########################################################################################
 */
@@ -134,7 +134,7 @@ import (
 // Auto-configured values
 //
 
-const GoVersionNumber = "5.19.0-alpha.0" // @@##@@
+const GoVersionNumber="5.19.0" // @@##@@
 
 //
 // eventMonitor responds to signals and timers that affect our overall operation
@@ -356,7 +356,7 @@ func acceptIncomingConnections(incoming net.Listener, app *Application) {
 	}
 }
 
-// @[00]@| Go-GMA 5.18.0
+// @[00]@| Go-GMA 5.19.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
