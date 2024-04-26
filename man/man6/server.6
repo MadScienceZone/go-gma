@@ -152,7 +152,7 @@ Miscellaneous debugging.
 .TP
 .B qos
 Quality of service stats (even if no action was taken).
-'\" <</Name>>
+'\" <</New>>
 .TP
 .B state
 Changes to the game state.
@@ -411,6 +411,7 @@ and the corresponding value for the rule is a set of fields as described below.
 If any of these rules are not included in the
 .B QOS
 payload, that rule will not be enforced at all.
+'\" <<list>>
 .RS
 .TP 16
 .B QueryImage
@@ -419,8 +420,10 @@ to find them by the server. There should be a little allowance for the client to
 to obtain the image, so a small number of repeated requests is ok, but a properly functioning
 client should stop asking for the same image right away.
 This rule's value is a JSON object with these fields:
+'\" <<list>>
 .RS
 .TP
+'\" <</ital-is-var>>
 .BI "Count " (int)
 The maximum number of
 .B AI?
@@ -438,13 +441,14 @@ which indicates that in order to trigger the rule,
 .B Count
 repeated requests must arrive during this period of time. (The server will reset the counters
 every time this much time elapses.)
-.TP
 .RE
+'\" <</>>
 .TP 
 .B MessageRate
 Reject clients which send more than a certain number of requests during a given window of time.
 This rule's value is a JSON object with these fields:
 .RS
+'\" <<list>>
 .TP
 .BI "Count " (int)
 The maximum number of messages allowed for the client to send during
@@ -457,6 +461,7 @@ Just as with the
 .B QueryImage
 rule, this specifies the time frame in which the threshold number of messages
 isn't allowed to be exceeded.
+'\" <</>>
 .RE
 .TP
 .B "Log"
@@ -469,9 +474,10 @@ or
 .BR all ),
 details about the data collected for each of the enabled rules is logged. Otherwise
 a single line is logged per client connection, in the form
+'\" <<ital-is-var>>
 .RB \*(lq QoS
 .BI img= icount ,
-.BI rate= rcount / rmax\fR\*(rq,\fP
+.BI rate= rcount / rmax \fR\*(rq,\fP
 where
 .I icount
 is the number of different image requests currently being tracked,
@@ -479,13 +485,17 @@ is the number of different image requests currently being tracked,
 is the number of packets received so far in the current time window, and
 .I rmax
 is the threshold number of packets allowed before the client is rejected.
+'\" <</ital-is-var>>
+'\" <<list>>
 .RS
 .TP
 .BI "Window " (duration)
+'\" <<ital-is-var>>
 The time interval after which to print each log message.
 .RE
 .RE
-'\" <</New>>
+'\" <</>>
+'\" <</>>
 .TP
 .B REDIRECT
 Instructs the client to use a different server for this session. This is used when
