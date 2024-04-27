@@ -77,50 +77,275 @@ Options which take parameter values may have the value separated from the option
 package main
 
 import (
+	"database/sql"
 	"flag"
 	"fmt"
 	"io/fs"
 	"log"
 	"os"
+	"regexp"
+	"slices"
+	"strconv"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 const GoVersionNumber = "5.19.0" //@@##@@
 
-type ImageDescription struct {
+type FileType byte
+const (
+	ImageFile FileType = iota
+	MapFile
+	UnknownFile
+)
+
+type MapFileDescription struct {
+	Type       FileType
 	InDatabase bool
 	OnDisk     bool
+	OnClient   bool
 	DiskPath   string
+	MapperID   string
+	Error      error
+	Frames     []int
+	Formats    []string
+	MapperName string
+	MapperZoom float64
 }
 
-// pathToID takes a disk path of the form "a/ab/abc.ext" and returns
+var (
+	mapFilePattern = regexp.MustCompile(`^(.)/(..?)/(?::(\d+):)?(.*?)\.(\w+)$`)
+)
+
+// parsePath takes a disk path of the form "a/ab/abc.ext" and returns
 // the base server ID ("abc") by which the server will refer to it.
-func pathToID(diskPath string) (string, error) {
-	return "", nil
+//
+// A valid file called abcdef.ext will be stored in the path
+// a/ab/abcdef.ext and will have serverID abcdef. If ext is "map"
+// then it's a map file otherwise a type of image file.
+func parsePath(diskPath string) (serverID string, d MapFileDescription, err error) {
+	d.DiskPath = diskPath
+	if matches := mapFilePattern.FindStringSubmatch(diskPath); matches != nil {
+		if len(matches) != 6 {
+			err = fmt.Errorf("unexpected number of matches %d", len(matches))
+			return
+		}
+
+		serverID = matches[4]
+		d.Formats = []string{matches[5]}
+		d.OnDisk = true
+		d.Type = ImageFile
+		if matches[3] != "" {
+			var f int
+			if f, err = strconv.Atoi(matches[3]); err != nil {
+				return
+			}
+			d.Frames = []int{f}
+		}
+
+		if matches[5] == "map" {
+			d.Type = MapFile
+		}
+
+		if matches[5] == "" {
+			err = fmt.Errorf("missing file type suffix")
+			return
+		}
+
+		if len(serverID) < 2 && (matches[1] != serverID[:1] || matches[2] != serverID[:1]) {
+			err = fmt.Errorf("file path %s invalid for GMA map file (id=%s, format=%s)", diskPath, serverID, matches[5])
+			return
+		}
+
+		if matches[1] != serverID[:1] || matches[2] != serverID[:2] {
+			err = fmt.Errorf("file path %s invalid for GMA map file (id=%s, format=%s)", diskPath, serverID, matches[5])
+			return
+		}
+	} else {
+		err = fmt.Errorf("unable to understand pathname pattern")
+	}
+	return
 }
 
-func getServedFiles(webRootDir string) (map[string]ImageDescription, error) {
+func getServedFiles(webRootDir string) (map[string]MapFileDescription, []MapFileDescription, error) {
+	servedFiles := make(map[string]MapFileDescription)
+	badFiles := []MapFileDescription{}
+
 	err := fs.WalkDir(os.DirFS(webRootDir), ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		fmt.Println("Found path", path, "d:", d)
+		if d.IsDir() {
+			return nil
+		}
+		if serverID, thisFile, err := parsePath(path); err != nil {
+			thisFile.Error = err
+			thisFile.Type = UnknownFile
+			badFiles = append(badFiles, thisFile)
+		} else {
+			entry, exists := servedFiles[serverID]
+			if !exists {
+				servedFiles[serverID] = thisFile
+			} else {
+				if entry.Type != thisFile.Type {
+					thisFile.Error = fmt.Errorf("type mismatch with other file(s) of the same server ID")
+					badFiles = append(badFiles, thisFile)
+					return nil
+				}
+
+				if len(thisFile.Frames) > 0 && !slices.Contains(entry.Frames, thisFile.Frames[0]) {
+					entry.Frames = append(entry.Frames, thisFile.Frames[0])
+				}
+				if len(thisFile.Formats) > 0 && !slices.Contains(entry.Formats, thisFile.Formats[0]) {
+					entry.Formats = append(entry.Formats, thisFile.Formats[0])
+				}
+				servedFiles[serverID]= entry
+			}
+		}
 		return nil
 	})
-	return nil, err
+	return servedFiles, badFiles, err
+}
+
+func searchForImages(servedFiles map[string]MapFileDescription, badFiles []MapFileDescription, dbPath string, remove bool) error {
+	db, err := sql.Open("sqlite3", "file:"+dbPath)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("error closing database: %v", err)
+		}
+	}()
+
+	rows, err := db.Query("SELECT name, zoom, location, islocal, frames FROM images")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	cullThese := []MapFileDescription{}
+
+	for rows.Next() {
+		var serverID string
+		var frames int
+		thisEntry := MapFileDescription{}
+		if err := rows.Scan(&thisEntry.MapperName, &thisEntry.MapperZoom, &serverID, &thisEntry.OnClient, &frames); err != nil {
+			return err
+		}
+		thisEntry.InDatabase = true
+		thisEntry.MapperID = fmt.Sprintf("%s@%.2f", thisEntry.MapperName, thisEntry.MapperZoom)
+		thisEntry.Type = ImageFile
+		if existingEntry, exists := servedFiles[serverID]; exists {
+			if existingEntry.Type != thisEntry.Type {
+				thisEntry.Error = fmt.Errorf("type mismatch with other file(s) of the same server ID")
+				badFiles = append(badFiles, thisEntry)
+				continue
+			}
+			existingEntry.InDatabase = true
+			existingEntry.MapperID = thisEntry.MapperID
+			existingEntry.OnClient = thisEntry.OnClient
+			servedFiles[serverID] = existingEntry
+		} else {
+			servedFiles[serverID] = thisEntry
+			if remove && !thisEntry.OnClient {
+				cullThese = append(cullThese, thisEntry)
+			}
+		}
+	}
+
+	for _, thisEntry := range cullThese {
+		if _, err := db.Exec("DELETE FROM images WHERE name = ? AND zoom = ?", thisEntry.MapperName, thisEntry.MapperZoom); err != nil {
+			return err
+		}
+		log.Printf("*** REMOVED SERVER RECORD FOR IMAGE %s AT %.3f ZOOM ***", thisEntry.MapperName, thisEntry.MapperZoom)
+	}
+	return nil
 }
 
 func main() {
-	//var sqlDbName = flag.String("sqlite", "", "Specify filename for sqlite database to use")
+	var sqlDbName = flag.String("sqlite", "", "Specify filename for sqlite database to use")
 	var webRootDir = flag.String("webroot", "", "Specify image base directory for served image files")
-	//var listFiles = flag.Bool("list", false, "List all the files in database and disk")
-	//var delImages = flag.Bool("delete", false, "Delete database images without files")
+	var listFiles = flag.Bool("list", false, "List all the files in database and disk")
+	var delImages = flag.Bool("delete", false, "Delete database images without files")
 	flag.Parse()
 
 	if webRootDir == nil || *webRootDir == "" {
 		log.Fatal("-webroot option is required")
 	}
+	if sqlDbName == nil || *sqlDbName == "" {
+		log.Fatal("-sqlite option is required")
+	}
+	if *delImages {
+		log.Print("WARNING: will delete database entries with missing files!")
+	}
 
-	if _, err := getServedFiles(*webRootDir); err != nil {
+	servedFiles, unknownFiles, err := getServedFiles(*webRootDir)
+	if err != nil {
 		log.Fatal("fatal error:", err)
 	}
+
+	if err := searchForImages(servedFiles, unknownFiles, *sqlDbName, *delImages); err != nil {
+		log.Fatal("fatal error:", err)
+	}
+
+	if len(unknownFiles) > 0 {
+		log.Printf("Invalid filenames found:     %6d", len(unknownFiles))
+		if (*listFiles) {
+			for _, f := range unknownFiles {
+				log.Printf("%s: %v", f.DiskPath, f.Error)
+			}
+		}
+	}
+
+	log.Printf("Served files discovered:     %6d", len(servedFiles))
+	if (*listFiles) {
+		log.Print("                                                                 type (I=image, M=map)")
+		log.Print("                                                                /database entry present")
+		log.Print("                                                               //web disk file present")
+		log.Print("                                                              ///")
+		log.Print("SERVER-ID--------------------------------------------------- tdw FRM FORMATS")
+	}
+	missingDiskFiles := 0
+	missingDatabase := 0
+	clientFiles := 0
+	for serverID, d := range servedFiles {
+		if !d.OnDisk && !d.OnClient {
+			missingDiskFiles++
+			log.Printf("*** IMAGE %s *** MISSING FROM DISK! Should be %s", d.MapperID, serverID)
+		}
+		if !d.InDatabase {
+			missingDatabase++
+		}
+		if d.OnClient {
+			clientFiles++
+		}
+		if (*listFiles) {
+			flags := "-"
+			switch d.Type {
+			case UnknownFile:
+				flags = "?"
+			case ImageFile:
+				flags = "I"
+			case MapFile:
+				flags = "M"
+			}
+			if d.InDatabase {
+				if d.OnClient {
+					flags += "c"
+				} else {
+					flags += "d"
+				}
+			} else {
+				flags += "-"
+			}
+			if d.OnDisk {
+				flags += "w"
+			} else {
+				flags += "-"
+			}
+			log.Printf("%-60s %s %3d %v", serverID, flags, len(d.Frames), d.Formats)
+		}
+	}
+	log.Printf("Files missing from database: %6d", missingDatabase)
+	log.Printf("Files missing from web dirs: %6d", missingDiskFiles)
 }
