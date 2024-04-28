@@ -1,0 +1,155 @@
+'\" <<ital-is-var>>
+'\" <<bold-is-fixed>>
+.TH SERVER 6 "Go-GMA 5.20.0" 27-Apr-2024 "Games" \" @@mp@@
+.SH NAME
+image-audit \- GMA server image accuracy audit
+.SH SYNOPSIS
+'\" <<usage>>
+.LP
+.na
+.RB [ gma
+.BR go ]
+.B server
+.RB [ \-delete ]
+.RB [ \-help ]
+.RB [ \-list ]
+.B \-sqlite
+.I path
+.B \-webroot
+.I path
+.ad
+'\" <</usage>>
+.SH DESCRIPTION
+.LP
+.B Image-audit 
+is run on a system which hosts both a GMA server and the web server
+which offers the map image tiles to mapper clients (or at least has filesystem
+access to those files).
+.LP
+It checks for any files in the server's database (which means they will be offered
+by the server to any clients asking about those images) which do not have actual
+image files being served for them.
+.LP
+It is important that the server doesn't advertise images to any mapper clients which
+don't actually exist on the server. This will cause the mappers to report errors
+when the download of the images fail, and eventually the server may kick them off
+when their repeated requests for the same image files is interpreted as a DoS attack.
+.LP
+'\" <</bold-is-fixed>>
+.B "N.B."
+'\" <<bold-is-fixed>>
+The
+.B image-audit
+program can't check for, or correct, everything that could go wrong. For example,
+it will be satisfied if any image file exists to satisfy requests for the corresponding
+database entry. However, it does not check to ensure that this image file is available in
+all (or any) specific graphic format (e.g., GIF or PNG) that your map clients will request.
+You must still make sure the files are provided in all formats your clients care about.
+.LP
+Also, in the case of animated images, no check is made that all expected frames are available
+or that any individual frame files exist; just that there is some image file at the advertised
+location.
+.SH OPTIONS
+.LP
+The command-line options described below 
+may be
+introduced with either one or two hyphens (e.g.,
+.B \-delete
+or
+.BR \-\-delete ).
+Options which take parameter values may have the value separated
+from the option name by a space or an equals sign (e.g.,
+.B \-sqlite=mygame.db
+or
+.BR "\-sqlite mygame.db" ),
+except for boolean flags which may be given
+alone (e.g.,
+.BR \-delete )
+to indicate that the option is set to \*(lqtrue\*(rq or may be given
+an explicit value which must be attached to the option with an
+equals sign (e.g.,
+.B \-delete=true
+or
+.BR \-delete=false ).
+'\" <<list>>
+.TP 8
+.B \-delete
+When images are defined in the server's database but no corresponding image file
+is actually found, actually delete the image's definition from the server's database
+file so it won't continue to tell clients that it knows their location. If you update
+the database later (say, by loading a map file which defines images), be sure the web
+server actually has those files available for download at that point.
+.TP
+.B \-list
+In addition to messages normally printed about missing files or removed database entries,
+this option causes
+.B image-audit
+to name all the files that don't seem to be in the right place or have names not conforming
+to the expected format (as opposed to just reporting how many of them were found), and to
+list all known files (whether mentioned in the database or discovered in the web server's
+GMA image directory tree), along with their status. The status is indicated by a set of
+single letter flags:
+.RS
+'\" <<desc>>
+.TP 3
+.B ?
+The file's type could not be determined.
+.TP
+.B I
+This is an image file.
+.TP
+.B M
+This is a map file.
+.TP
+.B c
+This file is known to the server but stored by a client, not on the web server.
+.TP
+.B d
+This file is known in the database and should be stored on the web server.
+.TP
+.B w
+This file was found on the web server.
+'\" <</>>
+.RE
+.TP
+.BR \-h ", " \-help
+Print a usage summary and exit.
+.TP
+.BI "\-sqlite " path
+Read the file specified by
+.I path
+as the a sqlite database the server uses for its persistent storage
+(as specified to the server program's own
+.B \-sqlite
+option).
+.B Image-audit 
+may be run while the server is also accessing this file, but note that updating the database
+by either program may briefly lock the other out from accessing it. Therefore, it is best to run
+.B image-audit 
+when the server is shut down or at least quiescent.
+.TP
+.BI "\-webroot " dir
+Consider all the files from dir down to be the directory structure behind what the GMA mapper client
+knows as the \*(lqimage base URL\*(rq. Thus, a server image ID of 
+.RB \*(lq abcdef \*(rq 
+corresponds to disk file
+.IB dir /a/ab/abcdef.png\fR,\fP 
+et al.
+'\" <</>>
+.SH "SEE ALSO"
+.LP
+.BR gma (6),
+.BR mapper (5),
+.BR mapper (6),
+.BR server (6).
+.SH AUTHOR
+.LP
+Steve Willoughby / steve@madscience.zone.
+.SH BUGS
+.LP
+There are more checks that
+.B image-audit
+could make to do more to evaluate the integrity of the server's image storage,
+but this is a first start.
+.SH COPYRIGHT
+Part of the GMA software suite, copyright \(co 1992\-2024 by Steven L. Willoughby, Aloha, Oregon, USA. All Rights Reserved. Distributed under BSD-3-Clause License. \"@m(c)@

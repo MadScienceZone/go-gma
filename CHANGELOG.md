@@ -1,12 +1,12 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.19.0                <!-- @@##@@ -->
- * Effective Date: 24-Apr-2024			<!-- @@##@@ -->
+ * This Package Version: 5.20.0                <!-- @@##@@ -->
+ * Effective Date: 27-Apr-2024			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 6.17.2		<!-- @@##@@ -->
- * GMA Mapper Version: 4.24-alpha.0		<!-- @@##@@ -->
+ * GMA Core API Library Version: 6.19-alpha.0		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.24		<!-- @@##@@ -->
  * GMA Mapper Protocol: 414		<!-- @@##@@ -->
  * GMA Mapper File Format: 23		<!-- @@##@@ -->
  * GMA Mapper Preferences File Format: 8 <!-- @@##@@ -->
@@ -18,6 +18,10 @@ When upgrading an existing server to version 5.15.0 or later, be sure to run `sc
 In addition, if your server didn't have the following update installed previously, do it as well:
 
 When upgrading an existing server to version 5.13.1 or later, be sure to run `scripts/upgrade-5.13.1` on each database file to update it to the new chat history encoding scheme introduced at 5.13.1. If you don't, the server will ignore some or all of your historic chat and die roll messages. Alternatively, you can delete the old database and make a new one with the current server.
+
+## v5.20.0
+### Enhanced
+ * Added the `image-audit` program. This checks the server's database for any images it's advertising to clients which don't actually exist on the web server. It can also update the server's database to remove any such invalid entries.
 
 ## v5.19.0
 ### Enhanced
