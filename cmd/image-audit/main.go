@@ -93,6 +93,7 @@ import (
 const GoVersionNumber = "5.19.0" //@@##@@
 
 type FileType byte
+
 const (
 	ImageFile FileType = iota
 	MapFile
@@ -199,7 +200,7 @@ func getServedFiles(webRootDir string) (map[string]MapFileDescription, []MapFile
 				if len(thisFile.Formats) > 0 && !slices.Contains(entry.Formats, thisFile.Formats[0]) {
 					entry.Formats = append(entry.Formats, thisFile.Formats[0])
 				}
-				servedFiles[serverID]= entry
+				servedFiles[serverID] = entry
 			}
 		}
 		return nil
@@ -290,7 +291,7 @@ func main() {
 
 	if len(unknownFiles) > 0 {
 		log.Printf("Invalid filenames found:     %6d", len(unknownFiles))
-		if (*listFiles) {
+		if *listFiles {
 			for _, f := range unknownFiles {
 				log.Printf("%s: %v", f.DiskPath, f.Error)
 			}
@@ -298,9 +299,9 @@ func main() {
 	}
 
 	log.Printf("Served files discovered:     %6d", len(servedFiles))
-	if (*listFiles) {
+	if *listFiles {
 		log.Print("                                                                 type (I=image, M=map)")
-		log.Print("                                                                /database entry present")
+		log.Print("                                                                /database entry present (d) or client-stored (c)")
 		log.Print("                                                               //web disk file present")
 		log.Print("                                                              ///")
 		log.Print("SERVER-ID--------------------------------------------------- tdw FRM FORMATS")
@@ -319,7 +320,7 @@ func main() {
 		if d.OnClient {
 			clientFiles++
 		}
-		if (*listFiles) {
+		if *listFiles {
 			flags := "-"
 			switch d.Type {
 			case UnknownFile:
