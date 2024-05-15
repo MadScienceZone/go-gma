@@ -1,16 +1,17 @@
 /*
+\
 ########################################################################################
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______  _______     _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )(  __   )   (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  || (  )  |   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )| | /   |   | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / | (/ /) |   | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/  |   / | |   |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\|  (__) | _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_______)(_)(_______)     #
+#  _______  _______  _______             _______     _______  _______      __          #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )(  __   )    /  \         #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  || (  )  |    \/) )        #
+# | |      | || || || (___) | Assistant | (____         /   )| | /   |      | |        #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / | (/ /) |      | |        #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/  |   / | |      | |        #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\|  (__) | _  __) (_       #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_______)(_) \____/       #
 #                                                                                      #
 ########################################################################################
 */
@@ -52,8 +53,8 @@ import (
 // and protocol versions supported by this code.
 //
 const (
-	GMAMapperProtocol=414              // @@##@@ auto-configured
-	GoVersionNumber="5.20.0" // @@##@@ auto-configured
+	GMAMapperProtocol=414      // @@##@@ auto-configured
+	GoVersionNumber="5.20.1" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
 	MaximumSupportedMapProtocol = 414
 )
@@ -771,6 +772,11 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 
 	case "DR":
 		p := QueryDicePresetsMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
 		p.messageType = QueryDicePresets
 		return p, nil
 
