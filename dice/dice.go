@@ -184,7 +184,12 @@ type Dice struct {
 //
 // Arbitrary  text  (<label>) may appear at the end of the expression. It is
 // simply reported back in the result as a label to  describe  that  value
-// (e.g.   “1d10  + 1d6 fire + 2d6 sneak”.)  If the expression begins with
+// (e.g.   “1d10  + 1d6 fire + 2d6 sneak”.)  The <label> must begin with a letter
+// or underscore; all subsequent characters in <label> must be letters, digits,
+// underscores, commas, and/or periods (full stops). The notion of "letter" and
+// "digit" follows the Unicode character classifications.
+//
+// If the expression begins with
 // the character “>”, then the first die in the set is maximized:  in  the
 // expression  “>3d6”,  the  first d6 is assumed to have the maximum value
 // (6), and the remaining two dice are rolled to produce random values.
@@ -201,9 +206,16 @@ type Dice struct {
 // which  rolls 2d6 and 1d4 to get a random value between 3 and 16, but if
 // the result is less than 6, it will return 6 anyway.
 //
+// However, these modifiers are deprecated now that the <= and >= operators
+// are part of the die-roll expression syntax.
+//
+//	expr | min a           ==   (expr) >= a
+//	expr | max b           ==   (expr) <= b
+//	expr | min a | max b   ==   (expr) >= a <= b
+//
 // For example:
 //
-//	d, err := New(ByDescription("3d6 + 12"))
+//	d, err := New(ByDescription("3d6 + 12 awesome bonus + 3 Strength"))
 func ByDescription(desc string) func(*Dice) error {
 	return func(o *Dice) error {
 		o.desc = desc
