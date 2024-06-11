@@ -1114,11 +1114,11 @@ func enumVal(level, value int) string {
 //
 // **text** sets "text" in boldface*†
 //
-// *blah... Starts bulleted list item‡
+// @blah... Starts bulleted list item‡
 //
-// **blah... Starts level-2 bulleted list item‡
+// @@blah... Starts level-2 bulleted list item‡
 //
-// ***blah... Starts level-3 bulleted list item (and so forth)‡
+// @@@blah... Starts level-3 bulleted list item (and so forth)‡
 //
 // #blah... Starts enumerated list item‡
 //
@@ -1190,7 +1190,7 @@ func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 		o(&ops)
 	}
 	collapseSpaces := regexp.MustCompile(`\s{2,}`)
-	newListBullet := regexp.MustCompile(`^[*#]+`)
+	newListBullet := regexp.MustCompile(`^[@#]+`)
 	formatReqs := regexp.MustCompile(`//|\*\*|\[\[|\]\]|\\\.`)
 
 	paragraphs := make([][][]any, 0, 10)
@@ -1216,7 +1216,7 @@ func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 			continue
 		}
 		//
-		// Look for * or # at the start of the line. This begins
+		// Look for @ or # at the start of the line. This begins
 		// a new list item. We'll just insert a marker to that effect
 		// in the current line and keep going, to avoid extra line
 		// breaks from sneaking in.
