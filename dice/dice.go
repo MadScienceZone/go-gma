@@ -4,14 +4,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______   __        __            #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) /  \      /  \           #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  | \/) )     \/) )          #
-# | |      | || || || (___) | Assistant | (____         /   )   | |       | |          #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    | |       | |          #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/     | |       | |          #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ __) (_ _  __) (_         #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \____/(_) \____/         #
+#  _______  _______  _______             _______     _______   __       _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) /  \     / ___   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  | \/) )    \/   )  |       #
+# | |      | || || || (___) | Assistant | (____         /   )   | |        /   )       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    | |      _/   /        #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/     | |     /   _/         #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ __) (_ _ (   (__/\       #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \____/(_)\_______/       #
 #                                                                                      #
 ########################################################################################
 */
@@ -77,6 +77,8 @@ import (
 const MinimumSupportedDieRollPresetFileFormat = 1
 const MaximumSupportedDieRollPresetFileFormat = 2
 
+var DefaultSeed int64
+
 // Seed the random number generator with a very random seed.
 func init() {
 	s, err := cryptorand.Int(cryptorand.Reader, big.NewInt(0xffffffff))
@@ -84,7 +86,8 @@ func init() {
 		panic(fmt.Sprintf("Unable to seed random number generator: %v", err))
 	}
 
-	rand.Seed(s.Int64())
+	DefaultSeed = s.Int64()
+	rand.Seed(DefaultSeed)
 }
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -3083,7 +3086,7 @@ d representation:
 
 */
 
-// @[00]@| Go-GMA 5.21.1
+// @[00]@| Go-GMA 5.21.2
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

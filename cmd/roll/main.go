@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______   __        __            #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) /  \      /  \           #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  | \/) )     \/) )          #
-# | |      | || || || (___) | Assistant | (____         /   )   | |       | |          #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    | |       | |          #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/     | |       | |          #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ __) (_ _  __) (_         #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \____/(_) \____/         #
+#  _______  _______  _______             _______     _______   __       _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) /  \     / ___   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  | \/) )    \/   )  |       #
+# | |      | || || || (___) | Assistant | (____         /   )   | |        /   )       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    | |      _/   /        #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/     | |     /   _/         #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ __) (_ _ (   (__/\       #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \____/(_)\_______/       #
 #                                                                                      #
 ########################################################################################
 #
@@ -79,10 +79,11 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/text"
 )
 
-const GoVersionNumber="5.21.1" //@@##@@
+const GoVersionNumber="5.21.2" //@@##@@
 
 func main() {
 	var err error
+	var seedUsed int64
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [-help] [-dice spec] [-json] [-seed value] [-syntax]\n", os.Args[0])
@@ -118,8 +119,10 @@ func main() {
 	var roller *dice.DieRoller
 	if *seedValue != 0 {
 		roller, err = dice.NewDieRoller(dice.WithSeed(*seedValue))
+		seedUsed = *seedValue
 	} else {
 		roller, err = dice.NewDieRoller()
+		seedUsed = dice.DefaultSeed
 	}
 	if err != nil {
 		fmt.Printf("Internal error: %v\n", err)
@@ -137,7 +140,7 @@ func main() {
 			resultSet = append(resultSet, ReportedResultSet{
 				Title:   title,
 				Results: results,
-				Seed:    *seedValue,
+				Seed:    seedUsed,
 			})
 		}
 
