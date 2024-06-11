@@ -4,14 +4,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______  _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )(  __   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  || (  )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____         /   )| | /   |      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / | (/ /) |      | |        #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/  |   / | |      | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\|  (__) | _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_______)(_) \____/       #
+#  _______  _______  _______             _______     _______   __       _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) /  \     (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  | \/) )    | (  )  |       #
+# | |      | || || || (___) | Assistant | (____         /   )   | |    | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    | |    | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/     | |    |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ __) (_ _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \____/(_)(_______)       #
 #                                                                                      #
 ########################################################################################
 */
@@ -30,19 +30,20 @@ package text
 //
 // @@:go:form-preamble:begin:commonPostScriptPreamble@@
 const commonPostScriptPreamble = `%!PS
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  _______  _______  _______              ______      __     _____          ______   _ %
-% (  ____ \(       )(  ___  )            / ____ \    /  \   / ___ \        (  ___ \ (  %
-% | (    \/| () () || (   ) |           ( (    \/    \/) ) ( (   ) )       | (   ) )|  %
-% | |      | || || || (___) |           | (____        | | ( (___) | _____ | (__/ / |  %
-% | | ____ | |(_)| ||  ___  |           |  ___ \       | |  \____  |(_____)|  __ (  |  %
-% | | \_  )| |   | || (   ) | Game      | (   ) )      | |       ) |       | (  \ \ |  %
-% | (___) || )   ( || )   ( | Master's  ( (___) ) _  __) (_/\____) )       | )___) )|  %
-% (_______)|/     \||/     \| Assistant  \_____/ (_) \____/\______/        |/ \___/ (_ %
+%  _______  _______  _______              ______     _______  _______                  %
+% (  ____ \(       )(  ___  )            / ____ \   / ___   )(  __   )                 %
+% | (    \/| () () || (   ) |           ( (    \/   \/   )  || (  )  |                 %
+% | |      | || || || (___) |           | (____         /   )| | /   |                 %
+% | | ____ | |(_)| ||  ___  |           |  ___ \      _/   / | (/ /) |                 %
+% | | \_  )| |   | || (   ) | Game      | (   ) )    /   _/  |   / | |                 %
+% | (___) || )   ( || )   ( | Master's  ( (___) ) _ (   (__/\|  (__) |                 %
+% (_______)|/     \||/     \| Assistant  \_____/ (_)\_______/(_______)                 %
 %                                                                                      %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-% @[00]@| GMA Core 6.19-beta.0
+% @[00]@| GMA Core 6.20
 % @[01]@|
 % @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 % @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
@@ -315,51 +316,102 @@ const commonPostScriptPreamble = `%!PS
     3 -1 roll       % w h text
     show            % w h
 } def
+
 %
-% text font size w x y FitText -
+% text font size w x y FitText -            (left justified)
+% text font size w     RelativeFitText -    (left justified)
+% text font size w x y FitTextCtr -         (centered)
+% text font size w x y FitTextR -           (right justified)
 % Draw text in specified font at (x,y) baseline, scaled down
 % if necessary to fit in maximum width w
 %
+% Support routines for the above:
+% 	text font size w x y func FitTextCommon -   	      (adjusts font and sets variables)
+% 	text font size w     func RelativeFitTextCommon -  (ditto)
+% Sets
+% 	FormFT_x, FormFT_y		(non-relative only)
+% 	FormFT_w		space width for text to fit into
+% 	FormFT_sz		font size (changed by *Common functions)
+% 	FormFT_fnt		font
+% 	FormFT_txt		text to print
+% 	FormFT_func		function to print
+%
 /FitTextCommon {
+	3 1 roll
     /FormFT_y   exch def 
     /FormFT_x   exch def
     RelativeFitTextCommon
 } def
 /RelativeFitTextCommon {
-    /FormFT_w   exch def
-    /FormFT_sz  exch def
-    /FormFT_fnt exch def
-    /FormFT_txt exch def
+    /FormFT_func exch def
+    /FormFT_w    exch def
+    /FormFT_sz   exch def
+    /FormFT_fnt  exch def
+    /FormFT_txt  exch def
 
+	% determine text height of font
+	FormFT_fnt findfont FormFT_sz scalefont setfont
+	%FormFT_x FormFT_y mv
+	%/FormFT_xht (X|gy) false charpath flattenpath pathbbox exch pop exch sub exch pop def
+	%(X|gy) = (X|gy) false charpath flattenpath pathbbox == == == ==
+	%/FormFT_lead FormFT_xht 2 div def
+	%FormFT_txt = FormFT_xht == FormFT_lead ==
+	/FormFT_lead FormFT_sz 2 div def
     {
         FormFT_fnt findfont FormFT_sz scalefont setfont
         FormFT_txt stringwidth pop FormFT_w le {exit} if
+		%FormFT_txt false charpath flattenpath pathbbox exch pop exch sub exch pop dup == FormFT_lead le {
+		FormFT_sz FormFT_lead le {
+			% print onto two lines
+			/FormFT_func {} def
+			/FormFT_y FormFT_y FormFT_lead 1 sub add def
+			FormFT_x FormFT_y mv
+			/FormFT_maxx FormFT_x FormFT_w add def
+			[ FormFT_txt ( ) {
+				search {
+					3 1 roll
+				}{
+					exit
+				} ifelse
+			} loop ] {
+				dup stringwidth pop currentpoint pop add FormFT_maxx ge {
+					currentpoint pop FormFT_x ne {
+						/FormFT_y FormFT_y FormFT_lead sub def
+						FormFT_x FormFT_y mv
+					} if
+				} if
+				show ( ) show
+			} forall
+			exit
+		} if
         /FormFT_sz FormFT_sz 0.1 sub def
         FormFT_sz 3 le {exit} if
     } loop
+    FormFT_func
 } def
 
 /RelativeFitText {
-    RelativeFitTextCommon
-    FormFT_txt show
+	currentpoint /FormFT_y exch def /FotmFT_x exch def
+    {FormFT_txt show} RelativeFitTextCommon
 } def
 /FitText {
-    FitTextCommon
-    FormFT_x FormFT_y mv FormFT_txt show
+    {FormFT_x FormFT_y mv FormFT_txt show} FitTextCommon
 } def
 /FitTextCtr {
-    FitTextCommon
-    FormFT_x FormFT_w 2 div add
-    FormFT_txt stringwidth pop 2 div sub
-    FormFT_y mv
-    FormFT_txt show
+	{
+		FormFT_x FormFT_w 2 div add
+		FormFT_txt stringwidth pop 2 div sub
+		FormFT_y mv
+		FormFT_txt show
+	} FitTextCommon
 } def
 /FitTextR {
-    FitTextCommon
-    FormFT_x FormFT_w add
-    FormFT_txt stringwidth pop sub
-    FormFT_y mv
-    FormFT_txt show
+	{
+		FormFT_x FormFT_w add
+		FormFT_txt stringwidth pop sub
+		FormFT_y mv
+		FormFT_txt show
+	} FitTextCommon
 } def
 
 %
@@ -603,6 +655,14 @@ const commonPostScriptPreamble = `%!PS
     FormDBbox_w R
 } def
 
+/TitleBlockL {
+    /FormDBbox_w exch def
+    FormHue X Y FormDBbox_w FormDBboxht BoxFill
+    SetLine_med X Y FormDBbox_w FormDBboxht BoxFrame
+    1 setgray FormDBtfont FormDBtsize FormDBbox_w X Y FormDBboxht .80 mul sub FitText
+    FormDBbox_w R
+} def
+
 /EndDataBlock {
     /X FormDB__X__ def
     FormDBboxht D
@@ -614,19 +674,20 @@ const commonPostScriptPreamble = `%!PS
 // @@:go:form-preamble:end:@@
 // @@:go:gma-preamble:begin:gmaPostScriptPreamble@@
 const gmaPostScriptPreamble = `%!PS
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  _______  _______  _______              ______      __     _____          ______   _ %
-% (  ____ \(       )(  ___  )            / ____ \    /  \   / ___ \        (  ___ \ (  %
-% | (    \/| () () || (   ) |           ( (    \/    \/) ) ( (   ) )       | (   ) )|  %
-% | |      | || || || (___) |           | (____        | | ( (___) | _____ | (__/ / |  %
-% | | ____ | |(_)| ||  ___  |           |  ___ \       | |  \____  |(_____)|  __ (  |  %
-% | | \_  )| |   | || (   ) | Game      | (   ) )      | |       ) |       | (  \ \ |  %
-% | (___) || )   ( || )   ( | Master's  ( (___) ) _  __) (_/\____) )       | )___) )|  %
-% (_______)|/     \||/     \| Assistant  \_____/ (_) \____/\______/        |/ \___/ (_ %
+%  _______  _______  _______              ______     _______  _______                  %
+% (  ____ \(       )(  ___  )            / ____ \   / ___   )(  __   )                 %
+% | (    \/| () () || (   ) |           ( (    \/   \/   )  || (  )  |                 %
+% | |      | || || || (___) |           | (____         /   )| | /   |                 %
+% | | ____ | |(_)| ||  ___  |           |  ___ \      _/   / | (/ /) |                 %
+% | | \_  )| |   | || (   ) | Game      | (   ) )    /   _/  |   / | |                 %
+% | (___) || )   ( || )   ( | Master's  ( (___) ) _ (   (__/\|  (__) |                 %
+% (_______)|/     \||/     \| Assistant  \_____/ (_)\_______/(_______)                 %
 %                                                                                      %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-% @[00]@| GMA Core 6.19-beta.0
+% @[00]@| GMA Core 6.20
 % @[01]@|
 % @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 % @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
@@ -810,19 +871,19 @@ _my_encoding 8#344 /divide        put
     SetTheme_d20_Red 
     /PageTitleText (Pathfinder Character Record Sheet) def
     /CopyrightText1 (PATHFINDER CHARACTER RECORD SHEET / ) def
-    /CopyrightText2 (\2512010, 2015, 2023 Steve Willoughby / REV 4 / 20-NOV-2015) def
+    /CopyrightText2 (\3452010, 2015, 2023, 2024 Steve Willoughby / REV 5 / 04-JUN-2024) def
 } def
 /SetTheme_d20_Monsters  { 
     SetTheme_d20_Blue
     /PageTitleText (Pathfinder Encounter Run Sheet) def
     /CopyrightText1 (PATHFINDER ENCOUNTER RUN SHEET / ) def
-    /CopyrightText2 (\2512013, 2015, 2023 Steve Willoughby / REV 4 / 07-JUN-2023) def
+    /CopyrightText2 (\3452013, 2015, 2023 Steve Willoughby / REV 4 / 07-JUN-2023) def
 } def
 /SetTheme_d20_GM_Matrix { 
     SetTheme_d20_Green 
     /PageTitleText (Pathfinder GM Player Matrix) def
     /CopyrightText1 (PATHFINDER GM PLAYER MATRIX / ) def
-    /CopyrightText2 (\2512013, 2015, 2023 Steve Willoughby / REV 4 / 07-JUN-2023) def
+    /CopyrightText2 (\3452013, 2015, 2023 Steve Willoughby / REV 4 / 07-JUN-2023) def
 } def
 %
 % Character Record PostScript Form
@@ -1024,6 +1085,27 @@ _my_encoding 8#344 /divide        put
     /X PageLeftMargin def
     /Y BottomY def
 } def
+% (desc of attack type) (desc) (attack type) BeginAttackModeBlock -
+/BeginAttackModeBlock {
+	SetColor_data
+	28 HeadingFontSize 4 add add RequiredVerticalSpace
+	/PF_Continuation_Proc {
+		HeadingFont HeadingFontSize 4 add HeadingFontSize 9 add BeginDataBlock
+		/AMBwidth PageTextWidth 190 sub 150 sub def
+		/AMBy Y def
+		PageTextWidth TitleBlockL EndDataBlock
+		/X PageLeftMargin AMBwidth add def
+		/Y AMBy 4 sub def
+		HeadingFont HeadingFontSize HeadingFontSize 4 add BeginDataBlock
+		150 TitleBlockCtr
+		190 TitleBlockCtr
+		EndDataBlock
+		/X PageLeftMargin def
+		SetColor_data
+	} def
+	PF_Continuation_Proc
+} def
+/EndAttackModeBlock {} def
 /BeginAttackBlock {
     /AB_atk_x PageLeftMargin def
     /AB_ini_w 80 def
@@ -1041,8 +1123,27 @@ _my_encoding 8#344 /divide        put
         EndDataBlock
         /AB_start_y Y def
         /AB_end_y Y def
+	SetColor_data
     } def
     PF_Continuation_Proc
+} def
+/StandaloneAttackBlock {
+    /AB_atk_x PageLeftMargin def
+    /AB_atk_y Y def
+    /AB_ini_w 160 def
+    /AB_atk_w PageTextWidth AB_ini_w sub 5 sub def
+    /AB_ini_x AB_atk_x AB_atk_w add def
+	SetColor_data
+	DataFontBold 18 20 BeginDataBlock
+	75 TitleBlockCtr
+	() AB_atk_w 75 sub 80 sub 30 4 mul sub BlankHue DataBlockR
+	DataFont 12 ChangeDataBlockFont
+	(= BASE) 80 GreyHue DataBlockR
+	30 GreyHue DataBlockR
+	30 GreyHue DataBlockR
+	(= MISC) 30 GreyHue DataBlockR
+	(= TEMP) 30 GreyHue DataBlockR
+	EndDataBlock
 } def
 /AttackBlock {
     SetColor_data
@@ -1074,6 +1175,22 @@ _my_encoding 8#344 /divide        put
     DataFont 12 20 BeginDataBlock
         (BOW/SLING)60 BlankHue DataBlockR
     EndDataBlock
+} def
+/StandaloneInitiativeBlock {
+	SetColor_data
+	/X AB_ini_x 5 add def
+	/Y AB_atk_y def
+	DataFontBold 18 20 BeginDataBlock
+		(Init) 40 TitleBlockCtr
+		() 40 BlankHue DataBlockR
+	EndDataBlock
+	/X X 80 add def
+	/Y AB_atk_y def
+	DataFont 12 20 BeginDataBlock
+		40 GreyHue DataBlockR
+		40 GreyHue DataBlockR
+	EndDataBlock
+	/X PageLeftMargin def
 } def
 /InitiativeBlock {
     SetColor_data
@@ -1114,6 +1231,7 @@ _my_encoding 8#344 /divide        put
     (TYPE)                    35 TitleBlockCtr
     (ID)                      50 TitleBlockCtr
     EndDataBlock
+    SetColor_data
     } def
     PF_Continuation_Proc
 } def
@@ -1165,6 +1283,7 @@ _my_encoding 8#344 /divide        put
         EndDataBlock
         /DB_start_y Y def
         /DB_ac_y Y def
+	SetColor_data
     } def
     PF_Continuation_Proc
 } def
@@ -1244,6 +1363,7 @@ _my_encoding 8#344 /divide        put
         (WT)                30 TitleBlockCtr
         (ID)                        50 TitleBlockCtr
         EndDataBlock
+        SetColor_data
     } def
     PF_Continuation_Proc
 } def
@@ -1279,6 +1399,7 @@ _my_encoding 8#344 /divide        put
         } repeat
         EndDataBlock
         /FB_col 0 def
+	SetColor_data
     } def
     PF_Continuation_Proc
 } def
@@ -1293,7 +1414,7 @@ _my_encoding 8#344 /divide        put
 /EndFeatBlock {
     EndFeatBlockNoFooter
     HeadingFont HeadingFontSize HeadingFontSize 4 add BeginDataBlock
-        ()(\256=Racial Ability; \251=Class Ability; \253Modifier already calculated into other stats\273) 
+        ()(\346=Racial Ability; \345=Class Ability; \253Modifier already calculated into other stats\273) 
         PageTextWidth BlankHue DataBlock
     EndDataBlock
 } def
@@ -1355,6 +1476,7 @@ _my_encoding 8#344 /divide        put
             (SKILLS \(Continued\)) () SkB_header_w BlankHue DataBlock
         EndDataBlock
         PF_hdr
+        SetColor_data
     } def
 } def
 /EndSkillBlock {
@@ -1394,6 +1516,7 @@ _my_encoding 8#344 /divide        put
         SetColor_form
             ABtitle () PageTextWidth BlankHue DataBlock
         EndDataBlock
+        SetColor_data
     } def
 } def
 /EndAnimalBlock {
@@ -1424,6 +1547,7 @@ _my_encoding 8#344 /divide        put
         (Relationships \(contd\))()PageTextWidth BlankHue DataBlock
    EndDataBlock
    PF_hdr
+    SetColor_data
    } def
 } def
 
@@ -1469,6 +1593,7 @@ _my_encoding 8#344 /divide        put
             (POSSESSIONS \(Continued\)) () PageTextWidth BlankHue DataBlock
         EndDataBlock
         PF_hdr
+    SetColor_data
     } def
 } def
 /EndItemBlock {
@@ -1645,6 +1770,7 @@ _my_encoding 8#344 /divide        put
         SpB_title (SPELL LIST CONTINUED FROM PREVIOUS PAGE) PageTextWidth BlankHue DataBlock
         EndDataBlock
         PF_hdr
+    SetColor_data
     } def
 } def
 /EndSpellBlock {
@@ -1692,7 +1818,7 @@ _my_encoding 8#344 /divide        put
         
 
     X Y FontLead_body FontSize_body PsFF_init
-    Sp_text_block Sp_tb_w PsFF_vertspace 12 add RequiredVerticalSpace
+    %Sp_text_block Sp_tb_w PsFF_vertspace 12 add RequiredVerticalSpace
     %12 FontLead_body Sp_lines mul add RequiredVerticalSpace
     SetColor_data
     DataFont 9 10 BeginDataBlock
@@ -1772,6 +1898,7 @@ _my_encoding 8#344 /divide        put
         SpB_title (EXPLOIT LIST CONTINUED FROM PREVIOUS PAGE) PageTextWidth BlankHue DataBlock
         EndDataBlock
         PF_hdr
+    SetColor_data
     } def
 } def
 
@@ -1909,11 +2036,21 @@ _my_encoding 8#344 /divide        put
     /X PsFF__x PsFF__i add def
     /Y PsFF__y def
     X Y moveto
-    /PsFF_nl { /Y Y PsFF_ld sub def /X PsFF__x PsFF__i add def X Y moveto /WaF__curwidth 0 def } def
-    /PsFF_par { /Y Y PsFF_ld 1.5 mul sub def /X PsFF__x PsFF__i add def X Y moveto /WaF__curwidth 0 def } def
+    /PsFF_nl { /Y Y PsFF_ld sub def 
+	Y PageBottomMargin 20 add le { /PSff_cf currentfont def eject 12 D PSff_cf setfont} if
+        /X PsFF__x PsFF__i add def X Y moveto /WaF__curwidth 0 def } def
+    /PsFF_par { /Y Y PsFF_ld 1.5 mul sub def 
+    	Y PageBottomMargin 20 add le { /PSff_cf currentfont def eject 12 D PSff_cf setfont} if 
+	/X PsFF__x PsFF__i add def X Y moveto /WaF__curwidth 0 def } def
     PsFF__c { show } { PsFF_nl } WrapAndFormat
 } def
 
+% override WaF_nl to do page breaks
+/WaF_nl {
+    /WaF__Y WaF__Y WaF__lead sub def
+    WaF__Y PageBottomMargin 20 add le { eject /WaF__Y Y def } if
+    WaF__X WaF__Y moveto
+} def
 %
 % PsFF_Lc -
 %   Fake "newline" command which just increments the line counter
@@ -2417,7 +2554,7 @@ _my_encoding 8#344 /divide        put
     /Note_text_block exch def
     /Notes_tb_w fftb_width 10 sub def
     X Y FontLead_body FontSize_body PsFF_init
-    Note_text_block Notes_tb_w PsFF_vertspace 12 add RequiredVerticalSpace
+%    Note_text_block Notes_tb_w PsFF_vertspace 12 add RequiredVerticalSpace
     SelectBodyFont
     /X PageLeftMargin def
     X 5 add Y FontLead_body 2 sub sub FontLead_body FontSize_body PsFF_init
@@ -2439,6 +2576,20 @@ _my_encoding 8#344 /divide        put
     HeadingFont HeadingFontSize HeadingFontSize 4 add BeginDataBlock
     (NOTES) PageTextWidth TitleBlockCtr
     EndDataBlock
+    SetColor_data
+    FreeFormTextBlock
+} def
+
+/MainNotesBlock {
+    X Y FontLead_body FontSize_body PsFF_init
+    dup PageTextWidth 10 sub PsFF_vertspace 12 add RequiredVerticalSpace
+
+    DataFontBold 18 20 BeginDataBlock
+    /ItB_header_w PageTextWidth def
+    SetColor_form
+        (CHARACTER NOTES) () ItB_header_w BlankHue DataBlock
+    EndDataBlock
+
     SetColor_data
     FreeFormTextBlock
 } def
@@ -2790,7 +2941,7 @@ _my_encoding 8#344 /divide        put
 `
 // @@:go:gma-preamble:end:@@
 
-// @[00]@| Go-GMA 5.20.1
+// @[00]@| Go-GMA 5.21.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
