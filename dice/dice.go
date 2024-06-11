@@ -4,14 +4,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______  _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )(  __   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  || (  )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____         /   )| | /   |      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / | (/ /) |      | |        #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/  |   / | |      | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\|  (__) | _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_______)(_) \____/       #
+#  _______  _______  _______             _______     _______   __       _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) /  \     (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  | \/) )    | (  )  |       #
+# | |      | || || || (___) | Assistant | (____         /   )   | |    | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    | |    | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/     | |    |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ __) (_ _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \____/(_)(_______)       #
 #                                                                                      #
 ########################################################################################
 */
@@ -184,7 +184,12 @@ type Dice struct {
 //
 // Arbitrary  text  (<label>) may appear at the end of the expression. It is
 // simply reported back in the result as a label to  describe  that  value
-// (e.g.   “1d10  + 1d6 fire + 2d6 sneak”.)  If the expression begins with
+// (e.g.   “1d10  + 1d6 fire + 2d6 sneak”.)  The <label> must begin with a letter
+// or underscore; all subsequent characters in <label> must be letters, digits,
+// underscores, commas, and/or periods (full stops). The notion of "letter" and
+// "digit" follows the Unicode character classifications.
+//
+// If the expression begins with
 // the character “>”, then the first die in the set is maximized:  in  the
 // expression  “>3d6”,  the  first d6 is assumed to have the maximum value
 // (6), and the remaining two dice are rolled to produce random values.
@@ -201,9 +206,16 @@ type Dice struct {
 // which  rolls 2d6 and 1d4 to get a random value between 3 and 16, but if
 // the result is less than 6, it will return 6 anyway.
 //
+// However, these modifiers are deprecated now that the <= and >= operators
+// are part of the die-roll expression syntax.
+//
+//	expr | min a           ==   (expr) >= a
+//	expr | max b           ==   (expr) <= b
+//	expr | min a | max b   ==   (expr) >= a <= b
+//
 // For example:
 //
-//	d, err := New(ByDescription("3d6 + 12"))
+//	d, err := New(ByDescription("3d6 + 12 awesome bonus + 3 Strength"))
 func ByDescription(desc string) func(*Dice) error {
 	return func(o *Dice) error {
 		o.desc = desc
@@ -2942,6 +2954,108 @@ func LoadDieRollPresetFile(input io.Reader) ([]DieRollPreset, DieRollPresetMetaD
 	return nil, meta, fmt.Errorf("invalid die-roll preset file format: unexpected end of file")
 }
 
+// Help text describing to the user how to make die roll expressions.
+// This is in GMA's markup format which can be processed with the
+// text package functions from go-gma.
+const DieRollExpressionSyntax = `
+==[Die-Roll Expression Syntax]==
+The general form for die roll expressions is:
+
+[//name//**=**] [//qty//[**/**//div//]] **d** //sides// [**best**|**worst of** //n//] [...] [**|**//modifiers]
+
+(Here, **bold** text means to type something literally as shown; //italics// indicates values to substitute, and 
+[square brackets] surround optional components.)
+
+==(Basics)==
+The basic die-roll expression uses traditional dice notation (e.g., “**3d6**” means to roll three six-sided dice and add them together).
+Multiple such dice may appear, separated from each other (and from numeric constants) with the basic math operators
+**+** (for addition), **--** (for subtraction), ***** (for multiplication), or **//** (for division; note that is **two** slashes);
+you can also use Unicode characters U+00D7 (**×**) for multiplication and U+00F7 (**÷**) for division. 
+The standard algebraic order of operations is performed,
+and parentheses can be used as necessary to force a particular order. Thus, “**d20+17**”, “**4d8+3d10+27**”, and “**(2d10+3)*3**” are
+all valid dice rolls.
+
+==(Constraints)==
+The operators **<=** and **>=** indicate that the value to their left must be less than or equal to (or greater than or equal to)
+some maximum (or minimum) value. For example “**3d6<=10**” means “roll 3d6 but the result must be less than or equal to 10”; if the
+roll yielded a result greater than 10, 10 will be used instead. Likewise, “**2d10>=5**” rolls 2d10 but forces the result to be at
+least 5. 
+
+Since these apply to the value immediately to their left, parentheses are needed if you want to place the constraint on a larger
+expression, such as “**(3d6+27+1d10)>=10**”.
+
+Unicode U+2264 and U+2265 (**≤** and **≥**) may also be used instead of **<=** and **>=** respectively.
+
+==(Special)==
+If a dice value is prefixed with a **>** symbol, as in “**>5d10**”, then the first die will be assumed to come up with its
+maximum value (so what's really rolled in this example is 10+4d10).
+
+==(Rerolls)==
+If you put “**best of** //n//” or “**worst of** //n//” after a dice value, such as “**d20 best of 2**”, it will roll the die
+that may times and take the best (or worst) of all those rolls to use for that set of dice. Note that this is part of the dice,
+not the overall expression so you would say, for example, “**3d6 best of 3 + 12**” and not “**3d6+12 best of 3**”.
+
+==(Percentile Rolls)==
+You can use “**d%**” to roll a d100 or “percentile” die as part of any die-roll expression.
+To just get a roll to indicate something that is successful //x// percent of the time, the special die-roll form
+“//x//**%**” can be used (this cannot be part of a larger expression). For example, if your die roll was “**42%**”, then the result reported back would be **1** (success) with a 42% probability, or **0** (failure) with a 58% probability.
+
+To customize the success/failure messages, you can add those messages to the end, like “**42% miss**” (where the result will be 
+“miss” 42% of the time or else “hit”), or “**15% red/blue**” (where the result will be “red” 15% of the time or else “blue”).
+
+==(Titles and Labels)==
+You can put arbitrary text at the start of the string, followed by an equals sign (**=**), to place a title on the
+whole roll, like “**Attack roll = d20+12**”. 
+
+Likewise, any dice or constant values in the expression can be followed by a text label to indicate what that value
+represents. In this case, the label must consist of one or more words which begin with a letter or underscore (**_**), 
+and contain only letters, digits, underscores, periods (**.**), and commas (**,**).  For example,
+“**5d6 + 1d6 fire + 1d6 acid spray**”.
+
+==(Options)==
+At the very end of the entire die-roll string, you can place one or more of the following options which alter the
+meaning of the whole thing. Each option begins with a vertical bar (**|**) character.
+
+**|max** //x// (Force the whole overall result to be no more than //x//.)
+
+**|min** //x// (Force the whole overall result to be at least //x//.)
+
+**|c**         (This is an attack roll. If the die rolled a natural 20, add a second roll to confirm the critical hit.)
+
+**|c** //t//   (As **|c** but consider a natural roll of at least //t// to threaten the critical.)
+
+**|c** //t//**+**//b// (As above but add the bonus //b// to the confirmation roll.)
+
+**|dc** //n// (Indicate that the roll was a “success” if the result was at least //n//.)
+
+**|maximized** (All die rolls are forced to their maximum possible values.)
+
+**|repeat** //n// (Roll //n// times.)
+
+**|sf**  (This roll is subject to automatic success/fail rules: the roll is successful if the die rolled a natural 20 (or whatever the die's maximum is) and failed if a natural 1 was rolled.)
+
+**|sf** //success//[**/**//fail//] (As **|sf** but specify your own custom messages to print if successful (and failure if that is given as well, separated by a slash).)
+
+**|until** //n// (Continue rolling until the result is at least //n//.)
+
+==(Permutations)==
+If a slash-separated set of values appear between curly braces, the die-roll will be executed once for each of the values in turn.
+For example, the die roll “**d20+{17/12/7/2}+5**” is the same as making the four separate rolls
+“**d20+17+5**”,
+“**d20+12+5**”,
+“**d20+7+5**”, and
+“**d20+2+5**”.
+
+Likewise, the die roll “**d20+{10/8}+{d10/100}**” is the same as rolling
+“**d20+10+d10**”,
+“**d20+10+100**”,
+“**d20+8+d10**”, and
+“**d20+8+100**”.
+
+Any arbitrary text may appear in the braces; the permutations and substitutions are made before each resulting die-roll string is parsed
+and evaluated.
+`
+
 /*
 NewDieRoller -> dr.d Dice
 
@@ -2969,7 +3083,7 @@ d representation:
 
 */
 
-// @[00]@| Go-GMA 5.20.1
+// @[00]@| Go-GMA 5.21.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

@@ -4,14 +4,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______  _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )(  __   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  || (  )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____         /   )| | /   |      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / | (/ /) |      | |        #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/  |   / | |      | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\|  (__) | _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_______)(_) \____/       #
+#  _______  _______  _______             _______     _______   __       _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) /  \     (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  | \/) )    | (  )  |       #
+# | |      | || || || (___) | Assistant | (____         /   )   | |    | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    | |    | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/     | |    |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ __) (_ _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \____/(_)(_______)       #
 #                                                                                      #
 ########################################################################################
 */
@@ -154,16 +154,16 @@ func TestMarkupTextNull(t *testing.T) {
 		{"a //it b\nc\\\\de//f", "a it b c\ndef", false, nil},
 		{"a //it b\nc\n\nde//f", "a it b c\n\ndef", false, nil},
 		{`This is a bullet list:
-*Item One
-*Item //Tw//o
-*Item Three
+@Item One
+@Item //Tw//o
+@Item Three
   * this is not a\\bullet list
-*But this is
-**and a sub-list
-*** and sub-sub-list
+@But this is
+@@and a sub-list
+@@@ and sub-sub-list
 
 And this should start a new list:
-*Not that you can tell with bullets.
+@Not that you can tell with bullets.
 `, `This is a bullet list:
 •  Item One
 •  Item Two
@@ -176,18 +176,18 @@ And this should start a new list:
 And this should start a new list:
 •  Not that you can tell with bullets.`, false, nil},
 		{`This is a bullet list:
-*Item One
-*Item //Tw//o
-*Item Three
+@Item One
+@Item //Tw//o
+@Item Three
   * this is not a\\bullet list
-*But this is
-**and a sub-list
-*** and sub-sub-list
-****But this is
-*****and a sub-list
+@But this is
+@@and a sub-list
+@@@ and sub-sub-list
+@@@@But this is
+@@@@@and a sub-list
 
 And this should start a new list:
-*Not that you can tell with bullets.
+@Not that you can tell with bullets.
 `, `This is a bullet list:
 •  Item One
 •  Item Two
@@ -289,29 +289,29 @@ func TestMarkupTextHTML(t *testing.T) {
 		{"a //it b\nc\\\\de//f", "<P>a <I>it b c<BR/>de</I>f</P>", false, nil},
 		{"a //it b\nc\n\nde//f", "<P>a <I>it b c</I></P><P>de<I>f</I></P>", false, nil},
 		{`This is a bullet list:
-*Item One
-*Item //Tw//o
-*Item Three
+@Item One
+@Item //Tw//o
+@Item Three
  * this is not a\\bullet list
-*But this is
-**and a sub-list
-*** and sub-sub-list
+@But this is
+@@and a sub-list
+@@@ and sub-sub-list
 
 And this should start a new list:
-*Not that you can tell with bullets.
+@Not that you can tell with bullets.
 `, "<P>This is a bullet list:<UL><LI>Item One<LI>Item <I>Tw</I>o<LI>Item Three * this is not a<BR/>bullet list<LI>But this is<UL><LI>and a sub-list<UL><LI>and sub-sub-list</UL></UL></UL></P><P>And this should start a new list:<UL><LI>Not that you can tell with bullets.</UL></P>", false, nil},
 		{`This is a bullet list:
-*Item One
-*Item //Tw//o
-*Item Three
+@Item One
+@Item //Tw//o
+@Item Three
  * this is not a\\bullet list
-*But this is
-**and a sub-list
-*** and sub-sub-list
-**** four
+@But this is
+@@and a sub-list
+@@@ and sub-sub-list
+@@@@ four
 
 And this should start a new list:
-*Not that you can tell with bullets.
+@Not that you can tell with bullets.
 `, "<P>This is a bullet list:<UL style='list-style-type:\"disc\";'><LI>Item One<LI>Item <I>Tw</I>o<LI>Item Three * this is not a<BR/>bullet list<LI>But this is<UL style='list-style-type:\"\\2023\";'><LI>and a sub-list<UL style='list-style-type:\"\\0025e6\";'><LI>and sub-sub-list<UL style='list-style-type:\"disc\";'><LI>four</UL></UL></UL></UL></P><P>And this should start a new list:<UL style='list-style-type:\"disc\";'><LI>Not that you can tell with bullets.</UL></P>", false, []func(*renderOptSet){WithBullets('•', '‣', '◦')}},
 		{`This is a numbered list:
 #Item One
@@ -379,16 +379,16 @@ c
 
 de//f`, " [  [ {} [ (a ) ] {PsFF_rm} ]  [ {} [ (it )(b )(c) ] {PsFF_it} ]  [ {PsFF_par} [  ] {PsFF_rm} ]  [ {} [ (de) ] {} ]  [ {} [ (f) ] {PsFF_it} ]  ] ", false, nil},
 		{`This is a bullet list:
-*Item One
-*Item //Tw//o
-*Item Three
+@Item One
+@Item //Tw//o
+@Item Three
  * this is not a\\bullet list
-*But this is
-**and a sub-list
-*** and sub-sub-list
+@But this is
+@@and a sub-list
+@@@ and sub-sub-list
 
 And this should start a new list:
-*Not that you can tell with bullets.
+@Not that you can tell with bullets.
 `, " [  [ {PsFF_nl} [ (This )(is )(a )(bullet )(list:) ] {PsFF_rm} ] " +
 			" [ { 1 PsFF_ind } [ (\\267) ] { 0 PsFF_ind } ] " +
 			" [ {PsFF_nl} [ (Item )(One) ] {} ] " +
@@ -502,7 +502,7 @@ PsFF_nl
 	}
 }
 
-// @[00]@| Go-GMA 5.20.1
+// @[00]@| Go-GMA 5.21.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

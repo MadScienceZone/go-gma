@@ -4,14 +4,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______  _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )(  __   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  || (  )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____         /   )| | /   |      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / | (/ /) |      | |        #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/  |   / | |      | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\|  (__) | _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/(_______)(_) \____/       #
+#  _______  _______  _______             _______     _______   __       _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) /  \     (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  | \/) )    | (  )  |       #
+# | |      | || || || (___) | Assistant | (____         /   )   | |    | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    | |    | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/     | |    |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ __) (_ _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \____/(_)(_______)       #
 #                                                                                      #
 ########################################################################################
 */
@@ -1114,11 +1114,11 @@ func enumVal(level, value int) string {
 //
 // **text** sets "text" in boldface*†
 //
-// *blah... Starts bulleted list item‡
+// @blah... Starts bulleted list item‡
 //
-// **blah... Starts level-2 bulleted list item‡
+// @@blah... Starts level-2 bulleted list item‡
 //
-// ***blah... Starts level-3 bulleted list item (and so forth)‡
+// @@@blah... Starts level-3 bulleted list item (and so forth)‡
 //
 // #blah... Starts enumerated list item‡
 //
@@ -1190,7 +1190,7 @@ func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 		o(&ops)
 	}
 	collapseSpaces := regexp.MustCompile(`\s{2,}`)
-	newListBullet := regexp.MustCompile(`^[*#]+`)
+	newListBullet := regexp.MustCompile(`^[@#]+`)
 	formatReqs := regexp.MustCompile(`//|\*\*|\[\[|\]\]|\\\.`)
 
 	paragraphs := make([][][]any, 0, 10)
@@ -1216,7 +1216,7 @@ func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 			continue
 		}
 		//
-		// Look for * or # at the start of the line. This begins
+		// Look for @ or # at the start of the line. This begins
 		// a new list item. We'll just insert a marker to that effect
 		// in the current line and keep going, to avoid extra line
 		// breaks from sneaking in.
@@ -1423,7 +1423,7 @@ func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 	return ops.formatter.finalize(), nil
 }
 
-// @[00]@| Go-GMA 5.20.1
+// @[00]@| Go-GMA 5.21.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
