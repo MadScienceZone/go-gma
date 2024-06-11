@@ -1,0 +1,121 @@
+'\" <<ital-is-var>>
+'\" <<bold-is-fixed>>
+.TH ROLl 6 "Go-GMA 5.20.1" 15-May-2024 "Games" \" @@mp@@
+.SH NAME
+roll \- GMA die roller CLI application (Go version)
+.SH SYNOPSIS
+'\" <<usage>>
+.LP
+(If using the full GMA core tool suite)
+.LP
+.na
+.B gma
+.B go
+.B roll
+[options as described below...]
+.ad
+.LP
+(Otherwise)
+.LP
+.na
+.B roll
+.B \-h
+.LP
+.B roll
+.B \-help
+.LP
+.B roll
+.B \-syntax
+.LP
+.B roll
+.RB [ \-dice
+.IR string ]
+.RB [ \-json ]
+.RB [ \-seed
+.IR int ]
+.ad
+'\" <</usage>>
+.SH DESCRIPTION
+.LP
+.B Roll
+provides a command-line utility that rolls dice using
+the GMA dice library without requiring a functioning
+GMA game server to roll the dice for you.
+.LP
+It can be used interactively by users or it can be embedded
+into scripts or other back-end services.
+.SH OPTIONS
+.LP
+Options may be introduced with either one or two hyphens (e.g.,
+.B \-json
+or
+.BR \-\-json ).
+Options which take parameter values may have the value separated
+from the option name by a space or an equals sign (e.g.,
+.B \-seed=2323
+or
+.BR "\-seed 2323" ), 
+except for boolean flags which may be given
+alone (e.g.,
+.BR \-json )
+to indicate that the option is set to \*(lqtrue\*(rq or may be given
+an explicit value which must be attached to the option with an
+equals sign (e.g.,
+.B \-json=true
+or
+.BR \-json=false ).
+'\" <<list>>
+.TP 15
+.BI "\-dice " string
+Specify the die-roll expression to be rolled, such as
+.RB \*(lq 3d6 \*(rq.
+.RS
+.LP
+Multiple die-roll expressions may be given as the value to this option,
+separated from one another by semicolons
+.RB (\*(lq ; \*(rq).
+In this case each will be rolled in the sequence given. This allows a group
+of die rolls to be performed from a single seed value in a single invocation
+of the program.
+.LP
+If this is not given,
+.B roll
+will interactively prompt for die-roll expressions and roll
+each as they're typed in. Typing a blank line repeats the
+previous expression. The program will exit on EOF.
+.RE
+.TP
+.B \-help
+Print a command option summary and exit.
+.TP
+.B \-json
+Output the results as a JSON string instead of plain text.
+.TP
+.BI "\-seed " int
+Instead of using a random seed value, base the die roll
+results on the given value. The
+.I int
+value is a 64-bit integer expressed in decimal digits.
+.TP
+.B \-syntax
+Print a summary of the die-roll expression syntax and exit.
+In interactive mode, this help text may be produced by
+typing
+.RB \*(lq help \*(rq
+as the input line.
+'\" <</>>
+.SH "SEE ALSO"
+.LP
+.BR dice (3),
+.BR roll (6).
+.LP
+This program is analogous to, but has more features than,
+the Python-based
+.B gma
+.B roll
+program from GMA-Core.
+.SH AUTHOR
+.LP
+Steve Willoughby / steve@madscience.zone.
+.SH COPYRIGHT
+Part of the GMA software suite, copyright \(co 1992\-2024 by Steven L. Willoughby, Aloha, Oregon, USA. All Rights Reserved. Distributed under BSD-3-Clause License. \"@m(c)@
