@@ -937,7 +937,9 @@ type listItem struct {
 // is a slice of tableCells.
 //
 type textTable struct {
-	rows [][]*tableCell
+	rows      [][]*tableCell
+	footnotes []*tableCell
+	captions  []*tableCell
 }
 
 //
@@ -1101,6 +1103,7 @@ func enumVal(level, value int) string {
 //
 //  *(PostScript format only)
 //
+//
 // The markup syntax is simple. Lines are collected together into a single
 // logical line which is then wrapped as appropriate to the output format
 // (which may rely on whatever is printing the output to break lines as
@@ -1180,6 +1183,8 @@ func enumVal(level, value int) string {
 // †May nest as in //Italic **and** bold//.
 //
 // ‡Must appear at the very beginning of a line.
+//
+// A literal \ or | character may be entered without being interpreted as part of markup syntax using the codes \e and \v respectively.
 //
 func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 	ops := renderOptSet{
@@ -1422,6 +1427,127 @@ func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 
 	return ops.formatter.finalize(), nil
 }
+
+const MarkupSyntax = `
+==[GMA Text Markup Syntax]==
+The markup syntax is simple. Lines are collected together into a single
+logical line which is then wrapped as appropriate to the output format
+(which may rely on whatever is printing the output to break lines as
+it prefers).
+
+==(Basic Markup)==
+A blank line marks a paragraph break.
+
+**\e\e** marks a line break.
+
+A literal **\e** or **|** character may be entered without being interpreted as part of markup syntax using the codes **\ee** and **\ev** respectively.
+
+**/\./text/\./** sets "text" in Italics*†\\
+**\.*\.*text\.*\.*** sets "text" in boldface*†
+
+**@**//blah//... Starts bulleted list item‡\\
+**@@**//blah//... Starts level-2 bulleted list item‡\\
+**@@@**//blah//... Starts level-3 bulleted list item (and so forth)‡
+
+**#**//blah//... Starts enumerated list item‡\\
+**##**//blah//... ...and so forth‡
+
+**[\.[**//name//**]\.]** Creates a hyperlink to "//name//" where this name itself adequately
+identifies the linked-to element in GMA (e.g., the name of a spell).\\
+**[\.[//link//**|**//name//]\.] Creates a hyperlink called "//name//" which links to GMA element "//link//".
+
+**\e.** does nothing but serves to disambiguate things or prevent otherwise special symbols
+from being interpreted as markup syntax.
+
+There is also a special page-break marker **<\.<-->\.>** which is not actually processed
+by this package, but some output subsystems recognize it when they see it in the output
+(e.g., PostScript formatted text blocks).
+
+==(Special Characters)==
+Many common Unicode characters are recognized on input, but support for
+them in the target output format is not guaranteed.
+
+The following markup symbols may also be used to represent special characters:
+|**[\.S]**   |[S] section       |**A\.E**   |AE ligature |
+|**[\.c]**   |[c] copyright     |**a\.e**   |ae ligature |
+|**[\.<<]**  |[<<] << quotes    |**[\.>>]** |[>>] >> quotes |
+|**[\.R]**   |[R] registered    |**1\./4**  |1/4 |
+|**^\.o**    |^o  degrees       |**1\./2**  |1/2 |
+|**+\.-**    |+/- plusminus     |**3\./4**  |3/4 |
+|**^\..**    |^.  bullet        |**[\.x]**  |[x] multiplication |
+|**[\.0]**   |[0] superscript 0 |**[\./]**  |[/] division |
+|**[\.1]**   |[1] superscript 1 |**-**      |\.- hyphen or minus sign |
+|**[\.2]**   |[2] superscript 2 |**-\.-**   |\.-- en dash |
+|**[\.3]**   |[3] superscript 3 |**-\.-\.-** |\.--- em dash |
+|**[\.4]**   |[4] superscript 4 |**‵** |‘ open single quote |
+|**[\.5]**   |[5] superscript 5 |**′** |' close single quote |
+|**[\.6]**   |[6] superscript 6 |**‵‵** |“ open double quote |
+|**[\.7]**   |[7] superscript 7 |**′′** |'' close double quote|
+|**[\.8]**   |[8] superscript 8 | | |
+|**[\.9]**   |[9] superscript 9 | | |
+
+The letter **x** immediately next to a digit causes it to be printed as a multiplication sign (e.g., x2 or 3x).\\
+A hyphen **-** immediately before a digit causes it to be printed as a minus sign instead of a hyphen (e.g., -1).\\
+Separate numbers from fractions with an underscore (e.g., **12\._\.1\./2** prints as **12_1/2**).
+
+==(Titles)==
+\.==[Main (top-level) Heading]==\\
+\.==(Subtitle (2nd-level))==
+
+==(Tables)==
+Tables are specified by a set of lines beginning with a **|** character.‡
+Each column in the table is separated from the others with **|** characters
+as well. A **|** at the very end of the row is optional.
+
+**|=Size Code|=Area|**\\
+**|  S  |  5|**\\
+**|  M  |  5|**\\
+**|  L  | 10|**
+
+This produces a table like
+
+|=Size Code|=Area|
+|  S  |  5|
+|  M  |  5|
+|  L  | 10|
+
+Table cells beginning with **=** are headers (usually placed in the first row)
+
+Cells are left- or right-justified if there is leading or trailing space between the **|**
+separators for that cell, respectively. If there is space before and after the text,
+it is centered. In the example above, the size codes will be centered in their column
+and the area numbers are right-justified in theirs.
+
+Cells which begin with a hyphen (**-**) indicate that the cell to their left spans into them.
+For example:
+
+**|=Column A|=Column B|=Column C**\\
+**|stuff    |more stuff|and more**\\
+**|a really wide column|- |hello**
+
+produces:
+
+|=Column A|=Column B|=Column C
+|stuff    |more stuff|and more
+|a really wide column|- |hello
+
+A row in the form
+
+**|: Table Caption |**
+
+places a caption on the table (usually above the table), while each row in the form
+
+**|:: Footnote |**
+
+adds a footnote at the bottom of the table. Footnotes may contain **\e\e** to make explicit line breaks but captions cannot.
+Captions and footnotes should be a single cell per line regardless of the number of columns the table has.
+
+==(Notes:)==
+*May cross line boundaries but not paragraphs.\\
+†May nest as in **/\./Italic *\.*and*\.* bold/\./.**\\
+‡Must appear at the very beginning of a line.
+
+`
 
 // @[00]@| Go-GMA 5.21.2
 // @[01]@|

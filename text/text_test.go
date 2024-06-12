@@ -139,6 +139,8 @@ func TestMarkupTextNull(t *testing.T) {
 
 	for i, test := range []testcase{
 		{"foo", "foo", false, nil},
+		{"foo\\\\bar", "foo\nbar", false, nil},
+		{"foo\\\\\nbar", "foo\nbar", false, nil},
 		{"", "", false, nil},
 		{"foo\nbar", "foo bar", false, nil},
 		{"foo\n\nbar", "foo\n\nbar", false, nil},
@@ -228,7 +230,12 @@ And this should start a new list:
 |left     |    right|
 |  center |filled|
 |  aaa    |   bbb
+|: The table title |
+|:: The table footnote |
+|:: Another footnote\\with a line break |
 And this is after the table.`, `Table test:
+
+THE TABLE TITLE
 +----------+----------+
 | COLUMN A | COLUMN B |
 +----------+----------+
@@ -236,6 +243,9 @@ And this is after the table.`, `Table test:
 |  center  | filled   |
 |   aaa    |      bbb |
 +----------+----------+
+The table footnote
+Another table footnote
+with a line break.
 And this is after the table.`, false, nil},
 		{`Table test:
 |=Column A|=Column B|=Column C|
@@ -251,6 +261,15 @@ And this is after the table.`, `Table test:
 |        aaa and        |          bbb |
 +----------+------------+--------------+
 And this is after the table.`, false, nil},
+		{`Titles:
+==[Main Title]==
+Some text
+==(Subtitle)==
+Some more text`, `Titles:
+===[MAIN TITLE]============================================================
+Some text
+--- SUBTITLE --------------------------------------------------------
+Some more text`, false, nil},
 	} {
 		test.opts = append(test.opts, AsPlainText)
 		v, err := Render(test.in, test.opts...)
@@ -330,13 +349,26 @@ And this should start a new list:
 |left     |    right|
 |  center |filled|
 |  aaa    |   bbb
-And this is after the table.`, "<P>Table test:<TABLE BORDER=1><TR><TH ALIGN=LEFT>Column A</TH><TH ALIGN=LEFT>Column B</TH></TR><TR><TD ALIGN=LEFT>left</TD><TD ALIGN=RIGHT>right</TD></TR><TR><TD ALIGN=CENTER>center</TD><TD ALIGN=LEFT>filled</TD></TR><TR><TD ALIGN=CENTER>aaa</TD><TD ALIGN=RIGHT>bbb</TD></TR></TABLE>And this is after the table.</P>", false, nil},
+|: The table title |
+|:: The table footnote |
+|:: Another table footnote\\\\with a line break. |
+And this is after the table.`, "<P>Table test:<TABLE BORDER=1><CAPTION>The table title</CAPTION><THEAD><TR><TH ALIGN=LEFT>Column A</TH><TH ALIGN=LEFT>Column B</TH></TR></THEAD><TBODY><TR><TD ALIGN=LEFT>left</TD><TD ALIGN=RIGHT>right</TD></TR><TR><TD ALIGN=CENTER>center</TD><TD ALIGN=LEFT>filled</TD></TR><TR><TD ALIGN=CENTER>aaa</TD><TD ALIGN=RIGHT>bbb</TD></TR></TBODY></TFOOT><TR><TD COLSPAN=2>The table footnote</TD></TR><TR><TD COLSPAN=2>Another table footnote<br/>with a line break.</TD></TR></TFOOT></TABLE>And this is after the table.</P>", false, nil},
 		{`Table test:
 |=Column A|=Column B|=Column C|
 |left     |    right| some stuff |
 |  center |filled and extended to the other |-
 |  aaa and |-   |   bbb
-And this is after the table.`, "<P>Table test:<TABLE BORDER=1><TR><TH ALIGN=LEFT>Column A</TH><TH ALIGN=LEFT>Column B</TH><TH ALIGN=LEFT>Column C</TH></TR><TR><TD ALIGN=LEFT>left</TD><TD ALIGN=RIGHT>right</TD><TD ALIGN=CENTER>some stuff</TD></TR><TR><TD ALIGN=CENTER>center</TD><TD ALIGN=LEFT COLSPAN=2>filled and extended to the other</TD></TR><TR><TD ALIGN=CENTER COLSPAN=2>aaa and</TD><TD ALIGN=RIGHT>bbb</TD></TR></TABLE>And this is after the table.</P>", false, nil},
+And this is after the table.`, "<P>Table test:<TABLE BORDER=1><THEAD><TR><TH ALIGN=LEFT>Column A</TH><TH ALIGN=LEFT>Column B</TH><TH ALIGN=LEFT>Column C</TH></TR></THEAD><TBODY><TR><TD ALIGN=LEFT>left</TD><TD ALIGN=RIGHT>right</TD><TD ALIGN=CENTER>some stuff</TD></TR><TR><TD ALIGN=CENTER>center</TD><TD ALIGN=LEFT COLSPAN=2>filled and extended to the other</TD></TR><TR><TD ALIGN=CENTER COLSPAN=2>aaa and</TD><TD ALIGN=RIGHT>bbb</TD></TR></TBODY></TABLE>And this is after the table.</P>", false, nil},
+		{`Titles:
+==[Main Title]==
+Some text
+==(Subtitle)==
+Some more text`, `Titles<H1>Main Title</H1>
+Some text<H2>Subtitle</H2>
+Some more text`, false, nil},
+		{`\\e`, `<P>\\</P>`, false, nil},
+		{`\\v`, `<P>|</P>`, false, nil},
+		{`\\e\\e`, `<P>\\\\</P>`, false, nil},
 	} {
 		test.opts = append(test.opts, AsHTML)
 		v, err := Render(test.in, test.opts...)
@@ -360,6 +392,9 @@ func TestMarkupTextPostScript(t *testing.T) {
 
 	for i, test := range []testcase{
 		{"foo", " [  [ {} [ (foo) ] {PsFF_rm} ]  ] ", false, nil},
+		{"\\e", " [  [ {} [ (\\\\) ] {PsFF_rm} ]  ] ", false, nil},
+		{"\\v", " [  [ {} [ (|) ] {PsFF_rm} ]  ] ", false, nil},
+		{"\\e\\e", " [  [ {} [ (\\\\\\\\) ] {PsFF_rm} ]  ] ", false, nil},
 		{"", " [  ] ", false, nil},
 		{"foo\nbar", " [  [ {} [ (foo )(bar) ] {PsFF_rm} ]  ] ", false, nil},
 		{"foo\n\nbar", " [  [ {PsFF_par} [ (foo) ] {PsFF_rm} ]  [ {} [ (bar) ] {} ]  ] ", false, nil},
@@ -443,6 +478,9 @@ And this should start a new list:
 |left     |    right|
 |  center |filled|
 |  aaa    |   bbb
+|: The table caption |
+|:: The table footer |
+|:: Another table footer\\\\with a line break.|
 And this is after the table.`, ` [  [ {PsFF_nl} [ (Table )(test:) ] {PsFF_rm} ] ` +
 			` [ {PsFF_rm
 %
