@@ -32,7 +32,7 @@ import (
 	"testing"
 )
 
-const verbose = false // set to true if you want debugging output
+const verbose = true // set to true if you want debugging output
 
 func _probtester(t *testing.T, description string, f func() (int, error), minval, maxval int) {
 	//
@@ -1865,6 +1865,57 @@ func TestDiceStructured(t *testing.T) {
 				{Type: "constant", Value: "5"},
 				{Type: "operator", Value: "×"},
 				{Type: "constant", Value: "0.5"},
+			}},
+		}},
+		// 78
+		{Roll: "1d8+3|total 30", Reslist: []StructuredResult{
+			{Result: 11, Details: []StructuredDescription{
+				{Type: "result", Value: "11"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d8"},
+				{Type: "roll", Value: "8"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "3"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "total", Value: "30"},
+				{Type: "cumulative", Value: "11"},
+				{Type: "iteration", Value: "1"},
+			}},
+			{Result: 4, Details: []StructuredDescription{
+				{Type: "result", Value: "4"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d8"},
+				{Type: "roll", Value: "1"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "3"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "total", Value: "30"},
+				{Type: "cumulative", Value: "15"},
+				{Type: "iteration", Value: "2"},
+			}},
+			{Result: 4, Details: []StructuredDescription{
+				{Type: "result", Value: "4"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d8"},
+				{Type: "roll", Value: "1"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "3"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "total", Value: "30"},
+				{Type: "cumulative", Value: "19"},
+				{Type: "iteration", Value: "3"},
+			}},
+			{Result: 11, Details: []StructuredDescription{
+				{Type: "result", Value: "11"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d8"},
+				{Type: "roll", Value: "8"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "3"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "total", Value: "30"},
+				{Type: "cumulative", Value: "30"},
+				{Type: "iteration", Value: "4"},
 			}},
 		}},
 	}
