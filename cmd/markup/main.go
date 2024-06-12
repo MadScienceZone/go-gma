@@ -68,6 +68,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/MadScienceZone/go-gma/v5/text"
@@ -94,17 +95,43 @@ func main() {
 		os.Exit(0)
 	}
 
-	if *syntaxHelp {
-		helpText, err := text.Render(text.MarkupSyntax)
-		if err != nil {
-			fmt.Printf("Unable to render syntax help text: %v\n", err)
-			os.Exit(1)
-		}
-
-		fmt.Print(helpText)
-		os.Exit(0)
+	if *asHTML && *asPS {
+		fmt.Println("You can't use both -ps and -html at the same time. Pick a lane.")
+		os.Exit(1)
 	}
 
-	fmt.Print(*asHTML, *includePreamble, *asPS, err)
+	if *includePreamble {
+		fmt.Print(text.CommonPostScriptPreamble)
+		fmt.Print(text.GMAPostScriptPreamble)
+	}
 
+	var inputText string
+	var outputText string
+
+	if *syntaxHelp {
+		inputText = text.MarkupSyntax
+	} else {
+		var inputBytes []byte
+
+		if inputBytes, err = io.ReadAll(os.Stdin); err != nil {
+			fmt.Printf("ERROR reading input: %v\n", err)
+			os.Exit(1)
+		}
+		inputText = string(inputBytes)
+	}
+
+	if *asPS {
+		outputText, err = text.Render(inputText, text.AsPostScript)
+	} else if *asHTML {
+		outputText, err = text.Render(inputText, text.AsHTML)
+	} else {
+		outputText, err = text.Render(inputText)
+	}
+
+	if err != nil {
+		fmt.Printf("Unable to render syntax help text: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Print(outputText)
 }

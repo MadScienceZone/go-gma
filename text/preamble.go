@@ -29,7 +29,7 @@ package text
 // among other things.
 //
 // @@:go:form-preamble:begin:commonPostScriptPreamble@@
-const commonPostScriptPreamble = `%!PS
+const CommonPostScriptPreamble = `%!PS
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %  _______  _______  _______              ______     _______  _______                  %
@@ -671,9 +671,10 @@ const commonPostScriptPreamble = `%!PS
 % (End of form-preamble.ps)
 %
 `
+
 // @@:go:form-preamble:end:@@
 // @@:go:gma-preamble:begin:gmaPostScriptPreamble@@
-const gmaPostScriptPreamble = `%!PS
+const GMAPostScriptPreamble = `%!PS
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %  _______  _______  _______              ______     _______  _______                  %
@@ -2939,6 +2940,7 @@ _my_encoding 8#344 /divide        put
 % End GMA Preamble
 %
 `
+
 // @@:go:gma-preamble:end:@@
 
 // @[00]@| Go-GMA 5.21.2
