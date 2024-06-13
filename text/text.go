@@ -27,6 +27,7 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 func max(a, b int) int {
@@ -126,6 +127,50 @@ func FromRoman(roman string) (int, error) {
 	}
 
 	return v, nil
+}
+
+//======================================================================================
+//  _____ _______  _______   _____ ___  ____  __  __    _  _____ _____ ___ _   _  ____
+// |_   _| ____\ \/ /_   _| |  ___/ _ \|  _ \|  \/  |  / \|_   _|_   _|_ _| \ | |/ ___|
+//   | | |  _|  \  /  | |   | |_ | | | | |_) | |\/| | / _ \ | |   | |  | ||  \| | |  _
+//   | | | |___ /  \  | |   |  _|| |_| |  _ <| |  | |/ ___ \| |   | |  | || |\  | |_| |
+//   |_| |_____/_/\_\ |_|   |_|   \___/|_| \_\_|  |_/_/   \_\_|   |_| |___|_| \_|\____|
+//
+
+//
+// CenterPrefix returns the string of spaces which will need to go before the
+// given string so that, when the string is printed, it will end up centered
+// inside a field of the given width.  If the width is insufficient for the
+// string to be held inside it, the empty string is returned since there
+// will therefore not be any padding that goes to the left of the string.
+//
+func CenterPrefix(s string, width int) string {
+	return strings.Repeat(" ", (width-len(s))/2)
+}
+
+//
+// CenterSuffix is like CenterPrefix but gives the spaces which follow
+// the string to complete the centering operation.
+//
+func CenterSuffix(s string, width int) string {
+	return strings.Repeat(" ", (width-len(s)+1)/2)
+}
+
+//
+// CenterText returns a padded string with the input string s
+// centered within a field of the given width.
+//
+func CenterText(s string, width int) string {
+	l := len(s)
+	return strings.Repeat(" ", (width-l)/2) + s + strings.Repeat(" ", (width-l+1)/2)
+}
+
+//
+// CenterTextPadding takes the number of characters in the string
+// and the field width, and returns the prefix and suffix padding strings.
+//
+func CenterTextPadding(strlen, width int) (string, string) {
+	return strings.Repeat(" ", (width-strlen)/2), strings.Repeat(" ", (width-strlen+1)/2)
 }
 
 //==================================================================
@@ -252,7 +297,7 @@ func (f *renderPlainTextFormatter) setBold(b bool) {
 }
 
 func (f *renderPlainTextFormatter) process(text string) {
-	f.buf.WriteString(text)
+	f.buf.WriteString(f.toString(text))
 }
 
 func (f *renderPlainTextFormatter) finalize() string {
@@ -260,7 +305,7 @@ func (f *renderPlainTextFormatter) finalize() string {
 }
 
 func (f *renderPlainTextFormatter) reference(desc, link string) {
-	f.buf.WriteString(desc)
+	f.buf.WriteString(f.toString(desc))
 }
 
 func (f *renderPlainTextFormatter) newLine() {
@@ -285,6 +330,22 @@ func (f *renderPlainTextFormatter) enumListItem(level, counter int) {
 	f.indent = level
 }
 
+func miniMaxLen(s string, filter func(string) string, o ...miniFormatterOption) int {
+	cf := &countingFormatter{
+		filter: filter,
+	}
+	miniFormatter(s, cf, o...)
+	return cf.maxLineWidth()
+}
+
+func miniLen(s string, filter func(string) string, o ...miniFormatterOption) int {
+	cf := &countingFormatter{
+		filter: filter,
+	}
+	miniFormatter(s, cf, o...)
+	return cf.textWidth()
+}
+
 func (f *renderPlainTextFormatter) table(t *textTable) {
 	//
 	// First pass: add up the widths of the non-spanning columns
@@ -296,7 +357,7 @@ func (f *renderPlainTextFormatter) table(t *textTable) {
 				colsize = append(colsize, 0)
 			}
 			if col != nil && col.span == 0 {
-				colsize[i] = max(colsize[i], len(col.text))
+				colsize[i] = max(colsize[i], miniLen(col.text, f.toString, oneLine))
 			}
 		}
 	}
@@ -308,7 +369,7 @@ func (f *renderPlainTextFormatter) table(t *textTable) {
 		for i, col := range row {
 			if col != nil && col.span > 0 {
 				alreadyAllocated := sum(colsize[i : i+col.span+1]...)
-				spaceNeeded := len(col.text) - 3*col.span
+				spaceNeeded := miniLen(col.text, f.toString, oneLine) - 3*col.span
 				if spaceNeeded > alreadyAllocated {
 					add := spaceNeeded - alreadyAllocated
 					each := add / (col.span + 1)
@@ -327,53 +388,80 @@ func (f *renderPlainTextFormatter) table(t *textTable) {
 	// Now lay out the table data in these columns
 	//
 	f.buf.WriteRune('\n')
-	for _, c := range colsize {
-		f.buf.WriteRune('+')
+	if len(t.captions) > 0 {
+		miniFormatter(strings.ToUpper(strings.Join(t.captions, " ")), f)
+		f.buf.WriteRune('\n')
+	}
+	for i, c := range colsize {
+		if i == 0 {
+			f.buf.WriteRune('┌')
+		} else {
+			f.buf.WriteRune('┬')
+		}
 		for xx := 0; xx < c+2; xx++ {
-			f.buf.WriteRune('-')
+			f.buf.WriteRune('─')
 		}
 	}
-	f.buf.WriteString("+\n")
+	f.buf.WriteString("┐\n")
 	for _, row := range t.rows {
 		headerRow := false
 		for c := 0; c < len(row); c++ {
 			if row[c] != nil {
 				colwidth := sum(colsize[c:c+row[c].span+1]...) + 3*row[c].span
+				pre, post := CenterTextPadding(miniLen(row[c].text, f.toString, oneLine), colwidth)
 				if row[c].header {
-					fmt.Fprintf(&f.buf, "| %-*s ", colwidth,
-						fmt.Sprintf("%-*s%s", (colwidth-len(row[c].text))/2, "", strings.ToUpper(row[c].text)))
+					f.process("│ " + pre)
+					miniFormatter(strings.ToUpper(row[c].text), f, oneLine)
+					f.process(post + " ")
 					headerRow = true
 				} else {
 					switch row[c].align {
 					case '>':
-						fmt.Fprintf(&f.buf, "| %*s ", colwidth, row[c].text)
+						f.process("│ " + pre + post)
+						miniFormatter(row[c].text, f, oneLine)
+						f.process(" ")
 					case '^':
-						fmt.Fprintf(&f.buf, "| %-*s ", colwidth,
-							fmt.Sprintf("%-*s%s", (colwidth-len(row[c].text))/2, "", row[c].text))
+						f.process("│ " + pre)
+						miniFormatter(row[c].text, f, oneLine)
+						f.process(post + " ")
 					default:
-						fmt.Fprintf(&f.buf, "| %-*s ", colwidth, row[c].text)
+						f.process("│ ")
+						miniFormatter(row[c].text, f, oneLine)
+						f.process(pre + post + " ")
 					}
 				}
 			}
 		}
-		f.buf.WriteString("|\n")
+		f.buf.WriteString("│\n")
 		if headerRow {
-			for _, c := range colsize {
-				f.buf.WriteRune('+')
+			for i, c := range colsize {
+				if i == 0 {
+					f.buf.WriteRune('├')
+				} else {
+					f.buf.WriteRune('┼')
+				}
 				for xx := 0; xx < c+2; xx++ {
-					f.buf.WriteRune('-')
+					f.buf.WriteRune('─')
 				}
 			}
-			f.buf.WriteString("+\n")
+			f.buf.WriteString("┤\n")
 		}
 	}
-	for _, c := range colsize {
-		f.buf.WriteRune('+')
+	for i, c := range colsize {
+		if i == 0 {
+			f.buf.WriteRune('└')
+		} else {
+			f.buf.WriteRune('┴')
+		}
 		for xx := 0; xx < c+2; xx++ {
-			f.buf.WriteRune('-')
+			f.buf.WriteRune('─')
 		}
 	}
-	f.buf.WriteString("+\n")
+	f.buf.WriteString("┘\n")
+	for _, footer := range t.footnotes {
+		miniFormatter(footer, f)
+		f.buf.WriteString("\n")
+	}
 }
 
 //
@@ -391,6 +479,57 @@ type renderHTMLFormatter struct {
 	ital      bool
 	bold      bool
 	listStack []string
+}
+
+type replSet struct {
+	str  string
+	re   *regexp.Regexp
+	repl string
+}
+
+func (f *renderPlainTextFormatter) toString(s string) string {
+	for _, sub := range []replSet{
+		{str: "+/-", repl: "±"},
+		{str: "---", repl: "\007"},
+		{str: "--", repl: "-"},
+		{str: "\007", repl: "--"},
+		{re: regexp.MustCompile(`(\d)x`), repl: "${1}×"},
+		{re: regexp.MustCompile(`x(\d)`), repl: "×${1}"},
+		{str: "[x]", repl: "×"},
+		{str: "[S]", repl: "§"},
+		{str: "[0]", repl: "°"},
+		{str: "[1]", repl: "¹"},
+		{str: "[2]", repl: "²"},
+		{str: "[3]", repl: "³"},
+		{str: "[4]", repl: "4"},
+		{str: "[5]", repl: "5"},
+		{str: "[6]", repl: "6"},
+		{str: "[7]", repl: "7"},
+		{str: "[8]", repl: "8"},
+		{str: "[9]", repl: "9"},
+		{re: regexp.MustCompile(`\b1/2\b`), repl: "½"},
+		{re: regexp.MustCompile(`\b1/4\b`), repl: "¼"},
+		{re: regexp.MustCompile(`\b3/4\b`), repl: "¾"},
+		{re: regexp.MustCompile(`\b(\d+)_1/2\b`), repl: "${1}½"},
+		{re: regexp.MustCompile(`\b(\d+)_1/4\b`), repl: "${1}¼"},
+		{re: regexp.MustCompile(`\b(\d+)_3/4\b`), repl: "${1}¾"},
+		{str: "^o", repl: "°"},
+		{str: "[c]", repl: "©"},
+		{str: "[R]", repl: "®"},
+		{str: "AE", repl: "Æ"},
+		{str: "ae", repl: "æ"},
+		{str: "[<<]", repl: "«"},
+		{str: "[>>]", repl: "»"},
+		{str: "^.", repl: "·"},
+		{str: "[/]", repl: "÷"},
+	} {
+		if sub.re != nil {
+			s = sub.re.ReplaceAllString(s, sub.repl)
+		} else {
+			s = strings.ReplaceAll(s, sub.str, sub.repl)
+		}
+	}
+	return s
 }
 
 func (f *renderHTMLFormatter) init(o renderOptSet) {
@@ -938,8 +1077,8 @@ type listItem struct {
 //
 type textTable struct {
 	rows      [][]*tableCell
-	footnotes []*tableCell
-	captions  []*tableCell
+	footnotes []string
+	captions  []string
 }
 
 //
@@ -951,6 +1090,20 @@ func (t *textTable) numCols() int {
 		nc = max(nc, len(r))
 	}
 	return nc
+}
+
+//
+// Add a new caption to a textTable.
+//
+func (t *textTable) addCaption(caption string) {
+	t.captions = append(t.captions, caption)
+}
+
+//
+// Add a new footer line to a textTable.
+//
+func (t *textTable) addFooter(footer string) {
+	t.footnotes = append(t.footnotes, footer)
 }
 
 //
@@ -1080,6 +1233,147 @@ func enumVal(level, value int) string {
 	return "?"
 }
 
+type miniFormatterOption byte
+
+const (
+	oneStyle miniFormatterOption = 1 << iota
+	oneLine
+)
+
+//
+// Limited style rendering within certain restricted environments
+// such as table cells.
+//
+// We allow \e, \v, \., \\, **, //, [[..]]; we can collapse to a single style
+// also if necessary.
+//
+func miniFormatter(text string, formatter renderingFormatter, options ...miniFormatterOption) {
+	linkPattern := regexp.MustCompile(`\[\[(.*?)(?:\|(.*?))?\]\]`)
+	splitterPattern := regexp.MustCompile(`\[\[.*?\]\]|\\e|\\v|\\\\|\\\.|\*\*|//`)
+	var opts miniFormatterOption
+
+	for _, o := range options {
+		opts |= o
+	}
+
+	isBold := false
+	isItal := false
+	hasLinks := 0
+	var theLink string
+	var theLinkAttrs []string
+
+	if (opts & oneStyle) != 0 {
+		// run through the string to see what formatting we'll be using
+		for _, frag := range splitterPattern.FindAllString(text, -1) {
+			if frag == "**" {
+				isBold = true
+			} else if frag == "//" {
+				isItal = true
+			} else if strings.HasPrefix(frag, "[[") {
+				hasLinks++
+				theLink = frag
+			}
+		}
+		if hasLinks == 1 {
+			// if there's a single link, use the whole text as the link.
+			// otherwise, don't use any.
+			isBold = false
+			isItal = false
+			theLinkAttrs = linkPattern.FindStringSubmatch(theLink)
+			theLinkText := ""
+			idx := 0
+			for _, ii := range splitterPattern.FindAllStringIndex(text, -1) {
+				if ii[0] > idx {
+					theLinkText += text[idx:ii[0]]
+				}
+				switch text[ii[0]:ii[1]] {
+				case "\\e":
+					theLinkText += "\\"
+				case "\\v":
+					theLinkText += "|"
+				case "\\.", "\\\\", "**", "//":
+				default:
+					if strings.HasPrefix(text[ii[0]:], "[[") {
+						if theLinkAttrs[1] == "" {
+							theLinkText += theLinkAttrs[0]
+						} else {
+							theLinkText += theLinkAttrs[1]
+						}
+					} else {
+						theLinkText += text[ii[0]:ii[1]]
+					}
+				}
+				idx = ii[1]
+			}
+			if idx < len(text) {
+				theLinkText += text[idx:]
+			}
+			if theLinkAttrs[1] == "" {
+				formatter.reference(theLinkAttrs[0], theLinkAttrs[0])
+			} else {
+				formatter.reference(theLinkAttrs[1], theLinkAttrs[0])
+			}
+			return
+		} else {
+			hasLinks = 0
+			theLink = ""
+			theLinkAttrs = nil
+			formatter.setBold(isBold)
+			formatter.setItal(isItal)
+		}
+	}
+
+	idx := 0
+	for _, fragmentRange := range splitterPattern.FindAllStringIndex(text, -1) {
+		if fragmentRange[0] > idx {
+			formatter.process(text[idx:fragmentRange[0]])
+		}
+		switch text[fragmentRange[0]:fragmentRange[1]] {
+		case "\\e":
+			formatter.process("//")
+		case "\\v":
+			formatter.process("|")
+		case "\\.":
+		case "\\\\":
+			if (opts & oneLine) == 0 {
+				formatter.newLine()
+			}
+		case "**":
+			if (opts & oneStyle) == 0 {
+				isBold = !isBold
+				formatter.setBold(isBold)
+			}
+		case "//":
+			if (opts & oneStyle) == 0 {
+				isItal = !isItal
+				formatter.setItal(isItal)
+			}
+		default:
+			if (opts & oneStyle) == 0 {
+				if linkParts := linkPattern.FindStringSubmatch(text[fragmentRange[0]:fragmentRange[1]]); linkParts != nil {
+					if len(linkParts) < 2 || linkParts[1] == "" {
+						formatter.reference(linkParts[0], linkParts[0])
+					} else {
+						formatter.reference(linkParts[1], linkParts[0])
+					}
+				} else {
+					formatter.process(text[fragmentRange[0]:fragmentRange[1]])
+				}
+			} else {
+				formatter.process(text[fragmentRange[0]:fragmentRange[1]])
+			}
+		}
+		idx = fragmentRange[1]
+	}
+	if idx < len(text) {
+		formatter.process(text[idx:])
+	}
+	if (opts & oneStyle) != 0 {
+		formatter.setItal(!isItal)
+		formatter.setBold(!isBold)
+	}
+}
+
 //
 // Render converts its input text (in our simple markup notation described
 // below) to an output format as specified by the option(s) passed after
@@ -1103,88 +1397,8 @@ func enumVal(level, value int) string {
 //
 //  *(PostScript format only)
 //
-//
-// The markup syntax is simple. Lines are collected together into a single
-// logical line which is then wrapped as appropriate to the output format
-// (which may rely on whatever is printing the output to break lines as
-// it prefers).
-//
-// A blank line marks a paragraph break.
-//
-// \\ marks a line break.
-//
-// //text// sets "text" in Italics*†
-//
-// **text** sets "text" in boldface*†
-//
-// @blah... Starts bulleted list item‡
-//
-// @@blah... Starts level-2 bulleted list item‡
-//
-// @@@blah... Starts level-3 bulleted list item (and so forth)‡
-//
-// #blah... Starts enumerated list item‡
-//
-// ##blah... ...and so forth‡
-//
-// [[name]] Creates a hyperlink to "name" where this name itself adequately
-// identifies the linked-to element in GMA (e.g., the name of a spell).
-//
-// [[link|name]] Creates a hyperlink called "name" which links to GMA element "link".
-//
-// \. does nothing but serves to disambiguate things such as ** to begin
-// a section of boldface text from ** to begin a 2nd-level bulleted item
-// since the latter must be at the very start of the line.
-//
-// There is also a special page-break marker <<-->> which is not actually processed
-// by this package, but some output subsystems recognize it when they see it in the output
-// (e.g., PostScript formatted text blocks).
-//
-// Tables are specified by a set of lines beginning with a | character.‡
-// Each column in the table is separated from the others with | characters
-// as well. A | at the very end of the row is optional.
-//   |=Size Code|=Area|
-//   |  S  |  5|
-//   |  M  |  5|
-//   |  L  | 10|
-// This produces a table like
-//   +-----------+------+
-//   | SIZE CODE | AREA |
-//   +-----------+------+
-//   |     S     |    5 |
-//   |     M     |    5 |
-//   |     L     |   10 |
-//   +-----------+------+
-//
-// Table cells beginning with = are headers (usually placed in the first row)
-//
-// Cells are left- or right-justified if there is leading or trailing space between the |
-// separators for that cell, respectively. If there is space before and after the text,
-// it is centered. In the example above, the size codes will be centered in their column
-// and the area numbers are right-justified in theirs.
-//
-// Cells which begin with a hyphen (-) indicate that the cell to their left spans into them.
-// For example:
-//   |=Column A|=Column B|=Column C
-//   |stuff    |more stuff|and more
-//   |a really wide column|- |hello
-// produces:
-//   +----------+------------+----------+
-//   | COLUMN A |  COLUMN B  | COLUMN C |
-//   +----------+------------+----------+
-//   | stuff    | more stuff | and more |
-//   | a really wide column  | hello    |
-//   +----------+------------+----------+
-//
-// Notes:
-//
-// *May cross line boundaries but not paragraphs.
-//
-// †May nest as in //Italic **and** bold//.
-//
-// ‡Must appear at the very beginning of a line.
-//
-// A literal \ or | character may be entered without being interpreted as part of markup syntax using the codes \e and \v respectively.
+// The markup syntax is described in gma-markup-syntax(7) and in the
+// MarkupSyntax constant string in this package.
 //
 func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 	ops := renderOptSet{
@@ -1395,7 +1609,17 @@ func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 						// trailing | is optional; remove it
 						columns = columns[:len(columns)-1]
 					}
-					currentTable.addRow(columns)
+					if len(columns) > 0 {
+						if strings.HasPrefix(columns[0], "::") {
+							currentTable.addFooter(columns[0][2:])
+						} else if strings.HasPrefix(columns[0], ":") {
+							currentTable.addCaption(columns[0][1:])
+						} else {
+							currentTable.addRow(columns)
+						}
+					} else {
+						currentTable.addRow(nil)
+					}
 
 				case listItem:
 					if currentTable != nil {
@@ -1426,6 +1650,60 @@ func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 	}
 
 	return ops.formatter.finalize(), nil
+}
+
+//
+// Character counter formatter. You can point miniFormatter into this
+// as a rendering engine but all it does is count the characters that
+// were sent to it.
+//
+// This is only intended for use in restricted environments where
+// miniFormatter can work, so not all markup is supported.
+//
+type countingFormatter struct {
+	buf    strings.Builder
+	filter func(string) string
+}
+
+func (f *countingFormatter) init(options renderOptSet) {}
+func (f *countingFormatter) newPar() {
+	f.buf.WriteRune('\n')
+}
+func (f *countingFormatter) process(text string) {
+	if f.filter != nil {
+		f.buf.WriteString(f.filter(text))
+	} else {
+		f.buf.WriteString(text)
+	}
+}
+func (f *countingFormatter) finalize() string { return "" }
+func (f *countingFormatter) setBold(on bool)  {}
+func (f *countingFormatter) setItal(on bool)  {}
+func (f *countingFormatter) newLine() {
+	f.buf.WriteRune('\n')
+}
+func (f *countingFormatter) table(t *textTable) {}
+func (f *countingFormatter) reference(displayname, linkName string) {
+	if f.filter != nil {
+		f.buf.WriteString(f.filter(displayname))
+	} else {
+		f.buf.WriteString(displayname)
+	}
+}
+func (f *countingFormatter) bulletListItem(level int, bullet rune) {}
+func (f *countingFormatter) enumListItem(level, counter int)       {}
+func (f *countingFormatter) textWidth() int {
+	return utf8.RuneCountInString(f.buf.String())
+}
+func (f *countingFormatter) maxLineWidth() int {
+	maxLen := 0
+	for _, s := range strings.Split(f.buf.String(), "\n") {
+		l := utf8.RuneCountInString(s)
+		if l > maxLen {
+			maxLen = l
+		}
+	}
+	return maxLen
 }
 
 const MarkupSyntax = `

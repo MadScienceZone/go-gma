@@ -540,6 +540,42 @@ PsFF_nl
 	}
 }
 
+func TestCompatibility(t *testing.T) {
+	type testcase struct {
+		in   string
+		out  string
+		err  bool
+		opts []func(*renderOptSet)
+	}
+
+	for i, test := range []testcase{
+		// testcase 0: plain text
+		{MarkupSyntax, `
+`, false, nil,
+		}} {
+		test.opts = append(test.opts, AsPostScript)
+		v, err := Render(test.in, test.opts...)
+		if err != nil && !test.err {
+			t.Errorf("Case %d: unexpected error: %v", i, err)
+		} else if err == nil && test.err {
+			t.Errorf("Case %d: error expected but not found", i)
+		} else if test.out != v {
+			t.Errorf("Case %d: %v -> %v but expected %v", i, test.in, v, test.out)
+			rActual := []rune(v)
+			rExpected := []rune(test.out)
+			for i := 0; i < len(rActual) && i < len(rExpected); i++ {
+				l := min(len(rActual), i+10)
+				e := min(len(rExpected), i+10)
+
+				if rActual[i] != rExpected[i] {
+					t.Errorf("  at position %d/%d (actual \"%s\" vs. expected \"%s\")", i, len(v), string(rActual[i:l]), string(rExpected[i:e]))
+					break
+				}
+			}
+		}
+	}
+}
+
 // @[00]@| Go-GMA 5.21.2
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
