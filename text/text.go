@@ -268,6 +268,9 @@ type renderingFormatter interface {
 	reference(displayName, linkName string)
 	bulletListItem(level int, bullet rune)
 	enumListItem(level, counter int)
+	title(text string)
+	subtitle(text string)
+	toString(string) string
 }
 
 //
@@ -284,6 +287,18 @@ type renderPlainTextFormatter struct {
 	indent int
 	ital   bool
 	bold   bool
+}
+
+func (f *renderPlainTextFormatter) title(text string) {
+	f.buf.WriteString("\n\n══╣ ")
+	f.process(text)
+	f.buf.WriteString(" ╠" + strings.Repeat("═", 80-4-2-miniLen(text, f.toString, oneLine)) + "\n\n")
+}
+
+func (f *renderPlainTextFormatter) subtitle(text string) {
+	f.buf.WriteString("\n\n──┤ ")
+	f.process(text)
+	f.buf.WriteString(" ├" + strings.Repeat("─", 80-4-2-miniLen(text, f.toString, oneLine)) + "\n\n")
 }
 
 func (f *renderPlainTextFormatter) init(o renderOptSet) {}
@@ -532,6 +547,9 @@ func (f *renderPlainTextFormatter) toString(s string) string {
 	return s
 }
 
+func (f *renderHTMLFormatter) title(text string)           {}
+func (f *renderHTMLFormatter) subtitle(text string)        {}
+func (f *renderHTMLFormatter) toString(text string) string { return "" }
 func (f *renderHTMLFormatter) init(o renderOptSet) {
 	f.buf.WriteString("<P>")
 	f.listStack = make([]string, 0, 4)
@@ -700,6 +718,9 @@ type psChunk struct {
 	post     string
 }
 
+func (f *renderPostScriptFormatter) title(text string)           {}
+func (f *renderPostScriptFormatter) subtitle(text string)        {}
+func (f *renderPostScriptFormatter) toString(text string) string { return "" }
 func (f *renderPostScriptFormatter) init(o renderOptSet) {
 	f.compact = o.compact
 }
@@ -1330,7 +1351,7 @@ func miniFormatter(text string, formatter renderingFormatter, options ...miniFor
 		}
 		switch text[fragmentRange[0]:fragmentRange[1]] {
 		case "\\e":
-			formatter.process("//")
+			formatter.process("\\")
 		case "\\v":
 			formatter.process("|")
 		case "\\.":
@@ -1410,7 +1431,7 @@ func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 	}
 	collapseSpaces := regexp.MustCompile(`\s{2,}`)
 	newListBullet := regexp.MustCompile(`^[@#]+`)
-	formatReqs := regexp.MustCompile(`//|\*\*|\[\[|\]\]|\\\.`)
+	formatReqs := regexp.MustCompile(`//|\*\*|\[\[|\]\]|\\\.|\\v|\\e|==\[|\]==|==\(|\)==`)
 
 	paragraphs := make([][][]any, 0, 10)
 	thisParagraph := make([][]any, 0, 10)
@@ -1514,6 +1535,9 @@ func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 		}
 
 		pendingReference := ""
+		pendingTitle := ""
+		pendingSubtitle := ""
+		suppressSpace := false
 		for _, fragments := range par {
 			if pendingReference != "" {
 				// false alarm; the [[ we saw earlier were just brackets
@@ -1533,7 +1557,9 @@ func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 					if i+1 < len(fragments) {
 						switch fragments[i+1].(type) {
 						case string:
-							fragment += " "
+							if len(fragment) > 0 {
+								fragment += " "
+							}
 						}
 					}
 					if currentTable != nil {
@@ -1563,6 +1589,12 @@ func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 						}
 
 						for _, piece := range pieces {
+							if piece == " " && suppressSpace {
+								suppressSpace = false
+								continue
+							}
+							suppressSpace = false
+
 							if piece == "\\." {
 								continue
 							}
@@ -1577,6 +1609,22 @@ func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 									pendingReference = ""
 								} else {
 									pendingReference += piece
+								}
+							} else if pendingTitle != "" {
+								if piece == "]==" {
+									ops.formatter.title(pendingTitle[3:])
+									pendingTitle = ""
+									suppressSpace = true
+								} else {
+									pendingTitle += piece
+								}
+							} else if pendingSubtitle != "" {
+								if piece == ")==" {
+									ops.formatter.subtitle(pendingSubtitle[3:])
+									pendingSubtitle = ""
+									suppressSpace = true
+								} else {
+									pendingSubtitle += piece
 								}
 							} else {
 								switch piece {
@@ -1593,6 +1641,14 @@ func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 
 								case "\\.":
 									// ignore
+								case "\\e":
+									ops.formatter.process("\\")
+								case "\\v":
+									ops.formatter.process("|")
+								case "==[":
+									pendingTitle = "==["
+								case "==(":
+									pendingSubtitle = "==("
 								default:
 									ops.formatter.process(piece)
 								}
@@ -1690,6 +1746,9 @@ func (f *countingFormatter) reference(displayname, linkName string) {
 		f.buf.WriteString(displayname)
 	}
 }
+func (f *countingFormatter) title(text string)                     {}
+func (f *countingFormatter) subtitle(text string)                  {}
+func (f *countingFormatter) toString(text string) string           { return "" }
 func (f *countingFormatter) bulletListItem(level int, bullet rune) {}
 func (f *countingFormatter) enumListItem(level, counter int)       {}
 func (f *countingFormatter) textWidth() int {
@@ -1769,8 +1828,8 @@ A hyphen **-** immediately before a digit causes it to be printed as a minus sig
 Separate numbers from fractions with an underscore (e.g., **12\._\.1\./2** prints as **12_1/2**).
 
 ==(Titles)==
-\.==[Main (top-level) Heading]==\\
-\.==(Subtitle (2nd-level))==
+=\.=[Main (top-level) Heading]==\\
+=\.=(Subtitle (2nd-level))==
 
 ==(Tables)==
 Tables are specified by a set of lines beginning with a **|** character.‡
