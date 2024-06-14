@@ -1,8 +1,8 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.21.2                <!-- @@##@@ -->
- * Effective Date: 11-Jun-2024			<!-- @@##@@ -->
+ * This Package Version: 5.22.0-alpha.0                <!-- @@##@@ -->
+ * Effective Date: 14-Jun-2024			<!-- @@##@@ -->
 
 ## Compatibility
  * GMA Core API Library Version: 6.20		<!-- @@##@@ -->
@@ -19,9 +19,19 @@ In addition, if your server didn't have the following update installed previousl
 
 When upgrading an existing server to version 5.13.1 or later, be sure to run `scripts/upgrade-5.13.1` on each database file to update it to the new chat history encoding scheme introduced at 5.13.1. If you don't, the server will ignore some or all of your historic chat and die roll messages. Alternatively, you can delete the old database and make a new one with the current server.
 
-## v5.21.2
+## v5.22.0 (alpha 0)
+### Added
+ * Added new option `|total n` to the die roller syntax. This repeats the die roll until the cumulative total of all the rolls meets or exceeds a target value.
+ * Added new CLI tool `markup` (invoked as `gma go markup` if using the whole GMA tool suite) which renders GMA markup text to plain text, PostScript, or HTML.
+    * This is still a work in progress. It functions, but it's quite finished yet for PostScript output. The other output formats seem to be about ready.
+ * Added text processing functions `CenterPrefix`, `CenterSuffix`, `CenterText`, `CenterTextPadding` to the `text` package.
+### Enhanced
+ * Moved description of markup and die-roll syntax to constants that can be read from applications.
+ * Enhanced the markup language.
 ### Fixed
  * `cmd/roll` reports the default seed in its JSON output if one wasn't given to it via `-seed`.
+ * Rearranged manpages so they all begin with `gma-go-` to disambiguate them from commands on the system with the same names. This also reflects the fact that they are intended to be invoked as subcommands of `gma` by starting the command line with `gma go CMDNAME ARGS...` (although they can be run independently too).
+
 
 ## v5.21.1
 ### Fixed
