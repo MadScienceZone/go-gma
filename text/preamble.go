@@ -27,8 +27,8 @@ package text
 // things we write. This provides some common form generation code
 // among other things.
 //
-// @@:go:form-preamble:begin:commonPostScriptPreamble@@
-const commonPostScriptPreamble = `%!PS
+// @@:go:form-preamble:begin:CommonPostScriptPreamble@@
+const CommonPostScriptPreamble = `%!PS
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %  _______  _______  _______              ______     _______  _______                  %
@@ -671,8 +671,8 @@ const commonPostScriptPreamble = `%!PS
 %
 `
 // @@:go:form-preamble:end:@@
-// @@:go:gma-preamble:begin:gmaPostScriptPreamble@@
-const gmaPostScriptPreamble = `%!PS
+// @@:go:gma-preamble:begin:GMAPostScriptPreamble@@
+const GMAPostScriptPreamble = `%!PS
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %  _______  _______  _______              ______     _______  _______                  %
