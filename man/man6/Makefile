@@ -1,33 +1,36 @@
-all: map-console.6.pdf map-update.6.pdf preset-update.6.pdf server.6.pdf upload-presets.6.pdf coredb.6.pdf session-stats.6.pdf image-audit.6.pdf roll.6.pdf
+all: gma-go-map-console.6.pdf gma-go-map-update.6.pdf gma-go-preset-update.6.pdf gma-go-server.6.pdf gma-go-upload-presets.6.pdf gma-go-coredb.6.pdf gma-go-session-stats.6.pdf gma-go-image-audit.6.pdf gma-go-roll.6.pdf gma-go-markup.6.pdf
 
 install:
 	@echo "Installing manpages to $(DESTDIR)/man/man6..."
 	install -d $(DESTDIR)/man/man6
 	install -m 644 *.6 $(DESTDIR)/man/man6
 
-roll.6.pdf: roll.6
+gma-go-markup.6.pdf: gma-go-markup.6
 	gma fmtman < $< | groff -man | ps2pdf - $@
 
-image-audit.6.pdf: image-audit.6
+gma-go-roll.6.pdf: gma-go-roll.6
 	gma fmtman < $< | groff -man | ps2pdf - $@
 
-session-stats.6.pdf: session-stats.6
+gma-go-image-audit.6.pdf: gma-go-image-audit.6
 	gma fmtman < $< | groff -man | ps2pdf - $@
 
-coredb.6.pdf: coredb.6
+gma-go-session-stats.6.pdf: gma-go-session-stats.6
 	gma fmtman < $< | groff -man | ps2pdf - $@
 
-map-console.6.pdf: map-console.6
+gma-go-coredb.6.pdf: gma-go-coredb.6
 	gma fmtman < $< | groff -man | ps2pdf - $@
 
-map-update.6.pdf: map-update.6
+gma-go-map-console.6.pdf: gma-go-map-console.6
 	gma fmtman < $< | groff -man | ps2pdf - $@
 
-preset-update.6.pdf: preset-update.6
+gma-go-map-update.6.pdf: gma-go-map-update.6
 	gma fmtman < $< | groff -man | ps2pdf - $@
 
-server.6.pdf: server.6
+gma-go-preset-update.6.pdf: gma-go-preset-update.6
 	gma fmtman < $< | groff -man | ps2pdf - $@
 
-upload-presets.6.pdf: upload-presets.6
+gma-go-server.6.pdf: gma-go-server.6
+	gma fmtman < $< | groff -man | ps2pdf - $@
+
+gma-go-upload-presets.6.pdf: gma-go-upload-presets.6
 	gma fmtman < $< | groff -man | ps2pdf - $@

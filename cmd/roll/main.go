@@ -79,7 +79,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/text"
 )
 
-const GoVersionNumber="5.21.2" //@@##@@
+const GoVersionNumber = "5.21.2" //@@##@@
 
 func main() {
 	var err error
@@ -93,7 +93,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "\n")
 		flag.PrintDefaults()
 	}
-	help := flag.Bool("help", false, "list command-line options and die-roll syntax description")
+	help := flag.Bool("help", false, "list command-line options and exit")
 	rollSpec := flag.String("dice", "", "die-roll expression(s) to be rolled (semicolon-separated) (interactive if this is not given)")
 	asJSON := flag.Bool("json", false, "print results in JSON")
 	seedValue := flag.Int64("seed", 0, "seed value (0 for random)")

@@ -1,4 +1,4 @@
-DIRS=map-console map-update preset-update server upload-presets coredb session-stats image-audit roll
+DIRS=map-console map-update preset-update server upload-presets coredb session-stats image-audit roll markup
 DESTDIR=/opt/gma
 
 binaries:

@@ -1,8 +1,8 @@
 '\" <<ital-is-var>>
 '\" <<bold-is-fixed>>
-.TH ROLL 6 "Go-GMA 5.21.2" 11-Jun-2024 "Games" \" @@mp@@
+.TH GMA-GO-ROLL 6 "Go-GMA 5.21.2" 11-Jun-2024 "Games" \" @@mp@@
 .SH NAME
-roll \- GMA die roller CLI application (Go version)
+gma go roll \- GMA die roller CLI application (Go version)
 .SH SYNOPSIS
 '\" <<usage>>
 .LP
@@ -44,6 +44,10 @@ GMA game server to roll the dice for you.
 .LP
 It can be used interactively by users or it can be embedded
 into scripts or other back-end services.
+.LP
+The full description of what can go into a die roll expression string
+is documented in
+.BR gma-dice-syntax (7).
 .SH OPTIONS
 .LP
 Options may be introduced with either one or two hyphens (e.g.,
@@ -107,7 +111,7 @@ as the input line.
 .SH "SEE ALSO"
 .LP
 .BR dice (3),
-.BR roll (6).
+.BR gma-roll (6).
 .LP
 This program is analogous to, but has more features than,
 the Python-based
