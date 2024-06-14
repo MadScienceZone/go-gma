@@ -1587,9 +1587,11 @@ type DieRoller struct {
 
 	// If we need to repeatedly roll dice, we will either do so RepeatFor
 	// times (if > 0), or until the result meets or exceeds RepeatUntil
-	// (again, if > 0)
-	RepeatUntil int
-	RepeatFor   int
+	// (again, if > 0), or until the cumulative result meets or exceeds
+	// RepeatUntilTotal (if > 0).
+	RepeatUntil      int
+	RepeatUntilTotal int
+	RepeatFor        int
 
 	// If PctChance ≥ 0 then our target to be "successful" is a score
 	// or at least PctChance on a percentile die roll. In that case
@@ -1701,6 +1703,7 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 	d.Template = ""
 	d.Permutations = nil
 	d.RepeatUntil = 0
+	d.RepeatUntilTotal = 0
 	d.RepeatFor = 1
 	d.DoMax = false
 	d.DC = 0
@@ -1711,6 +1714,7 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 	reModMinmax := regexp.MustCompile(`^\s*(min|max)\s*[+-]?\d+`)
 	reModConfirm := regexp.MustCompile(`^\s*c(\d+)?([-+]\d+)?\s*$`)
 	reModUntil := regexp.MustCompile(`^\s*until\s*(-?\d+)\s*$`)
+	reModUntilTotal := regexp.MustCompile(`^\s*total\s*(-?\d+)\s*$`)
 	reModRepeat := regexp.MustCompile(`^\s*repeat\s*(\d+)\s*$`)
 	reModMaximized := regexp.MustCompile(`^\s*(!|maximized)\s*$`)
 	reModDC := regexp.MustCompile(`^\s*[Dd][Cc]\s*(-?\d+)\s*$`)
@@ -1781,6 +1785,13 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 					if d.FailMessage == "" {
 						d.FailMessage = "MISS"
 					}
+				} else if fields := reModUntilTotal.FindStringSubmatch(majorPieces[i]); fields != nil {
+					//
+					// MODIFIER
+					//  | total <n>
+					// Repeat rolling until the cumulative total is at least <n>
+					//
+					d.RepeatUntilTotal, err = strconv.Atoi(fields[1])
 				} else if fields := reModUntil.FindStringSubmatch(majorPieces[i]); fields != nil {
 					//
 					// MODIFIER
@@ -1850,7 +1861,7 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 						d.FailMessage = "FAIL"
 					}
 				} else {
-					return fmt.Errorf("global modifier option \"%s\" not understood; must be !, c, dc, min, max, maximized, sf, until, or repeat", majorPieces[i])
+					return fmt.Errorf("global modifier option \"%s\" not understood; must be !, c, dc, min, max, maximized, sf, total, until, or repeat", majorPieces[i])
 				}
 			}
 		}
@@ -2015,7 +2026,12 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 //	| until <n>
 //
 // Continue making die rolls, adding their results to the returned output,
-// until a result of at least <n> is obtained.
+// until one of the rolls' result was at least <n>.
+//
+//  | total <n>
+//
+// Continue making die rolls until the cumulative results from all of them
+// total at least <n>.
 //
 //	| repeat <n>
 //
@@ -2028,7 +2044,7 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 // all three dice rolled sixes.
 //
 // To prevent getting caught in an infinite loop, a maximum of  100  rolls
-// will be made regardless of repeat and until options.
+// will be made regardless of repeat, total, and until options.
 //
 // Anywhere  in  the  string  you may introduce a combination specifier in
 // curly braces as “{<a>/<b>/<c>/...}”.  This will repeat the overall die roll
@@ -2084,6 +2100,8 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 //	                  failure ("blue").
 //	"2d10+3|until 19" Repeatedly rolls 2d10+3, adding each result to the set of die rolls
 //	                  returned, until a roll totals at least 19.
+//  "1d8+3|total 30"  Repeatedly rolls 1d8+3, keeping a running sum of all of the die rolls
+//                    in the set, until the cumulative sum is at least 30.
 func (d *DieRoller) DoRoll(spec string) (string, []StructuredResult, error) {
 	var err error
 	//
@@ -2104,6 +2122,7 @@ func (d *DieRoller) DoRoll(spec string) (string, []StructuredResult, error) {
 
 	repeatIter := 0
 	repeatCount := 0
+	repeatTotal := 0
 	for repeatIter < d.RepeatFor {
 		if d.Template != "" {
 			// If we're working with a set of permutations, expand them now
@@ -2117,7 +2136,7 @@ func (d *DieRoller) DoRoll(spec string) (string, []StructuredResult, error) {
 				if err != nil {
 					return "", nil, err
 				}
-				result, results, err = d.rollDice(repeatIter, repeatCount)
+				result, results, repeatTotal, err = d.rollDice(repeatIter, repeatCount, repeatTotal)
 				if err != nil {
 					return "", nil, err
 				}
@@ -2125,17 +2144,31 @@ func (d *DieRoller) DoRoll(spec string) (string, []StructuredResult, error) {
 			}
 		} else {
 			// Otherwise we already have the Dice object set up, just use it.
-			result, results, err = d.rollDice(repeatIter, repeatCount)
+			result, results, repeatTotal, err = d.rollDice(repeatIter, repeatCount, repeatTotal)
 			if err != nil {
 				return "", nil, err
 			}
 			overallResults = append(overallResults, results...)
 		}
 
-		if d.RepeatUntil == 0 || result >= d.RepeatUntil {
+		// Bail out if we've met our conditions already
+		if d.RepeatUntil > 0 && result >= d.RepeatUntil {
+			break
+		}
+
+		if d.RepeatUntilTotal > 0 && repeatTotal >= d.RepeatUntilTotal {
+			break
+		}
+
+		// Otherwise, increment the iteration if we're not just waiting for a
+		// condition. This will either exit the single iteration expected, or
+		// take us one iteration closer to the repeat count requested.
+		if d.RepeatUntil <= 0 && d.RepeatUntilTotal <= 0 {
 			repeatIter++
 		}
 		repeatCount++
+
+		// Safety limit
 		if repeatCount >= 100 {
 			break
 		}
@@ -2195,10 +2228,16 @@ func (d *DieRoller) ExplainSecretRoll(spec, notice string) (string, StructuredRe
 				StructuredDescription{Type: "repeat", Value: strconv.Itoa(d.RepeatFor)},
 			)
 		}
-		if d.RepeatUntil != 0 {
+		if d.RepeatUntil > 0 {
 			thisResult = append(thisResult,
 				StructuredDescription{Type: "moddelim", Value: "|"},
 				StructuredDescription{Type: "until", Value: strconv.Itoa(d.RepeatUntil)},
+			)
+		}
+		if d.RepeatUntilTotal > 0 {
+			thisResult = append(thisResult,
+				StructuredDescription{Type: "moddelim", Value: "|"},
+				StructuredDescription{Type: "total", Value: strconv.Itoa(d.RepeatUntilTotal)},
 			)
 		}
 		if d.DC != 0 {
@@ -2306,7 +2345,7 @@ func substituteTemplateValues(template string, values []any) string {
 // This does the work of performing a die roll (possibly two, if we're confirming
 // a critical roll) based on the exact specifications already set in place by
 // the caller.
-func (d *DieRoller) rollDice(repeatIter, repeatCount int) (int, []StructuredResult, error) {
+func (d *DieRoller) rollDice(repeatIter, repeatCount, repeatTotal int) (int, []StructuredResult, int, error) {
 	var results []StructuredResult
 	var thisResult []StructuredDescription
 	var result int
@@ -2358,12 +2397,20 @@ func (d *DieRoller) rollDice(repeatIter, repeatCount int) (int, []StructuredResu
 				StructuredDescription{Type: "iteration", Value: strconv.Itoa(repeatCount + 1)},
 			)
 		}
-		if d.RepeatUntil != 0 {
+		if d.RepeatUntil > 0 {
 			thisResult = append(thisResult,
 				StructuredDescription{Type: "moddelim", Value: "|"},
 				StructuredDescription{Type: "until", Value: strconv.Itoa(d.RepeatUntil)},
 				StructuredDescription{Type: "iteration", Value: strconv.Itoa(repeatCount + 1)},
 				describeDCRoll(d.RepeatUntil, result),
+			)
+		}
+		if d.RepeatUntilTotal > 0 {
+			thisResult = append(thisResult,
+				StructuredDescription{Type: "moddelim", Value: "|"},
+				StructuredDescription{Type: "total", Value: strconv.Itoa(d.RepeatUntilTotal)},
+				StructuredDescription{Type: "cumulative", Value: strconv.Itoa(repeatTotal)},
+				StructuredDescription{Type: "iteration", Value: strconv.Itoa(repeatCount + 1)},
 			)
 		}
 		if d.DC != 0 {
@@ -2443,7 +2490,7 @@ func (d *DieRoller) rollDice(repeatIter, repeatCount int) (int, []StructuredResu
 	// Enough of the preliminaries, let's get working.
 	//
 	if d.d == nil {
-		return 0, nil, fmt.Errorf("no defined Dice object to consume")
+		return 0, nil, repeatTotal, fmt.Errorf("no defined Dice object to consume")
 	}
 
 	// MAXIMIZED DIE ROLLS_____________________________________________________
@@ -2458,14 +2505,15 @@ func (d *DieRoller) rollDice(repeatIter, repeatCount int) (int, []StructuredResu
 	if d.DoMax {
 		result, err = d.d.MaxRoll()
 		if err != nil {
-			return 0, nil, err
+			return 0, nil, repeatTotal, err
 		}
+		repeatTotal += result
 		if d.PctChance >= 0 {
 			reportPctRoll(d.PctChance, d.PctLabel, true)
 		} else {
 			sdesc, err := d.d.StructuredDescribeRoll(WithAutoSF(sfo != "", d.SuccessMessage, d.FailMessage))
 			if err != nil {
-				return 0, nil, err
+				return 0, nil, repeatTotal, err
 			}
 			thisResult = append(thisResult, sdesc...)
 			reportOptions()
@@ -2477,14 +2525,14 @@ func (d *DieRoller) rollDice(repeatIter, repeatCount int) (int, []StructuredResu
 				results = append(results, StructuredResult{Result: result, Details: thisResult})
 				result2, err := d.d.MaxRollToConfirm(d.critBonus)
 				if err != nil {
-					return 0, nil, err
+					return 0, nil, repeatTotal, err
 				}
 				thisResult = nil
 				sdesc, err := d.d.StructuredDescribeRoll(
 					WithAutoSF(sfo != "", d.SuccessMessage, d.FailMessage),
 					WithRollBonus(d.critBonus))
 				if err != nil {
-					return 0, nil, err
+					return 0, nil, repeatTotal, err
 				}
 				thisResult = append(thisResult,
 					StructuredDescription{Type: "critlabel", Value: "Confirm:"})
@@ -2503,15 +2551,16 @@ func (d *DieRoller) rollDice(repeatIter, repeatCount int) (int, []StructuredResu
 		//
 		result, err = d.d.Roll()
 		if err != nil {
-			return 0, nil, err
+			return 0, nil, repeatTotal, err
 		}
+		repeatTotal += result
 		if d.PctChance >= 0 {
 			reportPctRoll(d.PctChance, d.PctLabel, false)
 		} else {
 			sdesc, err := d.d.StructuredDescribeRoll(
 				WithAutoSF(sfo != "", d.SuccessMessage, d.FailMessage))
 			if err != nil {
-				return 0, nil, err
+				return 0, nil, repeatTotal, err
 			}
 			thisResult = append(thisResult, sdesc...)
 			reportOptions()
@@ -2519,7 +2568,7 @@ func (d *DieRoller) rollDice(repeatIter, repeatCount int) (int, []StructuredResu
 				results = append(results, StructuredResult{Result: result, Details: thisResult})
 				result2, err := d.d.RollToConfirm(true, d.critThreat, d.critBonus)
 				if err != nil {
-					return 0, nil, err
+					return 0, nil, repeatTotal, err
 				}
 				if result2 != 0 {
 					thisResult = nil
@@ -2527,7 +2576,7 @@ func (d *DieRoller) rollDice(repeatIter, repeatCount int) (int, []StructuredResu
 						WithAutoSF(sfo != "", d.SuccessMessage, d.FailMessage),
 						WithRollBonus(d.critBonus))
 					if err != nil {
-						return 0, nil, err
+						return 0, nil, repeatTotal, err
 					}
 					thisResult = append(thisResult,
 						StructuredDescription{Type: "critlabel", Value: "Confirm:"})
@@ -2540,7 +2589,7 @@ func (d *DieRoller) rollDice(repeatIter, repeatCount int) (int, []StructuredResu
 		}
 	}
 
-	return result, results, nil
+	return result, results, repeatTotal, nil
 }
 
 // Roll rolls the dice specified by the specification string, without
@@ -2715,6 +2764,9 @@ func (sr StructuredDescriptionSet) Text() (string, error) {
 
 		case "subtotal":
 			fmt.Fprintf(&t, "(%s)", r.Value)
+
+		case "total":
+			fmt.Fprintf(&t, " (until total %s) ", r.Value)
 
 		case "until":
 			fmt.Fprintf(&t, " (until %s) ", r.Value)
@@ -2972,7 +3024,7 @@ The general form for die roll expressions is:
 ==(Basics)==
 The basic die-roll expression uses traditional dice notation (e.g., “**3d6**” means to roll three six-sided dice and add them together).
 Multiple such dice may appear, separated from each other (and from numeric constants) with the basic math operators
-**+** (for addition), **--** (for subtraction), ***** (for multiplication), or **//** (for division; note that is **two** slashes);
+**+** (for addition), **--** (for subtraction), ***** (for multiplication), or **/\./** (for division; note that is **two** slashes);
 you can also use Unicode characters U+00D7 (**×**) for multiplication and U+00F7 (**÷**) for division. 
 The standard algebraic order of operations is performed,
 and parentheses can be used as necessary to force a particular order. Thus, “**d20+17**”, “**4d8+3d10+27**”, and “**(2d10+3)*3**” are
@@ -3038,6 +3090,8 @@ meaning of the whole thing. Each option begins with a vertical bar (**|**) chara
 **|sf**  (This roll is subject to automatic success/fail rules: the roll is successful if the die rolled a natural 20 (or whatever the die's maximum is) and failed if a natural 1 was rolled.)
 
 **|sf** //success//[**/**//fail//] (As **|sf** but specify your own custom messages to print if successful (and failure if that is given as well, separated by a slash).)
+
+**|total** //n// (Continue rolling until the cumulative total of rolls is at least //n//.)
 
 **|until** //n// (Continue rolling until the result is at least //n//.)
 

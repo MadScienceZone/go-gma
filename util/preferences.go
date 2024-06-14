@@ -758,6 +758,11 @@ func DefaultPreferences() UserPreferences {
 						FG:       ColorSet{Dark: "red", Light: "red"},
 						FontName: "Special",
 					},
+					"total": DieRollComponent{
+						FG:       ColorSet{Dark: "#aaaaaa", Light: "#888888"},
+						FontName: "Special",
+						Format:   "total %s",
+					},
 					"until": DieRollComponent{
 						FG:       ColorSet{Dark: "#aaaaaa", Light: "#888888"},
 						FontName: "Special",
