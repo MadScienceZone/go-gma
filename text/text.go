@@ -290,15 +290,15 @@ type renderPlainTextFormatter struct {
 }
 
 func (f *renderPlainTextFormatter) title(text string) {
-	f.buf.WriteString("\n\n══╣ ")
+	f.buf.WriteString("\n══╣ ")
 	f.process(text)
-	f.buf.WriteString(" ╠" + strings.Repeat("═", 80-4-2-miniLen(text, f.toString, oneLine)) + "\n\n")
+	f.buf.WriteString(" ╠" + strings.Repeat("═", 80-4-2-miniLen(text, f.toString, oneLine)) + "\n")
 }
 
 func (f *renderPlainTextFormatter) subtitle(text string) {
-	f.buf.WriteString("\n\n──┤ ")
+	f.buf.WriteString("\n──┤ ")
 	f.process(text)
-	f.buf.WriteString(" ├" + strings.Repeat("─", 80-4-2-miniLen(text, f.toString, oneLine)) + "\n\n")
+	f.buf.WriteString(" ├" + strings.Repeat("─", 80-4-2-miniLen(text, f.toString, oneLine)) + "\n")
 }
 
 func (f *renderPlainTextFormatter) init(o renderOptSet) {}
@@ -512,16 +512,16 @@ func (f *renderPlainTextFormatter) toString(s string) string {
 		{re: regexp.MustCompile(`x(\d)`), repl: "×${1}"},
 		{str: "[x]", repl: "×"},
 		{str: "[S]", repl: "§"},
-		{str: "[0]", repl: "°"},
+		{str: "[0]", repl: "⁰"},
 		{str: "[1]", repl: "¹"},
 		{str: "[2]", repl: "²"},
 		{str: "[3]", repl: "³"},
-		{str: "[4]", repl: "4"},
-		{str: "[5]", repl: "5"},
-		{str: "[6]", repl: "6"},
-		{str: "[7]", repl: "7"},
-		{str: "[8]", repl: "8"},
-		{str: "[9]", repl: "9"},
+		{str: "[4]", repl: "⁴"},
+		{str: "[5]", repl: "⁵"},
+		{str: "[6]", repl: "⁶"},
+		{str: "[7]", repl: "⁷"},
+		{str: "[8]", repl: "⁸"},
+		{str: "[9]", repl: "⁹"},
 		{re: regexp.MustCompile(`\b1/2\b`), repl: "½"},
 		{re: regexp.MustCompile(`\b1/4\b`), repl: "¼"},
 		{re: regexp.MustCompile(`\b3/4\b`), repl: "¾"},
@@ -537,6 +537,8 @@ func (f *renderPlainTextFormatter) toString(s string) string {
 		{str: "[>>]", repl: "»"},
 		{str: "^.", repl: "·"},
 		{str: "[/]", repl: "÷"},
+		{str: "[+]", repl: "†"},
+		{str: "[++]", repl: "‡"},
 	} {
 		if sub.re != nil {
 			s = sub.re.ReplaceAllString(s, sub.repl)
@@ -547,9 +549,162 @@ func (f *renderPlainTextFormatter) toString(s string) string {
 	return s
 }
 
-func (f *renderHTMLFormatter) title(text string)           {}
-func (f *renderHTMLFormatter) subtitle(text string)        {}
-func (f *renderHTMLFormatter) toString(text string) string { return "" }
+func (f *renderHTMLFormatter) title(text string) {
+	f.buf.WriteString("<H1>")
+	f.process(text)
+	f.buf.WriteString("</H1>")
+}
+
+func (f *renderHTMLFormatter) subtitle(text string) {
+	f.buf.WriteString("<H2>")
+	f.process(text)
+	f.buf.WriteString("</H2>")
+}
+
+func (f *renderHTMLFormatter) toString(s string) string {
+	for _, sub := range []replSet{
+		{str: "&", repl: "&amp;"},
+		{str: "+/-", repl: "&plusmn;"},
+		{str: "---", repl: "&mdash;"},
+		{str: "--", repl: "&ndash;"},
+		{re: regexp.MustCompile(`(^|\s|\d)-(\d+)`), repl: "${1}&minus;${2}"},
+		{re: regexp.MustCompile(`(\d)x`), repl: "${1}×"},
+		{re: regexp.MustCompile(`x(\d)`), repl: "×${1}"},
+		{str: "[x]", repl: "&times;"},
+		{str: "[S]", repl: "&sect;"},
+		{str: "[<<]", repl: "&laquo;"},
+		{str: "[>>]", repl: "&raquo;"},
+		{str: "<", repl: "&lt;"},
+		{str: ">", repl: "&gt;"},
+		{str: "[0]", repl: "<sup>0</sup>"},
+		{str: "[1]", repl: "<sup>1</sup>"},
+		{str: "[2]", repl: "<sup>2</sup>"},
+		{str: "[3]", repl: "<sup>3</sup>"},
+		{str: "[4]", repl: "<sup>4</sup>"},
+		{str: "[5]", repl: "<sup>5</sup>"},
+		{str: "[6]", repl: "<sup>6</sup>"},
+		{str: "[7]", repl: "<sup>7</sup>"},
+		{str: "[8]", repl: "<sup>8</sup>"},
+		{str: "[9]", repl: "<sup>9</sup>"},
+		{re: regexp.MustCompile(`\b1/2\b`), repl: "&frac12;"},
+		{re: regexp.MustCompile(`\b1/4\b`), repl: "&frac14;"},
+		{re: regexp.MustCompile(`\b3/4\b`), repl: "&frac34;"},
+		{re: regexp.MustCompile(`\b(\d+)_1/2\b`), repl: "${1}&frac12;"},
+		{re: regexp.MustCompile(`\b(\d+)_1/4\b`), repl: "${1}&frac14;"},
+		{re: regexp.MustCompile(`\b(\d+)_3/4\b`), repl: "${1}&frac34;"},
+		{str: "^o", repl: "&deg;"},
+		{str: "[c]", repl: "&copy;"},
+		{str: "[R]", repl: "&reg;"},
+		{str: "AE", repl: "&AElig;"},
+		{str: "ae", repl: "&aelig;"},
+		{str: "^.", repl: "&bull;"},
+		{str: "[/]", repl: "&divide;"},
+		{str: "[+]", repl: "&dagger;"},
+		{str: "[++]", repl: "&Dagger;"},
+		{str: `‵`, repl: "&prime;"},
+		{str: `′`, repl: "&bprime;"},
+	} {
+		if sub.re != nil {
+			s = sub.re.ReplaceAllString(s, sub.repl)
+		} else {
+			s = strings.ReplaceAll(s, sub.str, sub.repl)
+		}
+	}
+	return s
+}
+
+func (f *renderPostScriptFormatter) toString(s string) string {
+	for _, sub := range []replSet{
+		{re: regexp.MustCompile(`([()\\])`), repl: "\\${1}"},
+		{str: "§", repl: "\\247"},
+		{str: "©", repl: "\\345"},
+		{str: "«", repl: "\\253"},
+		{str: "®", repl: "\\346"},
+		{str: "°", repl: "\\347"},
+		{str: "±", repl: "\\354"},
+		{str: "⁰", repl: "\\330"},
+		{str: "¹", repl: "\\331"},
+		{str: "²", repl: "\\332"},
+		{str: "³", repl: "\\333"},
+		{str: "⁴", repl: "\\334"},
+		{str: "⁵", repl: "\\335"},
+		{str: "⁶", repl: "\\336"},
+		{str: "⁷", repl: "\\337"},
+		{str: "⁸", repl: "\\340"},
+		{str: "⁹", repl: "\\342"},
+		{str: "·", repl: "\\267"},
+		{str: "»", repl: "\\273"},
+		{str: "¼", repl: "\\355"},
+		{str: "½", repl: "\\356"},
+		{str: "¾", repl: "\\357"},
+		{str: "Ä", repl: "\\200"},
+		{str: "Æ", repl: "\\341"},
+		{str: "×", repl: "\\360"},
+		{str: "ä", repl: "\\220"},
+		{str: "æ", repl: "\\361"},
+		{str: "÷", repl: "\\344"},
+		{str: "‒", repl: "\\362"}, // minus
+		{str: "–", repl: "\\261"}, // en dash
+		{str: "—", repl: "\\320"}, // em dash
+		{str: "“", repl: "\\252"},
+		{str: "”", repl: "\\272"},
+		{str: "‘", repl: "\\140"},
+		{str: "’", repl: "\\047"},
+		{str: "†", repl: "\\262"},
+		{str: "‡", repl: "\\263"},
+		{str: "•", repl: "\\267"},
+		{str: "ﬀ", repl: "ff"},
+		{str: "ﬁ", repl: "\\256"},
+		{str: "ﬂ", repl: "\\257"},
+		{str: "ﬃ", repl: "f\\256"},
+		{str: "ﬄ", repl: "f\\257"},
+		{str: "+/-", repl: "\\354"},
+		{str: "---", repl: "\\320"},
+		{str: "--", repl: "\\261"},
+		{re: regexp.MustCompile(`(^|\s|\d)-(\d+)`), repl: "${1}\\362${2}"},
+		{re: regexp.MustCompile(`(\d)x`), repl: "${1}\\360"},
+		{re: regexp.MustCompile(`x(\d)`), repl: "\\360${1}"},
+		{str: "[x]", repl: "\\360"},
+		{str: "[S]", repl: "\\247"},
+		{str: "[<<]", repl: "\\253"},
+		{str: "[>>]", repl: "\\273"},
+		{str: "[0]", repl: "\\330"},
+		{str: "[1]", repl: "\\331"},
+		{str: "[2]", repl: "\\332"},
+		{str: "[3]", repl: "\\333"},
+		{str: "[4]", repl: "\\334"},
+		{str: "[5]", repl: "\\335"},
+		{str: "[6]", repl: "\\336"},
+		{str: "[7]", repl: "\\337"},
+		{str: "[8]", repl: "\\340"},
+		{str: "[9]", repl: "\\342"},
+		{re: regexp.MustCompile(`\b1/2\b`), repl: "\\356"},
+		{re: regexp.MustCompile(`\b1/4\b`), repl: "\\355"},
+		{re: regexp.MustCompile(`\b3/4\b`), repl: "\\357"},
+		{re: regexp.MustCompile(`\b(\d+)_1/2\b`), repl: "${1}\\356"},
+		{re: regexp.MustCompile(`\b(\d+)_1/4\b`), repl: "${1}\\355"},
+		{re: regexp.MustCompile(`\b(\d+)_3/4\b`), repl: "${1}\\357"},
+		{str: "^o", repl: "\\347"},
+		{str: "[c]", repl: "\\345"},
+		{str: "[R]", repl: "\\346"},
+		{str: "AE", repl: "\\341"},
+		{str: "ae", repl: "\\361"},
+		{str: "^.", repl: "\\267"},
+		{str: "[/]", repl: "\\344"},
+		{str: "[+]", repl: "\\262"},
+		{str: "[++]", repl: "\\263"},
+		{str: `‵`, repl: "'"},
+		{str: `′`, repl: "`"},
+	} {
+		if sub.re != nil {
+			s = sub.re.ReplaceAllString(s, sub.repl)
+		} else {
+			s = strings.ReplaceAll(s, sub.str, sub.repl)
+		}
+	}
+	return s
+}
+
 func (f *renderHTMLFormatter) init(o renderOptSet) {
 	f.buf.WriteString("<P>")
 	f.listStack = make([]string, 0, 4)
@@ -583,7 +738,7 @@ func (f *renderHTMLFormatter) setBold(b bool) {
 }
 
 func (f *renderHTMLFormatter) process(text string) {
-	f.buf.WriteString(text)
+	f.buf.WriteString(f.toString(text))
 }
 
 func (f *renderHTMLFormatter) finalize() string {
@@ -592,7 +747,8 @@ func (f *renderHTMLFormatter) finalize() string {
 }
 
 func (f *renderHTMLFormatter) reference(desc, link string) {
-	fmt.Fprintf(&f.buf, "<A HREF=\"%s\">%s</A>", strings.ToUpper(link), desc)
+	fmt.Fprintf(&f.buf, "<A HREF=\"%s\">%s</A>", strings.ToUpper(link), f.toString(desc))
+	// XXX toupper??
 }
 
 func (f *renderHTMLFormatter) endPar() {
@@ -638,19 +794,19 @@ func (f *renderHTMLFormatter) bulletListItem(level int, bullet rune) {
 		case '*', '\u2022':
 			style = "disc"
 		case '\u2023':
-			style = "\\2023"
+			style = "\"\\2023\""
 		case '\u2043', '-':
 			style = "-"
 		case '\u25cb', 'o':
 			style = "circle"
 		case '\u261e':
-			style = "\\261e"
+			style = "\"\\261e\""
 		case '\u2605':
-			style = "\\2605"
+			style = "\"\\2605\""
 		default:
-			style = fmt.Sprintf("\\%06x", bullet)
+			style = fmt.Sprintf("\"\\%06x\"", bullet)
 		}
-		f.levelSet(level, "UL", "style='list-style-type:\""+style+"\";'")
+		f.levelSet(level, "UL", "style='list-style-type:"+style+";'")
 	}
 	f.buf.WriteString("<LI>")
 }
@@ -662,8 +818,24 @@ func (f *renderHTMLFormatter) enumListItem(level, counter int) {
 
 func (f *renderHTMLFormatter) table(t *textTable) {
 	f.buf.WriteString("<TABLE BORDER=1>")
+	if len(t.captions) > 0 {
+		f.buf.WriteString("<CAPTION>")
+		miniFormatter(strings.Join(t.captions, " "), f)
+		f.buf.WriteString("</CAPTION>\n")
+	}
+	f.buf.WriteString("<THEAD>")
+
+	inHead := true
+	footnoteSpan := 1
 	for _, row := range t.rows {
-		f.buf.WriteString("<TR>")
+		if len(row) > 0 && !row[0].header && inHead {
+			f.buf.WriteString("</THEAD><TBODY>")
+			inHead = false
+		}
+		if len(row) > footnoteSpan {
+			footnoteSpan = len(row)
+		}
+		f.buf.WriteString("\n<TR>")
 		for _, col := range row {
 			if col != nil {
 				td := "TD"
@@ -681,13 +853,26 @@ func (f *renderHTMLFormatter) table(t *textTable) {
 					cs = fmt.Sprintf(" COLSPAN=%d", col.span+1)
 				}
 
-				fmt.Fprintf(&f.buf, "<%s ALIGN=%s%s>%s</%s>",
-					td, al, cs, col.text, td)
+				fmt.Fprintf(&f.buf, "<%s ALIGN=%s%s>", td, al, cs)
+				miniFormatter(col.text, f)
+				fmt.Fprintf(&f.buf, "</%s>", td)
 			}
 		}
 		f.buf.WriteString("</TR>")
 	}
-	f.buf.WriteString("</TABLE>")
+	if inHead {
+		// odd, the table only has headers?
+		f.buf.WriteString("</THEAD>")
+	} else {
+		f.buf.WriteString("</TBODY>")
+	}
+	f.buf.WriteString("<TFOOT>")
+	for _, footer := range t.footnotes {
+		fmt.Fprintf(&f.buf, "<TR><TD COLSPAN=%d>", footnoteSpan)
+		miniFormatter(footer, f)
+		f.buf.WriteString("</TD></TR>")
+	}
+	f.buf.WriteString("</TFOOT></TABLE>")
 }
 
 //
@@ -710,6 +895,7 @@ type renderPostScriptFormatter struct {
 	ital        bool
 	bold        bool
 	needOutdent bool
+	wasEverBold bool
 }
 
 type psChunk struct {
@@ -718,9 +904,10 @@ type psChunk struct {
 	post     string
 }
 
-func (f *renderPostScriptFormatter) title(text string)           {}
-func (f *renderPostScriptFormatter) subtitle(text string)        {}
-func (f *renderPostScriptFormatter) toString(text string) string { return "" }
+func (f *renderPostScriptFormatter) title(text string) {
+}
+
+func (f *renderPostScriptFormatter) subtitle(text string) {}
 func (f *renderPostScriptFormatter) init(o renderOptSet) {
 	f.compact = o.compact
 }
@@ -734,6 +921,10 @@ func psSimpleEscape(s string) string {
 }
 
 func (f *renderPostScriptFormatter) fontChange() string {
+	return f.fontChangeWithStartCmd("")
+}
+
+func (f *renderPostScriptFormatter) fontChangeWithStartCmd(start string) string {
 	newFont := "rm"
 	if f.bold && f.ital {
 		newFont = "bi"
@@ -745,9 +936,9 @@ func (f *renderPostScriptFormatter) fontChange() string {
 
 	if newFont != f.lastSetFont {
 		f.lastSetFont = newFont
-		return fmt.Sprintf("{PsFF_%s}", newFont)
+		return fmt.Sprintf("{PsFF_%s %s}", newFont, start)
 	}
-	return "{}"
+	return fmt.Sprintf("{%s}", start)
 }
 
 func (f *renderPostScriptFormatter) setItal(b bool) {
@@ -758,6 +949,7 @@ func (f *renderPostScriptFormatter) setItal(b bool) {
 func (f *renderPostScriptFormatter) setBold(b bool) {
 	f.sendBuffer("{}")
 	f.bold = b
+	f.wasEverBold = true
 }
 
 func (f *renderPostScriptFormatter) process(text string) {
@@ -772,49 +964,20 @@ func (f *renderPostScriptFormatter) process(text string) {
 	}
 }
 
-//
-// Convert a string value to a properly-formatted PostScript string,
-// and substitute special character codes with PostScript equivalents.
-//
-func psStr(s string) string {
-	type specialChar struct {
-		pattern *regexp.Regexp
-		ps      string
-	}
+func (f *renderPostScriptFormatter) textContentAsPSString() string {
+	f.sendBuffer("{}")
+	f.setBold(false)
+	f.setItal(false)
 
-	for _, sc := range []specialChar{
-		{regexp.MustCompile(`[()\\]`), `\$0`},
-		{regexp.MustCompile(`\+/-`), `\261`},
-		{regexp.MustCompile(`-(\d)`), `\055$1`},
-		{regexp.MustCompile(`---`), `\055\055`},
-		{regexp.MustCompile(`--`), `\055`},
-		{regexp.MustCompile(`(\d)x`), `$1\327`},
-		{regexp.MustCompile(`x(\d)`), `\327$1`},
-		{regexp.MustCompile(`\[x\]`), `\327`},
-		{regexp.MustCompile(`\[S\]`), `\247`},
-		{regexp.MustCompile(`-`), `\255`},
-		{regexp.MustCompile(`\[1\]`), `\271`},
-		{regexp.MustCompile(`\[2\]`), `\262`},
-		{regexp.MustCompile(`\[3\]`), `\263`},
-		{regexp.MustCompile(`\b1/2\b`), `\275`},
-		{regexp.MustCompile(`\b1/4\b`), `\274`},
-		{regexp.MustCompile(`\b3/4\b`), `\276`},
-		{regexp.MustCompile(`_1/2\b`), `\275`},
-		{regexp.MustCompile(`_1/4\b`), `\274`},
-		{regexp.MustCompile(`_3/4\b`), `\276`},
-		{regexp.MustCompile(`\^o`), `\260`},
-		{regexp.MustCompile(`\[c\]`), `\251`},
-		{regexp.MustCompile(`\[R\]`), `\256`},
-		{regexp.MustCompile(`AE`), `\306`},
-		{regexp.MustCompile(`ae`), `\346`},
-		{regexp.MustCompile(`\[<<\]`), `\253`},
-		{regexp.MustCompile(`\[>>\]`), `\273`},
-		{regexp.MustCompile(`\^\.`), `\267`},
-		{regexp.MustCompile(`\[/\]`), `\367`},
-	} {
-		s = sc.pattern.ReplaceAllString(s, sc.ps)
+	var ps strings.Builder
+	ps.WriteRune('(')
+	for _, chunk := range f.chunks {
+		for _, s := range chunk.contents {
+			ps.WriteString(f.toString(s))
+		}
 	}
-	return s
+	ps.WriteRune(')')
+	return ps.String()
 }
 
 func (f *renderPostScriptFormatter) finalize() string {
@@ -829,14 +992,14 @@ func (f *renderPostScriptFormatter) finalize() string {
 		f.buf.WriteString(" [ ")
 		for _, s := range chunk.contents {
 			f.buf.WriteString("(")
-			f.buf.WriteString(psStr(s))
+			f.buf.WriteString(f.toString(s))
 			f.buf.WriteString(")")
 		}
 		f.buf.WriteString(" ] ")
 		f.buf.WriteString(chunk.pre)
 		f.buf.WriteString(" ] ")
 	}
-	f.buf.WriteString(" ] ")
+	f.buf.WriteString(" ] FreeFormTextBlock")
 	f.chunks = nil
 	return f.buf.String()
 }
@@ -912,6 +1075,17 @@ func (f *renderPostScriptFormatter) sendBuffer(end string) {
 	}
 }
 
+func (f *renderPostScriptFormatter) sendBufferWithStartCmd(start, end string) {
+	if f.curChunk != nil || end != "{}" {
+		f.chunks = append(f.chunks, psChunk{
+			pre:      f.fontChangeWithStartCmd(start),
+			contents: f.curChunk,
+			post:     end,
+		})
+		f.curChunk = nil
+	}
+}
+
 func (f *renderPostScriptFormatter) toggleItal() {
 	f.setItal(!f.ital)
 }
@@ -974,6 +1148,11 @@ func (f *renderPostScriptFormatter) enumListItem(level, counter int) {
 //  columns--this needs to be added back into the
 //  size of spanned columns)
 //
+// CAPTIONS
+//	Captions are added to the table by joining the caption cell(s), formatting with onestyle=true
+//  sending
+//		{PsFF_nl PsFF_rm} [ ...words in caption... ] {PsFF_tbl_caption}
+//
 func (f *renderPostScriptFormatter) table(t *textTable) {
 	// Emit routine to calculate column widths, then emit
 	// code to render the table
@@ -985,38 +1164,63 @@ func (f *renderPostScriptFormatter) table(t *textTable) {
 	f.sendBuffer("{PsFF_nl}")
 	f.bold = false
 	f.ital = false
+
+	if len(t.captions) > 0 {
+		f.newPar()
+		miniFormatter(strings.Join(t.captions, " "), f, oneStyle, oneLine)
+		f.sendBufferWithStartCmd("PsFF_tbl_caption", "{PsFF_nl PsFF_rm}")
+	}
+
+	//func miniFormatter(text string, formatter renderingFormatter, options ...miniFormatterOption) {
+
 	var ps strings.Builder
 	ps.WriteString(`{PsFF_rm
+/PsFF_Xsave X def
 %
-% Data Table: calculate column widths
+% Start of Data Table: calculate column widths
 %
 `)
 	for c := 0; c < t.numCols(); c++ {
-		fmt.Fprintf(&ps, "/PsFF_Cw%d 0 def\n[", c)
+		fmt.Fprintf(&ps, `
+%% Column #%d of %d
+/PsFF_Cw%[1]d 0 def
+`, c, t.numCols())
 		for _, row := range t.rows {
 			if row[c] != nil && row[c].span == 0 {
-				fmt.Fprintf(&ps, "(%s) ", psSimpleEscape(row[c].text))
+				tempEnv := &renderPostScriptFormatter{}
+				miniFormatter(row[c].text, tempEnv, oneLine)
+				if tempEnv.wasEverBold {
+					ps.WriteString("PsFF_bf")
+				} else {
+					ps.WriteString("PsFF_rm")
+				}
+				fmt.Fprintf(&ps, "%[1]s stringwidth pop dup PsFF_Cw%[2]d gt {/PsFF_Cw%[2]d exch def} {pop} ifelse\n",
+					tempEnv.textContentAsPSString(), c)
 			}
 		}
-		fmt.Fprintf(&ps, `] {
-	stringwidth pop dup PsFF_Cw%d gt {
-		/PsFF_Cw%d exch def
-	} {
-		pop
-	} ifelse
-} forall
-`, c, c)
 	}
-	//
-	// Now adjust column widths for the spans
-	//
+	ps.WriteString(`%
+% Now adjust column widths for the spans
+%
+`)
 	for r, row := range t.rows {
 		for i, col := range row {
 			if col != nil && col.span > 0 {
-				fmt.Fprintf(&ps, "\n%% span row %d, columns %d-%d:\n/PsFF__t__have PsFF_TcolSpn %d mul", r, i, i+col.span, col.span)
+				fmt.Fprintf(&ps, "%% span row %d, columns %d-%d:\n", r, i, i+col.span)
+				fmt.Fprintf(&ps, "/PSFF__t__have PSFF_TcolSpn %d mul ", col.span)
 				for j := i; j <= i+col.span; j++ {
-					fmt.Fprintf(&ps, " PsFF_Cw%d add", j)
+					fmt.Fprintf(&ps, "PsFF_Cw%d add ", j)
 				}
+				ps.WriteString("def\n/PsFF__t__need ")
+
+				tempEnv := &renderPostScriptFormatter{}
+				miniFormatter(col.text, tempEnv, oneLine)
+				if tempEnv.wasEverBold {
+					ps.WriteString("PsFF_bf")
+				} else {
+					ps.WriteString("PsFF_rm")
+				}
+				fmt.Fprintf(&ps, " %[1]s stringwidth pop def", tempEnv.textContentAsPSString())
 				fmt.Fprintf(&ps, " def\n/PsFF__t__need (%s) stringwidth pop def",
 					psSimpleEscape(col.text))
 				fmt.Fprintf(&ps, `
@@ -1025,20 +1229,21 @@ PsFF__t__need PsFF__t__have gt {
    /PsFF__t__each PsFF__t__add %d 1 add idiv def
 `, col.span)
 				for n := i; n <= i+col.span; n++ {
-					fmt.Fprintf(&ps, "   /PsFF_Cw%d PsFF_Cw%d PsFF__t__each add def\n", n, n)
+					fmt.Fprintf(&ps, "   /PsFF_Cw%d PsFF_Cw%[1]d PsFF__t__each add def\n", n)
 					ps.WriteString("   /PsFF__t__add PsFF__t__add PsFF__t__each sub def\n")
 				}
 				fmt.Fprintf(&ps, `   PsFF__t__add 0 gt {
-      /PsFF_Cw%d PsFF_Cw%d PsFF__t__add add def
+      /PsFF_Cw%d PsFF_Cw%[1]d PsFF__t__add add def
    } if
 } if
-`, i, i)
+`, i)
 			}
 		}
 	}
 	//
 	// now typeset the table itself.
 	//
+	ps.WriteString("%\n% Table contents\n%\n")
 	for _, row := range t.rows {
 		for c, col := range row {
 			if col != nil {
@@ -1779,24 +1984,24 @@ A blank line marks a paragraph break.
 
 A literal **\e** or **|** character may be entered without being interpreted as part of markup syntax using the codes **\ee** and **\ev** respectively.
 
-**/\./text/\./** sets "text" in Italics*†\\
-**\.*\.*text\.*\.*** sets "text" in boldface*†
+**/\./text/\./** sets "text" in Italics*[+]\\
+**\.*\.*text\.*\.*** sets "text" in boldface*[+]
 
-**@**//blah//... Starts bulleted list item‡\\
-**@@**//blah//... Starts level-2 bulleted list item‡\\
-**@@@**//blah//... Starts level-3 bulleted list item (and so forth)‡
+**@**//blah//... Starts bulleted list item[++]\\
+**@@**//blah//... Starts level-2 bulleted list item[++]\\
+**@@@**//blah//... Starts level-3 bulleted list item (and so forth)[++]
 
-**#**//blah//... Starts enumerated list item‡\\
-**##**//blah//... ...and so forth‡
+**#**//blah//... Starts enumerated list item[++]\\
+**##**//blah//... ...and so forth[++]
 
 **[\.[**//name//**]\.]** Creates a hyperlink to "//name//" where this name itself adequately
 identifies the linked-to element in GMA (e.g., the name of a spell).\\
-**[\.[//link//**|**//name//]\.] Creates a hyperlink called "//name//" which links to GMA element "//link//".
+**[\.[**//link//**|**//name//**]\.]** Creates a hyperlink called "//name//" which links to GMA element "//link//".
 
 **\e.** does nothing but serves to disambiguate things or prevent otherwise special symbols
 from being interpreted as markup syntax.
 
-There is also a special page-break marker **<\.<-->\.>** which is not actually processed
+There is also a special page-break marker **<\.<-\.->\.>** which is not actually processed
 by this package, but some output subsystems recognize it when they see it in the output
 (e.g., PostScript formatted text blocks).
 
@@ -1820,8 +2025,8 @@ The following markup symbols may also be used to represent special characters:
 |**[\.5]**   |[5] superscript 5 |**′** |' close single quote |
 |**[\.6]**   |[6] superscript 6 |**‵‵** |“ open double quote |
 |**[\.7]**   |[7] superscript 7 |**′′** |'' close double quote|
-|**[\.8]**   |[8] superscript 8 | | |
-|**[\.9]**   |[9] superscript 9 | | |
+|**[\.8]**   |[8] superscript 8 |**[\.+]** |[+] dagger|
+|**[\.9]**   |[9] superscript 9 |**[\.++]** |[++] double dagger|
 
 The letter **x** immediately next to a digit causes it to be printed as a multiplication sign (e.g., x2 or 3x).\\
 A hyphen **-** immediately before a digit causes it to be printed as a minus sign instead of a hyphen (e.g., -1).\\
@@ -1832,7 +2037,7 @@ Separate numbers from fractions with an underscore (e.g., **12\._\.1\./2** print
 =\.=(Subtitle (2nd-level))==
 
 ==(Tables)==
-Tables are specified by a set of lines beginning with a **|** character.‡
+Tables are specified by a set of lines beginning with a **|** character.[++]
 Each column in the table is separated from the others with **|** characters
 as well. A **|** at the very end of the row is optional.
 
@@ -1879,10 +2084,30 @@ places a caption on the table (usually above the table), while each row in the f
 adds a footnote at the bottom of the table. Footnotes may contain **\e\e** to make explicit line breaks but captions cannot.
 Captions and footnotes should be a single cell per line regardless of the number of columns the table has.
 
+So:
+
+**|= Die Roll |= Color |**\\
+**|    1    | blue  |**\\
+**|   2--4  | green |**\\
+**|    5+   | plaid[\.1] |**\\
+**|:Random Colors (d8)|**\\
+**|::[\.1]Or reroll.|**\\
+**|::(Subject to GM discretion.)|**
+
+produces:
+
+|= Die Roll |= Color |
+|    1    | blue  |
+|   2--4  | green |
+|    5+   | plaid[1] |
+|:Random Colors (d8)|
+|::[1]Or reroll.|
+|::(Subject to GM discretion.)|
+
 ==(Notes:)==
 *May cross line boundaries but not paragraphs.\\
-†May nest as in **/\./Italic *\.*and*\.* bold/\./.**\\
-‡Must appear at the very beginning of a line.
+[+]May nest as in **/\./Italic *\.*and*\.* bold/\./.**\\
+[++]Must appear at the very beginning of a line.
 
 `
 
