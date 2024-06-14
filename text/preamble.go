@@ -670,6 +670,7 @@ const CommonPostScriptPreamble = `%!PS
 % (End of form-preamble.ps)
 %
 `
+
 // @@:go:form-preamble:end:@@
 // @@:go:gma-preamble:begin:GMAPostScriptPreamble@@
 const GMAPostScriptPreamble = `%!PS
@@ -945,6 +946,14 @@ _my_encoding 8#344 /divide        put
 } def
 
 
+% (str0) (str1) cat (str0str1)
+% (str) i mkvari /stri
+/cat {
+	exch dup length 2 index length add string dup dup 4 2 roll copy length 4 -1 roll putinterval
+} def
+/mkvari {
+	10 string cvs cat cvn
+} def
 
 %
 % ID Char Player CharacterTitleBlock -
@@ -2938,6 +2947,7 @@ _my_encoding 8#344 /divide        put
 % End GMA Preamble
 %
 `
+
 // @@:go:gma-preamble:end:@@
 
 // @[00]@| Go-GMA 5.22.0-alpha.0

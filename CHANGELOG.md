@@ -28,6 +28,7 @@ When upgrading an existing server to version 5.13.1 or later, be sure to run `sc
 ### Enhanced
  * Moved description of markup and die-roll syntax to constants that can be read from applications.
  * Enhanced the markup language.
+ * Changed GMA PostScript preamble data to be exported from the `text` package (was private before).
 ### Fixed
  * `cmd/roll` reports the default seed in its JSON output if one wasn't given to it via `-seed`.
  * Rearranged manpages so they all begin with `gma-go-` to disambiguate them from commands on the system with the same names. This also reflects the fact that they are intended to be invoked as subcommands of `gma` by starting the command line with `gma go CMDNAME ARGS...` (although they can be run independently too).

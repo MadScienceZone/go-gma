@@ -27,6 +27,8 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
 func max(a, b int) int {
@@ -885,16 +887,17 @@ func (f *renderHTMLFormatter) table(t *textTable) {
 // PostScript output formatter
 //
 type renderPostScriptFormatter struct {
-	buf         strings.Builder
-	indent      int
-	chunks      []psChunk
-	curChunk    []string
-	lastSetFont string
-	compact     bool
-	ital        bool
-	bold        bool
-	needOutdent bool
-	wasEverBold bool
+	buf          strings.Builder
+	indent       int
+	chunks       []psChunk
+	curChunk     []string
+	lastSetFont  string
+	compact      bool
+	ital         bool
+	bold         bool
+	needOutdent  bool
+	wasEverBold  bool
+	footnoteMode bool
 }
 
 type psChunk struct {
@@ -903,10 +906,24 @@ type psChunk struct {
 	post     string
 }
 
-func (f *renderPostScriptFormatter) title(text string) {
+func (f *renderPostScriptFormatter) setFootnoteMode(b bool) {
+	f.footnoteMode = b
 }
 
-func (f *renderPostScriptFormatter) subtitle(text string) {}
+func (f *renderPostScriptFormatter) title(text string) {
+	f.newPar()
+	f.sendBuffer("{PsFF_section}")
+	f.process(text)
+	f.sendBuffer("{PsFF_nl PsFF_rm}")
+	f.newPar()
+}
+
+func (f *renderPostScriptFormatter) subtitle(text string) {
+	f.newLine()
+	f.sendBuffer("{PsFF_subsection}")
+	f.process(text)
+	f.sendBuffer("{PsFF_nl PsFF_rm}")
+}
 func (f *renderPostScriptFormatter) init(o renderOptSet) {
 	f.compact = o.compact
 }
@@ -933,9 +950,14 @@ func (f *renderPostScriptFormatter) fontChangeWithStartCmd(start string) string 
 		newFont = "it"
 	}
 
+	ft := ""
+	if f.footnoteMode {
+		ft = "tbl_footer_"
+	}
+
 	if newFont != f.lastSetFont {
 		f.lastSetFont = newFont
-		return fmt.Sprintf("{PsFF_%s %s}", newFont, start)
+		return fmt.Sprintf("{PsFF_%s%s %s}", ft, newFont, start)
 	}
 	return fmt.Sprintf("{%s}", start)
 }
@@ -961,6 +983,32 @@ func (f *renderPostScriptFormatter) process(text string) {
 	if text != "" {
 		f.curChunk = append(f.curChunk, text)
 	}
+}
+
+func (f *renderPostScriptFormatter) textContentAsPSLines() (string, int) {
+	lineCount := 1
+
+	f.sendBuffer("{}")
+	f.setBold(false)
+	f.setItal(false)
+
+	var ps strings.Builder
+	ps.WriteString("[(")
+	for _, chunk := range f.chunks {
+		for _, s := range chunk.contents {
+			if strings.Contains(chunk.pre, "PsFF_nl") {
+				ps.WriteString(")(")
+				lineCount++
+			}
+			ps.WriteString(f.toString(s))
+			if strings.Contains(chunk.post, "PsFF_nl") {
+				ps.WriteString(")(")
+				lineCount++
+			}
+		}
+	}
+	ps.WriteString(")]")
+	return ps.String(), lineCount
 }
 
 func (f *renderPostScriptFormatter) textContentAsPSString() string {
@@ -998,7 +1046,7 @@ func (f *renderPostScriptFormatter) finalize() string {
 		f.buf.WriteString(chunk.pre)
 		f.buf.WriteString(" ] ")
 	}
-	f.buf.WriteString(" ] FreeFormTextBlock")
+	f.buf.WriteString(" ] ")
 	f.chunks = nil
 	return f.buf.String()
 }
@@ -1085,6 +1133,13 @@ func (f *renderPostScriptFormatter) sendBufferWithStartCmd(start, end string) {
 	}
 }
 
+func (f *renderPostScriptFormatter) boolString(b bool) string {
+	if b {
+		return "true"
+	}
+	return "false"
+}
+
 func (f *renderPostScriptFormatter) toggleItal() {
 	f.setItal(!f.ital)
 }
@@ -1153,6 +1208,8 @@ func (f *renderPostScriptFormatter) enumListItem(level, counter int) {
 //		{PsFF_nl PsFF_rm} [ ...words in caption... ] {PsFF_tbl_caption}
 //
 func (f *renderPostScriptFormatter) table(t *textTable) {
+	var linesPerRow []int
+
 	// Emit routine to calculate column widths, then emit
 	// code to render the table
 	if f.compact {
@@ -1179,25 +1236,42 @@ func (f *renderPostScriptFormatter) table(t *textTable) {
 % Start of Data Table: calculate column widths
 %
 `)
+	var deferred strings.Builder
 	for c := 0; c < t.numCols(); c++ {
-		fmt.Fprintf(&ps, `
+		fmt.Fprintf(&deferred, `
 %% Column #%d of %d
 /PsFF_Cw%[1]d 0 def
 `, c, t.numCols())
-		for _, row := range t.rows {
+		for r, row := range t.rows {
 			if row[c] != nil && row[c].span == 0 {
 				tempEnv := &renderPostScriptFormatter{}
-				miniFormatter(row[c].text, tempEnv, oneLine)
+				miniFormatter(row[c].text, tempEnv)
 				if tempEnv.wasEverBold {
-					ps.WriteString("PsFF_bf")
+					deferred.WriteString("PsFF_bf")
 				} else {
-					ps.WriteString("PsFF_rm")
+					deferred.WriteString("PsFF_rm")
 				}
-				fmt.Fprintf(&ps, "%[1]s stringwidth pop dup PsFF_Cw%[2]d gt {/PsFF_Cw%[2]d exch def} {pop} ifelse\n",
-					tempEnv.textContentAsPSString(), c)
+				lines, nLines := tempEnv.textContentAsPSLines()
+				fmt.Fprintf(&deferred, " /PsFF_Cwi 0 def %[1]s {stringwidth pop dup dup (PsFF_CLw%[3]dc%[2]dl) PsFF_Cwi mkvari exch def /PsFF_Cwi PsFF_Cwi 1 add def PsFF_Cw%[2]d gt {/PsFF_Cw%[2]d exch def} {pop} ifelse} forall\n",
+					lines, c, r)
+				if len(linesPerRow) <= r {
+					linesPerRow = append(linesPerRow, 0)
+				}
+				if linesPerRow[r] < nLines {
+					linesPerRow[r] = nLines
+				}
 			}
 		}
 	}
+
+	for r := 0; r < len(t.rows); r++ {
+		for c := 0; c < t.numCols(); c++ {
+			for l := 0; l < linesPerRow[r]; l++ {
+				fmt.Fprintf(&ps, "/PsFF_CLw%dc%dl%d 0 def\n", r, c, l)
+			}
+		}
+	}
+	ps.WriteString(deferred.String())
 	ps.WriteString(`%
 % Now adjust column widths for the spans
 %
@@ -1206,26 +1280,32 @@ func (f *renderPostScriptFormatter) table(t *textTable) {
 		for i, col := range row {
 			if col != nil && col.span > 0 {
 				fmt.Fprintf(&ps, "%% span row %d, columns %d-%d:\n", r, i, i+col.span)
-				fmt.Fprintf(&ps, "/PSFF__t__have PSFF_TcolSpn %d mul ", col.span)
+				fmt.Fprintf(&ps, "/PsFF__t__have PsFF_TcolSpn %d mul ", col.span)
 				for j := i; j <= i+col.span; j++ {
 					fmt.Fprintf(&ps, "PsFF_Cw%d add ", j)
 				}
-				ps.WriteString("def\n/PsFF__t__need ")
+				ps.WriteString("def\n/PsFF__t__need 0 def\n")
 
 				tempEnv := &renderPostScriptFormatter{}
-				miniFormatter(col.text, tempEnv, oneLine)
+				miniFormatter(col.text, tempEnv)
 				if tempEnv.wasEverBold {
 					ps.WriteString("PsFF_bf")
 				} else {
 					ps.WriteString("PsFF_rm")
 				}
-				fmt.Fprintf(&ps, " %[1]s stringwidth pop def", tempEnv.textContentAsPSString())
-				fmt.Fprintf(&ps, " def\n/PsFF__t__need (%s) stringwidth pop def",
-					psSimpleEscape(col.text))
+				lines, nLines := tempEnv.textContentAsPSLines()
+				fmt.Fprintf(&ps, " /PsFF_Cwi 0 def %[1]s {stringwidth pop dup dup (PsFF_CLw%[3]dc%[2]dl) PsFF_Cwi mkvari exch def /PsFF_Cwi PsFF_Cwi 1 add def PsFF__t__need gt {/PsFF__t__need exch def} {pop} ifelse} forall\n", lines, i, r)
+				if len(linesPerRow) <= r {
+					linesPerRow = append(linesPerRow, 0)
+				}
+				if linesPerRow[r] < nLines {
+					linesPerRow[r] = nLines
+				}
+
 				fmt.Fprintf(&ps, `
 PsFF__t__need PsFF__t__have gt {
    /PsFF__t__add PsFF__t__need PsFF__t__have sub def
-   /PsFF__t__each PsFF__t__add %d 1 add idiv def
+   /PsFF__t__each PsFF__t__add %d 1 add div def
 `, col.span)
 				for n := i; n <= i+col.span; n++ {
 					fmt.Fprintf(&ps, "   /PsFF_Cw%d PsFF_Cw%[1]d PsFF__t__each add def\n", n)
@@ -1243,41 +1323,48 @@ PsFF__t__need PsFF__t__have gt {
 	// now typeset the table itself.
 	//
 	ps.WriteString("%\n% Table contents\n%\n")
-	for _, row := range t.rows {
-		for c, col := range row {
-			if col != nil {
-				fmt.Fprintf(&ps, "    (%s) PsFF_Cw%d ", psSimpleEscape(col.text), c)
-				for span := c + 1; span <= c+col.span; span++ {
-					fmt.Fprintf(&ps, "PsFF_Cw%d add ", span)
-				}
-				if col.span > 0 {
-					fmt.Fprintf(&ps, "PsFF_TcolSpn %d mul add ", col.span)
-				}
-				var style, align rune
-				if col.header {
-					style = 'h'
+	for r, row := range t.rows {
+		// We need to print the column contents a line at a time
+		fmt.Fprintf(&ps, "%% Row %d (%d %s)\n", r, linesPerRow[r], util.PluralizeString("line", linesPerRow[r]))
+		for l := 0; l < linesPerRow[r]; l++ {
+			for c, col := range row {
+				fmt.Fprintf(&ps, "%% Row %d, Col %d, Line %d\n", r, c, l)
+				// textwidth isheader? iscentered? isright? colwidth PsFF_cell{F,T,B,M} (full, top, bottom, middle)
+				if col == nil {
+					ps.WriteString("% (spanned through)\n")
 				} else {
-					style = 'd'
-				}
+					fmt.Fprintf(&ps, "PsFF_CLw%dc%dl%d %s %s %s PsFF_Cw%[2]d ", r, c, l,
+						f.boolString(col.header), f.boolString(col.align == '^'), f.boolString(col.align == '>'))
+					for span := c + 1; span <= c+col.span; span++ {
+						fmt.Fprintf(&ps, "PsFF_Cw%d add PsFF_TcolSpn add", span)
+					}
+					ps.WriteString(" PsFF_cell")
+					if linesPerRow[r] == 1 {
+						ps.WriteRune('F')
+					} else if l == 0 {
+						ps.WriteRune('T')
+					} else if l == linesPerRow[r]-1 {
+						ps.WriteRune('B')
+					} else {
+						ps.WriteRune('M')
+					}
 
-				switch col.align {
-				case '<':
-					align = 'L'
-				case '^':
-					align = 'C'
-				case '>':
-					align = 'R'
-				default:
-					align = 'L'
+					ps.WriteRune(' ')
+					ps.WriteString(f.miniCellFormatter(col.text, l))
+					ps.WriteString(" PsFF_tEnd\n")
 				}
-
-				fmt.Fprintf(&ps, "PsFF_t%c%c\n", style, align)
 			}
+			ps.WriteString("PsFF_nl\n")
 		}
-		ps.WriteString("PsFF_nl\n")
 	}
-	ps.WriteString("}")
+	ps.WriteString("/X PsFF_Xsave def}")
 	f.sendBuffer(ps.String())
+	f.setFootnoteMode(true)
+	for _, footer := range t.footnotes {
+		miniFormatter(footer, f, footnoteStyle)
+		f.sendBufferWithStartCmd("PsFF_tbl_footer", "{PsFF_nl PsFF_rm}")
+	}
+	f.setFootnoteMode(false)
 }
 
 //  ___                   _     ____
@@ -1463,6 +1550,7 @@ type miniFormatterOption byte
 const (
 	oneStyle miniFormatterOption = 1 << iota
 	oneLine
+	footnoteStyle
 )
 
 //
@@ -1472,6 +1560,7 @@ const (
 // We allow \e, \v, \., \\, **, //, [[..]]; we can collapse to a single style
 // also if necessary.
 //
+
 func miniFormatter(text string, formatter renderingFormatter, options ...miniFormatterOption) {
 	linkPattern := regexp.MustCompile(`\[\[(.*?)(?:\|(.*?))?\]\]`)
 	splitterPattern := regexp.MustCompile(`\[\[.*?\]\]|\\e|\\v|\\\\|\\\.|\*\*|//`)
@@ -1597,6 +1686,81 @@ func miniFormatter(text string, formatter renderingFormatter, options ...miniFor
 		formatter.setItal(!isItal)
 		formatter.setBold(!isBold)
 	}
+}
+
+func (f *renderPostScriptFormatter) miniCellFormatter(text string, line int) string {
+	var ps strings.Builder
+	linkPattern := regexp.MustCompile(`\[\[(.*?)(?:\|(.*?))?\]\]`)
+	splitterPattern := regexp.MustCompile(`\[\[.*?\]\]|\\e|\\v|\\\\|\\\.|\*\*|//`)
+
+	isBold := false
+	isItal := false
+
+	setCurrentFont := func() {
+		if isBold && isItal {
+			ps.WriteString("PsFF_bi ")
+		} else if isBold {
+			ps.WriteString("PsFF_bf ")
+		} else if isItal {
+			ps.WriteString("PsFF_it ")
+		} else {
+			ps.WriteString("PsFF_rm ")
+		}
+	}
+
+	idx := 0
+	ps.WriteString("PsFF_rm ")
+	for _, fragmentRange := range splitterPattern.FindAllStringIndex(text, -1) {
+		if fragmentRange[0] > idx && line == 0 {
+			fmt.Fprintf(&ps, "(%s) PsFF_cellfragment ", f.toString(text[idx:fragmentRange[0]]))
+		}
+		if text[fragmentRange[0]:fragmentRange[1]] == "\\\\" {
+			line--
+			if line < 0 {
+				break
+			}
+			idx = fragmentRange[1]
+			continue
+		}
+		if line != 0 {
+			idx = fragmentRange[1]
+			continue
+		}
+
+		switch text[fragmentRange[0]:fragmentRange[1]] {
+		case "\\e":
+			ps.WriteString("(\\\\) PsFF_cellfragment ")
+		case "\\v":
+			ps.WriteString("(|) PsFF_cellfragment ")
+		case "\\.":
+		case "**":
+			isBold = !isBold
+			setCurrentFont()
+		case "//":
+			isItal = !isItal
+			setCurrentFont()
+		default:
+			if linkParts := linkPattern.FindStringSubmatch(text[fragmentRange[0]:fragmentRange[1]]); linkParts != nil {
+				oldItal := isItal
+				isItal = true
+				setCurrentFont()
+				if len(linkParts) < 2 || linkParts[1] == "" {
+					fmt.Fprintf(&ps, "(%s) PsFF_cellfragment ", f.toString(linkParts[0]))
+				} else {
+					fmt.Fprintf(&ps, "(%s) PsFF_cellfragment ", f.toString(linkParts[1]))
+				}
+				isItal = oldItal
+				setCurrentFont()
+			} else {
+				fmt.Fprintf(&ps, "(%s) PsFF_cellfragment ", f.toString(text[fragmentRange[0]:fragmentRange[1]]))
+			}
+		}
+		idx = fragmentRange[1]
+	}
+	if idx < len(text) && line == 0 {
+		fmt.Fprintf(&ps, "(%s) PsFF_cellfragment ", f.toString(text[idx:]))
+	}
+	return ps.String()
 }
 
 //
