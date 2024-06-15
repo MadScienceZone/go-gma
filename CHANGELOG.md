@@ -19,7 +19,7 @@ In addition, if your server didn't have the following update installed previousl
 
 When upgrading an existing server to version 5.13.1 or later, be sure to run `scripts/upgrade-5.13.1` on each database file to update it to the new chat history encoding scheme introduced at 5.13.1. If you don't, the server will ignore some or all of your historic chat and die roll messages. Alternatively, you can delete the old database and make a new one with the current server.
 
-## v5.22.0 (alpha 0)
+## v5.22.0
 ### Added
  * Added new option `|total n` to the die roller syntax. This repeats the die roll until the cumulative total of all the rolls meets or exceeds a target value.
  * Added new CLI tool `markup` (invoked as `gma go markup` if using the whole GMA tool suite) which renders GMA markup text to plain text, PostScript, or HTML.
