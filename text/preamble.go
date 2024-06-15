@@ -1,17 +1,16 @@
 /*
-\
 ########################################################################################
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______   __       _______        #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) /  \     / ___   )       #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  | \/) )    \/   )  |       #
-# | |      | || || || (___) | Assistant | (____         /   )   | |        /   )       #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    | |      _/   /        #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/     | |     /   _/         #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ __) (_ _ (   (__/\       #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \____/(_)\_______/       #
+#  _______  _______  _______             _______     _______  _______     _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___   )   (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   )  |   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____         /   )    /   )   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /   _/   /    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/   /   _/     |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\(   (__/\ _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/\_______/(_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -28,8 +27,8 @@ package text
 // things we write. This provides some common form generation code
 // among other things.
 //
-// @@:go:form-preamble:begin:commonPostScriptPreamble@@
-const commonPostScriptPreamble = `%!PS
+// @@:go:form-preamble:begin:CommonPostScriptPreamble@@
+const CommonPostScriptPreamble = `%!PS
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %  _______  _______  _______              ______     _______  _______                  %
@@ -672,8 +671,8 @@ const commonPostScriptPreamble = `%!PS
 %
 `
 // @@:go:form-preamble:end:@@
-// @@:go:gma-preamble:begin:gmaPostScriptPreamble@@
-const gmaPostScriptPreamble = `%!PS
+// @@:go:gma-preamble:begin:GMAPostScriptPreamble@@
+const GMAPostScriptPreamble = `%!PS
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %  _______  _______  _______              ______     _______  _______                  %
@@ -945,7 +944,14 @@ _my_encoding 8#344 /divide        put
     CopyrightText2 PageLeftMargin Y RenderText pop pop
 } def
 
-
+% (str0) (str1) cat (str0str1)
+% (str) i mkvari /stri
+/cat {
+	exch dup length 2 index length add string dup dup 4 2 roll copy length 4 -1 roll putinterval
+} def
+/mkvari {
+	10 string cvs cat cvn
+} def
 
 %
 % ID Char Player CharacterTitleBlock -
@@ -1963,9 +1969,9 @@ _my_encoding 8#344 /divide        put
     /PsFF_bf { DataFontBold findfont PsFF_sz scalefont setfont } def
     /PsFF_it { DataFontItalic findfont PsFF_sz scalefont setfont } def
     /PsFF_bi { DataFontBoldItalic findfont PsFF_sz scalefont setfont } def
-    /PsFF_section { DataFontBold findfont PsFF_sz 1.2 mul scalefont setfont } def
-    /PsFF_tbl_caption { PsFF_section } def
-    /PsFF_subsection { DataFontBold findfont PsFF_sz 1.1 mul scalefont setfont } def
+    /PsFF_section { DataFontBold findfont PsFF_sz 1.3 mul scalefont setfont } def
+    /PsFF_subsection { DataFontBold findfont PsFF_sz 1.15 mul scalefont setfont } def
+    /PsFF_tbl_caption { PsFF_subsection } def
     /PsFF_tbl_footer { DataFont findfont PsFF_sz 0.8 mul scalefont setfont } def
     /PsFF_tbl_footer_it { DataFontItalic findfont PsFF_sz 0.8 mul scalefont setfont } def
     /PsFF_tbl_footer_bf { DataFontBold findfont PsFF_sz 0.8 mul scalefont setfont } def
@@ -2941,7 +2947,7 @@ _my_encoding 8#344 /divide        put
 `
 // @@:go:gma-preamble:end:@@
 
-// @[00]@| Go-GMA 5.21.2
+// @[00]@| Go-GMA 5.22.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

@@ -1,17 +1,16 @@
 /*
-\
 ########################################################################################
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______   __       _______        #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) /  \     / ___   )       #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  | \/) )    \/   )  |       #
-# | |      | || || || (___) | Assistant | (____         /   )   | |        /   )       #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    | |      _/   /        #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/     | |     /   _/         #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ __) (_ _ (   (__/\       #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \____/(_)\_______/       #
+#  _______  _______  _______             _______     _______  _______     _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___   )   (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   )  |   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____         /   )    /   )   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /   _/   /    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/   /   _/     |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\(   (__/\ _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/\_______/(_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -32,7 +31,7 @@ import (
 	"testing"
 )
 
-const verbose = false // set to true if you want debugging output
+const verbose = true // set to true if you want debugging output
 
 func _probtester(t *testing.T, description string, f func() (int, error), minval, maxval int) {
 	//
@@ -1867,6 +1866,57 @@ func TestDiceStructured(t *testing.T) {
 				{Type: "constant", Value: "0.5"},
 			}},
 		}},
+		// 78
+		{Roll: "1d8+3|total 30", Reslist: []StructuredResult{
+			{Result: 11, Details: []StructuredDescription{
+				{Type: "result", Value: "11"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d8"},
+				{Type: "roll", Value: "8"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "3"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "total", Value: "30"},
+				{Type: "cumulative", Value: "11"},
+				{Type: "iteration", Value: "1"},
+			}},
+			{Result: 4, Details: []StructuredDescription{
+				{Type: "result", Value: "4"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d8"},
+				{Type: "roll", Value: "1"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "3"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "total", Value: "30"},
+				{Type: "cumulative", Value: "15"},
+				{Type: "iteration", Value: "2"},
+			}},
+			{Result: 4, Details: []StructuredDescription{
+				{Type: "result", Value: "4"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d8"},
+				{Type: "roll", Value: "1"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "3"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "total", Value: "30"},
+				{Type: "cumulative", Value: "19"},
+				{Type: "iteration", Value: "3"},
+			}},
+			{Result: 11, Details: []StructuredDescription{
+				{Type: "result", Value: "11"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d8"},
+				{Type: "roll", Value: "8"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "3"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "total", Value: "30"},
+				{Type: "cumulative", Value: "30"},
+				{Type: "iteration", Value: "4"},
+			}},
+		}},
 	}
 
 	for i, test := range testcases {
@@ -2105,7 +2155,7 @@ func TestDicePrivateRolls(t *testing.T) {
 	}
 }
 
-// @[00]@| Go-GMA 5.21.2
+// @[00]@| Go-GMA 5.22.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

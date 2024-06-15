@@ -1,4 +1,4 @@
-DIRS=map-console map-update preset-update server upload-presets coredb session-stats image-audit roll
+DIRS=map-console map-update preset-update server upload-presets coredb session-stats image-audit roll markup
 DESTDIR=/opt/gma
 
 binaries:
@@ -10,14 +10,17 @@ binaries:
 
 all: binaries manpages
 
-install:
-	install -d $(DESTDIR)/var $(DESTDIR)/bin $(DESTDIR)/man
+refresh:
+	install -d $(DESTDIR)/bin
 	@echo "Installing binaries to $(DESTDIR)/bin..."
 	@for d in $(DIRS); do \
 		install cmd/$$d/$$d $(DESTDIR)/bin; \
 	done
 	@echo "Installing manpages to $(DESTDIR)/man..."
 	(cd man && DESTDIR="$(DESTDIR)" $(MAKE) install)
+
+install: refresh
+	install -d $(DESTDIR)/var
 	@echo "Installing sample server files in $(DESTDIR)/var..."
 	install -m 0600 cmd/server/sample.* $(DESTDIR)/var
 	@echo "NOTE: add $(DESTDIR)/man to your MANPATH variable"
