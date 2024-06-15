@@ -6,8 +6,8 @@
 #  _______  _______  _______             _______     _______  _______     _______      #
 # (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___   )   (  __   )     #
 # | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   )  |   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )    /   )   | | /   | ___ #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /   _/   /    | (/ /) |(___ #
+# | |      | || || || (___) | Assistant | (____         /   )    /   )   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /   _/   /    | (/ /) |     #
 # | | \_  )| |   | || (   ) |                 ) )    /   _/   /   _/     |   / | |     #
 # | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\(   (__/\ _ |  (__) |     #
 # (_______)|/     \||/     \| Client    \______/ (_)\_______/\_______/(_)(_______)     #
@@ -670,7 +670,6 @@ const CommonPostScriptPreamble = `%!PS
 % (End of form-preamble.ps)
 %
 `
-
 // @@:go:form-preamble:end:@@
 // @@:go:gma-preamble:begin:GMAPostScriptPreamble@@
 const GMAPostScriptPreamble = `%!PS
@@ -944,7 +943,6 @@ _my_encoding 8#344 /divide        put
     FontSize_footnote D
     CopyrightText2 PageLeftMargin Y RenderText pop pop
 } def
-
 
 % (str0) (str1) cat (str0str1)
 % (str) i mkvari /stri
@@ -2947,10 +2945,9 @@ _my_encoding 8#344 /divide        put
 % End GMA Preamble
 %
 `
-
 // @@:go:gma-preamble:end:@@
 
-// @[00]@| Go-GMA 5.22.0-alpha.0
+// @[00]@| Go-GMA 5.22.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

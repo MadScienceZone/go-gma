@@ -6,8 +6,8 @@
 #  _______  _______  _______             _______     _______  _______     _______      #
 # (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___   )   (  __   )     #
 # | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   )  |   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )    /   )   | | /   | ___ #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /   _/   /    | (/ /) |(___ #
+# | |      | || || || (___) | Assistant | (____         /   )    /   )   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /   _/   /    | (/ /) |     #
 # | | \_  )| |   | || (   ) |                 ) )    /   _/   /   _/     |   / | |     #
 # | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\(   (__/\ _ |  (__) |     #
 # (_______)|/     \||/     \| Client    \______/ (_)\_______/\_______/(_)(_______)     #
@@ -74,7 +74,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/text"
 )
 
-const GoVersionNumber="5.22.0-alpha.0" //@@##@@
+const GoVersionNumber = "5.22.0" //@@##@@
 
 func main() {
 	var err error
@@ -101,8 +101,8 @@ func main() {
 	}
 
 	if *includePreamble {
-		fmt.Print(text.CommonPostScriptPreamble)
-		fmt.Print(text.GMAPostScriptPreamble)
+		fmt.Printf("%s", text.CommonPostScriptPreamble)
+		fmt.Printf("%s", text.GMAPostScriptPreamble)
 	}
 
 	var inputText string
