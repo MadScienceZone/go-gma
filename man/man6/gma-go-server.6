@@ -193,37 +193,10 @@ as
 This enables client authentication. By default, the server will allow any client to
 connect and immediately interact with it. However, if this option is given, the server
 will require a valid user credential before allowing the client to operate. The contents
-of the password file are stored in plaintext, one password per line. 
-.RS
-.LP
-The first line is the general player password. Any client connecting with this credential
-will be admitted with any username they request other than
-.RB \*(lq GM \*(rq.
-.LP
-The next line, if present, gives the privileged GM password. Any client connecting with this
-credential will be granted with game master privileges 
-under the username
-.RB \*(lq GM \*(rq.
-.LP
-Any subsequent lines have the format
-.RI \*(lq username \fB:\fP password \*(rq.
-This assigns a specific
-.I password
-for the given
-.IR username ,
-such that any client wishing to sign on with that specific username
-must present this specific credential.
-.LP
-'\" <</bold-is-fixed>>
-.B N.B.
-This is an extremely trivial challenge-response authentication mechanism used solely to
-protect a game server from revealing in-game spoilers and rejecting nuisance connections.
-It should
-.B not
-'\" <<bold-is-fixed>>
-be relied upon to secure any sensitive information. No passwords used here should be the
-same as passwords used for anything else of consequence.
-.RE
+of the password file are stored in plaintext
+'\" <<New>>
+in the format documented below.
+'\" <</New>>
 .TP
 .BI "\-sqlite " path
 Specifies the filename of a sqlite database the server will use to maintain persistent
@@ -805,6 +778,112 @@ since it was started).
 This signal causes the server to dump a human-readable description of the current game state
 database to the log file.
 '\" <</>>
+'\" <<New>>
+.SH "PASSWORD FILE FORMAT"
+.LP
+The file specified for the
+.B \-password\-file
+is a JSON-format file whose first character must be an open
+curly brace
+.RB (\*(lq { \*(rq).
+The fields in this JSON object are:
+'\" <<list>>
+.TP
+.BI AuthenticationMethod
+Currently the only supported value for this field is
+.BR "\[dq]challenge\[dq]" ,
+which uses plain-text passwords on the server as described below,
+and uses a one-time challenge-response exchange with authenticating
+clients so the passwords themselves are not transmitted between them.
+This is the authentication method which is assumed by default if this
+field is omitted entirely or its value is empty.
+.TP
+.BI Users " (map object)"
+This is the list of authorized users. The keys are the user names,
+or
+.B \[dq]GM\[dq]
+for the privileged GM user or
+.B \[dq]default\[dq]
+for the default player credential to use if someone logs in with a
+user name not otherwise defined in this list. If there is no
+.B \[dq]default\[dq]
+key, then all users must have explicit definitions in this list which
+match the attempted login user name exactly.
+.RS
+.LP
+Each value in this map (i.e., for each user name) has the following fields:
+'\" <<list>>
+.TP
+.B Password
+The password for this user.
+.TP
+.BI Allowed " (list of strings)"
+A JSON list of the protocol commands which this user is allowed
+to send to the server. If this list is empty or the field is
+omitted entirely, then all commands normally allowed for the
+privilege level of that user are allowed. Otherwise, the attempt
+to send a command not in this list results in a
+.B PRIV
+error from the server.
+.TP
+.BI Banned " (boolean)"
+If present and true, this user is not allowed to log in to the server
+at all.
+'\" <</>>
+.RE
+'\" <</>>
+.RE
+.LP
+If the file begins with any character other than an open curly brace,
+it is assumed to be in the legacy format (this will be removed in version 6.0.0). In this format, the first line is the default user password,
+the next line is the GM password, and any subsequent lines have the
+format
+.IB username : password
+which defines the credentials for any users who wish to have their own
+passwords instead of the default one.
+.LP
+'\" <</bold-is-fixed>>
+.B N.B.
+This is an extremely trivial challenge-response authentication mechanism used solely to
+protect a game server from revealing in-game spoilers and rejecting nuisance connections.
+It should
+.B not
+'\" <<bold-is-fixed>>
+be relied upon to secure any sensitive information. No passwords used here should be the
+same as passwords used for anything else of consequence.
+.RE
+.SS Example
+.LP
+.na
+.nf
+.ft C
+{
+   "AuthenticationMethod": "challenge",
+   "Users": {
+      "GM": { 
+         "Password": "Rocks-Fall-TPK!!!"
+      },
+      "default": { 
+         "Password": "let's play!" 
+      },
+      "alice": { 
+         "Password": "abcdef" 
+      },
+      "bob": { 
+         "Password": "badPlayer", 
+         "Banned": true 
+      },
+      "dice": { 
+         "Password": "automated@Dice", 
+         "Allowed": ["D"] 
+      }
+   }
+}
+.ft
+.fi
+.ad
+
+'\" <</New>>
 .SH "SEE ALSO"
 .LP
 .BR gma (6),
@@ -817,6 +896,12 @@ manpage which comes with the GMA-Mapper package.
 .SH AUTHOR
 .LP
 Steve Willoughby / steve@madscience.zone.
+'\" <<New>>
+.SH HISTORY
+.LP
+The JSON-structured password file, and the ability to restrict what
+commands individual users can execute, was introduced in version 5.23.
+'\" <</New>>
 .SH BUGS
 .LP
 If the server is not configured to require authentication, that means it won't drop
