@@ -183,10 +183,10 @@ type Application struct {
 	// from this file.
 	PasswordFile string
 	clientAuth   struct {
-		groupPassword     []byte
-		gmPassword        []byte
-		personalPasswords map[string][]byte
-		lock              sync.RWMutex
+		groupPassword []byte
+		gmPassword    []byte
+		users         map[string]UserCredential
+		lock          sync.RWMutex
 	}
 
 	// Pathname for database file.
@@ -224,6 +224,14 @@ type Application struct {
 
 	// The QoS settings as configured for the server
 	QoSLimits QoSLimitsDescription
+}
+
+// UserCredential describes the access credentials and authorization data for each
+// individually-named user.
+type UserCredential struct {
+	password        []byte
+	AllowedCommands []ServerMessage
+	IsBanned        bool
 }
 
 type QoSLimitsDescription struct {
