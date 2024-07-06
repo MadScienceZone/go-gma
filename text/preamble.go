@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______  _______     _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___   )   (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   )  |   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )    /   )   | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /   _/   /    | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/   /   _/     |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\(   (__/\ _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/\_______/(_)(_______)     #
+#  _______  _______  _______             _______     _______  ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____         /   )   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/        ) \   |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\/\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/\______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -32,17 +32,17 @@ const CommonPostScriptPreamble = `%!PS
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %  _______  _______  _______              ______     _______  _______                  %
-% (  ____ \(       )(  ___  )            / ____ \   / ___   )(  __   )                 %
-% | (    \/| () () || (   ) |           ( (    \/   \/   )  || (  )  |                 %
-% | |      | || || || (___) |           | (____         /   )| | /   |                 %
-% | | ____ | |(_)| ||  ___  |           |  ___ \      _/   / | (/ /) |                 %
-% | | \_  )| |   | || (   ) | Game      | (   ) )    /   _/  |   / | |                 %
-% | (___) || )   ( || )   ( | Master's  ( (___) ) _ (   (__/\|  (__) |                 %
-% (_______)|/     \||/     \| Assistant  \_____/ (_)\_______/(_______)                 %
+% (  ____ \(       )(  ___  )            / ____ \   / ___   )/ ___   )                 %
+% | (    \/| () () || (   ) |           ( (    \/   \/   )  |\/   )  |                 %
+% | |      | || || || (___) |           | (____         /   )    /   )                 %
+% | | ____ | |(_)| ||  ___  |           |  ___ \      _/   /   _/   /                  %
+% | | \_  )| |   | || (   ) | Game      | (   ) )    /   _/   /   _/                   %
+% | (___) || )   ( || )   ( | Master's  ( (___) ) _ (   (__/\(   (__/\                 %
+% (_______)|/     \||/     \| Assistant  \_____/ (_)\_______/\_______/                 %
 %                                                                                      %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-% @[00]@| GMA Core 6.20
+% @[00]@| GMA Core 6.22
 % @[01]@|
 % @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 % @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
@@ -673,20 +673,19 @@ const CommonPostScriptPreamble = `%!PS
 // @@:go:form-preamble:end:@@
 // @@:go:gma-preamble:begin:GMAPostScriptPreamble@@
 const GMAPostScriptPreamble = `%!PS
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %  _______  _______  _______              ______     _______  _______                  %
-% (  ____ \(       )(  ___  )            / ____ \   / ___   )(  __   )                 %
-% | (    \/| () () || (   ) |           ( (    \/   \/   )  || (  )  |                 %
-% | |      | || || || (___) |           | (____         /   )| | /   |                 %
-% | | ____ | |(_)| ||  ___  |           |  ___ \      _/   / | (/ /) |                 %
-% | | \_  )| |   | || (   ) | Game      | (   ) )    /   _/  |   / | |                 %
-% | (___) || )   ( || )   ( | Master's  ( (___) ) _ (   (__/\|  (__) |                 %
-% (_______)|/     \||/     \| Assistant  \_____/ (_)\_______/(_______)                 %
+% (  ____ \(       )(  ___  )            / ____ \   / ___   )/ ___   )                 %
+% | (    \/| () () || (   ) |           ( (    \/   \/   )  |\/   )  |                 %
+% | |      | || || || (___) |           | (____         /   )    /   )                 %
+% | | ____ | |(_)| ||  ___  |           |  ___ \      _/   /   _/   /                  %
+% | | \_  )| |   | || (   ) | Game      | (   ) )    /   _/   /   _/                   %
+% | (___) || )   ( || )   ( | Master's  ( (___) ) _ (   (__/\(   (__/\                 %
+% (_______)|/     \||/     \| Assistant  \_____/ (_)\_______/\_______/                 %
 %                                                                                      %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-% @[00]@| GMA Core 6.20
+% @[00]@| GMA Core 6.22
 % @[01]@|
 % @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 % @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
@@ -808,6 +807,14 @@ _my_encoding 8#344 /divide        put
 /FontFace_footnote /HISO def
 /FontFace_data_ttl /HISO def
 /FontFace_body     /RISO def
+%
+% We'll tag items that might be important in ImportantHue. By default,
+% they will be unhighlighted but we can switch them on by changing ImportantHue
+% to HightlightHue for a particular document.
+%
+/HighlightImportantAreas {
+	/ImportantHue {HighlightHue} def
+} def
 % 
 % These define the colors used for standard form features.
 % Our character record sheets and GM reference materials are
@@ -820,8 +827,10 @@ _my_encoding 8#344 /divide        put
     /DarkHue    { 0.80 0.40 0.40 setrgbcolor } def
     /FormHue    { 0.60 0.20 0.20 setrgbcolor } def
     /FaintHue   { 1.00 0.70 0.70 setrgbcolor } def
+    /SlightHue  { 1.00 0.95 0.90 setrgbcolor } def
     /LabelTagHue    { 0.40 0.80 0.40 setrgbcolor } def
     /HighlightHue   { 1.00 1.00 0.50 setrgbcolor } def
+    /ImportantHue {BlankHue} def
 } def
 
 /SetTheme_d20_Blue {
@@ -832,7 +841,9 @@ _my_encoding 8#344 /divide        put
     /FormHue        { 0.20 0.20 0.60 setrgbcolor } def
     /FaintHue   { 0.70 0.70 1.00 setrgbcolor } def
     /LabelTagHue    { 0.80 0.40 0.40 setrgbcolor } def
+    /SlightHue  { 0.95 0.90 1.00 setrgbcolor } def
     /HighlightHue   { 1.00 1.00 0.50 setrgbcolor } def
+    /ImportantHue {BlankHue} def
 } def
 
 /SetTheme_d20_Green {
@@ -843,7 +854,9 @@ _my_encoding 8#344 /divide        put
     /FormHue        { 0.20 0.60 0.20 setrgbcolor } def
     /FaintHue   { 0.70 1.00 0.70 setrgbcolor } def
     /LabelTagHue    { 0.80 0.40 0.40 setrgbcolor } def
+    /SlightHue  { 0.92 1.00 0.92 setrgbcolor } def
     /HighlightHue   { 1.00 1.00 0.50 setrgbcolor } def
+    /ImportantHue {BlankHue} def
 } def
 /SetTheme_d20_Violet {
     /BlankHue       { 1.00 1.00 1.00 setrgbcolor } def
@@ -853,7 +866,21 @@ _my_encoding 8#344 /divide        put
     /FormHue        { 0.60 0.20 0.60 setrgbcolor } def
     /FaintHue   { 1.00 0.70 1.00 setrgbcolor } def
     /LabelTagHue    { 0.80 0.40 0.40 setrgbcolor } def
+    /SlightHue  { 1.00 0.95 0.95 setrgbcolor } def
     /HighlightHue   { 1.00 1.00 0.50 setrgbcolor } def
+    /ImportantHue {BlankHue} def
+} def
+/SetTheme_d20_Orange {
+    /BlankHue       { 1.000 1.000 1.000 setrgbcolor } def
+    /GreyHue        { 1.000 0.775 0.210 setrgbcolor } def
+    /AltGreyHue     { 0.949 0.550 0.157 setrgbcolor } def
+    /DarkHue        { 0.722 0.451 0.200 setrgbcolor } def
+    /FormHue        { 0.545 0.251 0.000 setrgbcolor } def
+    /FaintHue       { 0.980 0.835 0.647 setrgbcolor } def
+    /LabelTagHue    {DarkHue} def
+    /SlightHue      { 0.980 0.835 0.647 setrgbcolor } def
+    /HighlightHue   { 1.000 1.000 0.500 setrgbcolor } def
+    /ImportantHue {BlankHue} def
 } def
 /SetTheme_d20_Monochrome {
     /BlankHue       { 1.00 setgray } def    % blank cell background
@@ -862,15 +889,17 @@ _my_encoding 8#344 /divide        put
     /DarkHue    { 0.40 setgray } def    % disabled (heavy grey)
     /FormHue    { 0.20 setgray } def    % borders, etc.
     /FaintHue   { 0.90 setgray } def
+    /SlightHue   { 0.95 setgray } def
     /LabelTagHue    { 0.80 0.40 0.40 setrgbcolor } def
     /HighlightHue  { 1.00 1.00 0.50 setrgbcolor } def
+    /ImportantHue {BlankHue} def
 } def
 
 /SetTheme_d20_Character { 
     SetTheme_d20_Red 
     /PageTitleText (Pathfinder Character Record Sheet) def
     /CopyrightText1 (PATHFINDER CHARACTER RECORD SHEET / ) def
-    /CopyrightText2 (\3452010, 2015, 2023, 2024 Steve Willoughby / REV 5 / 04-JUN-2024) def
+    /CopyrightText2 (\3452010, 2015, 2023, 2024 Steve Willoughby / REV 6 / 21-JUN-2024) def
 } def
 /SetTheme_d20_Monsters  { 
     SetTheme_d20_Blue
@@ -882,8 +911,9 @@ _my_encoding 8#344 /divide        put
     SetTheme_d20_Green 
     /PageTitleText (Pathfinder GM Player Matrix) def
     /CopyrightText1 (PATHFINDER GM PLAYER MATRIX / ) def
-    /CopyrightText2 (\3452013, 2015, 2023 Steve Willoughby / REV 4 / 07-JUN-2023) def
+    /CopyrightText2 (\3452013, 2015, 2023, 2024 Steve Willoughby / REV 5 / 25-JUN-2024) def
 } def
+
 %
 % Character Record PostScript Form
 % Steve Willoughby
@@ -1003,15 +1033,18 @@ _my_encoding 8#344 /divide        put
     /NextX X 60 add 30 add 40 add 40 add 40 add def
     /NextY Y def
 } def
+% tmpmod tmp mod label value scorename AbilityScore -
 /AbilityScore {
     SetColor_data
     DataFontBold 18 20 BeginDataBlock
         60 TitleBlockCtr
-        () 30 BlankHue DataBlockR
+	exch pop exch
+        () 30 ImportantHue DataBlockR
         DataFont 12 ChangeDataBlockFont
-        40 BlankHue DataBlockR
-        (TMP) 40 GreyHue DataBlockR
-        (TMP MOD) 40 GreyHue DataBlockR
+        (RAW SCORE) 40 GreyHue DataBlockR
+	exch
+        (TMP) 40 SlightHue DataBlockR
+        (TMP RAW) 40 GreyHue DataBlockR
     EndDataBlock
 } def
 /EndAbilityScores {
@@ -1041,7 +1074,7 @@ _my_encoding 8#344 /divide        put
     SetColor_data
     DataFontBold 18 20 BeginDataBlock
         60 TitleBlockCtr
-        () 30 BlankHue DataBlockR
+        () 30 ImportantHue DataBlockR
         DataFont 12 ChangeDataBlockFont
         (= BASE) 30 GreyHue DataBlockR
         30 GreyHue DataBlockR
@@ -1142,7 +1175,7 @@ _my_encoding 8#344 /divide        put
 	SetColor_data
 	DataFontBold 18 20 BeginDataBlock
 	75 TitleBlockCtr
-	() AB_atk_w 75 sub 80 sub 30 4 mul sub BlankHue DataBlockR
+	() AB_atk_w 75 sub 80 sub 30 4 mul sub ImportantHue DataBlockR
 	DataFont 12 ChangeDataBlockFont
 	(= BASE) 80 GreyHue DataBlockR
 	30 GreyHue DataBlockR
@@ -1188,7 +1221,7 @@ _my_encoding 8#344 /divide        put
 	/Y AB_atk_y def
 	DataFontBold 18 20 BeginDataBlock
 		(Init) 40 TitleBlockCtr
-		() 40 BlankHue DataBlockR
+		() 40 ImportantHue DataBlockR
 	EndDataBlock
 	/X X 80 add def
 	/Y AB_atk_y def
@@ -1245,10 +1278,10 @@ _my_encoding 8#344 /divide        put
     SetColor_data
     DataFont 12 14 BeginDataBlock
         () WB_desc_w BlankHue DataBlock
-        () 50 BlankHue DataBlockR
-        () 85 BlankHue DataBlockR
-        () 35 BlankHue DataBlockR
-        () 20 BlankHue DataBlockR
+        () 50 ImportantHue DataBlockR
+        () 85 ImportantHue DataBlockR
+        () 35 ImportantHue DataBlockR
+        () 20 ImportantHue DataBlockR
         () 50 BlankHue DataBlockR
         () 30 BlankHue DataBlockR
         () 20 BlankHue DataBlockR
@@ -1297,7 +1330,7 @@ _my_encoding 8#344 /divide        put
     SetColor_data
     DataFontBold 18 20 BeginDataBlock
         60 TitleBlockCtr
-        () 30 BlankHue DataBlockR
+        () 30 ImportantHue DataBlockR
         DataFont 12 ChangeDataBlockFont
         (10)(= 10) 15 GreyHue DataBlockR
         8 {
@@ -1316,7 +1349,7 @@ _my_encoding 8#344 /divide        put
     /Y DB_start_y def
     DataFontBold 18 20 BeginDataBlock
         (HP) 40 TitleBlockCtr
-        () DB_hp_w 70 sub 40 sub 40 sub 20 sub BlankHue DataBlockR
+        () DB_hp_w 70 sub 40 sub 40 sub 20 sub ImportantHue DataBlockR
         DataFont 12 ChangeDataBlockFont
         (HEAL RATE) 40 BlankHue DataBlockR
         (DAMAGE REDUCTION) 70 BlankHue DataBlockR
@@ -1439,6 +1472,21 @@ _my_encoding 8#344 /divide        put
     } if
 } def
 
+/ImportantFeat {
+    SetColor_data
+    FB_col 0 eq {
+        DataFont 12 14 BeginDataBlock
+        /FB_col 1 def
+    } {
+            /FB_col 0 def
+    } ifelse
+    () FB_desc_w ImportantHue DataBlock
+    () 40 BlankHue DataBlockR
+    FB_col 0 eq {
+        EndDataBlock
+    } if
+} def
+
 /BeginSkillBlock {
     14 35 mul HeadingFontSize 4 add add RequiredVerticalSpace
     DataFontBold 18 20 BeginDataBlock
@@ -1499,8 +1547,8 @@ _my_encoding 8#344 /divide        put
             1 1 3 -1 roll 0 1 X 10 sub 2.5 add Y 4.5 sub 5 5 2 2 5 0 0 false CheckBoxMatrix
         } repeat
         () 125 BlankHue DataBlock
-        () 30 BlankHue DataBlockR
-        () 30 GreyHue DataBlockLR
+        () 30 ImportantHue DataFontBold 12 ChangeDataBlockFont DataBlockR
+        () 30 GreyHue DataFont 12 ChangeDataBlockFont DataBlockLR
         6 {
             () 30 GreyHue DataBlockR
         } repeat
@@ -1735,17 +1783,17 @@ _my_encoding 8#344 /divide        put
     SetColor_form
         SpB_title () SpB_header_w BlankHue DataBlock
         DataFont 12 ChangeDataBlockFont SetColor_data
-        (CONCEN) 30 BlankHue DataBlockR
-        (DC 0) 20 BlankHue DataBlockR
-        (I) 20 BlankHue DataBlockR
-        (II) 20 BlankHue DataBlockR
-        (III) 20 BlankHue DataBlockR
-        (IV) 20 BlankHue DataBlockR
-        (V) 20 BlankHue DataBlockR
-        (VI) 20 BlankHue DataBlockR
-        (VII) 20 BlankHue DataBlockR
-        (VIII) 20 BlankHue DataBlockR
-        (IX) 20 BlankHue DataBlockR
+        (CONCEN) 30 ImportantHue DataBlockR
+        (DC 0) 20 ImportantHue DataBlockR
+        (I) 20 ImportantHue DataBlockR
+        (II) 20 ImportantHue DataBlockR
+        (III) 20 ImportantHue DataBlockR
+        (IV) 20 ImportantHue DataBlockR
+        (V) 20 ImportantHue DataBlockR
+        (VI) 20 ImportantHue DataBlockR
+        (VII) 20 ImportantHue DataBlockR
+        (VIII) 20 ImportantHue DataBlockR
+        (IX) 20 ImportantHue DataBlockR
         (10)(=10) 20 GreyHue DataBlockR
         20 GreyHue DataBlockR
         (+SL)(+LVL) 20 GreyHue DataBlockR
@@ -2556,16 +2604,21 @@ _my_encoding 8#344 /divide        put
 } def
 
 /LimitedFreeFormTextBlock {
+    PageLeftMargin LimitedFreeFormTextBlockX
+} def
+
+/LimitedFreeFormTextBlockX {
+    /FFLeftMargin exch def
     /fftb_width exch def
     /Note_text_block exch def
     /Notes_tb_w fftb_width 10 sub def
     X Y FontLead_body FontSize_body PsFF_init
 %    Note_text_block Notes_tb_w PsFF_vertspace 12 add RequiredVerticalSpace
     SelectBodyFont
-    /X PageLeftMargin def
+    /X FFLeftMargin def
     X 5 add Y FontLead_body 2 sub sub FontLead_body FontSize_body PsFF_init
     Note_text_block Notes_tb_w PsFF_WaF
-    /X PageLeftMargin def
+    /X FFLeftMargin def
     2 D
 } def
 
@@ -2598,6 +2651,44 @@ _my_encoding 8#344 /divide        put
 
     SetColor_data
     FreeFormTextBlock
+} def
+%
+% Start the next column, possibly on the next page.
+%
+/TCNextCol {
+	TC_c 1 eq {
+		TC_Eject
+		/TC_y PageTopMargin def
+		/X TC_x def
+		/TC_c 0 def
+	} {
+		/X TC_x2 def
+		/TC_c 1 def
+	} ifelse
+	/Y TC_y def
+	/FFLeftMargin X def
+	X Y moveto
+	% TODO this still needs some work
+} def
+%
+% Start off a two-column notes section from the current X,Y location.
+% We'll start the next column 1/2 way from X to the right margin and
+% break pages at the bottom margin.
+%
+/BeginTwoColumnNotesBlock {
+	/TC_x X def
+	/TC_y Y def
+	/TC_w PageRightMargin X sub 2 div def
+	/TC_x2 TC_w PageLeftMargin add def
+	/TC_c 0 def
+	/TC_Eject userdict /eject get def
+	/eject {TCNextCol} def
+} def
+/EndTwoColumnNotesBlock {
+	/eject userdict /TC_Eject get def
+} def
+/TwoColumnNotesBlock {
+	TC_w X LimitedFreeFormTextBlockX
 } def
 
 /ConditionsBlock {
@@ -2690,6 +2781,17 @@ _my_encoding 8#344 /divide        put
         EndDataBlock
     } def
 } def
+/BeginStatMatrixAbbr {
+    SetColor_data
+    /PF_Page_Proc {
+        /ThePageCounter ThePageCounter 1 add def
+        /ThePage ThePageCounter __PFGMA_buf cvs def
+        HeadingFont HeadingFontSize HeadingFontSize 4 add BeginDataBlock
+        SetColor_form
+        ThePage () 20 BlankHue DataBlockR
+        EndDataBlock
+    } def
+} def
 /BeginSkillMatrix {
     SetColor_data
 } def
@@ -2721,18 +2823,46 @@ _my_encoding 8#344 /divide        put
     (FORT) 25 TitleBlockCtr
     (REFL) 25 TitleBlockCtr
     (WILL) 25 TitleBlockCtr
-    (--STR--)  40 TitleBlockCtr
-    (--DEX--)  40 TitleBlockCtr
-    (--CON--)  40 TitleBlockCtr
-    (--INT--)  40 TitleBlockCtr
-    (--WIS--)  40 TitleBlockCtr
-    (--CHA--)  40 TitleBlockCtr
+    (\320STR\320)  40 TitleBlockCtr
+    (\320DEX\320)  40 TitleBlockCtr
+    (\320CON\320)  40 TitleBlockCtr
+    (\320INT\320)  40 TitleBlockCtr
+    (\320WIS\320)  40 TitleBlockCtr
+    (\320CHA\320)  40 TitleBlockCtr
     (INITIATIVE) 45 TitleBlockCtr
     (AC)   20 TitleBlockCtr
     (TCH)20 TitleBlockCtr
     (FF) 20 TitleBlockCtr
     (CMD)  20 TitleBlockCtr
     (DC)   20 TitleBlockCtr
+    EndDataBlock
+} def
+/MXsBeginBasicAbbr {
+    SetColor_data
+    HeadingFont HeadingFontSize HeadingFontSize 4 add BeginDataBlock
+    (NAME) SMRnameW TitleBlockCtr
+    (CLASS) 50 TitleBlockCtr
+    (LEVEL) 50 TitleBlockCtr
+    (R) 20 TitleBlockCtr
+    (AL) 20 TitleBlockCtr
+    (FORT) 25 TitleBlockCtr
+    (REFL) 25 TitleBlockCtr
+    (WILL) 25 TitleBlockCtr
+    (STR)  25 TitleBlockCtr
+    (DEX)  25 TitleBlockCtr
+    (CON)  25 TitleBlockCtr
+    (INT)  25 TitleBlockCtr
+    (WIS)  25 TitleBlockCtr
+    (CHA)  25 TitleBlockCtr
+    (INITIATIVE) 45 TitleBlockCtr
+    (AC)   20 TitleBlockCtr
+    (TCH)20 TitleBlockCtr
+    (FF) 20 TitleBlockCtr
+    (CMD)  20 TitleBlockCtr
+    (DC)   20 TitleBlockCtr
+    (BAB)  35 TitleBlockCtr
+    (CMB)  25 TitleBlockCtr
+    (HP)   30 TitleBlockCtr
     EndDataBlock
 } def
 /SMRnameW {
@@ -2757,9 +2887,11 @@ _my_encoding 8#344 /divide        put
 } def
 /SM_EvenRow {
     /RowHue {GreyHue} def
+    /RowSlightHue {GreyHue} def
 } def
 /SM_OddRow {
     /RowHue {BlankHue} def
+    /RowSlightHue {SlightHue} def
 } def
 /StatMatrixRow {
     DataFontBold 12 14 BeginDataBlock
@@ -2790,6 +2922,34 @@ _my_encoding 8#344 /divide        put
      RowHue () 20 DataBlockR  % flat
      AltGreyHue  () 20 DataBlockR  % CMD
      RowHue () 20 DataBlockR  % spell DC
+    EndDataBlock
+} def
+/StatMatrixRowAbbr {
+    DataFontBold 12 14 BeginDataBlock
+     RowHue () SMRnameW DataBlock   % name
+     RowHue () 50 DataBlock   % class
+     RowHue () 50 DataBlock   % level
+     RowHue () 20 DataBlock   % race
+     RowHue () 20 DataBlock   % alignment
+     RowHue () 25 DataBlockR  % fort
+     RowHue () 25 DataBlockR  % refl
+     RowHue () 25 DataBlockR  % will
+     RowSlightHue () 25 DataBlockR  % str mod
+     RowSlightHue () 25 DataBlockR  % dex mod
+     RowSlightHue () 25 DataBlockR  % con mod
+     RowSlightHue () 25 DataBlockR  % int mod
+     RowSlightHue () 25 DataBlockR  % wis mod
+     RowSlightHue () 25 DataBlockR  % cha mod
+     AltGreyHue  () 20 DataBlockR  % init mod other than dex
+     RowHue () 25 DataBlockR  % init
+     RowHue () 20 DataBlockR  % AC
+     RowHue () 20 DataBlockR  % touch
+     RowHue () 20 DataBlockR  % flat
+     AltGreyHue  () 20 DataBlockR  % CMD
+     RowHue () 20 DataBlockR  % spell DC
+     RowHue () 35 DataBlockR  % BAB
+     RowHue () 25 DataBlockR  % CMB
+     RowHue () 30 DataBlockR  % hp
     EndDataBlock
 } def
 /MRnameW {
@@ -2947,7 +3107,7 @@ _my_encoding 8#344 /divide        put
 `
 // @@:go:gma-preamble:end:@@
 
-// @[00]@| Go-GMA 5.22.0
+// @[00]@| Go-GMA 5.23.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
