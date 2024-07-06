@@ -15,7 +15,6 @@
 ########################################################################################
 */
 
-//
 // Package mapper implements a standard client interface for the mapper service.
 //
 // This package handles the details of communicating with the
@@ -33,7 +32,6 @@
 // goroutine. Calling the associated context's cancel function
 // will signal that we want to stop talking to the server, resulting
 // in the termination of the running Dial method.
-//
 package mapper
 
 //
@@ -74,13 +72,11 @@ var ErrServerProtocolError = errors.New("server protocol error; unable to contin
 // fails in such a way that simply trying again would be the right thing to do.
 var ErrRetryConnection = errors.New("please retry the server connection")
 
-//
 // Debugging information is enabled by selecting a nummber
 // of discrete topics which you want logged as the application
 // runs (previous versions used a "level" of verbosity which
 // doesn't provide the better granularity this version provides
 // to just get the info you want.
-//
 type DebugFlags uint64
 
 const (
@@ -94,10 +90,8 @@ const (
 	DebugAll DebugFlags = 0xffffffff
 )
 
-//
 // DebugFlagNameSlice returns a slice of debug flat names
 // corresponding to the bit-encoded flags parameter.
-//
 func DebugFlagNameSlice(flags DebugFlags) []string {
 	if flags == 0 {
 		return nil
@@ -126,11 +120,9 @@ func DebugFlagNameSlice(flags DebugFlags) []string {
 	return list
 }
 
-//
 // DebugFlagNames returns a string representation of
 // the debugging flags (topics) stored in the DebugFlags
 // value passed in.
-//
 func DebugFlagNames(flags DebugFlags) string {
 	list := DebugFlagNameSlice(flags)
 	if list == nil {
@@ -139,7 +131,6 @@ func DebugFlagNames(flags DebugFlags) string {
 	return "<" + strings.Join(list, ",") + ">"
 }
 
-//
 // NamedDebugFlags takes a comma-separated list of
 // debug flag (topic) names, or a list of individual
 // names, or both, and returns the DebugFlags
@@ -148,7 +139,6 @@ func DebugFlagNames(flags DebugFlags) string {
 // If "none" appears in the list, it cancels all previous
 // values seen, but subsequent names will add their values
 // to the list.
-//
 func NamedDebugFlags(names ...string) (DebugFlags, error) {
 	var d DebugFlags
 	var err error
@@ -183,11 +173,9 @@ func NamedDebugFlags(names ...string) (DebugFlags, error) {
 	return d, err
 }
 
-//
 // Connection describes a connection to the server. These are
 // created with NewConnection and then send methods such as
 // Subscribe and Dial.
-//
 type Connection struct {
 	// If true, we will always try to reconnect to the server if we
 	// lose our connection.
@@ -272,9 +260,7 @@ type Connection struct {
 	}
 }
 
-//
 // Log writes data to our log destination.
-//
 func (c *Connection) Log(message ...any) {
 	if c != nil && c.Logger != nil {
 		message = append([]any{"[client] "}, message...)
@@ -282,25 +268,20 @@ func (c *Connection) Log(message ...any) {
 	}
 }
 
-//
 // Logf writes data to our log destination.
-//
 func (c *Connection) Logf(format string, data ...any) {
 	if c != nil && c.Logger != nil {
 		c.Logger.Printf("[client] "+format, data...)
 	}
 }
 
-//
 // IsReady returns true if the connection to the server
 // has completed and authentication was successful, so
 // the connection is ready for interactive use.
-//
 func (c *Connection) IsReady() bool {
 	return c != nil && c.serverConn.IsReady() && c.signedOn
 }
 
-//
 // WithContext modifies the behavior of the NewConnection function
 // by supplying a context for this connection, which may be used to
 // signal the Dial method that the connection to the server should
@@ -311,7 +292,6 @@ func (c *Connection) IsReady() bool {
 // a hanging connection will terminate when that timer expires,
 // regardless of the context. Otherwise, the connection will wait
 // indefinitely to complete OR until the context is cancelled.
-//
 func WithContext(ctx context.Context) func(*Connection) error {
 	return func(c *Connection) error {
 		c.Context = ctx
@@ -319,11 +299,9 @@ func WithContext(ctx context.Context) func(*Connection) error {
 	}
 }
 
-//
 // WhenReady specifies a channel on which to send a single byte
 // when the server login process is complete and the server
 // is ready to receive our commands.
-//
 func WhenReady(ch chan byte) func(*Connection) error {
 	return func(c *Connection) error {
 		c.ReadySignal = ch
@@ -333,39 +311,38 @@ func WhenReady(ch chan byte) func(*Connection) error {
 
 // ConnectionOption is an option to be passed to the NewConnection
 // function.
-//
 type ConnectionOption func(*Connection) error
 
-//
 // WithSubscription modifies the behavior of the NewConnection function
 // by adding a server message subscription to the connection just as if
 // the Subscribe method had been called on the connection value.
 //
 // For example, this:
-//   server, err := NewConnection(endpoint,
-//                    WithSubscription(chats, ChatMessage, RollResult),
-//                    WithSubscription(oops, ERROR, UNKNOWN))
-//   go server.Dial()
-// is equivalent to this:
-//   server, err := NewConnection(endpoint)
-//   err = server.Subscribe(chats, ChatMessage, RollResult)
-//   err = server.Subscribe(oops, ERROR, UNKNOWN)
-//   go server.Dial()
-// (Of course, real production code should check the returned error values.)
 //
+//	server, err := NewConnection(endpoint,
+//	                 WithSubscription(chats, ChatMessage, RollResult),
+//	                 WithSubscription(oops, ERROR, UNKNOWN))
+//	go server.Dial()
+//
+// is equivalent to this:
+//
+//	server, err := NewConnection(endpoint)
+//	err = server.Subscribe(chats, ChatMessage, RollResult)
+//	err = server.Subscribe(oops, ERROR, UNKNOWN)
+//	go server.Dial()
+//
+// (Of course, real production code should check the returned error values.)
 func WithSubscription(ch chan MessagePayload, messages ...ServerMessage) ConnectionOption {
 	return func(c *Connection) error {
 		return c.Subscribe(ch, messages...)
 	}
 }
 
-//
 // WithAuthenticator modifies the behavior of the NewConnection function
 // by adding an authenticator which will be used to identify the client
 // to the server. If this option is not given, no attempt will be made
 // to authenticate, which is only appropriate for servers which do not
 // require authentication. (Which, hopefully, won't be the case anyway.)
-//
 func WithAuthenticator(a *auth.Authenticator) ConnectionOption {
 	return func(c *Connection) error {
 		c.Authenticator = a
@@ -373,11 +350,9 @@ func WithAuthenticator(a *auth.Authenticator) ConnectionOption {
 	}
 }
 
-//
 // WithLogger modifies the behavior of the NewConnection function
 // by specifying a custom logger instead of the default one for
 // the Connection to use during its operations.
-//
 func WithLogger(l *log.Logger) ConnectionOption {
 	return func(c *Connection) error {
 		c.Logger = l
@@ -385,7 +360,6 @@ func WithLogger(l *log.Logger) ConnectionOption {
 	}
 }
 
-//
 // WithTimeout modifies the behavior of the NewConnection function
 // by specifying the time to allow the Dial method to make the TCP
 // connection to the server. After this time expires, the attempt
@@ -398,7 +372,6 @@ func WithLogger(l *log.Logger) ConnectionOption {
 // regardless of the context (although a canceled context will
 // stop retry attempts). Otherwise, the connection will wait
 // indefinitely to complete OR until the context is cancelled.
-//
 func WithTimeout(t time.Duration) ConnectionOption {
 	return func(c *Connection) error {
 		c.Timeout = t
@@ -406,7 +379,6 @@ func WithTimeout(t time.Duration) ConnectionOption {
 	}
 }
 
-//
 // WithRetries modifies the behavior of the NewConnection function
 // to indicate how many times the Dial method should try to
 // establish a connection to the server before giving up.
@@ -414,7 +386,6 @@ func WithTimeout(t time.Duration) ConnectionOption {
 // Setting this to 0 means to retry infinitely many times.
 // The default is to make a single attempt to connect to the
 // server.
-//
 func WithRetries(n uint) ConnectionOption {
 	return func(c *Connection) error {
 		c.Retries = n
@@ -422,7 +393,6 @@ func WithRetries(n uint) ConnectionOption {
 	}
 }
 
-//
 // StayConnected modifies the behavior of the NewConnection call so that
 // when Dial is called on the new Connection, it will
 // continue to try to re-establish connections to the server
@@ -433,7 +403,6 @@ func WithRetries(n uint) ConnectionOption {
 //
 // If enable is false (the default), Dial will return as soon
 // as the server connection is dropped for any reason.
-//
 func StayConnected(enable bool) ConnectionOption {
 	return func(c *Connection) error {
 		c.StayConnected = enable
@@ -441,11 +410,9 @@ func StayConnected(enable bool) ConnectionOption {
 	}
 }
 
-//
 // WithDebugging modifies the behavior of the NewConnection function
 // so that the operations of the Connection's interaction with the
 // server are logged to varying levels of verbosity.
-//
 func WithDebugging(flags DebugFlags) ConnectionOption {
 	return func(c *Connection) error {
 		c.DebuggingLevel = flags
@@ -453,40 +420,40 @@ func WithDebugging(flags DebugFlags) ConnectionOption {
 	}
 }
 
-//
 // NewConnection creates a new server connection value which can then be used to
 // manage our communication with the server.
 //
 // After the endpoint, you may specify any of the following options
 // to define the behavior desired for this connection:
-//   StayConnected(bool)
-//   WithAuthenticator(a)
-//   WithDebugging(level)
-//   WithContext(ctx)
-//   WithLogger(l)
-//   WithRetries(n)
-//   WithSubscription(ch, msgs...)
-//   WithTimeout(t)
+//
+//	StayConnected(bool)
+//	WithAuthenticator(a)
+//	WithDebugging(level)
+//	WithContext(ctx)
+//	WithLogger(l)
+//	WithRetries(n)
+//	WithSubscription(ch, msgs...)
+//	WithTimeout(t)
 //
 // Example:
-//   a := NewClientAuthenticator("fred", []byte("sekret"), "some random client")
-//   ctx, cancel := context.Background()
-//   defer cancel()
 //
-//   messages := make(chan MessagePayload, 10)
-//   problems := make(chan MessagePayload, 10)
+//	a := NewClientAuthenticator("fred", []byte("sekret"), "some random client")
+//	ctx, cancel := context.Background()
+//	defer cancel()
 //
-//   server, err := NewConnection("mygame.example.org:2323",
-//                     WithAuthenticator(a),
-//                     WithContext(ctx),
-//                     StayConnected(true),
-//                     WithSubscription(messages, ChatMessage, RollResult),
-//                     WithSubscription(problems, ERROR, UNKNOWN))
-//   if err != nil {
-//      log.Fatalf("can't reach the server: %v", err)
-//   }
-//   go server.Dial()
+//	messages := make(chan MessagePayload, 10)
+//	problems := make(chan MessagePayload, 10)
 //
+//	server, err := NewConnection("mygame.example.org:2323",
+//	                  WithAuthenticator(a),
+//	                  WithContext(ctx),
+//	                  StayConnected(true),
+//	                  WithSubscription(messages, ChatMessage, RollResult),
+//	                  WithSubscription(problems, ERROR, UNKNOWN))
+//	if err != nil {
+//	   log.Fatalf("can't reach the server: %v", err)
+//	}
+//	go server.Dial()
 func NewConnection(endpoint string, opts ...ConnectionOption) (Connection, error) {
 	newCon := Connection{
 		Context:  context.Background(),
@@ -533,9 +500,7 @@ func (c *Connection) PartialReset() {
 	c.ClientSettings = nil
 }
 
-//
 // Log debugging info at the given level.
-//
 func (c *Connection) debug(level DebugFlags, msg string) {
 	if c != nil && (c.DebuggingLevel&level) != 0 {
 		for i, line := range strings.Split(msg, "\n") {
@@ -553,7 +518,6 @@ func (c *Connection) debugf(level DebugFlags, format string, args ...any) {
 	}
 }
 
-//
 // Close terminates the connection to the server.
 // Note that the Dial function normally closes the connection
 // before it returns, so calling this explicitly should not
@@ -562,7 +526,6 @@ func (c *Connection) debugf(level DebugFlags, format string, args ...any) {
 // Calling Close will result in the Dial function stopping
 // due to the connection disappearing, but it is better to cancel
 // the context being watched by Dial instead.
-//
 func (c *Connection) Close() {
 	if c != nil {
 		c.debug(DebugIO, "Close()")
@@ -570,7 +533,6 @@ func (c *Connection) Close() {
 	}
 }
 
-//
 // Subscribe arranges for server messages to be sent to the specified channel
 // when they arrive.
 //
@@ -586,9 +548,11 @@ func (c *Connection) Close() {
 // message to go to the new channel instead of the previous one.
 //
 // Unless subscribed, the following default behaviors are assumed:
-//   Marco:   Auto-reply with Polo
-//   ERROR:   Log a message
-//   UNKNOWN: Log a message
+//
+//	Marco:   Auto-reply with Polo
+//	ERROR:   Log a message
+//	UNKNOWN: Log a message
+//
 // If any of these are subscribed to, then the default behavior is NOT taken,
 // on the assumption that the code consuming the subscribed events will fully
 // handle an appropriate response.
@@ -609,10 +573,10 @@ func (c *Connection) Close() {
 // received by the client until subscribed to again.
 //
 // Example: (error checking not shown for the sake of brevity)
-//   cm := make(chan MessagePayload, 1)
-//   service, err := NewConnection(endpoint)
-//   err = service.Subscribe(cm, ChatMessage)
 //
+//	cm := make(chan MessagePayload, 1)
+//	service, err := NewConnection(endpoint)
+//	err = service.Subscribe(cm, ChatMessage)
 func (c *Connection) Subscribe(ch chan MessagePayload, messages ...ServerMessage) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -631,17 +595,14 @@ func (c *Connection) Subscribe(ch chan MessagePayload, messages ...ServerMessage
 	return c.filterSubscriptions()
 }
 
-//
 // MessagePayload is an interface that includes any kind of message the server will
 // send to us.
-//
 type MessagePayload interface {
 	MessageType() ServerMessage
 	RawMessage() string
 	RawBytes() []byte
 }
 
-//
 // ServerMessage is an arbitrary code which identifies specific message types that
 // we can receive from the server. This value is passed to the Subscribe method
 // and returned by the MessageType method. These values are intended for use
@@ -649,15 +610,12 @@ type MessagePayload interface {
 // new releases of the code, so they should not be stored and re-used by a later
 // execution of the client, nor passed to other programs whose definition of these
 // values may not agree.
-//
 type ServerMessage byte
 
 // Despite the warning above, we'll do our best to avoid changing these values
 // if at all possible.
 
-//
 // ServerMessage values (see the comments accompanying the type definition).
-//
 const (
 	Accept ServerMessage = iota
 	AddCharacter
@@ -793,87 +751,76 @@ var ServerMessageByName = map[string]ServerMessage{
 	"World":                       World,
 }
 
-//
 // BaseMessagePayload is not a payload type that you should ever
 // encounter directly, but it is included in all other payload
 // types. It holds the bare minimum data for any server message.
-//
 type BaseMessagePayload struct {
 	rawMessage  string        `json:"-"`
 	messageType ServerMessage `json:"-"`
 }
 
-//
 // RawMessage returns the raw message received from the server before
 // it was parsed out into the MessagePayload the client should arguably
 // be looking at instead.
 //
 // The raw message data may be useful for debugging purposes or other
 // low-level poking around, though, so we make it available here.
-//
 func (p BaseMessagePayload) RawMessage() string { return p.rawMessage }
 func (p BaseMessagePayload) RawBytes() []byte   { return []byte(p.rawMessage) }
 
-//
 // MessageType returns the type of message this MessagePayload represents.
 // This value will be the same as the ServerMessage value used for the
 // Subscribe function, and may be used with channels which receive multiple
 // kinds of messages to differentiate them, like so:
 //
-//   select {
-//   case p<-messages:
-//       // This channel may receive a ChatMessage or RollResult.
-//       switch p.MessageType() {
-//       case ChatMessage:
-//           // Do whatever with p.(ChatMessageMessagePayload)
-//       case RollResult:
-//           // Do whatever with p.(RollResultMessagePayload)
-//       default:
-//           // Something bad happened!
-//       }
-//    ...
-//   }
+//	select {
+//	case p<-messages:
+//	    // This channel may receive a ChatMessage or RollResult.
+//	    switch p.MessageType() {
+//	    case ChatMessage:
+//	        // Do whatever with p.(ChatMessageMessagePayload)
+//	    case RollResult:
+//	        // Do whatever with p.(RollResultMessagePayload)
+//	    default:
+//	        // Something bad happened!
+//	    }
+//	 ...
+//	}
 //
 // You can also use a type switch to accomplish the same thing and avoid
 // the explicit type assertions:
-//   select {
-//   case p<-messages:
-//       // This channel may receive a ChatMessage or RollResult.
-//       switch msg := p.(type) {
-//       case ChatMessageMessagePayload:
-//           // Do whatever with msg
-//       case RollResultMessagePayload:
-//           // Do whatever with msg
-//       default:
-//           // Something bad happened!
-//       }
-//    ...
-//   }
 //
+//	select {
+//	case p<-messages:
+//	    // This channel may receive a ChatMessage or RollResult.
+//	    switch msg := p.(type) {
+//	    case ChatMessageMessagePayload:
+//	        // Do whatever with msg
+//	    case RollResultMessagePayload:
+//	        // Do whatever with msg
+//	    default:
+//	        // Something bad happened!
+//	    }
+//	 ...
+//	}
 func (p BaseMessagePayload) MessageType() ServerMessage { return p.messageType }
 
-//
 // ErrorMessagePayload describes
 // an error which encountered when trying to receive a message.
-//
 type ErrorMessagePayload struct {
 	BaseMessagePayload
 	OriginalMessageType ServerMessage
 	Error               error
 }
 
-//
 // UnknownMessagePayload describes a server message we received
 // but have no idea what it is.
-//
 type UnknownMessagePayload struct {
 	BaseMessagePayload
 }
 
-//
 // ProtocolMessagePayload describes the server's statement of
 // what protocol version it implements.
-//
 type ProtocolMessagePayload struct {
 	BaseMessagePayload
 	ProtocolVersion int
@@ -888,12 +835,10 @@ type ProtocolMessagePayload struct {
 //                     |_|
 //
 
-//
 // AcceptMessagePayload holds the information sent by a client requesting
 // that the server only send a subset of its possible message types to it.
 //
 // Clients send this by calling the Subscribe method on their connection.
-//
 type AcceptMessagePayload struct {
 	BaseMessagePayload
 
@@ -909,12 +854,10 @@ type AcceptMessagePayload struct {
 // /_/   \_\__,_|\__,_|\____|_| |_|\__,_|_|  \__,_|\___|\__\___|_|
 //
 
-//
 // AddCharacterMessagePayload holds the information sent by the server's AddCharacter
 // message to add a new PC to the party. This is not done for most creatures
 // and NPCs encountered; it is for the PCs and significant NPCs who are important
 // enough to be treated specially by clients (such as being included in menus).
-//
 type AddCharacterMessagePayload struct {
 	BaseMessagePayload
 	PlayerToken
@@ -928,21 +871,17 @@ type AddCharacterMessagePayload struct {
 // /_/   \_\__,_|\__,_|___|_| |_| |_|\__,_|\__, |\___|
 //                                         |___/
 
-//
 // AddImageMessagePayload holds the information sent by the server's AddImage
 // message informing the client as to where it can locate an image's data.
 //
 // Call the AddImage method to send this message out to others if you know
 // of an image file they should be aware of.
-//
 type AddImageMessagePayload struct {
 	BaseMessagePayload
 	ImageDefinition
 }
 
-//
 // AddImage informs the server and peers about an image they can use.
-//
 func (c *Connection) AddImage(idef ImageDefinition) error {
 	return c.serverConn.Send(AddImage, idef)
 }
@@ -954,13 +893,11 @@ func (c *Connection) AddImage(idef ImageDefinition) error {
 // /_/   \_\__,_|\__,_|\___/|_.__// /_/   \_\__|\__|_|  |_|_.__/ \__,_|\__\___||___/
 //                              |__/
 
-//
 // AddObjAttributesMessagePayload holds the information sent by the server's AddObjAttributes
 // message. This tells the client to adjust the multi-value attribute
 // of the object with the given ID by adding the new values to it.
 //
 // Call the AddObjAttributes method to send this message out to other clients.
-//
 type AddObjAttributesMessagePayload struct {
 	BaseMessagePayload
 	ObjID    string
@@ -968,11 +905,9 @@ type AddObjAttributesMessagePayload struct {
 	Values   []string
 }
 
-//
 // AddObjAttributes informs peers to add a set of string values to the existing
 // value of an object attribute. The attribute must be one whose value is a list
 // of strings, such as StatusList.
-//
 func (c *Connection) AddObjAttributes(objID, attrName string, values []string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -991,37 +926,31 @@ func (c *Connection) AddObjAttributes(objID, attrName string, values []string) e
 // /_/   \_\__,_|/ |\__,_|___/\__| \_/  |_|\___| \_/\_/
 //             |__/
 
-//
 // AdjustViewMessagePayload holds the information sent by the server's AdjustView
 // message. This tells the client to set its viewable area so that its x and y
 // scrollbars are at the given proportion of their full range.
 //
 // Call the AdjustView method to send this message out to other clients.
-//
 type AdjustViewMessagePayload struct {
 	BaseMessagePayload
 	XView, YView float64 `json:",omitempty"`
 	Grid         string  `json:",omitempty"`
 }
 
-//
 // AdjustView tells other clients to adjust their scrollbars
 // so that the x and y directions are scrolled to xview and
 // yview respectively, where those values are a fraction from
 // 0.0 to 1.0 indicating the proportion of the full range in
 // each direction.
-//
 func (c *Connection) AdjustView(xview, yview float64) error {
 	return c.AdjustViewToGridLabel(xview, yview, "")
 }
 
-//
 // AdjustViewToGridLabel is just like AdjustView but also provides a
 // grid label (e.g., A0 for the very top-left of the map) that should be
 // made to be at the upper-left of the on-screen display. The xview
 // and yview values are also provided for clients who cannot use the grid
 // label value.
-//
 func (c *Connection) AdjustViewToGridLabel(xview, yview float64, gridLabel string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -1040,10 +969,8 @@ func (c *Connection) AdjustViewToGridLabel(xview, yview float64, gridLabel strin
 // /_/   \_\_|_|\___/ \_/\_/
 //
 
-//
 // AllowMessagePayload holds the data sent by a client when indicating
 // which optional features it supports.
-//
 type AllowMessagePayload struct {
 	BaseMessagePayload
 
@@ -1057,10 +984,8 @@ const (
 	DiceColorBoxes OptionalFeature = iota
 )
 
-//
 // Allow tells the server which optional features this client is
 // prepared to accept.
-//
 func (c *Connection) Allow(features ...OptionalFeature) error {
 	var featureList []string
 	if c.Protocol < 333 {
@@ -1087,10 +1012,8 @@ func (c *Connection) Allow(features ...OptionalFeature) error {
 // /_/   \_\__,_|\__|_| |_|
 //
 
-//
 // AuthMessagePayload holds the data sent by a client when authenticating
 // to the server.
-//
 type AuthMessagePayload struct {
 	BaseMessagePayload
 
@@ -1111,10 +1034,8 @@ type AuthMessagePayload struct {
 //  \____\__,_|\___|_| |_|\___|_|   |_|_|\___|
 //
 
-//
 // CacheFile asks other clients to be sure they retrieve
 // and cache the map file with the given server ID.
-//
 func (c *Connection) CacheFile(serverID string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -1140,6 +1061,7 @@ type ChallengeMessagePayload struct {
 	BaseMessagePayload
 	Protocol      int
 	Challenge     []byte    `json:",omitempty"`
+	Iterations    int       `json:",omitempty"`
 	ServerStarted time.Time `json:",omitempty"`
 	ServerActive  time.Time `json:",omitempty"`
 	ServerTime    time.Time `json:",omitempty"`
@@ -1153,9 +1075,7 @@ type ChallengeMessagePayload struct {
 //  \____|_| |_|\__,_|\__|_|  |_|\___||___/___/\__,_|\__, |\___|
 //                                                   |___/
 
-//
 // ChatCommon holds fields common to chat messages and die-roll results.
-//
 type ChatCommon struct {
 	// The name of the person sending the message.
 	Sender string `json:",omitempty"`
@@ -1177,12 +1097,10 @@ type ChatCommon struct {
 	Sent time.Time `json:",omitempty"`
 }
 
-//
 // ChatMessageMessagePayload holds the information sent by the server's ChatMessage
 // message. This is a message sent by other players or perhaps by the server itself.
 //
 // Call the ChatMessage, ChatMessageToAll, or ChatMessageToGM methods to send this message out to other clients.
-//
 type ChatMessageMessagePayload struct {
 	BaseMessagePayload
 	ChatCommon
@@ -1191,11 +1109,9 @@ type ChatMessageMessagePayload struct {
 	Text string
 }
 
-//
 // ChatMessage sends a message on the chat channel to other
 // users. The to paramter is a slice of user names of the people
 // who should receive this message.
-//
 func (c *Connection) ChatMessage(to []string, message string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -1208,9 +1124,7 @@ func (c *Connection) ChatMessage(to []string, message string) error {
 	})
 }
 
-//
 // ChatMessageToAll is equivalent to ChatMessage, but is addressed to all users.
-//
 func (c *Connection) ChatMessageToAll(message string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -1223,9 +1137,7 @@ func (c *Connection) ChatMessageToAll(message string) error {
 	})
 }
 
-//
 // ChatMessageToGM is equivalent to ChatMessage, but is addressed only to the GM.
-//
 func (c *Connection) ChatMessageToGM(message string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -1245,13 +1157,11 @@ func (c *Connection) ChatMessageToGM(message string) error {
 //  \____|_|\___|\__,_|_|
 //
 
-//
 // ClearMessagePayload holds the information sent by the server's Clear
 // message. This tells the client to remove one or more objects from its
 // canvas.
 //
 // Call the Clear method to send this message out to other clients.
-//
 type ClearMessagePayload struct {
 	BaseMessagePayload
 
@@ -1265,16 +1175,14 @@ type ClearMessagePayload struct {
 	ObjID string
 }
 
-//
 // Clear tells peers to remove objects from their canvases.
-// The objID may be one of the following:
-//   *                    Remove all objects
-//   E*                   Remove all map elements
-//   M*                   Remove all monster tokens
-//   P*                   Remove all player tokens
-//   [<imagename>=]<name> Remove token with given <name>
-//   <id>                 Remove object with given <id>
 //
+//	"*"                  Remove all objects
+//	"E*"                 Remove all map elements
+//	"M*"                 Remove all monster tokens
+//	"P*"                 Remove all player tokens
+//	[<imagename>=]<name> Remove token with given <name>
+//	<id>                 Remove object with given <id>
 func (c *Connection) Clear(objID string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -1291,12 +1199,10 @@ func (c *Connection) Clear(objID string) error {
 //  \____|_|\___|\__,_|_|   \____|_| |_|\__,_|\__|
 //
 
-//
 // ClearChatMessagePayload holds the information sent by the server's ClearChat
 // message. This tells the client to remove some messages from its chat history.
 //
 // Call the ClearChat method to send this message out to other clients.
-//
 type ClearChatMessagePayload struct {
 	BaseMessagePayload
 
@@ -1315,13 +1221,11 @@ type ClearChatMessagePayload struct {
 	MessageID int `json:",omitempty"`
 }
 
-//
 // ClearChat tells peers to remove all messages from their
 // chat histories if target is zero. If target>0, then
 // all messages with IDs greater than target are removed.
 // Otherwise, if target<0 then only the most recent |target|
 // messages are kept.
-//
 func (c *Connection) ClearChat(target int, silently bool) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -1339,23 +1243,19 @@ func (c *Connection) ClearChat(target int, silently bool) error {
 //  \____|_|\___|\__,_|_|  |_|  |_|  \___/|_| |_| |_|
 //
 
-//
 // ClearFromMessagePayload holds the information sent by the server's ClearFrom
 // message. This tells the client to remove all elements mentioned in the specified
 // map file.
 //
 // Call the ClearFrom method to send this message out to other clients.
-//
 type ClearFromMessagePayload struct {
 	BaseMessagePayload
 	FileDefinition
 }
 
-//
 // ClearFrom tells all peers to load the map file with the
 // given server ID, but to remove from their canvases all
 // objects described in the file rather than loading them on.
-//
 func (c *Connection) ClearFrom(serverID string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -1375,12 +1275,10 @@ func (c *Connection) ClearFrom(serverID string) error {
 //  \____\___/|_| |_| |_|_.__/ \__,_|\__|_|  |_|\___/ \__,_|\___|
 //
 
-//
 // CombatModeMessagePayload holds the information sent by the server's CombatMode
 // message. This tells the client to enter or exit combat (initiative) mode.
 //
 // Call the CombatMode method to send this message out to other clients.
-//
 type CombatModeMessagePayload struct {
 	BaseMessagePayload
 
@@ -1388,9 +1286,7 @@ type CombatModeMessagePayload struct {
 	Enabled bool `json:",omitempty"`
 }
 
-//
 // CombatMode tells all peers to enable or disable combat mode.
-//
 func (c *Connection) CombatMode(enabled bool) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -1400,18 +1296,14 @@ func (c *Connection) CombatMode(enabled bool) error {
 	})
 }
 
-//
 // ToolbarMessagePayload holds the information sent by the server's Toolbar
 // message. This tells the client to display or hide its toolbar.
-//
 type ToolbarMessagePayload struct {
 	BaseMessagePayload
 	Enabled bool `json:",omitempty"`
 }
 
-//
 // Toolbar tells peers to turn on or off their toolbars.
-//
 func (c *Connection) Toolbar(enabled bool) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -1428,14 +1320,12 @@ func (c *Connection) Toolbar(enabled bool) error {
 //  \____\___/|_| |_| |_|_| |_| |_|\___|_| |_|\__|
 //
 
-//
 // CommentMessagePayload holds the information sent by the server's Comment
 // message. This provides information from the server that the client is
 // free to ignore, but may find interesting. Nothing sent in comments is
 // critical to the operation of a client. However, some incidental bits
 // of information such as an advisement of currently-supported client
 // versions and progress gauge data are sent via comments.
-//
 type CommentMessagePayload struct {
 	BaseMessagePayload
 	Text string
@@ -1451,10 +1341,8 @@ type CommentMessagePayload struct {
 // the server.
 //
 
-//
 // FilterCoreDataMessagePayload holds the request to the server to change
 // player visibility of core data items.
-//
 type FilterCoreDataMessagePayload struct {
 	BaseMessagePayload
 	InvertSelection bool `json:",omitempty"`
@@ -1463,12 +1351,10 @@ type FilterCoreDataMessagePayload struct {
 	Filter          string
 }
 
-//
 // FilterCoreData requests that the server change the visibility of all core database items
 // of the specified type whose code matches the filter regular expression. If isHidden
 // is true, those items will be visible to players; otherwise they will be hidden from
 // player view.
-//
 func (c *Connection) FilterCoreData(itemType, filterRegex string, isHidden bool) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -1480,10 +1366,8 @@ func (c *Connection) FilterCoreData(itemType, filterRegex string, isHidden bool)
 	})
 }
 
-//
 // FilterCoreDataInverted is like FilterCoreData, but it affects all core database items
 // of the given type which do NOT match the filter expression.
-//
 func (c *Connection) FilterCoreDataInverted(itemType, filterRegex string, isHidden bool) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -1496,9 +1380,7 @@ func (c *Connection) FilterCoreDataInverted(itemType, filterRegex string, isHidd
 	})
 }
 
-//
 // QueryCoreDataMessagePayload holds the request for a core data item.
-//
 type QueryCoreDataMessagePayload struct {
 	BaseMessagePayload
 	Type      string
@@ -1507,11 +1389,9 @@ type QueryCoreDataMessagePayload struct {
 	RequestID string `json:",omitempty"`
 }
 
-//
 // QueryCoreData asks the server to retrieve an item from the core database
 // of the specified type whose name and/or code match the strings given here.
 // The server will respond with an UpdateCoreData message.
-//
 func (c *Connection) QueryCoreData(itemType, code, name string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -1523,10 +1403,8 @@ func (c *Connection) QueryCoreData(itemType, code, name string) error {
 	})
 }
 
-//
 // QueryCoreDataWithID is like QueryCoreData but it also sends an arbitrary ID string
 // which will be returned in the server's reply.
-//
 func (c *Connection) QueryCoreDataWithID(itemType, code, name, requestID string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -1539,9 +1417,7 @@ func (c *Connection) QueryCoreDataWithID(itemType, code, name, requestID string)
 	})
 }
 
-//
 // UpdateCoreDataMessagePayload contains the server response to a QueryCoreData request.
-//
 type UpdateCoreDataMessagePayload struct {
 	BaseMessagePayload
 	// If NoSuchEntry is true, none of the other fields should be considered valid except RequestID.
@@ -1554,9 +1430,7 @@ type UpdateCoreDataMessagePayload struct {
 	RequestID   string `json:",omitempty"`
 }
 
-//
 // QueryCoreIndexMessagePayload holds the request for a core data index.
-//
 type QueryCoreIndexMessagePayload struct {
 	BaseMessagePayload
 	Type      string
@@ -1566,10 +1440,8 @@ type QueryCoreIndexMessagePayload struct {
 	RequestID string    `json:",omitempty"`
 }
 
-//
 // QueryCoreIndex asks the server to retrieve all the names and codes for
 // a type of entry from the database.
-//
 func (c *Connection) QueryCoreIndex(itemType, codeRegex, nameRegex string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -1581,10 +1453,8 @@ func (c *Connection) QueryCoreIndex(itemType, codeRegex, nameRegex string) error
 	})
 }
 
-//
 // QueryCoreIndexWithID is like QueryCoreIndex but also sends an arbitrary ID string
 // which will be returned in the server's reply.
-//
 func (c *Connection) QueryCoreIndexWithID(itemType, codeRegex, nameRegex, requestID string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -1597,9 +1467,7 @@ func (c *Connection) QueryCoreIndexWithID(itemType, codeRegex, nameRegex, reques
 	})
 }
 
-//
 // QueryCoreIndexSince is like QueryCoreIndex but limits the responses to those modified since a given date.
-//
 func (c *Connection) QueryCoreIndexSince(itemType, codeRegex, nameRegex string, since time.Time) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -1612,10 +1480,8 @@ func (c *Connection) QueryCoreIndexSince(itemType, codeRegex, nameRegex string, 
 	})
 }
 
-//
 // QueryCoreIndexSinceWithID is like QueryCoreIndex but limits the responses to those modified since a given date,
 // and sends a requestID.
-//
 func (c *Connection) QueryCoreIndexSinceWithID(itemType, codeRegex, nameRegex string, since time.Time, requestID string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -1629,9 +1495,7 @@ func (c *Connection) QueryCoreIndexSinceWithID(itemType, codeRegex, nameRegex st
 	})
 }
 
-//
 // UpdateCoreIndexMessagePayload contains the server response to a QueryCoreIndex request.
-//
 type UpdateCoreIndexMessagePayload struct {
 	BaseMessagePayload
 	IsDone    bool   `json:",omitempty"`
@@ -1650,10 +1514,8 @@ type UpdateCoreIndexMessagePayload struct {
 // |____/ \___|_| |_|_|\___|\__,_|
 //
 
-//
 // DeniedMessagePayload holds the reason the client was denied
 // access to the server.
-//
 type DeniedMessagePayload struct {
 	BaseMessagePayload
 	Reason string
@@ -1666,7 +1528,6 @@ type DeniedMessagePayload struct {
 // |_____\___|_| |_|\___/
 //
 
-//
 // EchoMessagePayload holds information the client wants echoed back
 // to it. This is typically used to synchronize a client with a server
 // by issuing a number of commands and then sending an Echo packet,
@@ -1678,7 +1539,6 @@ type DeniedMessagePayload struct {
 // keeping track of the client's state or intentions behind sending
 // the echo request. An arbitrary map of named values may also be
 // given as the O value.
-//
 type EchoMessagePayload struct {
 	BaseMessagePayload
 
@@ -1725,11 +1585,9 @@ func (c *Connection) Echo(b bool, i int, s string, o map[string]any) error {
 // |_|   |_|_|\__\___|_|  |____/|_|\___\___|_|   |_|  \___||___/\___|\__|___/
 //
 
-//
 // FilterDicePresets asks the server to remove all of your
 // die-roll presets whose names match the given regular
 // expression.
-//
 func (c *Connection) FilterDicePresets(re string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -1751,10 +1609,8 @@ func (c *Connection) FilterDicePresetsFor(user, re string) error {
 	})
 }
 
-//
 // FilterDicePresetMessagePayload holds the filter expression
 // the client sends to the server.
-//
 type FilterDicePresetsMessagePayload struct {
 	BaseMessagePayload
 	Filter string `json:",omitempty"`
@@ -1769,10 +1625,8 @@ type FilterDicePresetsMessagePayload struct {
 //                                           |___/
 //
 
-//
 // FilterImages asks the server to remove all of your defined images that match
 // a regular expression.
-//
 func (c *Connection) FilterImages(re string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -1782,10 +1636,8 @@ func (c *Connection) FilterImages(re string) error {
 	})
 }
 
-//
 // FilterImagesExcept asks the server to remove all of your defined images that don't match
 // a regular expression.
-//
 func (c *Connection) FilterImagesExcept(re string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -1796,9 +1648,7 @@ func (c *Connection) FilterImagesExcept(re string) error {
 	})
 }
 
-//
 // FilterImagesMessagePayload holds the filter expression the client sends to the server.
-//
 type FilterImagesMessagePayload struct {
 	BaseMessagePayload
 	KeepMatching bool   `json:",omitempty"`
@@ -1813,10 +1663,8 @@ type FilterImagesMessagePayload struct {
 //  \____|_|  \__,_|_| |_|\__\___|\__,_|
 //
 
-//
 // GrantedMessagePayload holds the response from the server
 // informing the client that its access was granted.
-//
 type GrantedMessagePayload struct {
 	BaseMessagePayload
 	User string
@@ -1829,7 +1677,6 @@ type GrantedMessagePayload struct {
 // |_____\___/ \__,_|\__,_|_|  |_|  \___/|_| |_| |_|
 //
 
-//
 // LoadFromMessagePayload holds the information sent by the server's LoadFrom
 // message. This tells the client to open the file named (which may either be
 // a local disk file or one retrieved from the server), and either replacing their
@@ -1837,7 +1684,6 @@ type GrantedMessagePayload struct {
 // elements to the existing contents.
 //
 // Call the LoadFrom method to send this message out to other clients.
-//
 type LoadFromMessagePayload struct {
 	BaseMessagePayload
 	FileDefinition
@@ -1851,7 +1697,6 @@ type LoadFromMessagePayload struct {
 	Merge bool `json:",omitempty"`
 }
 
-//
 // LoadFrom asks other clients to load a map files from a local
 // disk file or from the server. The previous map contents are erased before
 // each file is loaded.
@@ -1864,7 +1709,6 @@ type LoadFromMessagePayload struct {
 // If merge is true, then the current map elements are not deleted first.
 // In this case, the newly-loaded elements will be merged with what is already
 // on the map.
-//
 func (c *Connection) LoadFrom(path string, local bool, merge bool) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -1889,76 +1733,58 @@ func (c *Connection) LoadFrom(path string, local bool, merge bool) error {
 // individual map elements onto clients.
 //
 
-//
 // LoadArcObjectMessagePayload holds the information needed to send an arc element to a map.
-//
 type LoadArcObjectMessagePayload struct {
 	BaseMessagePayload
 	ArcElement
 }
 
-//
 // LoadCircleObjectMessagePayload holds the information needed to send an ellipse element to a map.
-//
 type LoadCircleObjectMessagePayload struct {
 	BaseMessagePayload
 	CircleElement
 }
 
-//
 // LoadLineObjectMessagePayload holds the information needed to send a line element to a map.
-//
 type LoadLineObjectMessagePayload struct {
 	BaseMessagePayload
 	LineElement
 }
 
-//
 // LoadPolygonObjectMessagePayload holds the information needed to send a polygon element to a map.
-//
 type LoadPolygonObjectMessagePayload struct {
 	BaseMessagePayload
 	PolygonElement
 }
 
-//
 // LoadRectangleObjectMessagePayload holds the information needed to send a rectangle element to a map.
-//
 type LoadRectangleObjectMessagePayload struct {
 	BaseMessagePayload
 	RectangleElement
 }
 
-//
 // LoadSpellAreaOfEffectObjectMessagePayload holds the information needed to send a spell area of effect element to a map.
-//
 type LoadSpellAreaOfEffectObjectMessagePayload struct {
 	BaseMessagePayload
 	SpellAreaOfEffectElement
 }
 
-//
 // LoadTextObjectMessagePayload holds the information needed to send a text element to a map.
-//
 type LoadTextObjectMessagePayload struct {
 	BaseMessagePayload
 	TextElement
 }
 
-//
 // LoadTileObjectMessagePayload holds the information needed to send a graphic tile element to a map.
-//
 type LoadTileObjectMessagePayload struct {
 	BaseMessagePayload
 	TileElement
 }
 
-//
 // LoadObject sends a MapObject to all peers.
 // It may be given a value of any of the supported MapObject
 // types for map graphic elements (Arc, Circle, Line, Polygon,
 // Rectangle, SpellAreaOfEffect, Text, or Tile).
-//
 func (c *Connection) LoadObject(mo MapObject) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -1992,7 +1818,6 @@ func (c *Connection) LoadObject(mo MapObject) error {
 // |_|  |_|\__,_|_|  \___\___/
 //
 
-//
 // MarcoMessagePayload holds the information sent by the server's Marco
 // message. This is a "ping" message the server periodically sends to all
 // clients to ensure they are still responding. A client who receives a
@@ -2000,7 +1825,6 @@ func (c *Connection) LoadObject(mo MapObject) error {
 //
 // If the client doesn't subscribe to Marco messages, the Dial method
 // will automatically reply with Polo messages.
-//
 type MarcoMessagePayload struct {
 	BaseMessagePayload
 }
@@ -2012,22 +1836,18 @@ type MarcoMessagePayload struct {
 // |_|  |_|\__,_|_|  |_|\_\
 //
 
-//
 // MarkMessagePayload holds the information sent by the server's Mark
 // message. This tells the client to
 // visually mark the given map coordinates.
 //
 // Call the Mark method to send this message out to other clients.
-//
 type MarkMessagePayload struct {
 	BaseMessagePayload
 	Coordinates
 }
 
-//
 // Mark tells clients to visibly mark a location centered
 // on the given (x, y) coordinates.
-//
 func (c *Connection) Mark(x, y float64) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -2047,7 +1867,6 @@ func (c *Connection) Mark(x, y float64) error {
 // |_|   |_|\__,_|\___\___|____/ \___/|_| |_| |_|\___|\___/|_| |_|\___|
 //
 
-//
 // PlaceSomeoneMessagePayload holds the information sent by the server's PlaceSomeone
 // message. This tells the client to
 // introduce a new creature token,
@@ -2059,13 +1878,11 @@ func (c *Connection) Mark(x, y float64) error {
 // stats so that structure will always be nil).
 //
 // Call the PlaceSomeone method to send this message out to other clients.
-//
 type PlaceSomeoneMessagePayload struct {
 	BaseMessagePayload
 	CreatureToken
 }
 
-//
 // PlaceSomeone tells all peers to add a new creature token on their
 // maps. The parameter passed must be either a PlayerToken or MonsterToken.
 //
@@ -2074,7 +1891,6 @@ type PlaceSomeoneMessagePayload struct {
 // the name or location of an existing creature, although the preferred
 // way to do that would be to use UpdateObjAttributes to change those
 // specific attributes of the creature directly.
-//
 func (c *Connection) PlaceSomeone(someone any) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -2094,9 +1910,7 @@ func (c *Connection) PlaceSomeone(someone any) error {
 // |_|   \___/|_|\___/
 //
 
-//
 // Polo send the client's response to the server's MARCO ping message.
-//
 func (c *Connection) Polo() error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -2128,7 +1942,6 @@ type PrivMessagePayload struct {
 //  \__\_\\__,_|\___|_|   \__, |___|_| |_| |_|\__,_|\__, |\___|
 //                        |___/                     |___/
 
-//
 // QueryImageMessagePayload holds the information sent by the server's QueryImage
 // message. This tells the client
 // that a peer wants to know where to find a given
@@ -2136,17 +1949,14 @@ type PrivMessagePayload struct {
 // for that image, reply with an AddImage message of your own.
 //
 // Call the QueryImage method to send this message out to other clients.
-//
 type QueryImageMessagePayload struct {
 	BaseMessagePayload
 	ImageDefinition
 }
 
-//
 // QueryImage asks the server and peers if anyone else knows
 // where to find the data for the given image name and zoom factor.
 // If someone does, you'll receive an AddImage message.
-//
 func (c *Connection) QueryImage(idef ImageDefinition) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -2162,11 +1972,9 @@ func (c *Connection) QueryImage(idef ImageDefinition) error {
 //                        |___/
 //
 
-//
 // ReadyMessagePayload indicates that the server is fully
 // ready to interact with the client and all preliminary
 // data has been sent to the client.
-//
 type ReadyMessagePayload struct {
 	BaseMessagePayload
 }
@@ -2184,7 +1992,6 @@ type ReadyMessagePayload struct {
 // /_/   \_\__|\__|_|  |_|_.__/ \__,_|\__\___||___/
 //
 
-//
 // RemoveObjAttributesMessagePayload holds the information sent by the server's RemoveObjAttributes
 // message. This tells the client
 // to adjust the multi-value attribute
@@ -2192,7 +1999,6 @@ type ReadyMessagePayload struct {
 // from it.
 //
 // Call the RemoveObjAttributes method to send this message out to other clients.
-//
 type RemoveObjAttributesMessagePayload struct {
 	BaseMessagePayload
 
@@ -2206,11 +2012,9 @@ type RemoveObjAttributesMessagePayload struct {
 	Values []string
 }
 
-//
 // RemoveObjAttributes informs peers to remove a set of string values from the existing
 // value of an object attribute. The attribute must be one whose value is a list
 // of strings, such as StatusList.
-//
 func (c *Connection) RemoveObjAttributes(objID, attrName string, values []string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -2229,7 +2033,6 @@ func (c *Connection) RemoveObjAttributes(objID, attrName string, values []string
 // |_| \_\___/|_|_|____/|_|\___\___|
 //
 
-//
 // RollDice sends a rollspec such as "d20+12" or "6d6 fire"
 // to the server, initiating a die roll using the server's
 // built-in facility for that.
@@ -2246,7 +2049,6 @@ func (c *Connection) RemoveObjAttributes(objID, attrName string, values []string
 // The rollspec may have any form that would be accepted to the
 // dice.Roll function and dice.DieRoller.DoRoll method. See the dice package for details.
 // https://pkg.go.dev/github.com/MadScienceZone/go-gma/v5/dice#DieRoller.DoRoll
-//
 func (c *Connection) RollDice(to []string, rollspec string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -2259,10 +2061,8 @@ func (c *Connection) RollDice(to []string, rollspec string) error {
 	})
 }
 
-//
 // RollDiceWithID is identical to RollDice except it passes a user-supplied request ID
 // to the server, which will be sent back with the corresponding result message(s).
-//
 func (c *Connection) RollDiceWithID(to []string, rollspec string, requestID string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -2276,10 +2076,8 @@ func (c *Connection) RollDiceWithID(to []string, rollspec string, requestID stri
 	})
 }
 
-//
 // RollDiceMessagePayload holds the data sent from the client to the
 // server when requesting a die roll.
-//
 type RollDiceMessagePayload struct {
 	BaseMessagePayload
 	ChatCommon
@@ -2292,9 +2090,7 @@ type RollDiceMessagePayload struct {
 	RollSpec string
 }
 
-//
 // RollDiceToAll is equivalent to RollDice, sending the results to all users.
-//
 func (c *Connection) RollDiceToAll(rollspec string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -2307,9 +2103,7 @@ func (c *Connection) RollDiceToAll(rollspec string) error {
 	})
 }
 
-//
 // RollDiceToAllWithID is equivalent to RollDiceWithID, sending the results to all users.
-//
 func (c *Connection) RollDiceToAllWithID(rollspec, requestID string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -2323,9 +2117,7 @@ func (c *Connection) RollDiceToAllWithID(rollspec, requestID string) error {
 	})
 }
 
-//
 // RollDiceToGM is equivalent to RollDice, sending the results only to the GM.
-//
 func (c *Connection) RollDiceToGM(rollspec string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -2338,9 +2130,7 @@ func (c *Connection) RollDiceToGM(rollspec string) error {
 	})
 }
 
-//
 // RollDiceToGMWithID is equivalent to RollDiceWithID, sending the results only to the GM.
-//
 func (c *Connection) RollDiceToGMWithID(rollspec, requestID string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -2354,10 +2144,8 @@ func (c *Connection) RollDiceToGMWithID(rollspec, requestID string) error {
 	})
 }
 
-//
 // RollResultMessagePayload holds the information sent by the server's RollResult
 // message. This tells the client the results of a die roll.
-//
 type RollResultMessagePayload struct {
 	BaseMessagePayload
 	ChatCommon
@@ -2382,10 +2170,8 @@ type RollResultMessagePayload struct {
 // |____/|_|\___\___|_|   |_|  \___||___/\___|\__|___/
 //
 
-//
 // DefineDicePresets replaces any existing die-roll presets you have
 // stored on the server with the new set passed as the presets parameter.
-//
 func (c *Connection) DefineDicePresets(presets []dice.DieRollPreset) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -2395,10 +2181,8 @@ func (c *Connection) DefineDicePresets(presets []dice.DieRollPreset) error {
 	})
 }
 
-//
 // DefineDicePresetDelegates changes the current list of users allowed to view and
 // change a user's stored presets. The new list replaces any and all previous ones.
-//
 func (c *Connection) DefineDicePresetDelegates(delegates []string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -2444,10 +2228,8 @@ type DefineDicePresetDelegatesMessagePayload struct {
 	Delegates []string `json:",omitempty"`
 }
 
-//
 // AddDicePresets is like DefineDicePresets except that it adds the presets
 // passed in to the existing set rather than replacing them.
-//
 func (c *Connection) AddDicePresets(presets []dice.DieRollPreset) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -2475,11 +2257,9 @@ type AddDicePresetsMessagePayload struct {
 	Presets []dice.DieRollPreset `json:",omitempty"`
 }
 
-//
 // QueryDicePresets requests that the server send you the die-roll
 // presets currently stored for you. It will send you an UpdateDicePresets
 // message.
-//
 func (c *Connection) QueryDicePresets() error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -2492,10 +2272,8 @@ type QueryDicePresetsMessagePayload struct {
 	For string `json:",omitempty"`
 }
 
-//
 // UpdateClockMessagePayload holds the information sent by the server's UpdateClock
 // message. This tells the client to update its clock display to the new value.
-//
 type UpdateClockMessagePayload struct {
 	BaseMessagePayload
 
@@ -2513,9 +2291,7 @@ type UpdateClockMessagePayload struct {
 	Running bool `json:",omitempty"`
 }
 
-//
 // UpdateClock informs everyone of the current time
-//
 func (c *Connection) UpdateClock(absolute, relative int64, keepRunning bool) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -2527,13 +2303,11 @@ func (c *Connection) UpdateClock(absolute, relative int64, keepRunning bool) err
 	})
 }
 
-//
 // UpdateDicePresetsMessagePayload holds the information sent by the server's UpdateDicePresets
 // message. This tells the client to
 // accept the die-roll presets
 // described here, replacing any previous presets it was
 // using.
-//
 type UpdateDicePresetsMessagePayload struct {
 	BaseMessagePayload
 	Presets     []dice.DieRollPreset
@@ -2542,11 +2316,9 @@ type UpdateDicePresetsMessagePayload struct {
 	Delegates   []string `json:",omitempty"`
 }
 
-//
 // UpdateInitiativeMessagePayload holds the information sent by the server's UpdateInitiative
 // message. This tells the client that the initiative order has been changed. Its current
 // notion of the initiative order should be replaced by the one given here.
-//
 type UpdateInitiativeMessagePayload struct {
 	BaseMessagePayload
 	InitiativeList []InitiativeSlot
@@ -2563,10 +2335,8 @@ func (c *Connection) UpdateInitiative(ilist []InitiativeSlot) error {
 	})
 }
 
-//
 // InitiativeSlot describes the creature occupying a given
 // slot of the initiative list.
-//
 type InitiativeSlot struct {
 	// The slot number (currently 0–59, corresponding to the 1/10th second "count" in the initiative round)
 	Slot int
@@ -2587,14 +2357,12 @@ type InitiativeSlot struct {
 	IsFlatFooted bool `json:",omitempty"`
 }
 
-//
 // UpdateObjAttributesMessagePayload holds the information sent by the server's UpdateObjAttributes
 // message. This tells the client to update an existing object
 // with new attributes. Any attributes not listed here should
 // remain intact.
 //
 // Call the UpdateObjAttributes method to send this message out to other clients.
-//
 type UpdateObjAttributesMessagePayload struct {
 	BaseMessagePayload
 
@@ -2605,11 +2373,9 @@ type UpdateObjAttributesMessagePayload struct {
 	NewAttrs map[string]any
 }
 
-//
 // UpdateObjAttributes informs peers that they should modify the
 // specified object's attributes which are mentioned in the newAttrs
 // map. This maps attribute names to their new values.
-//
 func (c *Connection) UpdateObjAttributes(objID string, newAttrs map[string]any) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -2620,19 +2386,15 @@ func (c *Connection) UpdateObjAttributes(objID string, newAttrs map[string]any) 
 	})
 }
 
-//
 // UpdatePeerListMessagePayload holds the information sent by the server's UpdatePeerList
 // message. This tells the client that the list of
 // other connected peers has changed.
-//
 type UpdatePeerListMessagePayload struct {
 	BaseMessagePayload
 	PeerList []Peer
 }
 
-//
 // Peer describes each peer we can reach via our server connection.
-//
 type Peer struct {
 	// IP address and port of the peer
 	Addr string
@@ -2653,11 +2415,9 @@ type Peer struct {
 	IsMe bool `json:",omitempty"`
 }
 
-//
 // QueryPeers asks the server to send an UpdatePeerList
 // message with the current set of peers who are connected
 // to the server.
-//
 func (c *Connection) QueryPeers() error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -2669,13 +2429,11 @@ type QueryPeersMessagePayload struct {
 	BaseMessagePayload
 }
 
-//
 // UpdateProgressMessagePayload holds the information sent by the server's UpdateProgress
 // Comment notification. This
 // advises the client of the status of an operation
 // in progress. The client may wish to display a progress indicator to the
 // user.
-//
 type UpdateProgressMessagePayload struct {
 	BaseMessagePayload
 
@@ -2706,7 +2464,6 @@ type UpdateProgressMessagePayload struct {
 	Targets []string `json:",omitempty"`
 }
 
-//
 // UpdateStatusMarkerMessagePayload holds the information sent by the server's UpdateStatusMarker
 // message. This tells the client
 // to add or change a status marker which may be placed
@@ -2714,16 +2471,13 @@ type UpdateProgressMessagePayload struct {
 //
 // Note: the server usually sends these upon login, which the Connection
 // struct stores internally.
-//
 type UpdateStatusMarkerMessagePayload struct {
 	BaseMessagePayload
 	StatusMarkerDefinition
 }
 
-//
 // UpdateStatusMarker changes, removes, or adds a status marker to place on
 // a creature marker.
-//
 func (c *Connection) UpdateStatusMarker(smd StatusMarkerDefinition) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -2731,10 +2485,8 @@ func (c *Connection) UpdateStatusMarker(smd StatusMarkerDefinition) error {
 	return c.serverConn.Send(UpdateStatusMarker, smd)
 }
 
-//
 // StatusMarkerDefinition describes each creature token status
 // that the map clients indicate.
-//
 type StatusMarkerDefinition struct {
 	// If the token should be transparent when this condition is in effect
 	Transparent bool `json:",omitempty"`
@@ -2780,22 +2532,16 @@ type StatusMarkerDefinition struct {
 	Description string `json:",omitempty"`
 }
 
-//
 // Text produces a simple text description of a StatusMarkerDefinition structure.
-//
 func (c StatusMarkerDefinition) Text() string {
 	return fmt.Sprintf("Condition %q: Shape=%q, Color=%q, Description=%q, Transparent=%v", c.Condition, c.Shape, c.Color, c.Description, c.Transparent)
 }
 
-//
 // StatusMarkerDefinitions is a map of a condition code name to the full
 // description of the marker to use for that condition.
-//
 type StatusMarkerDefinitions map[string]StatusMarkerDefinition
 
-//
 // CharacterDefinitions is a map of a character name to their token object.
-//
 type CharacterDefinitions map[string]PlayerToken
 
 // Text produces a simple text description of a map of PlayerTokens
@@ -2807,10 +2553,8 @@ func (cs CharacterDefinitions) Text() string {
 	return s.String()
 }
 
-//
 // Text produces a simple text description of a map of StatusMarkerDefinitions
 // as a multi-line string.
-//
 func (cs StatusMarkerDefinitions) Text() string {
 	var s strings.Builder
 	for k, c := range cs {
@@ -2819,10 +2563,8 @@ func (cs StatusMarkerDefinitions) Text() string {
 	return s.String()
 }
 
-//
 // UpdateTurnMessagePayload holds the information sent by the server's UpdateTurn
 // message. This tells the client whose turn it is in combat.
-//
 type UpdateTurnMessagePayload struct {
 	BaseMessagePayload
 
@@ -2837,9 +2579,7 @@ type UpdateTurnMessagePayload struct {
 	Hours, Minutes, Seconds, Rounds, Count int
 }
 
-//
 // UpdateTurn advances the initiative turn clock for connected clients.
-//
 func (c *Connection) UpdateTurn(relative float64, actor string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -2857,10 +2597,8 @@ func (c *Connection) UpdateTurn(relative float64, actor string) error {
 	})
 }
 
-//
 // Sync requests that the server send the entire game state
 // to it.
-//
 func (c *Connection) Sync() error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -2872,11 +2610,9 @@ type SyncMessagePayload struct {
 	BaseMessagePayload
 }
 
-//
 // SyncChat requests that the server (re-)send past messages
 // greater than the target message ID (target≥0) or the most
 // recent |target| messages (target<0).
-//
 func (c *Connection) SyncChat(target int) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -2967,7 +2703,6 @@ type RedirectMessagePayload struct {
 //   call cancel to terminate Dial/login/listen
 //
 
-//
 // Dial connects to the server, negotiates the initial sign-on sequence
 // with it, and then enters a loop to receive messages from the server
 // until the connection is broken or the context is cancelled, at which
@@ -2982,13 +2717,13 @@ type RedirectMessagePayload struct {
 // application did not subscribe to ERROR messages, they will be logged.
 //
 // Example:
-//   ctx, cancel := context.Background()
-//   server, err := NewConnection("example.org:2323",
-//                                WithAuthenticator(a),
-//                                WithContext(ctx))
-//   defer cancel()
-//   go server.Dial()
 //
+//	ctx, cancel := context.Background()
+//	server, err := NewConnection("example.org:2323",
+//	                             WithAuthenticator(a),
+//	                             WithContext(ctx))
+//	defer cancel()
+//	go server.Dial()
 func (c *Connection) Dial() {
 	if c == nil {
 		return
@@ -3174,7 +2909,7 @@ func (c *Connection) login(done chan error) {
 				}
 				c.Log("authenticating to server")
 				c.Authenticator.Reset()
-				authResponse, err := c.Authenticator.AcceptChallengeBytes(response.Challenge)
+				authResponse, err := c.Authenticator.AcceptChallengeBytesWithIterations(response.Challenge, response.Iterations)
 				if err != nil {
 					c.Logf("error accepting server's challenge: %v", err)
 					done <- err
@@ -3447,9 +3182,7 @@ func (c *Connection) receiveUpdateVersions(d UpdateVersionsMessagePayload) {
 	}
 }
 
-//
 // listen for, and dispatch, incoming server messages
-//
 func (c *Connection) listen(done chan error) {
 	if c == nil {
 		done <- fmt.Errorf("listen called on nil Connection")
@@ -3700,9 +3433,7 @@ func (c *Connection) listen(done chan error) {
 	}
 }
 
-//
 // report any sort of error to the client
-//
 func (c *Connection) reportError(e error) {
 	if c == nil {
 		return
@@ -3721,10 +3452,8 @@ func (c *Connection) reportError(e error) {
 	}
 }
 
-//
 // listen and interact with the service until it's finished,
 // then close our connection to it
-//
 func (c *Connection) interact() error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -3781,11 +3510,9 @@ func (c *Connection) interact() error {
 	}
 }
 
-//
 // Any time the subscription list changes,
 // we need to call this to let the server know what kinds of
 // messages the client wants to see.
-//
 func (c *Connection) filterSubscriptions() error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
@@ -3917,11 +3644,10 @@ func (c *Connection) unfilterSubscriptions() error {
 }
 */
 
-//
 // CheckVersionOf returns the closest match of the requested package
 // to the platform we are currently running, or nil if we're already
 // on the advertised version.
-//
+// on the advertised version.
 func (c *Connection) CheckVersionOf(packageName, myVersionNumber string) (*PackageVersion, error) {
 	var availableVersion *PackageVersion
 

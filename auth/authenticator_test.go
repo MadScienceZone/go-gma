@@ -29,12 +29,23 @@ func TestAuthenticatorRoundLimits(t *testing.T) {
 	a := Authenticator{}
 	for i := 0; i < 1000; i++ {
 		a.Reset()
-		a.GenerateChallenge()
+		_, _ = a.GenerateChallenge()
 		if a.Challenge[0]&0xf0 != 0 {
 			t.Errorf("iteration %d, challenge high byte is %x", i, a.Challenge[0])
 		}
 		if a.Challenge[1]&0x40 != 0x40 {
 			t.Errorf("iteration %d, challenge low byte is %x", i, a.Challenge[1])
+		}
+	}
+}
+
+func TestAuthenticatorRoundLimitsWithIterations(t *testing.T) {
+	a := Authenticator{}
+	for i := 0; i < 1000; i++ {
+		a.Reset()
+		_, _, _ = a.GenerateChallengeWithIterations()
+		if a.Iterations < 64 || a.Iterations > 4095 {
+			t.Errorf("test iteration %d, challenge iterations is %d", i, a.Iterations)
 		}
 	}
 }
@@ -430,6 +441,7 @@ func TestAuthenticator(t *testing.T) {
 	for i, test := range testcases {
 		a := Authenticator{Secret: []byte("abc123**sekret**XXXyyyZZZ")}
 		a.Challenge = test.Nonce
+		a.Iterations = (int(a.Challenge[0]) << 8) | int(a.Challenge[1])
 		if a.CurrentChallenge() != test.Challenge {
 			t.Errorf("Challenge iteration %d was %s, expected %s", i, a.CurrentChallenge(), test.Challenge)
 		}
