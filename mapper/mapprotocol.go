@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______  _______     _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___   )   (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   )  |   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )    /   )   | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /   _/   /    | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/   /   _/     |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\(   (__/\ _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/\_______/(_)(_______)     #
+#  _______  _______  _______             _______     _______  ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____         /   )   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/        ) \   |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\/\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/\______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -47,15 +47,13 @@ import (
 	"time"
 )
 
-//
 // The GMA Mapper Protocol version number current as of this build,
 // and protocol versions supported by this code.
-//
 const (
-	GMAMapperProtocol=414      // @@##@@ auto-configured
-	GoVersionNumber="5.22.0" // @@##@@ auto-configured
+	GMAMapperProtocol=415      // @@##@@ auto-configured
+	GoVersionNumber="5.23.0" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
-	MaximumSupportedMapProtocol = 414
+	MaximumSupportedMapProtocol = 415
 )
 
 func init() {
@@ -101,18 +99,14 @@ func (c *MapConnection) Close() {
 	}
 }
 
-//
 // SendEchoWithTimestamp is identical to Send, but only takes an EchoMessagePayload parameter
 // and writes the SentTime value into it as it sends it out.
-//
 func (c *MapConnection) SendEchoWithTimestamp(command ServerMessage, data EchoMessagePayload) error {
 	data.SentTime = time.Now()
 	return c.Send(command, data)
 }
 
-//
 // Send sends a message to the peer using the mapper protocol.
-//
 func (c *MapConnection) Send(command ServerMessage, data any) error {
 	if c == nil {
 		return fmt.Errorf("nil MapConnection")
@@ -456,29 +450,23 @@ func (c *MapConnection) sendRaw(data string) error {
 	return nil
 }
 
-//
 // UNSAFEsendRaw will send raw data to the server without any checks or controls.
 // Use this function at your own risk. If you don't phrase the data perfectly, the server will
 // not understand your request. This is intended only for testing purposes including manually
 // communicating with the server for debugging.
-//
 func (c *MapConnection) UNSAFEsendRaw(data string) error {
 	return c.sendRaw(data)
 }
 
-//
 // UNSAFEsendRaw will send raw data to the server without any checks or controls.
 // Use this function at your own risk. If you don't phrase the data perfectly, the server will
 // not understand your request. This is intended only for testing purposes including manually
 // communicating with the server for debugging.
-//
 func (c *Connection) UNSAFEsendRaw(data string) error {
 	return c.serverConn.sendRaw(data)
 }
 
-//
 // Receive waits for a message to arrive on the MapConnection's input then returns it.
-//
 func (c *MapConnection) Receive() (MessagePayload, error) {
 	var err error
 	if c == nil {
@@ -1125,10 +1113,8 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 	return nil, fmt.Errorf("bailing out, unable to cope with received packet")
 }
 
-//
 // Send out all waiting outbound messages and then return
 // DO NOT CALL this if you have a writer routine still running that is managing the sendBuf slice.
-//
 func (c *MapConnection) Flush() error {
 	// receive all the messages still in the channel
 	if c.debug != nil {

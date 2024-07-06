@@ -1,13 +1,13 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.22.0                <!-- @@##@@ -->
- * Effective Date: 14-Jun-2024			<!-- @@##@@ -->
+ * This Package Version: 5.23.0                <!-- @@##@@ -->
+ * Effective Date: 05-Jul-2024			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 6.20		<!-- @@##@@ -->
- * GMA Mapper Version: 4.24.5		<!-- @@##@@ -->
- * GMA Mapper Protocol: 414		<!-- @@##@@ -->
+ * GMA Core API Library Version: 6.22		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.26		<!-- @@##@@ -->
+ * GMA Mapper Protocol: 415		<!-- @@##@@ -->
  * GMA Mapper File Format: 23		<!-- @@##@@ -->
  * GMA Mapper Preferences File Format: 8 <!-- @@##@@ -->
  * GMA User Preferences File Format: 2 <!-- @@##@@ -->
@@ -18,6 +18,16 @@ When upgrading an existing server to version 5.15.0 or later, be sure to run `sc
 In addition, if your server didn't have the following update installed previously, do it as well:
 
 When upgrading an existing server to version 5.13.1 or later, be sure to run `scripts/upgrade-5.13.1` on each database file to update it to the new chat history encoding scheme introduced at 5.13.1. If you don't, the server will ignore some or all of your historic chat and die roll messages. Alternatively, you can delete the old database and make a new one with the current server.
+
+## v5.23.0
+### Added
+ * Changes to authenticator and protocol to make the challenge/response exchange a little more secure, such as it is, by decoupling the nonce from the number of hash rounds. It is backward compatible with previous protocol versions but a server which uses protocol 415 and later will insist on a client that understands the new authentication scheme. Deprecates old methods which didn't understand this in favor of new ones, which is part of what makes this not be a breaking change:
+    * `GenerateChallenge` replaced with `GenerateChallengeWithIterations`
+    * `GenerateChallengeBytes` replaced with `GenerateChallengeBytesWithIterations`
+    * `AcceptChallenge` replaced with `AcceptChallengeWithIterations`
+    * `AcceptChallengeBytes` replaced with `AcceptChallengeBytesWithIterations`
+### Enhanced
+ * Text handling code picks up latest changes from GMA core to PostScript preambles.
 
 ## v5.22.0
 ### Added
