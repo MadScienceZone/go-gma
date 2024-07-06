@@ -269,6 +269,9 @@ func (a *Authenticator) GenerateChallenge() (string, error) {
 // Also generates and returns a random number in the range [64,4095]
 // to be used as the number of hashing rounds to perform.
 //
+// This is at least a little more secure that GenerateChallenge, because the number of
+// hash rounds (aka iterations) is decoupled from the value of the challenge nonce itself.
+//
 // The challenge is returned as a base-64-encoded string.
 func (a *Authenticator) GenerateChallengeWithIterations() (string, int, error) {
 	_, err := a.generateChallengeBytes(false)
@@ -292,6 +295,10 @@ func (a *Authenticator) GenerateChallengeBytes() ([]byte, error) {
 // GenerateChallengeBytesWithIterations is just like GenerateChallengeWithIterations but
 // returns the challenge as a binary byte slice instead of encoding it
 // in base 64.
+//
+// This is at least a little more secure that GenerateChallengeBytes, because the number of
+// hash rounds (aka iterations) is decoupled from the value of the challenge nonce itself.
+//
 // (SERVER)
 func (a *Authenticator) GenerateChallengeBytesWithIterations() ([]byte, int, error) {
 	_, err := a.generateChallengeBytes(false)
@@ -435,6 +442,10 @@ func (a *Authenticator) AcceptChallenge(challenge string) (string, error) {
 
 // AcceptChallengeWithIterations takes a server's challenge, stores it internally, and generates an appropriate
 // response to it, which is returned as a base-64 encoded string. (CLIENT)
+//
+// If iterations is 0, this falls back to the old behavior of deriving the iterations (hash rounds)
+// from the first two bytes of the challenge nonce.
+//
 func (a *Authenticator) AcceptChallengeWithIterations(challenge string, iterations int) (string, error) {
 	c, err := base64.StdEncoding.DecodeString(challenge)
 	if err != nil {
@@ -468,6 +479,10 @@ func (a *Authenticator) AcceptChallengeBytes(challenge []byte) ([]byte, error) {
 
 // AcceptChallengeBytesWithIterations is like AcceptChallengeWithIterations but takes the raw binary
 // challenge and emits the raw binay response as []byte slices.
+//
+// If iterations is 0, this falls back to the old behavior of deriving the iterations (hash rounds)
+// from the first two bytes of the challenge nonce.
+//
 func (a *Authenticator) AcceptChallengeBytesWithIterations(challenge []byte, iterations int) ([]byte, error) {
 	a.Challenge = challenge
 	a.Iterations = iterations
