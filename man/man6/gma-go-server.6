@@ -825,6 +825,33 @@ privilege level of that user are allowed. Otherwise, the attempt
 to send a command not in this list results in a
 .B PRIV
 error from the server.
+Regardless, clients are always allowed to send
+.B POLO
+messages.
+.TP
+.BI Subscribe " (list of strings)"
+A JSON list of the protocol messages that the client is to receive
+from the server. Once logged in, the server will act as though this
+list were received in an
+.B ACCEPT
+message's
+.B Messages
+field from the client. This does not prevent other messages from being
+received if the server really wants to send others (which it will do,
+for example, to send
+.B MARCO
+and
+.B PRIV
+messages among a few others). If the
+.B ACCEPT
+message is listed in the
+.B Allowed
+field for this user (or there is no
+.B Allowed
+field or an empty list for it), then the client will be allowed
+to issue its own 
+.B ACCEPT
+command with its desired list of messages to subscribe to, overriding these.
 .TP
 .BI Banned " (boolean)"
 If present and true, this user is not allowed to log in to the server
@@ -875,7 +902,8 @@ same as passwords used for anything else of consequence.
       },
       "dice": { 
          "Password": "automated@Dice", 
-         "Allowed": ["D"] 
+         "Allowed": ["D"],
+         "Subscribe": ["ROLL"]
       }
    }
 }
