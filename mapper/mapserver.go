@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______  _______     _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___   )   (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   )  |   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )    /   )   | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /   _/   /    | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/   /   _/     |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\(   (__/\ _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/\_______/(_)(_______)     #
+#  _______  _______  _______             _______     _______  ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____         /   )   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/        ) \   |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\/\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/\______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -60,10 +60,8 @@ type ClientPreamble struct {
 	PostReady []string
 }
 
-//
 // ClientConnection describes the connection to a single
 // client from the server's point of view.
-//
 type ClientConnection struct {
 	// Client features enabled
 	Features struct {
@@ -158,11 +156,9 @@ func WithServer(s MapServer) ClientConnectionOption {
 	}
 }
 
-//
 // WithQoSQueryImageLimit imposes a limit on the number of
 // AI? requests for any image which the server has already answered
 // within a given time duration.
-//
 func WithQoSQueryImageLimit(limit uint64, window time.Duration) ClientConnectionOption {
 	return func(c *ClientConnection) error {
 		c.QoS.QueryImage.Threshold = limit
@@ -177,10 +173,8 @@ func WithQoSQueryImageLimit(limit uint64, window time.Duration) ClientConnection
 	}
 }
 
-//
 // WithQoSMessageRateLimit imposes a limit on the number of
 // requests received within a given time duration.
-//
 func WithQoSMessageRateLimit(limit uint64, window time.Duration) ClientConnectionOption {
 	return func(c *ClientConnection) error {
 		c.QoS.MessageRate.Threshold = limit
@@ -195,10 +189,8 @@ func WithQoSMessageRateLimit(limit uint64, window time.Duration) ClientConnectio
 	}
 }
 
-//
 // WithQoSLogWindow schedules a log report at intervals to log the
 // client's QoS stats.
-//
 func WithQoSLogWindow(window time.Duration) ClientConnectionOption {
 	return func(c *ClientConnection) error {
 		c.QoS.Log.Window = window
@@ -277,12 +269,10 @@ func (c *ClientConnection) Close() {
 	c.Conn.Close()
 }
 
-//
 // ServeToClient is intended to be run in its own thread,
 // and speaks to one client for the duration of its session.
 //
 // If the ctx context value is cancelled, the connection to the client will be closed and this routin will exit.
-//
 func (c *ClientConnection) ServeToClient(ctx context.Context, serverStarted, lastPing time.Time, nrApp *newrelic.Application) {
 	if c == nil {
 		return
@@ -718,7 +708,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 	// Authentication challenge
 	if c.Auth != nil {
 		c.debug(DebugIO, "issuing authentication challenge")
-		challenge, err := c.Auth.GenerateChallengeBytes()
+		challenge, iterations, err := c.Auth.GenerateChallengeBytesWithIterations()
 		if err != nil {
 			done <- fmt.Errorf("error generating authentication challenge: %v", err)
 			return
@@ -726,6 +716,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 		c.Conn.Send(Challenge, ChallengeMessagePayload{
 			Protocol:      GMAMapperProtocol,
 			Challenge:     challenge,
+			Iterations:    iterations,
 			ServerStarted: serverStarted,
 			ServerActive:  lastPing,
 			ServerTime:    time.Now(),

@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______  _______     _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___   )   (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   )  |   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )    /   )   | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /   _/   /    | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/   /   _/     |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\(   (__/\ _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/\_______/(_)(_______)     #
+#  _______  _______  _______             _______     _______  ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____         /   )   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/        ) \   |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\/\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/\______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -29,12 +29,23 @@ func TestAuthenticatorRoundLimits(t *testing.T) {
 	a := Authenticator{}
 	for i := 0; i < 1000; i++ {
 		a.Reset()
-		a.GenerateChallenge()
+		_, _ = a.GenerateChallenge()
 		if a.Challenge[0]&0xf0 != 0 {
 			t.Errorf("iteration %d, challenge high byte is %x", i, a.Challenge[0])
 		}
 		if a.Challenge[1]&0x40 != 0x40 {
 			t.Errorf("iteration %d, challenge low byte is %x", i, a.Challenge[1])
+		}
+	}
+}
+
+func TestAuthenticatorRoundLimitsWithIterations(t *testing.T) {
+	a := Authenticator{}
+	for i := 0; i < 1000; i++ {
+		a.Reset()
+		_, _, _ = a.GenerateChallengeWithIterations()
+		if a.Iterations < 64 || a.Iterations > 4095 {
+			t.Errorf("test iteration %d, challenge iterations is %d", i, a.Iterations)
 		}
 	}
 }
@@ -430,6 +441,7 @@ func TestAuthenticator(t *testing.T) {
 	for i, test := range testcases {
 		a := Authenticator{Secret: []byte("abc123**sekret**XXXyyyZZZ")}
 		a.Challenge = test.Nonce
+		a.Iterations = (int(a.Challenge[0]) << 8) | int(a.Challenge[1])
 		if a.CurrentChallenge() != test.Challenge {
 			t.Errorf("Challenge iteration %d was %s, expected %s", i, a.CurrentChallenge(), test.Challenge)
 		}
@@ -443,7 +455,7 @@ func TestAuthenticator(t *testing.T) {
 	}
 }
 
-// @[00]@| Go-GMA 5.22.0
+// @[00]@| Go-GMA 5.23.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______  _______     _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___   )   (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   )  |   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )    /   )   | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /   _/   /    | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/   /   _/     |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\(   (__/\ _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/\_______/(_)(_______)     #
+#  _______  _______  _______             _______     _______  ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____         /   )   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/        ) \   |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\/\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/\______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -24,7 +24,7 @@
 // Package auth calculates the challenge/response for a login attempt, and checks user input to
 // determine if it was a valid response to the challenge.
 //
-// BACKGROUND AND SECURITY NOTES
+// # BACKGROUND AND SECURITY NOTES
 //
 // This authentication system is designed for validating connections between clients
 // and servers in our game system and NOTHING ELSE. This is an extremely casual, low-risk
@@ -51,10 +51,12 @@
 // In case you missed it above, DO NOT USE this authenticator for ANYTHING that is worth
 // protecting. We only use it to play a game together.
 //
-// CLIENT-SIDE OPERATION
+// # CLIENT-SIDE OPERATION
 //
 // A client wishing to authenticate should create an Authenticator as
-//    a := NewClientAuthenticator(myUserName, mySecretValue, myProgramName)
+//
+//	a := NewClientAuthenticator(myUserName, mySecretValue, myProgramName)
+//
 // where mySecretValue is the password they are using to authenticate (which will be
 // the shared secret (password) used by all clients to
 // authenticate to the server, the GM's password, or the personal password assigned to the user with the
@@ -73,86 +75,102 @@
 // program name is empty, "unnamed" will be used.
 //
 // The client then obtains a challenge from the server in the form of a base-64-encoded
-// string, which is passed to the AcceptChallenge method:
-//     response, err := a.AcceptChallenge(serverChallengeString)
-// This provides the response to send back to the server in order to log in.
+// string, along with the number of hash iterations to perform, which are passed to the
+// AcceptChallengeWithIterations method:
 //
-// SERVER-SIDE OPERATION
+//	response, err := a.AcceptChallengeWithIterations(serverChallengeString, iterations)
+//
+// This returns the response to send back to the server in order to log in.
+//
+// # SERVER-SIDE OPERATION
 //
 // A server which accepts a client connection should create an Authenticator
 // for each such client which will track that session's authentication state.
-//     a := &Authenticator{Secret: commonPassword, GmSecret: gmPassword}
+//
+//	a := &Authenticator{Secret: commonPassword, GmSecret: gmPassword}
+//
 // where commonPassword is the password used by all clients to authenticate, and
 // gmPassword is the one used by privileged clients.
 //
 // The server then generates a unique challenge for this client's session by
 // calling
-//     challenge, err := a.GenerateChallenge()
 //
-// The generated challenge string is sent to the client, which will reply with
+//	challenge, iterations, err := a.GenerateChallengeWithIterations()
+//
+// The generated challenge string and iteration count are sent to the client, which will reply with
 // a response string.
 //
 // If the server knows it needs to validate against a specific non-GM user's
 // personal password, the server needs to update the Authenticator with that
 // password by calling
-//     a.SetSecret(personalSecret)
+//
+//	a.SetSecret(personalSecret)
+//
 // before validating the client's response.
 //
 // The server validates the authenticity of the response
 // by calling
-//     ok, err := a.ValidateResponse(clientResponse)
+//
+//	ok, err := a.ValidateResponse(clientResponse)
+//
 // which will return true if the response is correct for that challenge.
 //
-// AUTHENTICATION ALGORITHM
+// # AUTHENTICATION ALGORITHM
 //
 // Given:
-//   C:    the server's challenge as a byte slice
-//   h(x): the binary SHA-256 hash digest of byte slice x
-//   P:    the password needed to authenticate to the server
-//   x‖y:  means to concatenate x and y
+//
+//	C:    the server's challenge as a byte slice
+//  i:    the number of hash iterations (rounds) to perform
+//	h(x): the binary SHA-256 hash digest of byte slice x
+//	P:    the password needed to authenticate to the server
+//	x‖y:  means to concatenate x and y
 //
 // To calculate the response to the server's authentication challenge,
 // the client must do the following:
 //
-//   (1) Obtain i from the first 2 bytes of C as a big-endian uint16 value.
-//   (2) Calculate D=h(C‖P).
-//   (3) Repeat i times: D'=h(P‖D); let D=D'
+//	(1) Obtain i from the challenge issued by the server, OR if one was not
+//	    presented, then i is derived from the first 2 bytes of C as a big-endian uint16 value.
+//	(2) Calculate D=h(C‖P).
+//	(3) Repeat i times: D'=h(P‖D); let D=D'
 //
 // D is the response to send to the server for validation.
 //
-// PROTOCOL
+// # PROTOCOL
 //
 // Although the auth package itself isn't involved in the client/server protocol
 // directly, the way it is used by the map server and its clients uses the following
 // protocol:
 //
-//  (server->client) OK {"Protocol":<v>, "Challenge":"<challenge>"}
+//	(server->client) OK {"Protocol":<v>, "Challenge":"<challenge>", "Iterations":<iterations>}
+//
 // The server's greeting to the client includes this line which gives the server's
 // protocol version (<v>) and a base-64 encoding of the binary challenge value (C in the
 // algorithm described above)
 //
-//  (server<-client) AUTH {"Response":"<response>", "User":"<user>", "Client":"<client>"}
+//	(server<-client) AUTH {"Response":"<response>", "User":"<user>", "Client":"<client>"}
+//
 // The client's response is sent with this line, where <response> is the base-64
 // encoded representation of the response to the challenge (D above), and the optional <user> and
 // <client> values are the desired user name and description of the client program.
 //
-//  (server->client) DENIED {"Reason":"<message>"}
+//	(server->client) DENIED {"Reason":"<message>"}
+//
 // Server response indicating that the authentication was unsuccessful.
 //
-//  (server->client) GRANTED {"User":"<user>"}
+//	(server->client) GRANTED {"User":"<user>"}
+//
 // Server response indicating that the authentication was successful. The <user> value is
 // "GM" if the GM password was used, or the user name supplied by the user, which will be
 // the name they're known by inside the game map (usually a character name). If the user
 // did not supply a name and did not use the GM password, "anonymous" is returned.
-//
 package auth
 
 import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/binary"
 	"fmt"
+	"math/big"
 	"os/user"
 )
 
@@ -174,7 +192,8 @@ type Authenticator struct {
 	GmSecret []byte
 
 	// current generated challenge or nil
-	Challenge []byte
+	Challenge  []byte
+	Iterations int
 
 	// text description of client program/version
 	Client string
@@ -186,7 +205,6 @@ type Authenticator struct {
 	GmMode bool
 }
 
-//
 // SetSecret changes the non-GM secret and disables GM logins for this
 // authenticator. (SERVER)
 //
@@ -199,16 +217,13 @@ type Authenticator struct {
 //
 // GM logins are disabled since the GM already has their
 // own password, so this feature would not apply to them.
-//
 func (a *Authenticator) SetSecret(secret []byte) {
 	a.GmSecret = []byte{}
 	a.GmMode = false
 	a.Secret = secret
 }
 
-//
 // Compare two byte arrays for equality.
-//
 func bytesEqual(a, b []byte) bool {
 	if len(a) != len(b) {
 		return false
@@ -221,7 +236,6 @@ func bytesEqual(a, b []byte) bool {
 	return true
 }
 
-//
 // GenerateChallenge creates an authentication challenge for this session.
 // (SERVER)
 //
@@ -238,21 +252,66 @@ func bytesEqual(a, b []byte) bool {
 //
 // The challenge is returned as a base-64-encoded string.
 //
+// Deprecated: use GenerateChallengeWithIterations instead.
 func (a *Authenticator) GenerateChallenge() (string, error) {
-	_, err := a.GenerateChallengeBytes()
+	_, err := a.generateChallengeBytes(true)
 	if err != nil {
 		return "", err
 	}
 	return a.CurrentChallenge(), nil
 }
 
+// GenerateChallengeWithiterations creates an authentication challenge for this session.
+// (SERVER)
 //
+// This is a 256-bit random nonce which is remembered for
+// subsequent operations on this Authenticator instance.
+// It does not depend on the password(s).
+//
+// Also generates and returns a random number in the range [64,4095]
+// to be used as the number of hashing rounds to perform.
+//
+// This is at least a little more secure that GenerateChallenge, because the number of
+// hash rounds (aka iterations) is decoupled from the value of the challenge nonce itself.
+//
+// The challenge is returned as a base-64-encoded string.
+func (a *Authenticator) GenerateChallengeWithIterations() (string, int, error) {
+	_, err := a.generateChallengeBytes(false)
+	if err != nil {
+		return "", 0, err
+	}
+
+	return a.CurrentChallenge(), a.Iterations, nil
+}
+
 // GenerateChallengeBytes is just like GenerateChallenge but
 // returns the challenge as a binary byte slice instead of
 // encoding it in base 64.
 // (SERVER)
 //
+// Deprecated: use GenerateChallengeBytesWithIterations instead.
 func (a *Authenticator) GenerateChallengeBytes() ([]byte, error) {
+	return a.generateChallengeBytes(true)
+}
+
+// GenerateChallengeBytesWithIterations is just like GenerateChallengeWithIterations but
+// returns the challenge as a binary byte slice instead of encoding it
+// in base 64.
+//
+// This is at least a little more secure that GenerateChallengeBytes, because the number of
+// hash rounds (aka iterations) is decoupled from the value of the challenge nonce itself.
+//
+// (SERVER)
+func (a *Authenticator) GenerateChallengeBytesWithIterations() ([]byte, int, error) {
+	_, err := a.generateChallengeBytes(false)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return a.CurrentChallengeBytes(), a.Iterations, nil
+}
+
+func (a *Authenticator) generateChallengeBytes(constrained bool) ([]byte, error) {
 	a.Challenge = make([]byte, 32)
 	a.GmMode = false
 	_, err := rand.Read(a.Challenge)
@@ -260,52 +319,65 @@ func (a *Authenticator) GenerateChallengeBytes() ([]byte, error) {
 		return nil, err
 	}
 
-	// The first two bytes of the nonce determine the number of
-	// rounds of hashing that are done for the response. We'll
-	// limit the number to something in the range [64,4095] to
-	// prevent a trivial run or causing a performance issue on
-	// the client by requiring too many.
-	a.Challenge[0] &= 0x0f
-	a.Challenge[1] |= 0x40
+	if constrained {
+		// The first two bytes of the nonce determine the number of
+		// rounds of hashing that are done for the response. We'll
+		// limit the number to something in the range [64,4095] to
+		// prevent a trivial run or causing a performance issue on
+		// the client by requiring too many.
+
+		a.Challenge[0] &= 0x0f
+		a.Challenge[1] |= 0x40
+		a.Iterations = (int(a.Challenge[0]) << 8) | int(a.Challenge[1])
+	} else {
+		// We will generate the iterations separately so the full
+		// nonce can be any byte values.
+
+		i, err := rand.Int(rand.Reader, big.NewInt(4096))
+		if err != nil {
+			return nil, err
+		}
+		a.Iterations = int(i.Int64())
+		if a.Iterations < 64 {
+			a.Iterations += 64
+		}
+	}
 
 	return a.CurrentChallengeBytes(), nil
 }
 
-//
 // CurrentChallenge returns the last-generated challenge created by
 // GenerateChallenge.
 // (SERVER)
 //
 // This is returned as a base-64-encoded string suitable for transmitting
 // directly to a client.
-//
 func (a *Authenticator) CurrentChallenge() string {
 	return base64.StdEncoding.EncodeToString(a.Challenge)
 }
 
-//
 // CurrentChallengeBytes is like CurrentChallenge but returns the value
 // as a byte slice instead of base 64 encoding it.
 // (SERVER)
-//
 func (a *Authenticator) CurrentChallengeBytes() []byte {
 	return a.Challenge
 }
 
-//
 // Calculate the correct response for the previously generated challenge
 // value (which is stored in the Authenticator instance on which this
 // method is called).
 //
 // The response is:
-//    R = H(S || H(S || ... H(C||S)))
-//        \________________/
-//                 P
+//
+//	R = H(S || H(S || ... H(C||S)))
+//	    \________________/
+//	             P
 //
 // Where C = the generated 256-bit binary challenge value
-//       S = the user's secret
-//    H(x) = the binary SHA-256 hash of x
-//       P = the randomly-chosen number of rounds through H(x)
+//
+//	   S = the user's secret
+//	H(x) = the binary SHA-256 hash of x
+//	   P = the randomly-chosen number of rounds through H(x)
 //
 // P is a random value from 0-65535 which is obtained by taking the
 // first two bytes of C as a 16-bit big-endian binary integer value.
@@ -325,23 +397,21 @@ func (a *Authenticator) CurrentChallengeBytes() []byte {
 // with moving our pieces on the board, so we're ok with this simple
 // approach for the time being. We'll most likely upgrade this to have
 // additional protections in the future.
-//
 func (a *Authenticator) calcResponse(secret []byte) ([]byte, error) {
-	var i uint16
+	var i int
 
 	if len(a.Challenge) < 8 {
-		return nil, fmt.Errorf("No (or insufficient) challenge value set; unable to determine response")
+		return nil, fmt.Errorf("no (or insufficient) challenge value set; unable to determine response")
 	}
 	if len(secret) == 0 {
-		return nil, fmt.Errorf("No secret value set; unable to determine response")
+		return nil, fmt.Errorf("no secret value set; unable to determine response")
 	}
 
-	passes := binary.BigEndian.Uint16(a.Challenge[0:2])
 	h := sha256.New()
 	h.Write(a.Challenge)
 	h.Write(secret)
 	d := h.Sum(nil)
-	for i = 0; i < passes; i++ {
+	for i = 0; i < a.Iterations; i++ {
 		h.Reset()
 		h.Write(secret)
 		h.Write(d)
@@ -351,10 +421,10 @@ func (a *Authenticator) calcResponse(secret []byte) ([]byte, error) {
 	return d, nil
 }
 
-//
 // AcceptChallenge takes a server's challenge, stores it internally, and generates an appropriate
 // response to it, which is returned as a base-64 encoded string. (CLIENT)
 //
+// Deprecated: use AcceptChallengeWithIterations instead.
 func (a *Authenticator) AcceptChallenge(challenge string) (string, error) {
 	c, err := base64.StdEncoding.DecodeString(challenge)
 	if err != nil {
@@ -372,12 +442,36 @@ func (a *Authenticator) AcceptChallenge(challenge string) (string, error) {
 	return base64.StdEncoding.EncodeToString(response), nil
 }
 
+// AcceptChallengeWithIterations takes a server's challenge, stores it internally, and generates an appropriate
+// response to it, which is returned as a base-64 encoded string. (CLIENT)
 //
-// AcceptChallengeBytes is like Accept Challenge but takes the raw binary
+// If iterations is 0, this falls back to the old behavior of deriving the iterations (hash rounds)
+// from the first two bytes of the challenge nonce.
+//
+func (a *Authenticator) AcceptChallengeWithIterations(challenge string, iterations int) (string, error) {
+	c, err := base64.StdEncoding.DecodeString(challenge)
+	if err != nil {
+		return "", fmt.Errorf("bad challenge string: %v", err)
+	}
+
+	if len(c) < 2 {
+		return "", fmt.Errorf("challenge value is too short")
+	}
+	response, err := a.AcceptChallengeBytesWithIterations(c, iterations)
+	if err != nil {
+		return "", err
+	}
+
+	return base64.StdEncoding.EncodeToString(response), nil
+}
+
+// AcceptChallengeBytes is like AcceptChallenge but takes the raw binary
 // challenge and emits the raw binay response as []byte slices.
 //
+// Deprecated: use AcceptChallengeBytesWithIterations instead.
 func (a *Authenticator) AcceptChallengeBytes(challenge []byte) ([]byte, error) {
 	a.Challenge = challenge
+	a.Iterations = (int(challenge[0]) << 8) | int(challenge[1])
 	response, err := a.calcResponse(a.Secret)
 	if err != nil {
 		return nil, fmt.Errorf("unable to generate response: %v", err)
@@ -385,7 +479,22 @@ func (a *Authenticator) AcceptChallengeBytes(challenge []byte) ([]byte, error) {
 	return response, nil
 }
 
+// AcceptChallengeBytesWithIterations is like AcceptChallengeWithIterations but takes the raw binary
+// challenge and emits the raw binay response as []byte slices.
 //
+// If iterations is 0, this falls back to the old behavior of deriving the iterations (hash rounds)
+// from the first two bytes of the challenge nonce.
+//
+func (a *Authenticator) AcceptChallengeBytesWithIterations(challenge []byte, iterations int) ([]byte, error) {
+	a.Challenge = challenge
+	a.Iterations = iterations
+	response, err := a.calcResponse(a.Secret)
+	if err != nil {
+		return nil, fmt.Errorf("unable to generate response: %v", err)
+	}
+	return response, nil
+}
+
 // ValidateResponse takes
 // a base-64-encoded response string and verifies that the value it encodes
 // matches the expected response for the previously-generated challenge.
@@ -396,29 +505,26 @@ func (a *Authenticator) AcceptChallengeBytes(challenge []byte) ([]byte, error) {
 // role. If so, the GmMode member of the Authenticator is set to true.
 //
 // Returns true if the authentication was successful.
-//
 func (a *Authenticator) ValidateResponse(response string) (bool, error) {
 	binaryResponse, err := base64.StdEncoding.DecodeString(response)
 	if err != nil {
-		return false, fmt.Errorf("Error decoding client response: %v", err)
+		return false, fmt.Errorf("error decoding client response: %v", err)
 	}
 	return a.ValidateResponseBytes(binaryResponse)
 }
 
-//
 // ValidateResponseBytes is like ValidateResponse except that the response
 // value passed is in the form of a byte slice instead of being base 64
 // encoded.
 // (SERVER)
-//
 func (a *Authenticator) ValidateResponseBytes(binaryResponse []byte) (bool, error) {
 	a.GmMode = false
 	if len(a.Secret) == 0 {
-		return false, fmt.Errorf("No password configured")
+		return false, fmt.Errorf("no password configured")
 	}
 	ourResponse, err := a.calcResponse(a.Secret)
 	if err != nil {
-		return false, fmt.Errorf("Error validating client response: %v", err)
+		return false, fmt.Errorf("error validating client response: %v", err)
 	}
 	if bytesEqual(ourResponse, binaryResponse) {
 		return true, nil
@@ -426,7 +532,7 @@ func (a *Authenticator) ValidateResponseBytes(binaryResponse []byte) (bool, erro
 	if len(a.GmSecret) > 0 {
 		ourResponse, err := a.calcResponse(a.GmSecret)
 		if err != nil {
-			return false, fmt.Errorf("Error validating client response (gm): %v", err)
+			return false, fmt.Errorf("error validating client response (gm): %v", err)
 		}
 		if bytesEqual(ourResponse, binaryResponse) {
 			a.GmMode = true
@@ -436,26 +542,22 @@ func (a *Authenticator) ValidateResponseBytes(binaryResponse []byte) (bool, erro
 	return false, nil
 }
 
-//
 // Reset returns an Authenticator instance back to its pre-challenge state
 // so that it may be used again for another authentication attempt.
 // (CLIENT/SERVER)
 //
 // Existing secrets and user names are preserved.
-//
 func (a *Authenticator) Reset() {
 	a.Challenge = []byte{}
 	a.GmMode = false
 }
 
-//
 // NewClientAuthenticator creates and returns a pointer to a new Authenticator
 // instance, prepared for use by a typical client. (CLIENT)
 //
 // If the username string is empty, an
 // attempt will be made to determine the local username on the system, or the string
 // "anonymous" will be used. If the client string is empty, "unnamed" will be used.
-//
 func NewClientAuthenticator(username string, secret []byte, client string) *Authenticator {
 	a := &Authenticator{
 		Username: username,
@@ -479,7 +581,7 @@ func NewClientAuthenticator(username string, secret []byte, client string) *Auth
 	return a
 }
 
-// @[00]@| Go-GMA 5.22.0
+// @[00]@| Go-GMA 5.23.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
