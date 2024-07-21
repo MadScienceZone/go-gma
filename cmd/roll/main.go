@@ -36,34 +36,36 @@ It can be used interactively by users or it can be embedded in scripts for web-b
 # SYNOPSIS
 
 (If using the full GMA core tool suite)
-   gma go roll ...
+
+	gma go roll ...
 
 (Otherwise)
-   roll -help
-   roll -syntax
-   roll [-seed value] [-dice spec] [-json]
+
+	roll -help
+	roll -syntax
+	roll [-seed value] [-dice spec] [-json]
 
 # OPTIONS
 
 Command-line options may be specified with one or two hyphens (e.g., -json or --json).
 
-Options which take parameter values may have the value separated from the option name by a space or an equals sign (e.g., -dice="3d6" or -dice "3d6"), except for boolean flags which may be given alone (e.g., -json) to indicate that the option is set to ``true'' or may be given an explicit value which must be attached to the option with an equals sign (e.g., -json=true or -json=false).
+Options which take parameter values may have the value separated from the option name by a space or an equals sign (e.g., -dice="3d6" or -dice "3d6"), except for boolean flags which may be given alone (e.g., -json) to indicate that the option is set to “true” or may be given an explicit value which must be attached to the option with an equals sign (e.g., -json=true or -json=false).
 
-  -dice spec[;...]
-      Specify the die-roll expression to be rolled, such as "3d6". If this is not given, roll will interactively prompt for die-roll expressions. Typing a blank line repeats the previous expression. The program will exit on EOF. Multiple die-roll specs may be given here, separated by semicolons. These will be rolled in order after setting the seed (if any).
+	  -dice spec[;...]
+	      Specify the die-roll expression to be rolled, such as "3d6". If this is not given, roll will interactively prompt for die-roll expressions. Typing a blank line repeats the previous expression. The program will exit on EOF. Multiple die-roll specs may be given here, separated by semicolons. These will be rolled in order after setting the seed (if any).
 
-  -help
-      Print a command summary and exit.
+	  -help
+	      Print a command summary and exit.
 
-  -json
-      Print die-roll results in JSON format.
+	  -json
+	      Print die-roll results in JSON format.
 
-  -seed value
-      Instead of using a random seed value, base the die roll results on the given value.
-	  Value is a 64-bit integer expressed in decimal digits.
+	  -seed value
+	      Instead of using a random seed value, base the die roll results on the given value.
+		  Value is a 64-bit integer expressed in decimal digits.
 
-  -syntax
-      Print a summary of the die-roll expression syntax and exit. In interactive mode, this help text may be produced by typing "help" as the input line.
+	  -syntax
+	      Print a summary of the die-roll expression syntax and exit. In interactive mode, this help text may be produced by typing "help" as the input line.
 */
 package main
 
@@ -72,14 +74,16 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"math"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/MadScienceZone/go-gma/v5/dice"
 	"github.com/MadScienceZone/go-gma/v5/text"
 )
 
-const GoVersionNumber="5.23.0" //@@##@@
+const GoVersionNumber = "5.23.0" //@@##@@
 
 func main() {
 	var err error
@@ -182,6 +186,9 @@ func ReportText(title string, results []dice.StructuredResult) {
 	if title != "" {
 		fmt.Printf("** %s **\n", title)
 	}
+
+	sum := 0
+	data := make([]int, 0, 10)
 	for i, res := range results {
 		if len(results) > 1 {
 			fmt.Printf("Roll #%d: ", i+1)
@@ -194,11 +201,60 @@ func ReportText(title string, results []dice.StructuredResult) {
 			fmt.Println("**RESULT HIDDEN**")
 			continue
 		}
+		sum += res.Result
+		data = append(data, res.Result)
 		if description, err := res.Details.Text(); err == nil {
 			fmt.Printf("%s\n", description)
 		} else {
 			fmt.Printf("[%d] **ERROR: %v**\n", res.Result, err)
 		}
+	}
+	if len(data) > 2 {
+		/* calculate remaining statistics for this set of results */
+		var v, sd, med float64
+		var cur, count, largest_count int
+		var mode []int
+		N := len(data)
+
+		slices.Sort(data)
+		mean := float64(sum) / float64(N)
+		for i, x := range data {
+			v += math.Pow((float64(x) - mean), 2)
+			if i == 0 {
+				// nothing collected yet
+				cur = x
+				count = 1
+			} else if cur != x {
+				// hit a new value in the list. See what to do about the value we were tracking
+				if count == largest_count {
+					// we have a tie, so ADD to the mode list
+					mode = append(mode, cur)
+				} else if count > largest_count {
+					// we have a new most-popular one; this replaces all previous modes
+					mode = append(mode[:0], cur)
+					largest_count = count
+				}
+				cur = x
+				count = 1
+			} else {
+				count++
+			}
+		}
+		if count == largest_count {
+			mode = append(mode, cur)
+		} else if count > largest_count {
+			mode = append(mode[:0], cur)
+			largest_count = count
+		}
+		sd = math.Sqrt(v / float64(N-1))
+
+		if N%2 == 0 {
+			med = float64(data[N/2]+data[N/2-1]) / 2.0
+		} else {
+			med = float64(data[N/2])
+		}
+
+		fmt.Printf("N=%d, μ=%v, σ=%v, Md=%v, Mo=%v, Σ=%v\n", len(data), mean, sd, med, mode, sum)
 	}
 }
 
