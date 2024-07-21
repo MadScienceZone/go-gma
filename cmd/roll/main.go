@@ -74,7 +74,9 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"math"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/MadScienceZone/go-gma/v5/dice"
@@ -186,7 +188,7 @@ func ReportText(title string, results []dice.StructuredResult) {
 	}
 
 	sum := 0
-	count := 0
+	data := make([]int, 0, 10)
 	for i, res := range results {
 		if len(results) > 1 {
 			fmt.Printf("Roll #%d: ", i+1)
@@ -200,15 +202,59 @@ func ReportText(title string, results []dice.StructuredResult) {
 			continue
 		}
 		sum += res.Result
-		count++
+		data = append(data, res.Result)
 		if description, err := res.Details.Text(); err == nil {
 			fmt.Printf("%s\n", description)
 		} else {
 			fmt.Printf("[%d] **ERROR: %v**\n", res.Result, err)
 		}
 	}
-	if count > 2 {
-		fmt.Printf("N=%d, mean=%v, sum=%v\n", count, float64(sum)/float64(count), sum)
+	if len(data) > 2 {
+		/* calculate remaining statistics for this set of results */
+		var v, sd, med float64
+		var cur, count, largest_count int
+		var mode []int
+		N := len(data)
+
+		slices.Sort(data)
+		mean := float64(sum) / float64(N)
+		for i, x := range data {
+			v += math.Pow((float64(x) - mean), 2)
+			if i == 0 {
+				// nothing collected yet
+				cur = x
+				count = 1
+			} else if cur != x {
+				// hit a new value in the list. See what to do about the value we were tracking
+				if count == largest_count {
+					// we have a tie, so ADD to the mode list
+					mode = append(mode, cur)
+				} else if count > largest_count {
+					// we have a new most-popular one; this replaces all previous modes
+					mode = append(mode[:0], cur)
+					largest_count = count
+				}
+				cur = x
+				count = 1
+			} else {
+				count++
+			}
+		}
+		if count == largest_count {
+			mode = append(mode, cur)
+		} else if count > largest_count {
+			mode = append(mode[:0], cur)
+			largest_count = count
+		}
+		sd = math.Sqrt(v / float64(N-1))
+
+		if N%2 == 0 {
+			med = float64(data[N/2]+data[N/2-1]) / 2.0
+		} else {
+			med = float64(data[N/2])
+		}
+
+		fmt.Printf("N=%d, μ=%v, σ=%v, Md=%v, Mo=%v, Σ=%v\n", len(data), mean, sd, med, mode, sum)
 	}
 }
 
