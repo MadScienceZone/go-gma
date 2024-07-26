@@ -74,6 +74,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"slices"
@@ -133,31 +134,32 @@ func main() {
 		os.Exit(1)
 	}
 
+	report := ReportedData{
+		Seed: seedUsed,
+	}
+
 	if *rollSpec != "" {
-		var resultSet []ReportedResultSet
 		for i, thisRoll := range strings.Split(*rollSpec, ";") {
 			title, results, err := roller.DoRoll(thisRoll)
 			if err != nil {
 				fmt.Printf("Error in die-roll expression #%d: %v\n", i+1, err)
 				os.Exit(1)
 			}
-			resultSet = append(resultSet, ReportedResultSet{
+			r := ReportedResultSet{
 				Title:   title,
 				Results: results,
-				Seed:    seedUsed,
-			})
+			}
+			r.CalculateStats()
+			report.AddResult(r)
 		}
 
 		if *asJSON {
-			err = ReportJSON(resultSet)
-			if err != nil {
+			if err := report.WriteJSON(os.Stdout); err != nil {
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
 			}
 		} else {
-			for _, theResult := range resultSet {
-				ReportText(theResult.Title, theResult.Results)
-			}
+			report.WriteText(os.Stdout)
 		}
 	} else {
 		fmt.Println("Enter each die-roll expression below.\nType \"help\" to see a syntax description.\nEOF terminates.")
@@ -175,104 +177,190 @@ func main() {
 				if err != nil {
 					fmt.Printf("ERROR: %v\n", err)
 				} else {
-					ReportText(title, results)
+					r := ReportedResultSet{
+						Title:   title,
+						Results: results,
+					}
+					r.CalculateStats()
+					r.WriteText(os.Stdout)
 				}
 			}
 		}
 	}
 }
 
-func ReportText(title string, results []dice.StructuredResult) {
-	if title != "" {
-		fmt.Printf("** %s **\n", title)
+//
+// ReportedData describes the full output of an invocation of the die roller.
+// This includes overall metadata such as the PRNG seed value and a slice of
+// the result set from each discrete die-roll request.
+//
+type ReportedData struct {
+	ResultSet []ReportedResultSet
+	Seed      int64 `json:",omitempty"`
+}
+
+//
+// ResultStats provides statistics about the data set.
+//
+type ResultStats struct {
+	N      int     // population size
+	Mean   float64 // population mean (μ=Σ/N)
+	Median float64 // median value
+	Mode   []int   // population mode(s)
+	StdDev float64 // standard deviation (σ=(sqrt(Σ((Xi-μ)**2))/(N-1)))
+	Sum    int64   // sum of all values (Σ)
+}
+
+// ReportedResultSet describes the result of a single die-roll request.
+// This may involve multiple die rolls, depending on the options included, and each of those
+// may involve multiple dice being rolled.
+//
+type ReportedResultSet struct {
+	Title   string `json:",omitempty"`
+	Results []dice.StructuredResult
+	Stats   *ResultStats `json:",omitempty"`
+}
+
+//
+// AddResult adds a new result set to the output data.
+//
+func (rd *ReportedData) AddResult(r ReportedResultSet) {
+	rd.ResultSet = append(rd.ResultSet, r)
+}
+
+//
+// CalculateStats generates the ResultStats for a given result set,
+// assign it to the receiver's Stats struct member. If there is only
+// a single value, there's not much point so we leave Stats with a nil
+// value in that case.
+//
+func (rs *ReportedResultSet) CalculateStats() {
+	if len(rs.Results) < 2 {
+		rs.Stats = nil
+		return
 	}
 
-	sum := 0
-	data := make([]int, 0, 10)
-	for i, res := range results {
-		if len(results) > 1 {
-			fmt.Printf("Roll #%d: ", i+1)
-		}
-		if res.InvalidRequest {
-			fmt.Println("**INVALID DIE ROLL**")
+	// We only get this far if we have 2 or more values and thus
+	// the stats become non-trivial. Note that the code below
+	// this point ASSUMES there are more than 1 element in the
+	// Results slice.
+
+	rs.Stats = &ResultStats{
+		N: len(rs.Results),
+	}
+	data := make([]int, 0, rs.Stats.N)
+	for _, res := range rs.Results {
+		if res.InvalidRequest || res.ResultSuppressed {
+			rs.Stats.N--
 			continue
 		}
-		if res.ResultSuppressed {
-			fmt.Println("**RESULT HIDDEN**")
-			continue
-		}
-		sum += res.Result
+
 		data = append(data, res.Result)
-		if description, err := res.Details.Text(); err == nil {
-			fmt.Printf("%s\n", description)
-		} else {
-			fmt.Printf("[%d] **ERROR: %v**\n", res.Result, err)
-		}
+		rs.Stats.Sum += int64(res.Result)
 	}
-	if len(data) > 2 {
-		/* calculate remaining statistics for this set of results */
-		var v, sd, med float64
-		var cur, count, largest_count int
-		var mode []int
-		N := len(data)
+	slices.Sort(data)
+	rs.Stats.Mean = float64(rs.Stats.Sum) / float64(rs.Stats.N)
 
-		slices.Sort(data)
-		mean := float64(sum) / float64(N)
-		for i, x := range data {
-			v += math.Pow((float64(x) - mean), 2)
-			if i == 0 {
-				// nothing collected yet
-				cur = x
-				count = 1
-			} else if cur != x {
-				// hit a new value in the list. See what to do about the value we were tracking
-				if count == largest_count {
-					// we have a tie, so ADD to the mode list
-					mode = append(mode, cur)
-				} else if count > largest_count {
-					// we have a new most-popular one; this replaces all previous modes
-					mode = append(mode[:0], cur)
-					largest_count = count
-				}
-				cur = x
-				count = 1
-			} else {
-				count++
-			}
-		}
+	var v float64
+	var cur, count, largest_count int
+
+	setMode := func() {
 		if count == largest_count {
-			mode = append(mode, cur)
+			rs.Stats.Mode = append(rs.Stats.Mode, cur)
 		} else if count > largest_count {
-			mode = append(mode[:0], cur)
+			rs.Stats.Mode = append(rs.Stats.Mode[:0], cur)
 			largest_count = count
 		}
-		sd = math.Sqrt(v / float64(N-1))
+	}
 
-		if N%2 == 0 {
-			med = float64(data[N/2]+data[N/2-1]) / 2.0
+	for i, x := range data {
+		v += math.Pow((float64(x) - rs.Stats.Mean), 2)
+		if i == 0 {
+			// nothing collected yet
+			cur = x
+			count = 1
+		} else if cur != x {
+			// hit a new value in the list. See what to do about the value we were tracking
+			setMode()
+			cur = x
+			count = 1
 		} else {
-			med = float64(data[N/2])
+			count++
 		}
+	}
+	setMode()
+	rs.Stats.StdDev = math.Sqrt(v / float64(rs.Stats.N-1))
 
-		fmt.Printf("N=%d, μ=%v, σ=%v, Md=%v, Mo=%v, Σ=%v\n", len(data), mean, sd, med, mode, sum)
+	if rs.Stats.N%2 == 0 {
+		rs.Stats.Median = float64(data[rs.Stats.N/2]+data[rs.Stats.N/2-1]) / 2.0
+	} else {
+		rs.Stats.Median = float64(data[rs.Stats.N/2])
 	}
 }
 
-type ReportedResultSet struct {
-	Title   string                  `json:"title,omitempty"`
-	Results []dice.StructuredResult `json:"results"`
-	Seed    int64                   `json:"seed,omitempty"`
-}
-
-func ReportJSON(rs []ReportedResultSet) error {
-	j, err := json.Marshal(struct {
-		ResultSet []ReportedResultSet `json:"result_set"`
-	}{
-		ResultSet: rs,
-	})
+//
+// WriteJSON outputs reported data in JSON format to the designated output device.
+//
+func (rd ReportedData) WriteJSON(o io.Writer) error {
+	j, err := json.Marshal(rd)
 	if err != nil {
 		return err
 	}
-	fmt.Print(string(j))
+	o.Write(j)
 	return nil
+}
+
+//
+// WriteText outputs reported data in plain text format.
+//
+func (rd ReportedData) WriteText(o io.Writer) {
+	for i, set := range rd.ResultSet {
+		if i > 0 {
+			o.Write([]byte(strings.Repeat("\u2550", 80) + "\n"))
+		}
+		set.WriteText(o)
+	}
+}
+
+//
+// WriteText outputs reported data in plain text format.
+//
+func (rs ReportedResultSet) WriteText(o io.Writer) {
+
+	if rs.Title != "" {
+		o.Write([]byte("\033[1m\"" + rs.Title + "\":\033[0m\n"))
+	}
+
+	for i, res := range rs.Results {
+		if len(rs.Results) > 1 {
+			o.Write([]byte(fmt.Sprintf("\033[1;34mRoll #%d: \033[0m", i+1)))
+		}
+		if res.InvalidRequest {
+			o.Write([]byte("\033[1;31m**INVALID DIE ROLL**\033[0m\n"))
+			continue
+		}
+		if res.ResultSuppressed {
+			o.Write([]byte("\033[1;33m**RESULT HIDDEN**\033[0m\n"))
+			continue
+		}
+
+		if description, err := res.Details.Text(); err == nil {
+			o.Write([]byte(description + "\n"))
+		} else {
+			o.Write([]byte(fmt.Sprintf("[%d] \033[1;31m**ERROR: %v**\033[0m\n", res.Result, err)))
+		}
+	}
+
+	// If there are 3 or more data elements, report the stats. This keeps us
+	// from being overly eager when interacting with the user. The JSON output
+	// may choose to report the stats more often, but we won't.
+	if rs.Stats != nil && rs.Stats.N >= 3 {
+		o.Write([]byte(fmt.Sprintf("\033[36mN=%d, μ=%v, σ=%v, Md=%v, Mo=%v, Σ=%v\033[0m\n",
+			rs.Stats.N,
+			rs.Stats.Mean,
+			rs.Stats.StdDev,
+			rs.Stats.Median,
+			rs.Stats.Mode,
+			rs.Stats.Sum)))
+	}
 }
