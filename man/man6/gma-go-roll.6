@@ -108,6 +108,102 @@ typing
 .RB \*(lq help \*(rq
 as the input line.
 '\" <</>>
+.SH "OUTPUT FORMATS"
+.SS "Text Output"
+.LP
+The plain-text output format (the default) briefly summarizes each result and the die rolls which were made to reach that result.
+This output uses ANSI escape codes to add colors for emphasis.
+.LP
+In case a die roll specification yields three or more results (e.g., from a spec such as
+.RB \*(lq "3d6+5|repeat 20" \*(rq),
+a line of statistics will be printed, showing the number of results (N),
+population mean value (\[mc]),
+standard deviation (\[*s]),
+median value (Md),
+mode value(s) (Mo),
+and the sum of all results in the set (\[*S]).
+.SS "JSON Output"
+.LP
+If JSON output is requested, a single JSON object will be printed to standard output,
+with the following fields. Fields which are not relevant or have a zero value may be omitted
+entirely from the output.
+'\" <<list>>
+'\" <</ital-is-var>>
+.TP
+.BI "ResultSet " "(list of objects)"
+The value is a list of JSON objects, each containing one set of results from the set of die-roll specifications.
+Each value is an object with the following fields:
+'\" <<list>>
+.RS
+.TP
+.BI "Title " (string)
+The title (label) string, if any, specified by the user (this is the initial part of the die-roll
+spec, separated from the rest of the expression by an equals sign).
+.TP
+.BI "Results " "(list of objects)"
+This is a list of JSON objects, each describing one of the results from a single die-roll specification.
+Each element of the list is an object with the following fields:
+'\" <<list>>
+.RS
+.TP
+.BI "ResultSuppressed " (bool)
+If true, this indicates that the results are not shown to the user. They may have been sent privately
+to the GM, for example,
+.TP
+.BI "InvalidRequest " (bool)
+If true, this indicates that the request could not be understood and thus no results have been generated.
+.TP
+.BI "Result " (int)
+The total result of the die-roll expression, truncated to an integer (rounded toward zero).
+.TP
+.BI "Details " "(list of objects)"
+This list describes the die-roll expression that led to the result, including subtotals and the value rolled
+for each individual die. Each element of the list is a JSON object with the following fields:
+'\" <<list>>
+.RS
+.TP
+.BI Type
+The type of value this element represents.
+.TP
+.B Value
+The value of the element, expressed as a string.
+'\" <</>>
+.RE
+'\" <</>>
+.RE
+.TP
+.BI "Stats " "(object or null)"
+If there are 2 or more results in the result set, this object will provide statistics about the result set's values. It contains
+the following fields:
+'\" <<list>>
+.RS
+.TP
+.BI "N " (int)
+The population size (number of results analyzed).
+.TP
+.BI "Mean " (float)
+The population mean (simple average).
+.TP
+.BI "Median " (float)
+The median value of the result set.
+.TP
+.BI "Mode " (list of ints)
+The mode value (the value which occured most). If there's a tie for the most popular number,
+all of the most popular ones are listed.
+.TP
+.BI "StdDev " (float)
+The standard deviation of the values.
+.TP
+.BI "Sum " (int)
+The sum of all the values in the result set.
+'\" <</>>
+.RE
+'\" <</>>
+.RE
+.TP
+.BI "Seed " (int)
+The random-number seed used to generate this set of die rolls.
+'\" <</>>
 .SH "SEE ALSO"
 .LP
 .BR dice (3),

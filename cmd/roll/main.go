@@ -258,6 +258,14 @@ func (rs *ReportedResultSet) CalculateStats() {
 		data = append(data, res.Result)
 		rs.Stats.Sum += int64(res.Result)
 	}
+
+	// we may have started with 2+ elements but if enough were
+	// invalid/hidden we may still not have enough to do anything with.
+	if rs.Stats.N < 2 {
+		rs.Stats = nil
+		return
+	}
+
 	slices.Sort(data)
 	rs.Stats.Mean = float64(rs.Stats.Sum) / float64(rs.Stats.N)
 
