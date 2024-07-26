@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______  ______      _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___  \    (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   \  \   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )   ___) /   | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /   (___ (    | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/        ) \   |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\/\___/  / _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/\______/ (_)(_______)     #
+#  _______  _______  _______             _______     _______     ___       _______     #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )   /   )     (  __   )    #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |  / /) |     | (  )  |    #
+# | |      | || || || (___) | Assistant | (____         /   ) / (_) (_    | | /   |    #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / (____   _)   | (/ /) |    #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/       ) (     |   / | |    #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\     | |   _ |  (__) |    #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/     (_)  (_)(_______)    #
 #                                                                                      #
 ########################################################################################
 */
@@ -75,11 +75,12 @@
 // program name is empty, "unnamed" will be used.
 //
 // The client then obtains a challenge from the server in the form of a base-64-encoded
-// string, which is passed to the AcceptChallenge method:
+// string, along with the number of hash iterations to perform, which are passed to the
+// AcceptChallengeWithIterations method:
 //
-//	response, err := a.AcceptChallenge(serverChallengeString)
+//	response, err := a.AcceptChallengeWithIterations(serverChallengeString, iterations)
 //
-// This provides the response to send back to the server in order to log in.
+// This returns the response to send back to the server in order to log in.
 //
 // # SERVER-SIDE OPERATION
 //
@@ -94,9 +95,9 @@
 // The server then generates a unique challenge for this client's session by
 // calling
 //
-//	challenge, err := a.GenerateChallenge()
+//	challenge, iterations, err := a.GenerateChallengeWithIterations()
 //
-// The generated challenge string is sent to the client, which will reply with
+// The generated challenge string and iteration count are sent to the client, which will reply with
 // a response string.
 //
 // If the server knows it needs to validate against a specific non-GM user's
@@ -119,6 +120,7 @@
 // Given:
 //
 //	C:    the server's challenge as a byte slice
+//  i:    the number of hash iterations (rounds) to perform
 //	h(x): the binary SHA-256 hash digest of byte slice x
 //	P:    the password needed to authenticate to the server
 //	x‖y:  means to concatenate x and y
@@ -139,7 +141,7 @@
 // directly, the way it is used by the map server and its clients uses the following
 // protocol:
 //
-//	(server->client) OK {"Protocol":<v>, "Challenge":"<challenge>"}
+//	(server->client) OK {"Protocol":<v>, "Challenge":"<challenge>", "Iterations":<iterations>}
 //
 // The server's greeting to the client includes this line which gives the server's
 // protocol version (<v>) and a base-64 encoding of the binary challenge value (C in the
@@ -579,7 +581,7 @@ func NewClientAuthenticator(username string, secret []byte, client string) *Auth
 	return a
 }
 
-// @[00]@| Go-GMA 5.23.0
+// @[00]@| Go-GMA 5.24.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

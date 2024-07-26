@@ -1,11 +1,11 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.23.0                <!-- @@##@@ -->
- * Effective Date: 05-Jul-2024			<!-- @@##@@ -->
+ * This Package Version: 5.24.0                <!-- @@##@@ -->
+ * Effective Date: 25-Jul-2024			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 6.22		<!-- @@##@@ -->
+ * GMA Core API Library Version: 6.26		<!-- @@##@@ -->
  * GMA Mapper Version: 4.26		<!-- @@##@@ -->
  * GMA Mapper Protocol: 415		<!-- @@##@@ -->
  * GMA Mapper File Format: 23		<!-- @@##@@ -->
@@ -18,6 +18,10 @@ When upgrading an existing server to version 5.15.0 or later, be sure to run `sc
 In addition, if your server didn't have the following update installed previously, do it as well:
 
 When upgrading an existing server to version 5.13.1 or later, be sure to run `scripts/upgrade-5.13.1` on each database file to update it to the new chat history encoding scheme introduced at 5.13.1. If you don't, the server will ignore some or all of your historic chat and die roll messages. Alternatively, you can delete the old database and make a new one with the current server.
+
+## v5.24.0
+### Enhanced
+ * The standalone die-roller command `roll` was refactored and the ability to report statistics of the result set were added. *Note:* This changes the JSON output format (`-json` option).
 
 ## v5.23.0
 ### Added

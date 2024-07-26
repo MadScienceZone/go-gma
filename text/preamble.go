@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______  ______      _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___  \    (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   \  \   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )   ___) /   | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /   (___ (    | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/        ) \   |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\/\___/  / _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/\______/ (_)(_______)     #
+#  _______  _______  _______             _______     _______     ___       _______     #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )   /   )     (  __   )    #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |  / /) |     | (  )  |    #
+# | |      | || || || (___) | Assistant | (____         /   ) / (_) (_    | | /   |    #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / (____   _)   | (/ /) |    #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/       ) (     |   / | |    #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\     | |   _ |  (__) |    #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/     (_)  (_)(_______)    #
 #                                                                                      #
 ########################################################################################
 */
@@ -31,18 +31,18 @@ package text
 const CommonPostScriptPreamble = `%!PS
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  _______  _______  _______              ______     _______  _______                  %
-% (  ____ \(       )(  ___  )            / ____ \   / ___   )/ ___   )                 %
-% | (    \/| () () || (   ) |           ( (    \/   \/   )  |\/   )  |                 %
-% | |      | || || || (___) |           | (____         /   )    /   )                 %
-% | | ____ | |(_)| ||  ___  |           |  ___ \      _/   /   _/   /                  %
-% | | \_  )| |   | || (   ) | Game      | (   ) )    /   _/   /   _/                   %
-% | (___) || )   ( || )   ( | Master's  ( (___) ) _ (   (__/\(   (__/\                 %
-% (_______)|/     \||/     \| Assistant  \_____/ (_)\_______/\_______/                 %
+%  _______  _______  _______              ______     _______   ______                  %
+% (  ____ \(       )(  ___  )            / ____ \   / ___   ) / ____ \                 %
+% | (    \/| () () || (   ) |           ( (    \/   \/   )  |( (    \/                 %
+% | |      | || || || (___) |           | (____         /   )| (____                   %
+% | | ____ | |(_)| ||  ___  |           |  ___ \      _/   / |  ___ \                  %
+% | | \_  )| |   | || (   ) | Game      | (   ) )    /   _/  | (   ) )                 %
+% | (___) || )   ( || )   ( | Master's  ( (___) ) _ (   (__/\( (___) )                 %
+% (_______)|/     \||/     \| Assistant  \_____/ (_)\_______/ \_____/                  %
 %                                                                                      %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-% @[00]@| GMA Core 6.22
+% @[00]@| GMA Core 6.26
 % @[01]@|
 % @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 % @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
@@ -508,7 +508,15 @@ const CommonPostScriptPreamble = `%!PS
         CBM__boxpath                % i         (path set)
         dup CBM_qty_used le {           % i i<=u?
             stroke              % i         used block: solid box
+
+	    % use the form background if drawing checkbox under label tag
             SetColor_data
+	    CBM_label_i CBM_label_n lt CBM_qty_chkd 0 le and {
+	        CBM_labels CBM_label_i get () ne {
+		       SetColor_form
+		} if
+	    } if	
+	
             CBM_qty_half 0 gt {         % half-checked-qty > 0?
                 /CBM_qty_half CBM_qty_half 1 sub def
                 np          % i     within chkd/half zone, make 1/2 check
@@ -523,6 +531,7 @@ const CommonPostScriptPreamble = `%!PS
                     CBM_bx_w CBM_bx_h neg rln
                 stroke
             } if
+	    SetColor_data
         } {
                             % outside used zone; draw dashed outline of box
             SetLine_thin
@@ -536,8 +545,8 @@ const CommonPostScriptPreamble = `%!PS
         % in the current font
         %
         CBM_label_i CBM_label_n lt {
-            CBM__x 1 add CBM__y 1 add CBM_bx_h sub mv 
-            gsave /Helvetica findfont CBM_bx_h scalefont setfont LabelTagHue
+            CBM__x 0.5 add CBM__y 0.5 add CBM_bx_h sub mv 
+            gsave /HelveticaBold findfont CBM_bx_h 1 add scalefont setfont LabelTagHue
             CBM_labels CBM_label_i get show
             grestore
             /CBM_label_i CBM_label_i 1 add def
@@ -674,18 +683,18 @@ const CommonPostScriptPreamble = `%!PS
 // @@:go:gma-preamble:begin:GMAPostScriptPreamble@@
 const GMAPostScriptPreamble = `%!PS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  _______  _______  _______              ______     _______  _______                  %
-% (  ____ \(       )(  ___  )            / ____ \   / ___   )/ ___   )                 %
-% | (    \/| () () || (   ) |           ( (    \/   \/   )  |\/   )  |                 %
-% | |      | || || || (___) |           | (____         /   )    /   )                 %
-% | | ____ | |(_)| ||  ___  |           |  ___ \      _/   /   _/   /                  %
-% | | \_  )| |   | || (   ) | Game      | (   ) )    /   _/   /   _/                   %
-% | (___) || )   ( || )   ( | Master's  ( (___) ) _ (   (__/\(   (__/\                 %
-% (_______)|/     \||/     \| Assistant  \_____/ (_)\_______/\_______/                 %
+%  _______  _______  _______              ______     _______   ______                  %
+% (  ____ \(       )(  ___  )            / ____ \   / ___   ) / ____ \                 %
+% | (    \/| () () || (   ) |           ( (    \/   \/   )  |( (    \/                 %
+% | |      | || || || (___) |           | (____         /   )| (____                   %
+% | | ____ | |(_)| ||  ___  |           |  ___ \      _/   / |  ___ \                  %
+% | | \_  )| |   | || (   ) | Game      | (   ) )    /   _/  | (   ) )                 %
+% | (___) || )   ( || )   ( | Master's  ( (___) ) _ (   (__/\( (___) )                 %
+% (_______)|/     \||/     \| Assistant  \_____/ (_)\_______/ \_____/                  %
 %                                                                                      %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-% @[00]@| GMA Core 6.22
+% @[00]@| GMA Core 6.26
 % @[01]@|
 % @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 % @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
@@ -828,7 +837,7 @@ _my_encoding 8#344 /divide        put
     /FormHue    { 0.60 0.20 0.20 setrgbcolor } def
     /FaintHue   { 1.00 0.70 0.70 setrgbcolor } def
     /SlightHue  { 1.00 0.95 0.90 setrgbcolor } def
-    /LabelTagHue    { 0.40 0.80 0.40 setrgbcolor } def
+    /LabelTagHue    { 0.10 0.40 0.10 setrgbcolor } def
     /HighlightHue   { 1.00 1.00 0.50 setrgbcolor } def
     /ImportantHue {BlankHue} def
 } def
@@ -2364,6 +2373,7 @@ _my_encoding 8#344 /divide        put
         MonsterID () PageTextWidth 20 sub 25 sub 20 sub BlankHue DataBlock
         ThePage   ()  20 BlankHue DataBlockR
         EndDataBlock
+    	SetColor_data
     } def
 
     % RequiredVerticalSpace
@@ -2630,7 +2640,8 @@ _my_encoding 8#344 /divide        put
 
 /NotesBlock {
     X Y FontLead_body FontSize_body PsFF_init
-    dup PageTextWidth 10 sub PsFF_vertspace 12 add RequiredVerticalSpace
+%    dup PageTextWidth 10 sub PsFF_vertspace 12 add RequiredVerticalSpace
+    36 RequiredVerticalSpace
     SetColor_form
     HeadingFont HeadingFontSize HeadingFontSize 4 add BeginDataBlock
     (NOTES) PageTextWidth TitleBlockCtr
@@ -2882,6 +2893,9 @@ _my_encoding 8#344 /divide        put
 /SMSkillNull {
     DarkHue (//////) () SMSkillW DataBlockCtr
 } def
+/SMSkillNoRankValue {
+    DarkHue () SMSkillW DataBlockR
+} def
 /EndPlayerSkillBlock {
     EndDataBlock
 } def
@@ -3107,7 +3121,7 @@ _my_encoding 8#344 /divide        put
 `
 // @@:go:gma-preamble:end:@@
 
-// @[00]@| Go-GMA 5.23.0
+// @[00]@| Go-GMA 5.24.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
