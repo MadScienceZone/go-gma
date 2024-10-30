@@ -22,7 +22,9 @@
 package util
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -68,13 +70,49 @@ func VersionCompare(a, b string) (int, error) {
 }
 
 //
+// LineWrap breaks a long line up on embedded newlines, returning the lines (sans newline) as a slice of strings.
+// The first line is returned with its own prefix string, and subsequent lines with their own, followed by a final prefix for the
+// last line. A single final trailing newline is ignored, but any other embedded blank lines are preserved.
+// If only one line is found, it is prefixed by onlyPrefix.
+//
+func LineWrap(source, onlyPrefix, firstPrefix, nextPrefix, lastPrefix string) []string {
+	var output []string
+	lines := strings.Split(source, "\n")
+	if len(lines) == 0 {
+		return []string{onlyPrefix}
+	}
+
+	limit := len(lines) - 1
+	if limit > 0 && lines[limit] == "" {
+		limit--
+	}
+
+	if limit == 0 {
+		return []string{onlyPrefix + lines[0]}
+	}
+
+	for i, l := range lines {
+		if i == 0 {
+			output = append(output, firstPrefix+l)
+		} else if i == limit {
+			output = append(output, lastPrefix+l)
+		} else {
+			output = append(output, nextPrefix+l)
+		}
+	}
+	return output
+}
+
+//
 // Return a string representation of an ASCII hexdump of the data.
 //
+
 type hdopt struct {
 	addr  int
 	width int
 	word  int
 	ascii bool
+	term  bool
 }
 
 //
@@ -95,6 +133,7 @@ type hdopt struct {
 // WithStartingAddress(addr),
 // WithWidth(nbytes),
 // WithWordSize(nbytes),
+// WithoutNewline,
 // and/or
 // WithoutText.
 //
@@ -107,6 +146,7 @@ func Hexdump(data []byte, opts ...func(*hdopt)) string {
 		width: 16,
 		word:  1,
 		ascii: true,
+		term:  true,
 	}
 	for _, o := range opts {
 		o(&options)
@@ -114,6 +154,9 @@ func Hexdump(data []byte, opts ...func(*hdopt)) string {
 
 	stop := len(data)
 	for i := 0; i < stop; i += options.width {
+		if i > 0 {
+			result.WriteByte('\n')
+		}
 		fmt.Fprintf(&result, "%08X: ", options.addr)
 		for j := 0; j < options.width; j += options.word {
 			result.WriteByte(' ')
@@ -140,10 +183,22 @@ func Hexdump(data []byte, opts ...func(*hdopt)) string {
 			}
 			result.WriteByte('|')
 		}
-		result.WriteByte('\n')
 		options.addr += options.width
 	}
+	if options.term {
+		result.WriteByte('\n')
+	}
 	return result.String()
+}
+
+//
+// WithoutNewline suppresses the final newline from the Hexdump output.
+//
+// Example:
+//  Hexdump(data, WithoutNewline)
+//
+func WithoutNewline(o *hdopt) {
+	o.term = false
 }
 
 //
@@ -237,6 +292,34 @@ func PluralizeCustom(base, singularSuffix, pluralSuffix string, qty int) string 
 		return base + singularSuffix
 	}
 	return base + pluralSuffix
+}
+
+//
+// YorN is a simple yes/no interactive prompt.
+//
+func YorN(prompt string, defaultChoice bool) bool {
+	var answer string
+	r := bufio.NewReader(os.Stdin)
+
+	for {
+		fmt.Print(prompt)
+		if defaultChoice {
+			fmt.Print("? [yes] ")
+		} else {
+			fmt.Print("? [no] ")
+		}
+
+		answer, _ = r.ReadString('\n')
+		switch answer {
+		case "y\n", "yes\n", "sure\n", "ok\n", "affirmative\n", "true\n", "1\n":
+			return true
+		case "n\n", "no\n", "nope\n", "denied\n", "negative\n", "false\n", "0\n":
+			return false
+		case "", "\n":
+			return defaultChoice
+		}
+		fmt.Println("Please answer 'yes' or 'no'.")
+	}
 }
 
 // @[00]@| Go-GMA 5.24.0
