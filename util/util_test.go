@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______     ___       _______     #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )   /   )     (  __   )    #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |  / /) |     | (  )  |    #
-# | |      | || || || (___) | Assistant | (____         /   ) / (_) (_    | | /   |    #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / (____   _)   | (/ /) |    #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/       ) (     |   / | |    #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\     | |   _ |  (__) |    #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/     (_)  (_)(_______)    #
+#  _______  _______  _______             _______     _______  _______     _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )(  ____ \   (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  || (    \/   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____         /   )| (____     | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / (_____ \    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/        ) )   |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\/\____) ) _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/\______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -35,7 +35,7 @@ func TestHexDump(t *testing.T) {
 		outnt string
 	}
 	for i, test := range []testcase{
-		{[]byte{}, "", "", "", "", ""},
+		{[]byte{}, "\n", "\n", "\n", "\n", "\n"},
 		{[]byte{0},
 			`00000000:  00                                               |.               |
 `,
@@ -82,7 +82,7 @@ func TestHexDump(t *testing.T) {
 		hxnt := Hexdump(test.in, WithoutText)
 
 		if hx != test.out {
-			t.Errorf("Case %d: expected:\n%sactual:\n%s", i, test.out, hx)
+			t.Errorf("Case %d: expected:\n'%s'actual:\n'%s'", i, test.out, hx)
 		}
 		if hx32 != test.out32 {
 			t.Errorf("Case %d/32: expected:\n%sactual:\n%s", i, test.out32, hx32)
@@ -149,7 +149,7 @@ func TestVersions(t *testing.T) {
 	}
 }
 
-// @[00]@| Go-GMA 5.24.0
+// @[00]@| Go-GMA 5.25.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

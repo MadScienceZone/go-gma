@@ -1,8 +1,8 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.24.0                <!-- @@##@@ -->
- * Effective Date: 25-Jul-2024			<!-- @@##@@ -->
+ * This Package Version: 5.25.0                <!-- @@##@@ -->
+ * Effective Date: 30-Nov-2024			<!-- @@##@@ -->
 
 ## Compatibility
  * GMA Core API Library Version: 6.26		<!-- @@##@@ -->
@@ -18,6 +18,14 @@ When upgrading an existing server to version 5.15.0 or later, be sure to run `sc
 In addition, if your server didn't have the following update installed previously, do it as well:
 
 When upgrading an existing server to version 5.13.1 or later, be sure to run `scripts/upgrade-5.13.1` on each database file to update it to the new chat history encoding scheme introduced at 5.13.1. If you don't, the server will ignore some or all of your historic chat and die roll messages. Alternatively, you can delete the old database and make a new one with the current server.
+
+## v5.25.0
+### Enhanced
+ * Die-roll labels now allow an extended syntax which allows users to add their own custom colors for individual modifiers and permuted rolls.
+### Added
+ * `LineWrap` function to break long lines up on embedded newlines.
+ * `WithoutNewline` option for hex dump output.
+ * `YorN` yes/no prompt function.
 
 ## v5.24.0
 ### Enhanced
