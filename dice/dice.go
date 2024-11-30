@@ -1044,7 +1044,7 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 		reIsOp := regexp.MustCompile(`^[-+*×÷()≤≥]$`)
 		reIsDie := regexp.MustCompile(`\d+\s*[dD]\d*\d+`)
 		reIsWS := regexp.MustCompile(`^\s+$`)
-		reIsBareLabel := regexp.MustCompile(`^\s*([\p{L}_][\p{L}\p{N}_,.]*\s*)+\s*$`)
+		reIsBareLabel := regexp.MustCompile(`^\s*([\p{L}_][\p{L}\p{N}_,.]*\s*)+(≡(#[0-9a-fA-F]+|\w+)){0,2}\s*$`)
 		reConstant := regexp.MustCompile(`^\s*(\d+(?:\.\d+)?|\.\d+)\s*(.*?)\s*$`)
 		//                                  max?    numerator    denominator       sides          best/worst         rerolls   label
 		//                                   _1_    __2__          __3__            __4___       _____5_____         __6__     __7__

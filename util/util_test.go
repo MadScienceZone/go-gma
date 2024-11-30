@@ -35,7 +35,7 @@ func TestHexDump(t *testing.T) {
 		outnt string
 	}
 	for i, test := range []testcase{
-		{[]byte{}, "", "", "", "", ""},
+		{[]byte{}, "\n", "\n", "\n", "\n", "\n"},
 		{[]byte{0},
 			`00000000:  00                                               |.               |
 `,
@@ -82,7 +82,7 @@ func TestHexDump(t *testing.T) {
 		hxnt := Hexdump(test.in, WithoutText)
 
 		if hx != test.out {
-			t.Errorf("Case %d: expected:\n%sactual:\n%s", i, test.out, hx)
+			t.Errorf("Case %d: expected:\n'%s'actual:\n'%s'", i, test.out, hx)
 		}
 		if hx32 != test.out32 {
 			t.Errorf("Case %d/32: expected:\n%sactual:\n%s", i, test.out32, hx32)
