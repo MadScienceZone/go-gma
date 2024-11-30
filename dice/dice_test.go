@@ -31,7 +31,7 @@ import (
 	"testing"
 )
 
-const verbose = true // set to true if you want debugging output
+const verbose = false // set to true if you want debugging output
 
 func _probtester(t *testing.T, description string, f func() (int, error), minval, maxval int) {
 	//
@@ -1727,35 +1727,35 @@ func TestDiceStructured(t *testing.T) {
 			}},
 		}},
 		// 65
-		{Roll: "d4|sf foo/bar", Reslist: []StructuredResult{
+		{Roll: "d4|sf foo≡red/bar≡blue≡green", Reslist: []StructuredResult{
 			{Result: 1, Details: []StructuredDescription{
-				{Type: "fail", Value: "bar"},
+				{Type: "fail", Value: "bar≡blue≡green"},
 				{Type: "result", Value: "1"},
 				{Type: "separator", Value: "="},
 				{Type: "diespec", Value: "1d4"},
 				{Type: "roll", Value: "1"},
 				{Type: "moddelim", Value: "|"},
-				{Type: "sf", Value: "sf foo/bar"},
+				{Type: "sf", Value: "sf foo≡red/bar≡blue≡green"},
 			}},
 		}},
 		// 66
-		{Roll: "3d6 fire + 15d10 force + 1d4 electricity + 10d10 cold", Reslist: []StructuredResult{
+		{Roll: "3d6 fire≡red + 15d10 force≡#12abCD + 1d4 electricity≡#ABCDEF≡#000000 + 10d10 cold", Reslist: []StructuredResult{
 			{Result: 146, Details: []StructuredDescription{
 				{Type: "result", Value: "146"},
 				{Type: "separator", Value: "="},
 				{Type: "diespec", Value: "3d6"},
 				{Type: "subtotal", Value: "8"},
 				{Type: "roll", Value: "2,2,4"},
-				{Type: "label", Value: "fire"},
+				{Type: "label", Value: "fire≡red"},
 				{Type: "operator", Value: "+"},
 				{Type: "diespec", Value: "15d10"},
 				{Type: "subtotal", Value: "70"},
 				{Type: "roll", Value: "6,7,7,4,1,4,4,1,3,9,8,1,9,5,1"},
-				{Type: "label", Value: "force"},
+				{Type: "label", Value: "force≡#12abCD"},
 				{Type: "operator", Value: "+"},
 				{Type: "diespec", Value: "1d4"},
 				{Type: "roll", Value: "3"},
-				{Type: "label", Value: "electricity"},
+				{Type: "label", Value: "electricity≡#ABCDEF≡#000000"},
 				{Type: "operator", Value: "+"},
 				{Type: "diespec", Value: "10d10"},
 				{Type: "subtotal", Value: "65"},
