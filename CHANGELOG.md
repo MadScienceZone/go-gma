@@ -1,7 +1,7 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.25.0                <!-- @@##@@ -->
+ * This Package Version: 5.25.1-alpha.0                <!-- @@##@@ -->
  * Effective Date: 30-Nov-2024			<!-- @@##@@ -->
 
 ## Compatibility
