@@ -53,10 +53,8 @@ const (
 	DebugAll DebugFlags = 0xffffffff
 )
 
-//
 // DebugFlagNameSlice returns a list of debug option names
 // from the given DebugFlags value.
-//
 func DebugFlagNameSlice(flags DebugFlags) []string {
 	if flags == 0 {
 		return nil
@@ -87,11 +85,9 @@ func DebugFlagNameSlice(flags DebugFlags) []string {
 	return list
 }
 
-//
 // DebugFlagNames returns a single string representation of
 // the debugging flags (topics) stored in the DebugFlags
 // value passed in.
-//
 func DebugFlagNames(flags DebugFlags) string {
 	list := DebugFlagNameSlice(flags)
 	if list == nil {
@@ -100,7 +96,6 @@ func DebugFlagNames(flags DebugFlags) string {
 	return "<" + strings.Join(list, ",") + ">"
 }
 
-//
 // NamedDebugFlags takes a comma-separated list of
 // debug flag (topic) names, or a list of individual
 // names, or both, and returns the DebugFlags
@@ -109,7 +104,6 @@ func DebugFlagNames(flags DebugFlags) string {
 // If "none" appears in the list, it cancels all previous
 // values seen, but subsequent names will add their values
 // to the list.
-//
 func NamedDebugFlags(names ...string) (DebugFlags, error) {
 	var d DebugFlags
 	var err error
@@ -147,10 +141,8 @@ func NamedDebugFlags(names ...string) (DebugFlags, error) {
 	return d, err
 }
 
-//
 // Application holds the global settings and other context for the application
 // generally.
-//
 type Application struct {
 	// Logger is whatever device or file we're writing logs to.
 	Logger *log.Logger
@@ -252,18 +244,14 @@ func (a *Application) GetAllowedClients() []mapper.PackageUpdate {
 	return a.AllowedClients
 }
 
-//
 // AddClient adds the given client connection to our list of active
 // connections.
-//
 func (a *Application) AddClient(c *mapper.ClientConnection) {
 	a.clientData.add <- c
 	//a.SendPeerListToAll()
 }
 
-//
 // DropAllClients severs the connection to all clients.
-//
 func (a *Application) DropAllClients() {
 	clients := a.GetClients()
 	for i, c := range clients {
@@ -276,18 +264,14 @@ func (a *Application) DropAllClients() {
 	}
 }
 
-//
 // RemoveClients removes the given client from the list of connections.
-//
 func (a *Application) RemoveClient(c *mapper.ClientConnection) {
 	a.clientData.remove <- c
 	//a.SendPeerListToAll()
 }
 
-//
 // GetClients returns a copy of the client list as it existed
 // at the time of the call.
-//
 func (a *Application) GetClients() []*mapper.ClientConnection {
 	return <-a.clientData.fetch
 }
@@ -363,11 +347,9 @@ func (a *Application) manageClientList() {
 	}
 }
 
-//
 // Debug logs messages conditionally based on the currently set
 // debug level. It acts just like fmt.Println as far as formatting
 // its arguments.
-//
 func (a *Application) Debug(level DebugFlags, message ...any) {
 	if a != nil && a.Logger != nil && (a.DebugLevel&level) != 0 {
 		var dmessage []any
@@ -377,41 +359,33 @@ func (a *Application) Debug(level DebugFlags, message ...any) {
 	}
 }
 
-//
 // Log logs messages to the application's logger.
 // It acts just like fmt.Println as far as formatting
 // its arguments.
-//
 func (a *Application) Log(message ...any) {
 	if a != nil && a.Logger != nil {
 		a.Logger.Println(message...)
 	}
 }
 
-//
 // Logf logs messages to the application's logger.
 // It acts just like fmt.Printf as far as formatting
 // its arguments.
-//
 func (a *Application) Logf(format string, args ...any) {
 	if a != nil && a.Logger != nil {
 		a.Logger.Printf(format, args...)
 	}
 }
 
-//
 // Debugf works like Debug, but takes a format string and argument
 // list just like fmt.Printf does.
-//
 func (a *Application) Debugf(level DebugFlags, format string, args ...any) {
 	if a != nil && a.Logger != nil && (a.DebugLevel&level) != 0 {
 		a.Logger.Printf(DebugFlagNames(level)+" "+format, args...)
 	}
 }
 
-//
 // GetAppOptions configures the application by reading command-line options.
-//
 func (a *Application) GetAppOptions() error {
 
 	var initFile = flag.String("init-file", "", "Load initial client commands from named file path")
@@ -878,7 +852,11 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 					response.Title = genericLabel
 				}
 
-				if err := peer.Conn.Send(mapper.RollResult, response); err != nil {
+				if !peer.Features.DiceColorLabels {
+					if err := peer.Conn.Send(mapper.RollResult, stripColorsFromResponse(response)); err != nil {
+						a.Logf("error sending color-stripped die-roll result %v to %v: %v", response, peer.IdTag(), err)
+					}
+				} else if err := peer.Conn.Send(mapper.RollResult, response); err != nil {
 					a.Logf("error sending die-roll result %v to %v: %v", response, peer.IdTag(), err)
 				}
 			}
@@ -1296,11 +1274,9 @@ func NewApplication() *Application {
 	return &app
 }
 
-//
 // managePreambleData centralizes access to the common preamble data
 // in a single goroutine, providing goroutine-safe access to it via
 // channels.
-//
 func (a *Application) managePreambleData() {
 	a.Log("preamble data manager started")
 	defer a.Log("preamble data manager stopped")
@@ -1731,9 +1707,7 @@ func (a *Application) managePreambleData() {
 	}
 }
 
-//
 // manageGameState is a goroutine which tracks the global game state for clients
-//
 func (a *Application) manageGameState() {
 	var isInCombatMode bool
 	var toolbarHidden bool
@@ -2110,4 +2084,29 @@ func (a *Application) UpdateGameState(event *mapper.MessagePayload) {
 
 func (a *Application) SendGameState(client *mapper.ClientConnection) {
 	a.gameState.sync <- client
+}
+
+// Strip color codes from strings in the message payload, returning a new copy without those color codes.
+func stripColorsFromResponse(result mapper.RollResultMessagePayload) mapper.RollResultMessagePayload {
+	if func() bool {
+		for _, detail := range result.Result.Details {
+			if strings.IndexRune(detail.Value, '≡') >= 0 {
+				return false
+			}
+		}
+		return true
+	}() {
+		// nothing to strip
+		return result
+	}
+
+	strippedResult := result
+
+	strippedResult.Result.Details = nil
+	for _, detail := range result.Result.Details {
+		if colorSep := strings.IndexRune(detail.Value, '≡'); colorSep >= 0 && (detail.Type == "label" || detail.Type == "fail" || detail.Type == "success") {
+			strippedResult.Result.Details = append(strippedResult.Result.Details, dice.StructuredDescription{Type: detail.Type, Value: detail.Value[0:colorSep]})
+		}
+	}
+	return strippedResult
 }
