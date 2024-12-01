@@ -6,8 +6,8 @@
 #  _______  _______  _______             _______     _______  _______      __          #
 # (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )(  ____ \    /  \         #
 # | (    \/| () () || (   ) | Master's  | (    \/   \/   )  || (    \/    \/) )        #
-# | |      | || || || (___) | Assistant | (____         /   )| (____        | |  _____ #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / (_____ \       | | (_____ #
+# | |      | || || || (___) | Assistant | (____         /   )| (____        | |        #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / (_____ \       | |        #
 # | | \_  )| |   | || (   ) |                 ) )    /   _/        ) )      | |        #
 # | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\/\____) ) _  __) (_       #
 # (_______)|/     \||/     \| Client    \______/ (_)\_______/\______/ (_) \____/       #
@@ -51,7 +51,7 @@ import (
 // and protocol versions supported by this code.
 const (
 	GMAMapperProtocol=415      // @@##@@ auto-configured
-	GoVersionNumber="5.25.1-alpha.0" // @@##@@ auto-configured
+	GoVersionNumber="5.25.1" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
 	MaximumSupportedMapProtocol = 415
 )
