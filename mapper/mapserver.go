@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______  _______     _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )(  ____ \   (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  || (    \/   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )| (____     | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / (_____ \    | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/        ) )   |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\/\____) ) _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/\______/ (_)(_______)     #
+#  _______  _______  _______             _______     _______  _______      __          #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )(  ____ \    /  \         #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  || (    \/    \/) )        #
+# | |      | || || || (___) | Assistant | (____         /   )| (____        | |        #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / (_____ \       | |        #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/        ) )      | |        #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\/\____) ) _  __) (_       #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/\______/ (_) \____/       #
 #                                                                                      #
 ########################################################################################
 */
@@ -65,7 +65,8 @@ type ClientPreamble struct {
 type ClientConnection struct {
 	// Client features enabled
 	Features struct {
-		DiceColorBoxes bool
+		DiceColorBoxes  bool
+		DiceColorLabels bool
 	}
 
 	// The client's host and port number
@@ -599,10 +600,13 @@ mainloop:
 
 				case AllowMessagePayload:
 					c.Features.DiceColorBoxes = false
+					c.Features.DiceColorLabels = false
 
 					for _, feature := range p.Features {
 						if feature == "DICE-COLOR-BOXES" {
 							c.Features.DiceColorBoxes = true
+						} else if feature == "DICE-COLOR-LABELS" {
+							c.Features.DiceColorLabels = true
 						}
 					}
 
