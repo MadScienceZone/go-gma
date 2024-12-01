@@ -65,7 +65,8 @@ type ClientPreamble struct {
 type ClientConnection struct {
 	// Client features enabled
 	Features struct {
-		DiceColorBoxes bool
+		DiceColorBoxes  bool
+		DiceColorLabels bool
 	}
 
 	// The client's host and port number
@@ -599,10 +600,13 @@ mainloop:
 
 				case AllowMessagePayload:
 					c.Features.DiceColorBoxes = false
+					c.Features.DiceColorLabels = false
 
 					for _, feature := range p.Features {
 						if feature == "DICE-COLOR-BOXES" {
 							c.Features.DiceColorBoxes = true
+						} else if feature == "DICE-COLOR-LABELS" {
+							c.Features.DiceColorLabels = true
 						}
 					}
 

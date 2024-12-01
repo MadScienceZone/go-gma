@@ -982,6 +982,7 @@ type OptionalFeature byte
 
 const (
 	DiceColorBoxes OptionalFeature = iota
+	DiceColorLabels
 )
 
 // Allow tells the server which optional features this client is
@@ -995,6 +996,8 @@ func (c *Connection) Allow(features ...OptionalFeature) error {
 		switch feature {
 		case DiceColorBoxes:
 			featureList = append(featureList, "DICE-COLOR-BOXES")
+		case DiceColorLabels:
+			featureList = append(featureList, "DICE-COLOR-LABELS")
 		default:
 			return fmt.Errorf("unknown OptionalFeature code %v", feature)
 		}
