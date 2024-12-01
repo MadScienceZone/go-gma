@@ -2106,6 +2106,8 @@ func stripColorsFromResponse(result mapper.RollResultMessagePayload) mapper.Roll
 	for _, detail := range result.Result.Details {
 		if colorSep := strings.IndexRune(detail.Value, '≡'); colorSep >= 0 && (detail.Type == "label" || detail.Type == "fail" || detail.Type == "success") {
 			strippedResult.Result.Details = append(strippedResult.Result.Details, dice.StructuredDescription{Type: detail.Type, Value: detail.Value[0:colorSep]})
+		} else {
+			strippedResult.Result.Details = append(strippedResult.Result.Details, detail)
 		}
 	}
 	return strippedResult
