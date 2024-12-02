@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______  _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )(  ____ \    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  || (    \/    \/) )        #
-# | |      | || || || (___) | Assistant | (____         /   )| (____        | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / (_____ \       | |        #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/        ) )      | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\/\____) ) _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/\______/ (_) \____/       #
+#  _______  _______  _______             _______     _______  _______     _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )(  ____ \   / ___   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  || (    \/   \/   )  |     #
+# | |      | || || || (___) | Assistant | (____         /   )| (____         /   )     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / (_____ \      _/   /      #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/        ) )    /   _/       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\/\____) ) _ (   (__/\     #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/\______/ (_)\_______/     #
 #                                                                                      #
 ########################################################################################
 */
@@ -1044,7 +1044,7 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 		reIsOp := regexp.MustCompile(`^[-+*×÷()≤≥]$`)
 		reIsDie := regexp.MustCompile(`\d+\s*[dD]\d*\d+`)
 		reIsWS := regexp.MustCompile(`^\s+$`)
-		reIsBareLabel := regexp.MustCompile(`^\s*([\p{L}_][\p{L}\p{N}_,.]*\s*)+(≡(#[0-9a-fA-F]+|\w+)){0,2}\s*$`)
+		reIsBareLabel := regexp.MustCompile(`^\s*([\p{L}_][\p{L}\p{N}_,.]*\s*)+(≡(#[0-9a-fA-F]+|\w+)){0,2}(\s*‖\s*([\p{L}_][\p{L}\p{N}_,.]*\s*)+(≡(#[0-9a-fA-F]+|\w+)){0,2})*\s*$`)
 		reConstant := regexp.MustCompile(`^\s*(\d+(?:\.\d+)?|\.\d+)\s*(.*?)\s*$`)
 		//                                  max?    numerator    denominator       sides          best/worst         rerolls   label
 		//                                   _1_    __2__          __3__            __4___       _____5_____         __6__     __7__
@@ -2027,7 +2027,7 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 // Continue making die rolls, adding their results to the returned output,
 // until one of the rolls' result was at least <n>.
 //
-//  | total <n>
+//	| total <n>
 //
 // Continue making die rolls until the cumulative results from all of them
 // total at least <n>.
@@ -2077,30 +2077,30 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 //
 // Example die-roll specifications:
 //
-//	"d20"             Roll 1d20.
-//	"3d6"             Roll 3d6 (3 six-sided dice, adding their values).
-//	"15d6+15"         Roll 15d6, add 15 to their sum.
-//	"1d10+5*10"       Roll 1d10, add 5, then multiply the result by 10.
-//	"1/2 d6"          Roll 1d6, divide result by 2 (truncating toward zero).
-//	"2d10+3d6+12"     Roll 2d10, 3d6, add their results and add 12 to the sum.
-//	"d20+15|c"        Roll d20+15, automatically rolling to confirm on a natural 20.
-//	"d20+15|c19+2"    Roll d20+15, rolling to confirm on natural 19 or 20 with +2 bonus.
-//	"d%"              Roll percentile dice, giving result 1-100.
-//	"40%"             Roll percentile dice, giving result 1 with 40% probability.
-//	"d20+12|max20"    Roll d20+12 but any result > 20 is capped at 20.
-//	"d20 best of 2"   Roll d20 twice, discarding the worse result.
-//	"d20+4|dc 10"     Roll d20+4, signalling success if the result is 10 or greater.
-//	"3d6 fire+1d4 acid+2 bonus"
-//	                  Roll 3d6+1d4+2. In the structured results, it will show the values
-//	                  rolled for the 3d6 fire, 1d4 acid, and 2 bonus individually.
-//	"40% hit"         Reports success ("hit") with a 40% probability; otherwise reports
-//	                  failure ("miss").
-//	"13% red/blue"    Reports success ("red") with a 13% probability; otherwise reports
-//	                  failure ("blue").
-//	"2d10+3|until 19" Repeatedly rolls 2d10+3, adding each result to the set of die rolls
-//	                  returned, until a roll totals at least 19.
-//  "1d8+3|total 30"  Repeatedly rolls 1d8+3, keeping a running sum of all of the die rolls
-//                    in the set, until the cumulative sum is at least 30.
+//		"d20"             Roll 1d20.
+//		"3d6"             Roll 3d6 (3 six-sided dice, adding their values).
+//		"15d6+15"         Roll 15d6, add 15 to their sum.
+//		"1d10+5*10"       Roll 1d10, add 5, then multiply the result by 10.
+//		"1/2 d6"          Roll 1d6, divide result by 2 (truncating toward zero).
+//		"2d10+3d6+12"     Roll 2d10, 3d6, add their results and add 12 to the sum.
+//		"d20+15|c"        Roll d20+15, automatically rolling to confirm on a natural 20.
+//		"d20+15|c19+2"    Roll d20+15, rolling to confirm on natural 19 or 20 with +2 bonus.
+//		"d%"              Roll percentile dice, giving result 1-100.
+//		"40%"             Roll percentile dice, giving result 1 with 40% probability.
+//		"d20+12|max20"    Roll d20+12 but any result > 20 is capped at 20.
+//		"d20 best of 2"   Roll d20 twice, discarding the worse result.
+//		"d20+4|dc 10"     Roll d20+4, signalling success if the result is 10 or greater.
+//		"3d6 fire+1d4 acid+2 bonus"
+//		                  Roll 3d6+1d4+2. In the structured results, it will show the values
+//		                  rolled for the 3d6 fire, 1d4 acid, and 2 bonus individually.
+//		"40% hit"         Reports success ("hit") with a 40% probability; otherwise reports
+//		                  failure ("miss").
+//		"13% red/blue"    Reports success ("red") with a 13% probability; otherwise reports
+//		                  failure ("blue").
+//		"2d10+3|until 19" Repeatedly rolls 2d10+3, adding each result to the set of die rolls
+//		                  returned, until a roll totals at least 19.
+//	 "1d8+3|total 30"  Repeatedly rolls 1d8+3, keeping a running sum of all of the die rolls
+//	                   in the set, until the cumulative sum is at least 30.
 func (d *DieRoller) DoRoll(spec string) (string, []StructuredResult, error) {
 	var err error
 	//
@@ -3066,6 +3066,32 @@ represents. In this case, the label must consist of one or more words which begi
 and contain only letters, digits, underscores, periods (**.**), and commas (**,**).  For example,
 “**5d6 + 1d6 fire + 1d6 acid spray**”.
 
+==(Custom Colors for Titles and Labels)==
+To make a die roll title stand out, for example to make damage monster attack rolls or critical damage rolls stand out so you can notice them
+at a glance when scrolling back through the die-roll/chat window, you can colorize the title by adding color codes after the title text (just
+before the equals sign (**=**).
+
+The color code is introduced by a Unicode character U+2261 (**≡**), followed by the name of a color or a pound sign and a hex RGB color value
+such as **≡red** or **≡#3366bb**.
+If you add two of these color codes, the first sets the text foreground color and the second sets the background color. For example,
+“**damage≡red≡white=**...” titles a die roll with the text “damage” in red letters on a white background.
+
+You can break a title into multiple parts, each of which may have its own coloring by separating the parts with Unicode characters U+2016 (‖).
+For example, “**beholder≡red‖damage≡yellow=2d6+12**”.
+
+While text labels in the die-roll expression itself (e.g., the “fire” in “6d6 fire”) are normally displayed according to
+your overall style preferences (so all such labels are displayed the same), sometimes die roll expressions can be so complex, and a few key
+modifiers so special, that it may be important for certain labels to visually stand out when they appear. To accommodate these cases,
+it is possible to apply the same color codes to the end of these labels as described above for the die-roll titles. We recommend doing this
+sparingly, however, so that they remain an effective way of highlighting exceptional modifiers rather than just introducing an explosion
+of color into the die-roll window.
+
+For example:
+“**d20+15 bab+3 str+4 smite≡red+2 luck**”.
+
+Normally, these colors apply to the entire text label which may include spaces. If you just want to color part of the label, or want to 
+apply different colors to different parts of the label, use the U+2016 double-vertical-bar separator (‖) between parts of the label to
+divide portions of the modifier label to be colorized, similar to how this is done for the overall die-roll title string.
 ==(Options)==
 At the very end of the entire die-roll string, you can place one or more of the following options which alter the
 meaning of the whole thing. Each option begins with a vertical bar (**|**) character.
@@ -3110,6 +3136,8 @@ Likewise, the die roll “**d20+{10/8}+{d10/100}**” is the same as rolling
 
 Any arbitrary text may appear in the braces; the permutations and substitutions are made before each resulting die-roll string is parsed
 and evaluated.
+
+The order in which the permuted rolls are performed is not defined.
 `
 
 /*
@@ -3139,7 +3167,7 @@ d representation:
 
 */
 
-// @[00]@| Go-GMA 5.25.1
+// @[00]@| Go-GMA 5.25.2
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

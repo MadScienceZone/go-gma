@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______  _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )(  ____ \    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  || (    \/    \/) )        #
-# | |      | || || || (___) | Assistant | (____         /   )| (____        | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / (_____ \       | |        #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/        ) )      | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\/\____) ) _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/\______/ (_) \____/       #
+#  _______  _______  _______             _______     _______  _______     _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )(  ____ \   / ___   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  || (    \/   \/   )  |     #
+# | |      | || || || (___) | Assistant | (____         /   )| (____         /   )     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / (_____ \      _/   /      #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/        ) )    /   _/       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\/\____) ) _ (   (__/\     #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/\______/ (_)\_______/     #
 #                                                                                      #
 ########################################################################################
 */
@@ -1727,19 +1727,19 @@ func TestDiceStructured(t *testing.T) {
 			}},
 		}},
 		// 65
-		{Roll: "d4|sf foo≡red/bar≡blue≡green", Reslist: []StructuredResult{
+		{Roll: "d4|sf foo/bar", Reslist: []StructuredResult{
 			{Result: 1, Details: []StructuredDescription{
-				{Type: "fail", Value: "bar≡blue≡green"},
+				{Type: "fail", Value: "bar"},
 				{Type: "result", Value: "1"},
 				{Type: "separator", Value: "="},
 				{Type: "diespec", Value: "1d4"},
 				{Type: "roll", Value: "1"},
 				{Type: "moddelim", Value: "|"},
-				{Type: "sf", Value: "sf foo≡red/bar≡blue≡green"},
+				{Type: "sf", Value: "sf foo/bar"},
 			}},
 		}},
 		// 66
-		{Roll: "3d6 fire≡red + 15d10 force≡#12abCD + 1d4 electricity≡#ABCDEF≡#000000 + 10d10 cold", Reslist: []StructuredResult{
+		{Roll: "3d6 fire≡red + 15d10 force≡#12abCD + 1d4 electricity≡#ABCDEF≡#000000‖ and ‖force≡white + 10d10 cold", Reslist: []StructuredResult{
 			{Result: 146, Details: []StructuredDescription{
 				{Type: "result", Value: "146"},
 				{Type: "separator", Value: "="},
@@ -1755,7 +1755,7 @@ func TestDiceStructured(t *testing.T) {
 				{Type: "operator", Value: "+"},
 				{Type: "diespec", Value: "1d4"},
 				{Type: "roll", Value: "3"},
-				{Type: "label", Value: "electricity≡#ABCDEF≡#000000"},
+				{Type: "label", Value: "electricity≡#ABCDEF≡#000000‖ and ‖force≡white"},
 				{Type: "operator", Value: "+"},
 				{Type: "diespec", Value: "10d10"},
 				{Type: "subtotal", Value: "65"},
@@ -2155,7 +2155,7 @@ func TestDicePrivateRolls(t *testing.T) {
 	}
 }
 
-// @[00]@| Go-GMA 5.25.1
+// @[00]@| Go-GMA 5.25.2
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
