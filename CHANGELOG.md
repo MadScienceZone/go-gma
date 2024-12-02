@@ -19,6 +19,10 @@ In addition, if your server didn't have the following update installed previousl
 
 When upgrading an existing server to version 5.13.1 or later, be sure to run `scripts/upgrade-5.13.1` on each database file to update it to the new chat history encoding scheme introduced at 5.13.1. If you don't, the server will ignore some or all of your historic chat and die roll messages. Alternatively, you can delete the old database and make a new one with the current server.
 
+## v5.25.2
+## Fixed
+ * Die-roll labels may also include ‖ separators.
+
 ## v5.25.1
 ## Fixed
  * Die-roll label colors are stripped from output to clients which do not declare that they don't allow that feature.

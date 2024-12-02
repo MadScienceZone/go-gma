@@ -1727,19 +1727,19 @@ func TestDiceStructured(t *testing.T) {
 			}},
 		}},
 		// 65
-		{Roll: "d4|sf foo≡red/bar≡blue≡green", Reslist: []StructuredResult{
+		{Roll: "d4|sf foo/bar", Reslist: []StructuredResult{
 			{Result: 1, Details: []StructuredDescription{
-				{Type: "fail", Value: "bar≡blue≡green"},
+				{Type: "fail", Value: "bar"},
 				{Type: "result", Value: "1"},
 				{Type: "separator", Value: "="},
 				{Type: "diespec", Value: "1d4"},
 				{Type: "roll", Value: "1"},
 				{Type: "moddelim", Value: "|"},
-				{Type: "sf", Value: "sf foo≡red/bar≡blue≡green"},
+				{Type: "sf", Value: "sf foo/bar"},
 			}},
 		}},
 		// 66
-		{Roll: "3d6 fire≡red + 15d10 force≡#12abCD + 1d4 electricity≡#ABCDEF≡#000000 + 10d10 cold", Reslist: []StructuredResult{
+		{Roll: "3d6 fire≡red + 15d10 force≡#12abCD + 1d4 electricity≡#ABCDEF≡#000000‖ and ‖force≡white + 10d10 cold", Reslist: []StructuredResult{
 			{Result: 146, Details: []StructuredDescription{
 				{Type: "result", Value: "146"},
 				{Type: "separator", Value: "="},
@@ -1755,7 +1755,7 @@ func TestDiceStructured(t *testing.T) {
 				{Type: "operator", Value: "+"},
 				{Type: "diespec", Value: "1d4"},
 				{Type: "roll", Value: "3"},
-				{Type: "label", Value: "electricity≡#ABCDEF≡#000000"},
+				{Type: "label", Value: "electricity≡#ABCDEF≡#000000‖ and ‖force≡white"},
 				{Type: "operator", Value: "+"},
 				{Type: "diespec", Value: "10d10"},
 				{Type: "subtotal", Value: "65"},
