@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______  _______     _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )(  ____ \   / ___   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  || (    \/   \/   )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )| (____         /   )     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / (_____ \      _/   /      #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/        ) )    /   _/       #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\/\____) ) _ (   (__/\     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/\______/ (_)\_______/     #
+#  _______  _______  _______             _______     _______   ______     _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) / ____ \   (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |( (    \/   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____         /   )| (____     | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / |  ___ \    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/  | (   ) )   |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\( (___) ) _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_____/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -986,6 +986,45 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			a.Logf("Error sending ECHO: %v", err)
 		}
 
+	case mapper.FailedMessagePayload:
+		if requester.Auth == nil || !requester.Auth.GmMode {
+			requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+				Command: p.RawMessage(),
+				Reason:  "You are not authorized to issue FAILED messages for requests.",
+			})
+			a.Logf("refusing to allow non-GM user send a FAILED message")
+			return
+		}
+		// The GM is sending a FAILED notice back to a player's client
+		for _, peer := range a.GetClients() {
+			if peer.Address == p.RequestingClient {
+				if err := peer.Conn.Send(mapper.Failed, p); err != nil {
+					a.Logf("error sending message %v to %v: %v", p, peer.IdTag(), err)
+				}
+				return
+			}
+		}
+		a.Logf("unable to find original requesting client %v to send FAILED message to", p.RequestingClient)
+
+	case mapper.TimerAcknowledgeMessagePayload:
+		if requester.Auth == nil || !requester.Auth.GmMode {
+			requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+				Command: p.RawMessage(),
+				Reason:  "You are not authorized to send a TMACK message.",
+			})
+			a.Logf("refusing to allow non-GM user to send a TMACK message")
+			return
+		}
+		for _, peer := range a.GetClients() {
+			if peer.Address == p.RequestingClient {
+				if err := peer.Conn.Send(mapper.TimerAcknowledge, p); err != nil {
+					a.Logf("error sending message %v to %v: %v", p, peer.IdTag(), err)
+				}
+				return
+			}
+		}
+		a.Logf("unable to find original requesting client %v to send TMACK message to", p.RequestingClient)
+
 	case mapper.FilterDicePresetsMessagePayload:
 		if requester.Auth == nil {
 			a.Logf("Unable to filter die-roll preset for unauthenticated user")
@@ -1124,6 +1163,19 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 
 			if err := peer.Conn.Send(mapper.ChatMessage, p); err != nil {
 				a.Logf("error sending message %v to %v: %v", p, peer.IdTag(), err)
+			}
+		}
+
+	case mapper.TimerRequestMessagePayload:
+		if requester.Auth != nil {
+			p.RequestedBy = requester.Auth.Username
+		}
+		p.RequestingClient = requester.Address
+		for _, peer := range a.GetClients() {
+			if peer.Auth != nil && peer.Auth.GmMode {
+				if err := peer.Conn.Send(mapper.TimerRequest, p); err != nil {
+					a.Logf("error sending %v to %v: %v", p, peer.IdTag(), err)
+				}
 			}
 		}
 

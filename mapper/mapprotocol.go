@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______  _______     _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )(  ____ \   / ___   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  || (    \/   \/   )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )| (____         /   )     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / (_____ \      _/   /      #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/        ) )    /   _/       #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\/\____) ) _ (   (__/\     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/\______/ (_)\_______/     #
+#  _______  _______  _______             _______     _______   ______     _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) / ____ \   (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |( (    \/   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____         /   )| (____     | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / |  ___ \    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/  | (   ) )   |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\( (___) ) _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_____/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -50,10 +50,10 @@ import (
 // The GMA Mapper Protocol version number current as of this build,
 // and protocol versions supported by this code.
 const (
-	GMAMapperProtocol=415      // @@##@@ auto-configured
-	GoVersionNumber="5.25.2" // @@##@@ auto-configured
+	GMAMapperProtocol=416      // @@##@@ auto-configured
+	GoVersionNumber="5.26.0" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
-	MaximumSupportedMapProtocol = 415
+	MaximumSupportedMapProtocol = 416
 )
 
 func init() {
@@ -194,6 +194,10 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 	case Echo:
 		if e, ok := data.(EchoMessagePayload); ok {
 			return c.sendJSON("ECHO", e)
+		}
+	case Failed:
+		if fa, ok := data.(FailedMessagePayload); ok {
+			return c.sendJSON("FAILED", fa)
 		}
 	case FilterCoreData:
 		if fi, ok := data.(FilterCoreDataMessagePayload); ok {
@@ -340,6 +344,14 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 	case SyncChat:
 		if sc, ok := data.(SyncChatMessagePayload); ok {
 			return c.sendJSON("SYNC-CHAT", sc)
+		}
+	case TimerAcknowledge:
+		if ta, ok := data.(TimerAcknowledgeMessagePayload); ok {
+			return c.sendJSON("TMACK", ta)
+		}
+	case TimerRequest:
+		if tr, ok := data.(TimerRequestMessagePayload); ok {
+			return c.sendJSON("TMRQ", tr)
 		}
 	case Toolbar:
 		if tb, ok := data.(ToolbarMessagePayload); ok {
@@ -787,6 +799,16 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 		p.messageType = Echo
 		return p, nil
 
+	case "FAILED":
+		p := FailedMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
+		p.messageType = Failed
+		return p, nil
+
 	case "GRANTED":
 		p := GrantedMessagePayload{BaseMessagePayload: payload}
 		if hasJsonPart {
@@ -1059,6 +1081,26 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = Toolbar
+		return p, nil
+
+	case "TMACK":
+		p := TimerAcknowledgeMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
+		p.messageType = TimerAcknowledge
+		return p, nil
+
+	case "TMRQ":
+		p := TimerRequestMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
+		p.messageType = TimerRequest
 		return p, nil
 
 	case "TO":
