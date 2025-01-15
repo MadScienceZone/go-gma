@@ -636,6 +636,7 @@ const (
 	DefineDicePresetDelegates
 	Denied
 	Echo
+	Failed
 	FilterCoreData
 	FilterDicePresets
 	FilterImages
@@ -667,6 +668,8 @@ const (
 	RollResult
 	Sync
 	SyncChat
+	TimerAcknowledge
+	TimerRequest
 	Toolbar
 	UpdateClock
 	UpdateCoreData
@@ -705,6 +708,7 @@ var ServerMessageByName = map[string]ServerMessage{
 	"DefineDicePresetDelegates":   DefineDicePresetDelegates,
 	"Denied":                      Denied,
 	"Echo":                        Echo,
+	"Failed":                      Failed,
 	"FilterCoreData":              FilterCoreData,
 	"FilterDicePresets":           FilterDicePresets,
 	"FilterImages":                FilterImages,
@@ -736,6 +740,8 @@ var ServerMessageByName = map[string]ServerMessage{
 	"RollResult":                  RollResult,
 	"Sync":                        Sync,
 	"SyncChat":                    SyncChat,
+	"TimerAcknowledge":            TimerAcknowledge,
+	"TimerRequest":                TimerRequest,
 	"Toolbar":                     Toolbar,
 	"UpdateClock":                 UpdateClock,
 	"UpdateCoreData":              UpdateCoreData,
@@ -1579,6 +1585,42 @@ func (c *Connection) Echo(b bool, i int, s string, o map[string]any) error {
 		return fmt.Errorf("nil connection")
 	}
 	return c.serverConn.Send(Echo, EchoMessagePayload{B: b, I: i, S: s, O: o})
+}
+
+//  _____     _ _          _
+// |  ___|_ _(_) | ___  __| |
+// | |_ / _` | | |/ _ \/ _` |
+// |  _| (_| | | |  __/ (_| |
+// |_|  \__,_|_|_|\___|\__,_|
+//
+
+// FailedMessagePayload holds information about a client request that was
+// unsuccessful because the server detected an error with it or the GM decided
+// to decline the request.
+//
+type FailedMessagePayload struct {
+	BaseMessagePayload
+
+	// If true, the request failed because there was something found to be wrong with it.
+	IsError bool `json:",omitempty"`
+
+	// If true, the GM simply decided not to honor the request.
+	IsDiscretionary bool `json:",omitempty"`
+
+	// The command string for the requested operation.
+	Command string
+
+	// The reason given for the failure. Usually, this is all the information you need to give to the end user.
+	Reason string
+
+	// The ID of the original request, as supplied with that request.
+	RequestID string
+
+	// The user name of the requesting user.
+	RequestedBy string `json:",omitempty"`
+
+	// An opaque connection ID meaningful to the server to identify the client from which the request was received.
+	RequestingClient string `json:",omitempty"`
 }
 
 //  _____ _ _ _            ____  _          ____                     _
@@ -2671,6 +2713,60 @@ type RedirectMessagePayload struct {
 	Reason string `json:",omitempty"`
 }
 
+// TimerAcknowledgeMessagePayload conveys to the requesting client
+// that their TimerRequest message was accepted.
+type TimerAcknowledgeMessagePayload struct {
+	BaseMessagePayload
+	RequestID        string
+	RequestingClient string `json:",omitempty"`
+	RequestedBy      string `json:",omitempty"`
+}
+
+// TimerRequestMessagePayload carries a client's request to add a timer
+// to the GM's time tracker.
+type TimerRequestMessagePayload struct {
+	BaseMessagePayload
+
+	// If true, the timer should be visible to the players instead of just the GM
+	ShowToAll bool
+
+	// If true, the timer should start running as soon as it's created
+	IsRunning bool
+
+	// A unique identifier for this request (recommend using a UUID)
+	RequestID string
+
+	// One-line description of the timer's purpose
+	Description string
+
+	// Absolute or relative expiration time for this timer.
+	Expires string
+
+	// If nonempty, the timer should only be visible to these users.
+	Targets []string
+
+	// The server will fill in this information about the requesting client.
+	RequestedBy      string
+	RequestingClient string
+}
+
+// TimerRequest sends a timer requst to the GM. If approved, the new timer will be added
+// to the list of things being tracked in the game.
+
+func (c *Connection) TimerRequest(id, description, expires string, targets []string, isRunning, showToAll bool) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(TimerRequest, TimerRequestMessagePayload{
+		ShowToAll:   showToAll,
+		IsRunning:   isRunning,
+		RequestID:   id,
+		Description: description,
+		Expires:     expires,
+		Targets:     targets,
+	})
+}
+
 //
 // Concurrency and general flow of operation for Dial:
 // Dial itself will block until the session with the server is completed.
@@ -3265,6 +3361,11 @@ func (c *Connection) listen(done chan error) {
 				ch <- cmd
 			}
 
+		case FailedMessagePayload:
+			if ch, ok := c.Subscriptions[Failed]; ok {
+				ch <- cmd
+			}
+
 		case LoadArcObjectMessagePayload:
 			if ch, ok := c.Subscriptions[LoadArcObject]; ok {
 				ch <- cmd
@@ -3344,6 +3445,16 @@ func (c *Connection) listen(done chan error) {
 
 		case RollResultMessagePayload:
 			if ch, ok := c.Subscriptions[RollResult]; ok {
+				ch <- cmd
+			}
+
+		case TimerAcknowledgeMessagePayload:
+			if ch, ok := c.Subscriptions[TimerAcknowledge]; ok {
+				ch <- cmd
+			}
+
+		case TimerRequestMessagePayload:
+			if ch, ok := c.Subscriptions[TimerRequest]; ok {
 				ch <- cmd
 			}
 
@@ -3524,7 +3635,7 @@ func (c *Connection) filterSubscriptions() error {
 		return nil
 	}
 
-	subList := []string{"MARCO", "PRIV"} // these are unconditional
+	subList := []string{"MARCO", "FAILED", "PRIV"} // these are unconditional
 	for msg := range c.Subscriptions {
 		switch msg {
 		//Accept (client)
@@ -3536,6 +3647,7 @@ func (c *Connection) filterSubscriptions() error {
 		//DefineDicePresets (client)
 		//DefineDicePresetDelegates (client)
 		//Denied (forbidden)
+		//Failed (mandatory)
 		//FilterCoreData (client)
 		//FilterDicePresets (client)
 		//FilterImages (client)
@@ -3603,6 +3715,10 @@ func (c *Connection) filterSubscriptions() error {
 			subList = append(subList, "OA-")
 		case RollResult:
 			subList = append(subList, "ROLL")
+		case TimerAcknowledge:
+			subList = append(subList, "TMACK")
+		case TimerRequest:
+			subList = append(subList, "TMRQ")
 		case Toolbar:
 			subList = append(subList, "TB")
 		case UpdateClock:
