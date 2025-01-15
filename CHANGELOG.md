@@ -1,13 +1,13 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.25.2                <!-- @@##@@ -->
- * Effective Date: 01-Dec-2024			<!-- @@##@@ -->
+ * This Package Version: 5.26.0                <!-- @@##@@ -->
+ * Effective Date: 15-Jan-2025			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 6.26		<!-- @@##@@ -->
- * GMA Mapper Version: 4.27		<!-- @@##@@ -->
- * GMA Mapper Protocol: 415		<!-- @@##@@ -->
+ * GMA Core API Library Version: 6.28		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.28		<!-- @@##@@ -->
+ * GMA Mapper Protocol: 416		<!-- @@##@@ -->
  * GMA Mapper File Format: 23		<!-- @@##@@ -->
  * GMA Mapper Preferences File Format: 8 <!-- @@##@@ -->
  * GMA User Preferences File Format: 2 <!-- @@##@@ -->
@@ -18,6 +18,12 @@ When upgrading an existing server to version 5.15.0 or later, be sure to run `sc
 In addition, if your server didn't have the following update installed previously, do it as well:
 
 When upgrading an existing server to version 5.13.1 or later, be sure to run `scripts/upgrade-5.13.1` on each database file to update it to the new chat history encoding scheme introduced at 5.13.1. If you don't, the server will ignore some or all of your historic chat and die roll messages. Alternatively, you can delete the old database and make a new one with the current server.
+
+## v5.26.0
+## Enhanced
+ * Implements server protocol 416.
+ * Adds support for `FAILED` messages for client requests that are rejected by the GM or have errors not related to privileges.
+ * Adds support for `TMRQ` and `TMACK` messages for players to request new timers in the time tracking system.
 
 ## v5.25.2
 ## Fixed
