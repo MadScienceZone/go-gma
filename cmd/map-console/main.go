@@ -200,7 +200,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.25.2" //@@##@@
+const GoVersionNumber = "5.25.2" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -347,6 +347,8 @@ func main() {
 			mapper.QueryImage,
 			mapper.RemoveObjAttributes,
 			mapper.RollResult,
+			mapper.TimerAcknowledge,
+			mapper.TimerRequest,
 			mapper.Toolbar,
 			mapper.UpdateClock,
 			mapper.UpdateCoreData,
