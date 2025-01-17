@@ -200,7 +200,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.26.0" //@@##@@
+const GoVersionNumber = "5.26.0" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -332,6 +332,7 @@ func main() {
 			mapper.CombatMode,
 			mapper.Comment,
 			mapper.Echo,
+			mapper.Failed,
 			mapper.LoadFrom,
 			mapper.LoadArcObject,
 			mapper.LoadCircleObject,
@@ -848,6 +849,17 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"(latency)", m.SentTime.Sub(m.ReceivedTime)},
 		)
 
+	case mapper.FailedMessagePayload:
+		printFields(mono, "Failed",
+			fieldDesc{"reason", m.Reason},
+			fieldDesc{"error?", m.IsError},
+			fieldDesc{"discretionary?", m.IsDiscretionary},
+			fieldDesc{"command", m.Command},
+			fieldDesc{"reeuestID", m.RequestID},
+			fieldDesc{"requestedBy", m.RequestedBy},
+			fieldDesc{"client", m.RequestingClient},
+		)
+
 	case mapper.LoadFromMessagePayload:
 		printFields(mono, "LoadFrom",
 			fieldDesc{"file", m.File},
@@ -1076,6 +1088,25 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 						return colorize(fmt.Sprintf("%5.1fs", p), "Red", mono)
 					}(peer.LastPolo))})
 		}
+
+	case mapper.TimerAcknowledgeMessagePayload:
+		printFields(mono, "TimerAcknowledge",
+			fieldDesc{"ID", m.RequestID},
+			fieldDesc{"requestedBy", m.RequestedBy},
+			fieldDesc{"client", m.RequestingClient},
+		)
+
+	case mapper.TimerRequestMessagePayload:
+		printFields(mono, "TimerRequest",
+			fieldDesc{"ID", m.RequestID},
+			fieldDesc{"description", m.Description},
+			fieldDesc{"expires", m.Expires},
+			fieldDesc{"targets", m.Targets},
+			fieldDesc{"public?", m.ShowToAll},
+			fieldDesc{"running?", m.IsRunning},
+			fieldDesc{"requestedBy", m.RequestedBy},
+			fieldDesc{"client", m.RequestingClient},
+		)
 
 	case mapper.UpdateProgressMessagePayload:
 		if m.IsTimer {
