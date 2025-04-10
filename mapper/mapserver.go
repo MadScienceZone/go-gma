@@ -820,6 +820,13 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 					}
 				}
 
+				if strings.HasPrefix(packet.User, "SYS$") {
+					c.Logf("denied access to restricted username")
+					c.Conn.Send(Denied, DeniedMessagePayload{Reason: "login incorrect"})
+					_ = c.Conn.Flush()
+					done <- fmt.Errorf("access denied")
+					return
+				}
 				if newSecret := c.Server.GetPersonalCredentials(packet.User); newSecret != nil {
 					c.Auth.SetSecret(newSecret)
 				}

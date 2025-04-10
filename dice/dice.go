@@ -2791,6 +2791,9 @@ func (sr StructuredDescriptionSet) Text() (string, error) {
 // has stored on the server or in a file as a ready-to-go preset value which will
 // be used often, and needs to be persistent across gaming sessions.
 type DieRollPreset struct {
+	// If true, this is a system-wide global preset.
+	Global bool `json:",omitempty"`
+
 	// The name by which this die-roll preset is identified to the user.
 	// This must be unique among that user's presets.
 	//

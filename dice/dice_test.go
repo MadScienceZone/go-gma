@@ -195,7 +195,7 @@ abc456 {} d12
 		}
 		for j, p := range presets {
 			if p.Name != tcase.expectedOutput[j].Name || p.Description != tcase.expectedOutput[j].Description || p.DieRollSpec != tcase.expectedOutput[j].DieRollSpec {
-				t.Errorf("test case %d, output record %d, was %q but expected %q", i, j, p, tcase.expectedOutput[j])
+				t.Errorf("test case %d, output record %d, was %v but expected %v", i, j, p, tcase.expectedOutput[j])
 			}
 		}
 		if tcase.expectedMeta != meta {

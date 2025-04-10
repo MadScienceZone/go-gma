@@ -38,6 +38,8 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+const GlobalPresetUser string = "SYS$PRESET"
+
 type DebugFlags uint64
 
 const (
@@ -902,11 +904,22 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				}
 			}
 		}
+		if p.Global {
+			if !requester.Auth.GmMode {
+				a.Logf("refusing to allow non-privileged command %v %v for non-GM user %s", p.MessageType(), p, requester.Auth.Username)
+				requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+					Command: p.RawMessage(),
+					Reason:  "You are not authorized to alter the system-wide global die-roll preset list",
+				})
+				return
+			}
+			target = GlobalPresetUser
+		}
 
 		if err := a.StoreDicePresets(target, p.Presets, true); err != nil {
 			a.Logf("error storing die-roll preset: %v", err)
 		}
-		if err := a.SendDicePresets(target); err != nil {
+		if err := a.SendDicePresets(target, true); err != nil {
 			a.Logf("error sending die-roll presets after changing them: %v", err)
 		}
 
@@ -934,7 +947,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		if err := a.StoreDicePresetDelegates(target, p.Delegates); err != nil {
 			a.Logf("error storing die-roll preset delegates: %v", err)
 		}
-		if err := a.SendDicePresets(target); err != nil {
+		if err := a.SendDicePresets(target, true); err != nil {
 			a.Logf("error sending die-roll presets after changing delegates: %v", err)
 		}
 
@@ -973,11 +986,22 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				}
 			}
 		}
+		if p.Global {
+			if !requester.Auth.GmMode {
+				a.Logf("refusing to execute privileged command %v %v for non-GM user %s", p.MessageType(), p, requester.Auth.Username)
+				requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+					Command: p.RawMessage(),
+					Reason:  "You are not authorized to change the system-wide global die-roll preset list",
+				})
+				return
+			}
+			target = GlobalPresetUser
+		}
 
 		if err := a.StoreDicePresets(target, p.Presets, false); err != nil {
 			a.Logf("error adding to die-roll preset: %v", err)
 		}
-		if err := a.SendDicePresets(target); err != nil {
+		if err := a.SendDicePresets(target, true); err != nil {
 			a.Logf("error sending die-roll presets after changing them: %v", err)
 		}
 
@@ -1060,11 +1084,22 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				}
 			}
 		}
+		if p.Global {
+			if !requester.Auth.GmMode {
+				a.Logf("refusing to execute privileged command %v %v for non-GM user %s", p.MessageType(), p, requester.Auth.Username)
+				requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+					Command: p.RawMessage(),
+					Reason:  "You are not authorized to filter the system-wide global die-roll presets",
+				})
+				return
+			}
+			target = GlobalPresetUser
+		}
 
 		if err := a.FilterDicePresets(target, p); err != nil {
 			a.Logf("error filtering die-roll preset for %s with /%s/: %v", target, p.Filter, err)
 		}
-		if err := a.SendDicePresets(target); err != nil {
+		if err := a.SendDicePresets(target, true); err != nil {
 			a.Logf("error sending die-roll presets after filtering them: %v", err)
 		}
 
@@ -1118,8 +1153,11 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				}
 			}
 		}
+		if p.Global {
+			target = GlobalPresetUser
+		}
 
-		if err := a.SendDicePresets(target); err != nil {
+		if err := a.SendDicePresets(target, false); err != nil {
 			a.Logf("error sending die-roll presets: %v", err)
 		}
 
