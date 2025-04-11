@@ -200,7 +200,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.26.0" //@@##@@
+const GoVersionNumber = "5.26.0" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -998,12 +998,14 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 
 	case mapper.UpdateDicePresetsMessagePayload:
 		printFields(mono, "UpdateDicePresets",
+			fieldDesc{"global", m.Global},
 			fieldDesc{"for", m.For},
 			fieldDesc{"delegates", m.Delegates},
 			fieldDesc{"delegate for", m.DelegateFor},
 		)
 		for i, dp := range m.Presets {
 			printFields(mono, colorize(fmt.Sprintf("  [%02d] ", i), "Blue", mono),
+				fieldDesc{"g", gp.Global},
 				fieldDesc{"name", dp.Name},
 				fieldDesc{"desc", dp.Description},
 				fieldDesc{"spec", dp.DieRollSpec},
