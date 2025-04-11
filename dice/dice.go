@@ -2845,6 +2845,8 @@ func WriteDieRollPresetFile(path string, presets []DieRollPreset, meta DieRollPr
 }
 
 // SaveDieRollPresetFile writes a slice of presets to an open stream.
+// Strictly speaking, clients shouldn't be writing system global presets into their local files,
+// but we won't stop you if you do it anyway.
 func SaveDieRollPresetFile(output io.Writer, presets []DieRollPreset, meta DieRollPresetMetaData) error {
 	writer := bufio.NewWriter(output)
 	writer.WriteString("__DICE__:2\n")
