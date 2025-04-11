@@ -393,7 +393,20 @@ func (a *Application) FilterDicePresets(user string, f mapper.FilterDicePresetsM
 	return nil
 }
 
-func (a *Application) SendDicePresets(user string, broadcast bool) error {
+//
+// SendDicePresets transmits the current set of dice presets to a specified user.
+// This will include all of the system-wide global presets plus that user's own set of presets.
+// These will be send as an UpdateDicePresetsMessage ("DD=") to all clients logged in as the
+// target user and all users who are designated as delegates on behalf of that user.
+//
+// If the onlyGlobal parameter is true, then only the system-wide global set will be returned.
+//
+// If the broadcast parameter is true when onlyGlobal is also true, these global results will be broadcast to all connected
+// users. Otherwise, they will be sent only to the designated user.
+//
+func (a *Application) SendDicePresets(user string, onlyGlobal bool, broadcast bool) error {
+	var err error
+
 	delegates, err := a.QueryPresetDelegates(user)
 	if err != nil {
 		return err
@@ -403,13 +416,18 @@ func (a *Application) SendDicePresets(user string, broadcast bool) error {
 		return err
 	}
 
-	rows, err := a.sqldb.Query(`select user, name, description, rollspec from dicepresets where user = ? or user = ?`, user, GlobalPresetUser)
+	var rows *sql.Rows
+	var pset mapper.UpdateDicePresetsMessagePayload
+
+	if onlyGlobal {
+		rows, err = a.sqldb.Query(`select user, name, description, rollspec from dicepresets where user = ?`, GlobalPresetUser)
+	} else {
+		rows, err = a.sqldb.Query(`select user, name, description, rollspec from dicepresets where user = ? or user = ?`, user, GlobalPresetUser)
+	}
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
-
-	var pset mapper.UpdateDicePresetsMessagePayload
 
 	for rows.Next() {
 		var preset dice.DieRollPreset
@@ -422,21 +440,22 @@ func (a *Application) SendDicePresets(user string, broadcast bool) error {
 		}
 		pset.Presets = append(pset.Presets, preset)
 	}
-	if err := rows.Err(); err != nil {
+	if err = rows.Err(); err != nil {
 		return err
 	}
 	pset.Delegates = delegates
 	pset.DelegateFor = delegateFor
-	if user == GlobalPresetUser {
+	if onlyGlobal {
 		pset.Global = true
 	} else {
 		pset.For = user
 	}
 
-	// TODO where/how to send global updates? broadcast is true if we're updating the global store, false if just querying it as a user
 	for _, peer := range a.GetClients() {
-		if peer.Auth != nil && (peer.Auth.Username == user || slices.Contains(delegates, peer.Auth.Username)) {
-			peer.Conn.Send(mapper.UpdateDicePresets, pset)
+		if peer.Auth != nil {
+			if (onlyGlobal && broadcast) || (peer.Auth.Username == user || slices.Contains(delegates, peer.Auth.Username)) {
+				peer.Conn.Send(mapper.UpdateDicePresets, pset)
+			}
 		}
 	}
 	return nil

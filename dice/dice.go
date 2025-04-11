@@ -148,7 +148,7 @@ type Dice struct {
 // specification which likely came from the user anyway. (Although
 // using DieRoller instead of Dice is even better.)
 //
-// This text description may contain any number of integer constants
+// This text description may contain any number of integer or real-number constants
 // and/or die‐roll expressions separated by the basic math operators “+”,  “−”,
 // “*”,  and “//”  which  respectively add, subtract, multiply, and divide the total
 // value so far with the value that follows the operator.   Division performed
@@ -2693,6 +2693,7 @@ func (d *DieRoller) isNatural(checkForMax bool) (result bool) {
 func (sr StructuredDescriptionSet) Text() (string, error) {
 	var t strings.Builder
 	var i int
+	var f float64
 	var err error
 
 	for _, r := range sr {
@@ -2700,7 +2701,13 @@ func (sr StructuredDescriptionSet) Text() (string, error) {
 		case "best":
 			fmt.Fprintf(&t, " (best of %s) ", r.Value)
 
-		case "bonus", "constant", "diebonus":
+		case "constant":
+			if f, err = strconv.ParseFloat(r.Value, 64); err != nil {
+				return "", err
+			}
+			fmt.Fprintf(&t, "%g", f)
+
+		case "bonus", "diebonus":
 			if i, err = strconv.Atoi(r.Value); err != nil {
 				return "", err
 			}
