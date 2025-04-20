@@ -2155,7 +2155,7 @@ func TestDicePrivateRolls(t *testing.T) {
 	}
 }
 
-// @[00]@| Go-GMA 5.27.0-alpha.0
+// @[00]@| Go-GMA 5.27.0-alpha.1
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

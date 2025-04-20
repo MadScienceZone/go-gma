@@ -67,6 +67,7 @@ type ClientConnection struct {
 	Features struct {
 		DiceColorBoxes  bool
 		DiceColorLabels bool
+		GMAMarkup       bool
 	}
 
 	// The client's host and port number
@@ -601,12 +602,16 @@ mainloop:
 				case AllowMessagePayload:
 					c.Features.DiceColorBoxes = false
 					c.Features.DiceColorLabels = false
+					c.Features.GMAMarkup = false
 
 					for _, feature := range p.Features {
-						if feature == "DICE-COLOR-BOXES" {
+						switch feature {
+						case "DICE-COLOR-BOXES":
 							c.Features.DiceColorBoxes = true
-						} else if feature == "DICE-COLOR-LABELS" {
+						case "DICE-COLOR-LABELS":
 							c.Features.DiceColorLabels = true
+						case "GMA-MARKUP":
+							c.Features.GMAMarkup = true
 						}
 					}
 

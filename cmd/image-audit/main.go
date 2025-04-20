@@ -90,7 +90,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-const GoVersionNumber="5.27.0-alpha.0" //@@##@@
+const GoVersionNumber="5.27.0-alpha.1" //@@##@@
 
 type FileType byte
 

@@ -33,6 +33,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/auth"
 	"github.com/MadScienceZone/go-gma/v5/dice"
 	"github.com/MadScienceZone/go-gma/v5/mapper"
+	"github.com/MadScienceZone/go-gma/v5/text"
 	"github.com/MadScienceZone/go-gma/v5/util"
 	"github.com/newrelic/go-agent/v3/newrelic"
 	"golang.org/x/exp/slices"
@@ -1182,6 +1183,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			a.Logf("unable to add ChatMessage event to chat history: %v", err)
 		}
 
+		var cleanedP *mapper.ChatMessageMessagePayload
 		for _, peer := range a.GetClients() {
 			if p.ToGM {
 				if peer.Auth == nil || (!peer.Auth.GmMode && peer.Auth.Username != requester.Auth.Username) {
@@ -1199,8 +1201,25 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				}
 			}
 
-			if err := peer.Conn.Send(mapper.ChatMessage, p); err != nil {
-				a.Logf("error sending message %v to %v: %v", p, peer.IdTag(), err)
+			if p.Markup && !peer.Features.GMAMarkup {
+				var err error
+				if cleanedP == nil {
+					cleanedP = &mapper.ChatMessageMessagePayload{}
+					*cleanedP = p
+					cleanedP.Markup = false
+					cleanedP.Text, err = text.Render(p.Text, text.AsPlainText)
+					if err != nil {
+						a.Logf("error stripping markup text from chat message: %v", err)
+						cleanedP.Text = fmt.Sprintf("%s (formatting error: %v)", p.Text, err)
+					}
+				}
+				if err := peer.Conn.Send(mapper.ChatMessage, cleanedP); err != nil {
+					a.Logf("error sending cleaned message %v to %v: %v", cleanedP, peer.IdTag(), err)
+				}
+			} else {
+				if err := peer.Conn.Send(mapper.ChatMessage, p); err != nil {
+					a.Logf("error sending message %v to %v: %v", p, peer.IdTag(), err)
+				}
 			}
 		}
 

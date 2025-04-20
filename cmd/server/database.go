@@ -33,6 +33,7 @@ import (
 
 	"github.com/MadScienceZone/go-gma/v5/dice"
 	"github.com/MadScienceZone/go-gma/v5/mapper"
+	"github.com/MadScienceZone/go-gma/v5/text"
 	"golang.org/x/exp/slices"
 )
 
@@ -293,6 +294,12 @@ func (a *Application) QueryChatHistory(target int, requester *mapper.ClientConne
 				return err
 			}
 			if chat.ToAll || (chat.ToGM && requester.Auth.GmMode) || slices.Contains(chat.Recipients, requester.Auth.Username) {
+				if chat.Markup && !requester.Features.GMAMarkup {
+					chat.Markup = false
+					if cleaned, err := text.Render(chat.Text, text.AsPlainText); err == nil {
+						chat.Text = cleaned
+					}
+				}
 				requester.Conn.Send(mapper.ChatMessage, chat)
 			}
 
@@ -393,7 +400,6 @@ func (a *Application) FilterDicePresets(user string, f mapper.FilterDicePresetsM
 	return nil
 }
 
-//
 // SendDicePresets transmits the current set of dice presets to a specified user.
 // This will include all of the system-wide global presets plus that user's own set of presets.
 // These will be send as an UpdateDicePresetsMessage ("DD=") to all clients logged in as the
@@ -403,7 +409,6 @@ func (a *Application) FilterDicePresets(user string, f mapper.FilterDicePresetsM
 //
 // If the broadcast parameter is true when onlyGlobal is also true, these global results will be broadcast to all connected
 // users. Otherwise, they will be sent only to the designated user.
-//
 func (a *Application) SendDicePresets(user string, onlyGlobal bool, broadcast bool) error {
 	var err error
 
@@ -571,7 +576,7 @@ func (a *Application) FilterImages(f mapper.FilterImagesMessagePayload) error {
 	return nil
 }
 
-// @[00]@| Go-GMA 5.27.0-alpha.0
+// @[00]@| Go-GMA 5.27.0-alpha.1
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
