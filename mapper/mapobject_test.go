@@ -1922,7 +1922,7 @@ func CEq(a, b []Coordinates, msg string, t *testing.T) {
 	}
 }
 
-// @[00]@| Go-GMA 5.27.0-alpha.1
+// @[00]@| Go-GMA 5.27.0-alpha.2
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

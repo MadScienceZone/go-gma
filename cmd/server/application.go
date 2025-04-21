@@ -818,6 +818,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 						receiptPayload.Title = receiptLabel
 					}
 
+					receiptPayload.Origin = peer == requester
 					peer.Conn.Send(mapper.RollResult, receiptPayload)
 				}
 			}
@@ -855,6 +856,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 					response.Title = genericLabel
 				}
 
+				response.Origin = peer == requester
 				if !peer.Features.DiceColorLabels {
 					if err := peer.Conn.Send(mapper.RollResult, stripColorsFromResponse(response)); err != nil {
 						a.Logf("error sending color-stripped die-roll result %v to %v: %v", response, peer.IdTag(), err)
@@ -1201,6 +1203,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				}
 			}
 
+			p.Origin = peer == requester
 			if p.Markup && !peer.Features.GMAMarkup {
 				var err error
 				if cleanedText == "" {

@@ -1089,6 +1089,11 @@ type ChallengeMessagePayload struct {
 
 // ChatCommon holds fields common to chat messages and die-roll results.
 type ChatCommon struct {
+	// True if the peer receiving this was it origin of the message/request
+	// as opposed to a peer just getting a copy of the message as it is being
+	// broadcast out to everyone else.
+	Origin bool `json:",omitempty"`
+
 	// The name of the person sending the message.
 	Sender string `json:",omitempty"`
 
@@ -3893,7 +3898,7 @@ func (c *Connection) CheckVersionOf(packageName, myVersionNumber string) (*Packa
 	return availableVersion, nil
 }
 
-// @[00]@| Go-GMA 5.27.0-alpha.1
+// @[00]@| Go-GMA 5.27.0-alpha.2
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

@@ -45,7 +45,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.27.0-alpha.1" //@@##@@
+const GoVersionNumber="5.27.0-alpha.2" //@@##@@
 const GMAMapperFileFormat = 23  //@@##@@
 
 func main() {
@@ -86,7 +86,7 @@ func main() {
 }
 
 /*
-# @[00]@| Go-GMA 5.27.0-alpha.1
+# @[00]@| Go-GMA 5.27.0-alpha.2
 # @[01]@|
 # @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
