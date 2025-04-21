@@ -1183,7 +1183,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			a.Logf("unable to add ChatMessage event to chat history: %v", err)
 		}
 
-		var cleanedP *mapper.ChatMessageMessagePayload
+		var cleanedText string
 		for _, peer := range a.GetClients() {
 			if p.ToGM {
 				if peer.Auth == nil || (!peer.Auth.GmMode && peer.Auth.Username != requester.Auth.Username) {
@@ -1203,19 +1203,19 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 
 			if p.Markup && !peer.Features.GMAMarkup {
 				var err error
-				if cleanedP == nil {
-					cleanedP = &mapper.ChatMessageMessagePayload{}
-					*cleanedP = p
-					cleanedP.Markup = false
-					cleanedP.Text, err = text.Render(p.Text, text.AsPlainText)
+				if cleanedText == "" {
+					cleanedText, err = text.Render(p.Text, text.AsPlainText)
 					if err != nil {
 						a.Logf("error stripping markup text from chat message: %v", err)
-						cleanedP.Text = fmt.Sprintf("%s (formatting error: %v)", p.Text, err)
+						cleanedText = fmt.Sprintf("%s (formatting error: %v)", p.Text, err)
 					}
 				}
-				if err := peer.Conn.Send(mapper.ChatMessage, cleanedP); err != nil {
-					a.Logf("error sending cleaned message %v to %v: %v", cleanedP, peer.IdTag(), err)
+				t := p.Text
+				p.Text, p.Markup = cleanedText, false
+				if err := peer.Conn.Send(mapper.ChatMessage, p); err != nil {
+					a.Logf("error sending cleaned message %v to %v: %v", p, peer.IdTag(), err)
 				}
+				p.Markup, p.Text = true, t
 			} else {
 				if err := peer.Conn.Send(mapper.ChatMessage, p); err != nil {
 					a.Logf("error sending message %v to %v: %v", p, peer.IdTag(), err)
