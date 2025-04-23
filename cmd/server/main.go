@@ -6,8 +6,8 @@
 #  _______  _______  _______             _______     _______  ______      _______      #
 # (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___  \    (  __   )     #
 # | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   )  )   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )    /  /    | | /   | ___ #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    /  /     | (/ /) |(___ #
+# | |      | || || || (___) | Assistant | (____         /   )    /  /    | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    /  /     | (/ /) |     #
 # | | \_  )| |   | || (   ) |                 ) )    /   _/    /  /      |   / | |     #
 # | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ /  /     _ |  (__) |     #
 # (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_/     (_)(_______)     #
@@ -134,7 +134,7 @@ import (
 // Auto-configured values
 //
 
-const GoVersionNumber="5.27.0-alpha.2" // @@##@@
+const GoVersionNumber="5.27.0" // @@##@@
 
 //
 // eventMonitor responds to signals and timers that affect our overall operation
@@ -356,7 +356,7 @@ func acceptIncomingConnections(incoming net.Listener, app *Application) {
 	}
 }
 
-// @[00]@| Go-GMA 5.27.0-alpha.2
+// @[00]@| Go-GMA 5.27.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
