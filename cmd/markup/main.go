@@ -74,7 +74,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/text"
 )
 
-const GoVersionNumber="5.27.0-alpha.0" //@@##@@
+const GoVersionNumber="5.27.0-alpha.2" //@@##@@
 
 func main() {
 	var err error

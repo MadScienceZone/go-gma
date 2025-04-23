@@ -989,6 +989,7 @@ type OptionalFeature byte
 const (
 	DiceColorBoxes OptionalFeature = iota
 	DiceColorLabels
+	GMAMarkup
 )
 
 // Allow tells the server which optional features this client is
@@ -1004,6 +1005,8 @@ func (c *Connection) Allow(features ...OptionalFeature) error {
 			featureList = append(featureList, "DICE-COLOR-BOXES")
 		case DiceColorLabels:
 			featureList = append(featureList, "DICE-COLOR-LABELS")
+		case GMAMarkup:
+			featureList = append(featureList, "GMA-MARKUP")
 		default:
 			return fmt.Errorf("unknown OptionalFeature code %v", feature)
 		}
@@ -1086,6 +1089,11 @@ type ChallengeMessagePayload struct {
 
 // ChatCommon holds fields common to chat messages and die-roll results.
 type ChatCommon struct {
+	// True if the peer receiving this was it origin of the message/request
+	// as opposed to a peer just getting a copy of the message as it is being
+	// broadcast out to everyone else.
+	Origin bool `json:",omitempty"`
+
 	// The name of the person sending the message.
 	Sender string `json:",omitempty"`
 
@@ -1113,6 +1121,9 @@ type ChatCommon struct {
 type ChatMessageMessagePayload struct {
 	BaseMessagePayload
 	ChatCommon
+
+	// True if the message contains GMA markup formatting codes
+	Markup bool `json:",omitempty"`
 
 	// The text of the chat message we received.
 	Text string
@@ -1156,6 +1167,50 @@ func (c *Connection) ChatMessageToGM(message string) error {
 			ToGM: true,
 		},
 		Text: message,
+	})
+}
+
+// ChatMarkupMessage sends a message on the chat channel to other
+// users. The to paramter is a slice of user names of the people
+// who should receive this message. The text may contain markup formatting codes
+func (c *Connection) ChatMarkupMessage(to []string, message string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(ChatMessage, ChatMessageMessagePayload{
+		ChatCommon: ChatCommon{
+			Recipients: to,
+		},
+		Markup: true,
+		Text:   message,
+	})
+}
+
+// ChatMessageToAll is equivalent to ChatMarkupMessage, but is addressed to all users.
+func (c *Connection) ChatMarkupMessageToAll(message string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(ChatMessage, ChatMessageMessagePayload{
+		ChatCommon: ChatCommon{
+			ToAll: true,
+		},
+		Markup: true,
+		Text:   message,
+	})
+}
+
+// ChatMarkupMessageToGM is equivalent to ChatMarkupMessage, but is addressed only to the GM.
+func (c *Connection) ChatMarkupMessageToGM(message string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(ChatMessage, ChatMessageMessagePayload{
+		ChatCommon: ChatCommon{
+			ToGM: true,
+		},
+		Markup: true,
+		Text:   message,
 	})
 }
 
@@ -3843,7 +3898,7 @@ func (c *Connection) CheckVersionOf(packageName, myVersionNumber string) (*Packa
 	return availableVersion, nil
 }
 
-// @[00]@| Go-GMA 5.27.0-alpha.0
+// @[00]@| Go-GMA 5.27.0-alpha.2
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

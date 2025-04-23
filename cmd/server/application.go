@@ -33,6 +33,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/auth"
 	"github.com/MadScienceZone/go-gma/v5/dice"
 	"github.com/MadScienceZone/go-gma/v5/mapper"
+	"github.com/MadScienceZone/go-gma/v5/text"
 	"github.com/MadScienceZone/go-gma/v5/util"
 	"github.com/newrelic/go-agent/v3/newrelic"
 	"golang.org/x/exp/slices"
@@ -817,6 +818,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 						receiptPayload.Title = receiptLabel
 					}
 
+					receiptPayload.Origin = peer == requester
 					peer.Conn.Send(mapper.RollResult, receiptPayload)
 				}
 			}
@@ -854,6 +856,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 					response.Title = genericLabel
 				}
 
+				response.Origin = peer == requester
 				if !peer.Features.DiceColorLabels {
 					if err := peer.Conn.Send(mapper.RollResult, stripColorsFromResponse(response)); err != nil {
 						a.Logf("error sending color-stripped die-roll result %v to %v: %v", response, peer.IdTag(), err)
@@ -1182,6 +1185,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			a.Logf("unable to add ChatMessage event to chat history: %v", err)
 		}
 
+		var cleanedText string
 		for _, peer := range a.GetClients() {
 			if p.ToGM {
 				if peer.Auth == nil || (!peer.Auth.GmMode && peer.Auth.Username != requester.Auth.Username) {
@@ -1199,8 +1203,26 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				}
 			}
 
-			if err := peer.Conn.Send(mapper.ChatMessage, p); err != nil {
-				a.Logf("error sending message %v to %v: %v", p, peer.IdTag(), err)
+			p.Origin = peer == requester
+			if p.Markup && !peer.Features.GMAMarkup {
+				var err error
+				if cleanedText == "" {
+					cleanedText, err = text.Render(p.Text, text.AsPlainText)
+					if err != nil {
+						a.Logf("error stripping markup text from chat message: %v", err)
+						cleanedText = fmt.Sprintf("%s (formatting error: %v)", p.Text, err)
+					}
+				}
+				t := p.Text
+				p.Text, p.Markup = cleanedText, false
+				if err := peer.Conn.Send(mapper.ChatMessage, p); err != nil {
+					a.Logf("error sending cleaned message %v to %v: %v", p, peer.IdTag(), err)
+				}
+				p.Markup, p.Text = true, t
+			} else {
+				if err := peer.Conn.Send(mapper.ChatMessage, p); err != nil {
+					a.Logf("error sending message %v to %v: %v", p, peer.IdTag(), err)
+				}
 			}
 		}
 
