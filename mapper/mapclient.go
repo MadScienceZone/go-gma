@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______   ______     _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) / ____ \   (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |( (    \/   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )| (____     | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / |  ___ \    | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/  | (   ) )   |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\( (___) ) _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_____/ (_)(_______)     #
+#  _______  _______  _______             _______     _______  ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   )  )   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____         /   )    /  /    | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    /  /     | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/    /  /      |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ /  /     _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_/     (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -989,6 +989,7 @@ type OptionalFeature byte
 const (
 	DiceColorBoxes OptionalFeature = iota
 	DiceColorLabels
+	GMAMarkup
 )
 
 // Allow tells the server which optional features this client is
@@ -1004,6 +1005,8 @@ func (c *Connection) Allow(features ...OptionalFeature) error {
 			featureList = append(featureList, "DICE-COLOR-BOXES")
 		case DiceColorLabels:
 			featureList = append(featureList, "DICE-COLOR-LABELS")
+		case GMAMarkup:
+			featureList = append(featureList, "GMA-MARKUP")
 		default:
 			return fmt.Errorf("unknown OptionalFeature code %v", feature)
 		}
@@ -1032,7 +1035,7 @@ type AuthMessagePayload struct {
 	// Response gives the binary response to the server's challenge
 	Response []byte
 
-	// User gives the username requested by the client
+	// User gives the username requested by the client. "GM" is privileged. Names beginning with "SYS$" are forbidden.
 	User string `json:",omitempty"`
 }
 
@@ -1086,6 +1089,11 @@ type ChallengeMessagePayload struct {
 
 // ChatCommon holds fields common to chat messages and die-roll results.
 type ChatCommon struct {
+	// True if the peer receiving this was it origin of the message/request
+	// as opposed to a peer just getting a copy of the message as it is being
+	// broadcast out to everyone else.
+	Origin bool `json:",omitempty"`
+
 	// The name of the person sending the message.
 	Sender string `json:",omitempty"`
 
@@ -1113,6 +1121,9 @@ type ChatCommon struct {
 type ChatMessageMessagePayload struct {
 	BaseMessagePayload
 	ChatCommon
+
+	// True if the message contains GMA markup formatting codes
+	Markup bool `json:",omitempty"`
 
 	// The text of the chat message we received.
 	Text string
@@ -1156,6 +1167,50 @@ func (c *Connection) ChatMessageToGM(message string) error {
 			ToGM: true,
 		},
 		Text: message,
+	})
+}
+
+// ChatMarkupMessage sends a message on the chat channel to other
+// users. The to paramter is a slice of user names of the people
+// who should receive this message. The text may contain markup formatting codes
+func (c *Connection) ChatMarkupMessage(to []string, message string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(ChatMessage, ChatMessageMessagePayload{
+		ChatCommon: ChatCommon{
+			Recipients: to,
+		},
+		Markup: true,
+		Text:   message,
+	})
+}
+
+// ChatMessageToAll is equivalent to ChatMarkupMessage, but is addressed to all users.
+func (c *Connection) ChatMarkupMessageToAll(message string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(ChatMessage, ChatMessageMessagePayload{
+		ChatCommon: ChatCommon{
+			ToAll: true,
+		},
+		Markup: true,
+		Text:   message,
+	})
+}
+
+// ChatMarkupMessageToGM is equivalent to ChatMarkupMessage, but is addressed only to the GM.
+func (c *Connection) ChatMarkupMessageToGM(message string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(ChatMessage, ChatMessageMessagePayload{
+		ChatCommon: ChatCommon{
+			ToGM: true,
+		},
+		Markup: true,
+		Text:   message,
 	})
 }
 
@@ -1597,7 +1652,6 @@ func (c *Connection) Echo(b bool, i int, s string, o map[string]any) error {
 // FailedMessagePayload holds information about a client request that was
 // unsuccessful because the server detected an error with it or the GM decided
 // to decline the request.
-//
 type FailedMessagePayload struct {
 	BaseMessagePayload
 
@@ -1654,10 +1708,22 @@ func (c *Connection) FilterDicePresetsFor(user, re string) error {
 	})
 }
 
+// FilterGlobalDicePresets is like FilterDicePresets but filters the system-wide global set.
+func (c *Connection) FilterGlobalDicePresets(re string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(FilterDicePresets, FilterDicePresetsMessagePayload{
+		Global: true,
+		Filter: re,
+	})
+}
+
 // FilterDicePresetMessagePayload holds the filter expression
 // the client sends to the server.
 type FilterDicePresetsMessagePayload struct {
 	BaseMessagePayload
+	Global bool   `json:",omitempty"`
 	Filter string `json:",omitempty"`
 	For    string `json:",omitempty"`
 }
@@ -2226,6 +2292,18 @@ func (c *Connection) DefineDicePresets(presets []dice.DieRollPreset) error {
 	})
 }
 
+// DefineGlobalDicePresets replaces any existing die-roll presets you have
+// stored on the server with the new set passed as the presets parameter, but for the system-wide global set.
+func (c *Connection) DefineGlobalDicePresets(presets []dice.DieRollPreset) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(DefineDicePresets, DefineDicePresetsMessagePayload{
+		Global:  true,
+		Presets: presets,
+	})
+}
+
 // DefineDicePresetDelegates changes the current list of users allowed to view and
 // change a user's stored presets. The new list replaces any and all previous ones.
 func (c *Connection) DefineDicePresetDelegates(delegates []string) error {
@@ -2263,6 +2341,7 @@ func (c *Connection) DefineDicePresetsFor(user string, presets []dice.DieRollPre
 
 type DefineDicePresetsMessagePayload struct {
 	BaseMessagePayload
+	Global  bool                 `json:",omitempty"`
 	For     string               `json:",omitempty"`
 	Presets []dice.DieRollPreset `json:",omitempty"`
 }
@@ -2284,6 +2363,18 @@ func (c *Connection) AddDicePresets(presets []dice.DieRollPreset) error {
 	})
 }
 
+// AddGlobalDicePresets is like DefineGlobalDicePresets except that it adds the presets
+// passed in to the existing set rather than replacing them.
+func (c *Connection) AddGlobalDicePresets(presets []dice.DieRollPreset) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(AddDicePresets, AddDicePresetsMessagePayload{
+		Global:  true,
+		Presets: presets,
+	})
+}
+
 // AddDicePresetsFor is just like AddDicePresets but performs the operation
 // for another user (GM only).
 func (c *Connection) AddDicePresetsFor(user string, presets []dice.DieRollPreset) error {
@@ -2298,6 +2389,7 @@ func (c *Connection) AddDicePresetsFor(user string, presets []dice.DieRollPreset
 
 type AddDicePresetsMessagePayload struct {
 	BaseMessagePayload
+	Global  bool                 `json:",omitempty"`
 	For     string               `json:",omitempty"`
 	Presets []dice.DieRollPreset `json:",omitempty"`
 }
@@ -2312,9 +2404,26 @@ func (c *Connection) QueryDicePresets() error {
 	return c.serverConn.Send(QueryDicePresets, nil)
 }
 
+// QueryGlobalDicePresets is like QueryDicePresets but queries only the system-wide set.
+func (c *Connection) QueryGlobalDicePresets() error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(QueryDicePresets, QueryDicePresetsMessagePayload{Global: true})
+}
+
+// QueryDicePresetsFor is like QueryDicePresets but queries presets for a given user.
+func (c *Connection) QueryDicePresetsFor(user string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(QueryDicePresets, QueryDicePresetsMessagePayload{For: user})
+}
+
 type QueryDicePresetsMessagePayload struct {
 	BaseMessagePayload
-	For string `json:",omitempty"`
+	Global bool   `json:",omitempty"`
+	For    string `json:",omitempty"`
 }
 
 // UpdateClockMessagePayload holds the information sent by the server's UpdateClock
@@ -2355,6 +2464,7 @@ func (c *Connection) UpdateClock(absolute, relative int64, keepRunning bool) err
 // using.
 type UpdateDicePresetsMessagePayload struct {
 	BaseMessagePayload
+	Global      bool `json:",omitempty"`
 	Presets     []dice.DieRollPreset
 	For         string   `json:",omitempty"`
 	DelegateFor []string `json:",omitempty"`
@@ -3788,9 +3898,9 @@ func (c *Connection) CheckVersionOf(packageName, myVersionNumber string) (*Packa
 	return availableVersion, nil
 }
 
-// @[00]@| Go-GMA 5.26.0
+// @[00]@| Go-GMA 5.27.0
 // @[01]@|
-// @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
+// @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
 // @[12]@| Aloha, Oregon, USA. All Rights Reserved. Some components were introduced at different
 // @[13]@| points along that historical time line.

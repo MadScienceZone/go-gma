@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______   ______     _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) / ____ \   (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |( (    \/   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )| (____     | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / |  ___ \    | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/  | (   ) )   |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\( (___) ) _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_____/ (_)(_______)     #
+#  _______  _______  _______             _______     _______  ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   )  )   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____         /   )    /  /    | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    /  /     | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/    /  /      |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ /  /     _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_/     (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 #
@@ -39,77 +39,79 @@ Its input and output is not designed to be user-friendly, but rather to make it 
 # SYNOPSIS
 
 (If using the full GMA core tool suite)
-   gma go map-console ...
+
+	gma go map-console ...
 
 (Otherwise)
-   map-console -h
-   map-console -help
-   map-console [-Dm] [-C configfile] [-c calendar] [-H host] [-l logfile] [-P password] [-p port] [-S profile] [-u user]
-   map-console [-calendar calendar] [-config configfile] [-debug] [-help] [-host host] [-log logfile] [-mono] [-password password] [-port port] [-select profile] [-username user]
+
+	map-console -h
+	map-console -help
+	map-console [-Dm] [-C configfile] [-c calendar] [-H host] [-l logfile] [-P password] [-p port] [-S profile] [-u user]
+	map-console [-calendar calendar] [-config configfile] [-debug] [-help] [-host host] [-log logfile] [-mono] [-password password] [-port port] [-select profile] [-username user]
 
 # OPTIONS
 
 The command-line options described below have a long form (e.g., -port) and a  short form (e.g., -p) which are equivalent.
 In either case, the option may be introduced with either one or two hyphens (e.g., -port or --port).
 
-Options which take parameter values may have the value separated from the option name by a space or an equals sign (e.g., -port=2323 or -port 2323), except for boolean flags which may be given alone (e.g., -D) to indicate that the option is set to ``true'' or may be given an explicit value which must be attached to the option with an equals sign (e.g., -D=true or -D=false).
+Options which take parameter values may have the value separated from the option name by a space or an equals sign (e.g., -port=2323 or -port 2323), except for boolean flags which may be given alone (e.g., -D) to indicate that the option is set to “true” or may be given an explicit value which must be attached to the option with an equals sign (e.g., -D=true or -D=false).
 
 You may not combine multiple single-letter options into a single composite argument, (e.g., the options -D and -m would need to be entered as two separate options, not as -Dm).
 
-  -c, -calendar name
-      Override server's advertised campaign calendar name.
+	  -c, -calendar name
+	      Override server's advertised campaign calendar name.
 
-  -C, -config file
-      The named file is read to set the same options as documented here
-      for command-line parameters as option=value pairs, one per line.
-      For example:
+	  -C, -config file
+	      The named file is read to set the same options as documented here
+	      for command-line parameters as option=value pairs, one per line.
+	      For example:
 
-      host=example.com
-      mono
-      debug=i/o
+	      host=example.com
+	      mono
+	      debug=i/o
 
-  -D, -debug flags
-      Adds debugging messages to map-console's output. The flags
-      value is a comma-separated list of debug flag names, which
-      may be any of the following:
+	  -D, -debug flags
+	      Adds debugging messages to map-console's output. The flags
+	      value is a comma-separated list of debug flag names, which
+	      may be any of the following:
 
-      all      Enable all debugging messages
-      none     Disable all debugging messages
-      auth     Authentication operations
-      binary   Add hexdump output of network data
-      events   Show background events such as expiring timers and signals
-      i/o      Input/output operations used to get data in and out of the client
-      messages Server messages sent and received
-      misc     Miscellaneous debugging messages
+	      all      Enable all debugging messages
+	      none     Disable all debugging messages
+	      auth     Authentication operations
+	      binary   Add hexdump output of network data
+	      events   Show background events such as expiring timers and signals
+	      i/o      Input/output operations used to get data in and out of the client
+	      messages Server messages sent and received
+	      misc     Miscellaneous debugging messages
 
-  -H, -host host
-      Specifies the server's hostname.
+	  -H, -host host
+	      Specifies the server's hostname.
 
-  -h, -help
-      Print a command summary and exit.
+	  -h, -help
+	      Print a command summary and exit.
 
-  -l, -log file
-      Write log messages to the named file instead of stdout.
-      Use "-" for the file to explicitly send to stdout.
+	  -l, -log file
+	      Write log messages to the named file instead of stdout.
+	      Use "-" for the file to explicitly send to stdout.
 
-  -list-profiles
-      Write a list of profiles that are defined in the mapper preferences file
-	  and exit.
+	  -list-profiles
+	      Write a list of profiles that are defined in the mapper preferences file
+		  and exit.
 
-  -m, -mono
-      Don't send ANSI color codes in the terminal output.
+	  -m, -mono
+	      Don't send ANSI color codes in the terminal output.
 
-  -P, -password password
-      Authenticate to the server using the specified password.
+	  -P, -password password
+	      Authenticate to the server using the specified password.
 
-  -p, -port port
-      Specifies the server's TCP port number.
+	  -p, -port port
+	      Specifies the server's TCP port number.
 
-  -S, -select profile
-      Selects a server profile to use from the user's saved mapper preferences.
+	  -S, -select profile
+	      Selects a server profile to use from the user's saved mapper preferences.
 
-  -u, -username user
-      Authenticate to the server using the specified user name.
+	  -u, -username user
+	      Authenticate to the server using the specified user name.
 
 # COMMANDS
 
@@ -119,60 +121,68 @@ Obviously, this should be done with caution by someone intimately familiar with 
 
 Each typed command line must conform to the Tcl list syntax (space-separated list of strings, curly braces around a string which contains spaces (including sub-lists)).
 
-  AI name size file         Deprecated: upload image file
-  AI? name size             Ask for location of image file
-  AI@ name size id          Advertise image file location
-  AI/ regex [-keep]         Filter out stored images
-  AV label x y              Scroll to map label or (x,y)
-  CC silent? target         Clear chat history
-  CLR id|*|E*|M*|P*|name    Remove object(s) from map
-  CLR@ id                   Remove contents of a map file
-  CO enabled?               Enter/exit combat mode
-  D recips|*|% roll [id]    Make a die roll (*=to all, %=to GM)
-  DD {{name desc roll} ...} Replace your die-roll presets
-  DD+ ...                   Same as DD but append to presets
-  DD/ regex                 Delete presets matching regex
-  DDD {name name ...}       Set delegate list to the specified names
-  DR                        Retrieve die-roll presets
-  EXIT|QUIT                 Exit map-console
-  HELP|?                    Prints out a command summary
-  L filename                Load contents of local map file
-  L@ id                     Load contents of server map file
-  M filename                As L but merge contents with existing map
-  M? id                     Tell clients to cache server map file
-  M@ id                     As M but using a server map file
-  MARK x y                  Show visible marker at (x,y)
-  OA id {k1 v1 k2 v2 ...}   Set object attributes to new values
-  OA+ id k {v1 v2 v3 ...}   Add values to a list-valued object attribute
-  OA- id k {v1 v2 v3 ...}   Remove values from a list-valued object attribute
-  POLO                      Send POLO packet to server
-  PS id color name area size player|monster x y reach
-                            Place a creature token on the map
-  SYNC                      Retrieve full game state
-  SYNC CHAT [target]        Retrieve chat message history
-  TO recips|*|% message     Send chat message (*=to all, %=to GM)
-  /CONN                     Retrieve list of connected clients
+	AI name size file         Deprecated: upload image file
+	AI? name size             Ask for location of image file
+	AI@ name size id          Advertise image file location
+	AI/ regex [-keep]         Filter out stored images
+	AV label x y              Scroll to map label or (x,y)
+	CC silent? target         Clear chat history
+	CLR id|*|E*|M*|P*|name    Remove object(s) from map
+	CLR@ id                   Remove contents of a map file
+	CO enabled?               Enter/exit combat mode
+	D recips|*|% roll [id]    Make a die roll (*=to all, %=to GM)
+	DD {{name desc roll} ...} Replace your die-roll presets
+	DD+ ...                   Same as DD but append to presets
+	DD/ regex                 Delete presets matching regex
+	DDD {name name ...}       Set delegate list to the specified names
+	DR                        Retrieve die-roll presets
+	EXIT|QUIT                 Exit map-console
+	HELP|?                    Prints out a command summary
+	L filename                Load contents of local map file
+	L@ id                     Load contents of server map file
+	M filename                As L but merge contents with existing map
+	M? id                     Tell clients to cache server map file
+	M@ id                     As M but using a server map file
+	MARK x y                  Show visible marker at (x,y)
+	OA id {k1 v1 k2 v2 ...}   Set object attributes to new values
+	OA+ id k {v1 v2 v3 ...}   Add values to a list-valued object attribute
+	OA- id k {v1 v2 v3 ...}   Remove values from a list-valued object attribute
+	POLO                      Send POLO packet to server
+	PS id color name area size player|monster x y reach
+	                          Place a creature token on the map
+	SYNC                      Retrieve full game state
+	SYNC CHAT [target]        Retrieve chat message history
+	TO recips|*|% message     Send chat message (*=to all, %=to GM)
+	/CONN                     Retrieve list of connected clients
 
 You may also type any arbitrary server command with its JSON parameter payload using the syntax
-   !cmd k1=v1 k2=v2 ...
+
+	!cmd k1=v1 k2=v2 ...
+
 This is translated to
-   CMD {"k1":"v1", "k2":"v2", ...}
+
+	CMD {"k1":"v1", "k2":"v2", ...}
+
 and sent directly to the server. The values v1, v2, etc. are assumed to be string values and are appropriately quoted for JSON.
 
 If the syntax k#v is used (# instead of = between key and value), then the value is NOT quoted.
 This may be used to enter numeric or boolean values, as well as to type objects directly. Thus,
-   !cmd {foo#["bar","hello world"]} qty#42 retries#false
+
+	!cmd {foo#["bar","hello world"]} qty#42 retries#false
+
 would be sent as
-   CMD {"foo":["bar","hello world"], "qty":42, "retries":false}
+
+	CMD {"foo":["bar","hello world"], "qty":42, "retries":false}
 
 For convenience, the syntax k:v may be used. This is identical to the k=v form except that any underscores (_) in the value are translated to spaces in the string value sent to the server.
 
 To send a completely unprocessed string directly to the server, just prefix it with a backquote (`) as in
-   `ECHO {"s":"Hello, world", "i":42}
 
-See the full documentation in the accompanying manual file man/man6/map-console.6.pdf (or run ``gma man go map-console'' if you have the GMA Core package installed as well as Go-GMA).
+	`ECHO {"s":"Hello, world", "i":42}
 
-See also the server protocol specification in the man/man6/mapper.6.pdf of the GMA-Mapper package (or run ``gma man 6 mapper'').
+See the full documentation in the accompanying manual file man/man6/map-console.6.pdf (or run “gma man go map-console” if you have the GMA Core package installed as well as Go-GMA).
+
+See also the server protocol specification in the man/man6/mapper.6.pdf of the GMA-Mapper package (or run “gma man 6 mapper”).
 */
 package main
 
@@ -200,7 +210,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.26.0" //@@##@@
+const GoVersionNumber="5.27.0" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -732,10 +742,8 @@ func describeObject(mono bool, obj any) string {
 	return desc.String()
 }
 
-//
 // describeIncomingMessage applys a standard formatting to present
 // a human-readable representation of each server message.
-//
 type fieldDesc struct {
 	name  string
 	value any
@@ -805,6 +813,7 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"to", m.Recipients},
 			fieldDesc{"toAll", m.ToAll},
 			fieldDesc{"toGM", m.ToGM},
+			fieldDesc{"markup", m.Markup},
 			fieldDesc{"text", m.Text},
 		)
 
@@ -998,12 +1007,14 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 
 	case mapper.UpdateDicePresetsMessagePayload:
 		printFields(mono, "UpdateDicePresets",
+			fieldDesc{"global", m.Global},
 			fieldDesc{"for", m.For},
 			fieldDesc{"delegates", m.Delegates},
 			fieldDesc{"delegate for", m.DelegateFor},
 		)
 		for i, dp := range m.Presets {
 			printFields(mono, colorize(fmt.Sprintf("  [%02d] ", i), "Blue", mono),
+				fieldDesc{"g", dp.Global},
 				fieldDesc{"name", dp.Name},
 				fieldDesc{"desc", dp.Description},
 				fieldDesc{"spec", dp.DieRollSpec},
@@ -1267,7 +1278,6 @@ func readLines(filename string) ([]string, error) {
 	return data, scanner.Err()
 }
 
-//
 // readUserInput takes lines of input from the user which correspond to
 // map server requests. While the Python version of the map-console
 // just sent the input as-is, trusting the user to form a protocol-conforming
@@ -1278,7 +1288,6 @@ func readLines(filename string) ([]string, error) {
 // but for now, like the earlier Python map-console, we expect the user
 // to type the command in the form it would be sent to the server.
 // See the mapper protocol as described in mapper(6) for details.
-//
 func readUserInput(mono bool, cancel context.CancelFunc, server mapper.Connection) {
 	fmt.Printf("map-console> ")
 	scanner := bufio.NewScanner(os.Stdin)
@@ -2005,9 +2014,9 @@ func colorize(text, color string, mono bool) string {
 }
 
 /*
-# @[00]@| Go-GMA 5.26.0
+# @[00]@| Go-GMA 5.27.0
 # @[01]@|
-# @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
+# @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
 # @[12]@| Aloha, Oregon, USA. All Rights Reserved. Some components were introduced at different
 # @[13]@| points along that historical time line.

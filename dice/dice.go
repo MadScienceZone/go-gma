@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______   ______     _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) / ____ \   (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |( (    \/   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )| (____     | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / |  ___ \    | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/  | (   ) )   |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\( (___) ) _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_____/ (_)(_______)     #
+#  _______  _______  _______             _______     _______  ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   )  )   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____         /   )    /  /    | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    /  /     | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/    /  /      |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ /  /     _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_/     (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -148,7 +148,7 @@ type Dice struct {
 // specification which likely came from the user anyway. (Although
 // using DieRoller instead of Dice is even better.)
 //
-// This text description may contain any number of integer constants
+// This text description may contain any number of integer or real-number constants
 // and/or die‐roll expressions separated by the basic math operators “+”,  “−”,
 // “*”,  and “//”  which  respectively add, subtract, multiply, and divide the total
 // value so far with the value that follows the operator.   Division performed
@@ -2693,6 +2693,7 @@ func (d *DieRoller) isNatural(checkForMax bool) (result bool) {
 func (sr StructuredDescriptionSet) Text() (string, error) {
 	var t strings.Builder
 	var i int
+	var f float64
 	var err error
 
 	for _, r := range sr {
@@ -2700,7 +2701,13 @@ func (sr StructuredDescriptionSet) Text() (string, error) {
 		case "best":
 			fmt.Fprintf(&t, " (best of %s) ", r.Value)
 
-		case "bonus", "constant", "diebonus":
+		case "constant":
+			if f, err = strconv.ParseFloat(r.Value, 64); err != nil {
+				return "", err
+			}
+			fmt.Fprintf(&t, "%g", f)
+
+		case "bonus", "diebonus":
 			if i, err = strconv.Atoi(r.Value); err != nil {
 				return "", err
 			}
@@ -2791,6 +2798,9 @@ func (sr StructuredDescriptionSet) Text() (string, error) {
 // has stored on the server or in a file as a ready-to-go preset value which will
 // be used often, and needs to be persistent across gaming sessions.
 type DieRollPreset struct {
+	// If true, this is a system-wide global preset.
+	Global bool `json:",omitempty"`
+
 	// The name by which this die-roll preset is identified to the user.
 	// This must be unique among that user's presets.
 	//
@@ -2835,6 +2845,8 @@ func WriteDieRollPresetFile(path string, presets []DieRollPreset, meta DieRollPr
 }
 
 // SaveDieRollPresetFile writes a slice of presets to an open stream.
+// Strictly speaking, clients shouldn't be writing system global presets into their local files,
+// but we won't stop you if you do it anyway.
 func SaveDieRollPresetFile(output io.Writer, presets []DieRollPreset, meta DieRollPresetMetaData) error {
 	writer := bufio.NewWriter(output)
 	writer.WriteString("__DICE__:2\n")
@@ -3167,9 +3179,9 @@ d representation:
 
 */
 
-// @[00]@| Go-GMA 5.26.0
+// @[00]@| Go-GMA 5.27.0
 // @[01]@|
-// @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
+// @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
 // @[12]@| Aloha, Oregon, USA. All Rights Reserved. Some components were introduced at different
 // @[13]@| points along that historical time line.

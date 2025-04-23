@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______   ______     _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) / ____ \   (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |( (    \/   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )| (____     | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / |  ___ \    | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/  | (   ) )   |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\( (___) ) _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_____/ (_)(_______)     #
+#  _______  _______  _______             _______     _______  ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   )  )   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____         /   )    /  /    | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    /  /     | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/    /  /      |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ /  /     _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_/     (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -33,6 +33,7 @@ import (
 
 	"github.com/MadScienceZone/go-gma/v5/dice"
 	"github.com/MadScienceZone/go-gma/v5/mapper"
+	"github.com/MadScienceZone/go-gma/v5/text"
 	"golang.org/x/exp/slices"
 )
 
@@ -199,6 +200,9 @@ func (a *Application) QueryImageData(img mapper.ImageDefinition) (mapper.ImageDe
 
 func (a *Application) QueryPresetDelegates(user string) ([]string, error) {
 	var delegates []string
+	if user == GlobalPresetUser {
+		return delegates, nil
+	}
 
 	a.Debugf(DebugDB, "query of delegates for %s", user)
 	rows, err := a.sqldb.Query(`SELECT delegate FROM delegates WHERE user=?`, user)
@@ -221,6 +225,9 @@ func (a *Application) QueryPresetDelegates(user string) ([]string, error) {
 
 func (a *Application) QueryPresetDelegateFor(user string) ([]string, error) {
 	var delegates []string
+	if user == GlobalPresetUser {
+		return delegates, nil
+	}
 
 	a.Debugf(DebugDB, "query of who %s is a delegate for", user)
 	rows, err := a.sqldb.Query(`SELECT user FROM delegates WHERE delegate=?`, user)
@@ -287,6 +294,12 @@ func (a *Application) QueryChatHistory(target int, requester *mapper.ClientConne
 				return err
 			}
 			if chat.ToAll || (chat.ToGM && requester.Auth.GmMode) || slices.Contains(chat.Recipients, requester.Auth.Username) {
+				if chat.Markup && !requester.Features.GMAMarkup {
+					chat.Markup = false
+					if cleaned, err := text.Render(chat.Text, text.AsPlainText); err == nil {
+						chat.Text = cleaned
+					}
+				}
 				requester.Conn.Send(mapper.ChatMessage, chat)
 			}
 
@@ -387,7 +400,18 @@ func (a *Application) FilterDicePresets(user string, f mapper.FilterDicePresetsM
 	return nil
 }
 
-func (a *Application) SendDicePresets(user string) error {
+// SendDicePresets transmits the current set of dice presets to a specified user.
+// This will include all of the system-wide global presets plus that user's own set of presets.
+// These will be send as an UpdateDicePresetsMessage ("DD=") to all clients logged in as the
+// target user and all users who are designated as delegates on behalf of that user.
+//
+// If the onlyGlobal parameter is true, then only the system-wide global set will be returned.
+//
+// If the broadcast parameter is true when onlyGlobal is also true, these global results will be broadcast to all connected
+// users. Otherwise, they will be sent only to the designated user.
+func (a *Application) SendDicePresets(user string, onlyGlobal bool, broadcast bool) error {
+	var err error
+
 	delegates, err := a.QueryPresetDelegates(user)
 	if err != nil {
 		return err
@@ -397,31 +421,46 @@ func (a *Application) SendDicePresets(user string) error {
 		return err
 	}
 
-	rows, err := a.sqldb.Query(`select name, description, rollspec from dicepresets where user = ?`, user)
+	var rows *sql.Rows
+	var pset mapper.UpdateDicePresetsMessagePayload
+
+	if onlyGlobal {
+		rows, err = a.sqldb.Query(`select user, name, description, rollspec from dicepresets where user = ?`, GlobalPresetUser)
+	} else {
+		rows, err = a.sqldb.Query(`select user, name, description, rollspec from dicepresets where user = ? or user = ?`, user, GlobalPresetUser)
+	}
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 
-	var pset mapper.UpdateDicePresetsMessagePayload
-
 	for rows.Next() {
 		var preset dice.DieRollPreset
-		if err := rows.Scan(&preset.Name, &preset.Description, &preset.DieRollSpec); err != nil {
+		var puser string
+		if err := rows.Scan(&puser, &preset.Name, &preset.Description, &preset.DieRollSpec); err != nil {
 			return err
+		}
+		if puser == GlobalPresetUser {
+			preset.Global = true
 		}
 		pset.Presets = append(pset.Presets, preset)
 	}
-	if err := rows.Err(); err != nil {
+	if err = rows.Err(); err != nil {
 		return err
 	}
 	pset.Delegates = delegates
 	pset.DelegateFor = delegateFor
-	pset.For = user
+	if onlyGlobal {
+		pset.Global = true
+	} else {
+		pset.For = user
+	}
 
 	for _, peer := range a.GetClients() {
-		if peer.Auth != nil && (peer.Auth.Username == user || slices.Contains(delegates, peer.Auth.Username)) {
-			peer.Conn.Send(mapper.UpdateDicePresets, pset)
+		if peer.Auth != nil {
+			if (onlyGlobal && broadcast) || (peer.Auth.Username == user || slices.Contains(delegates, peer.Auth.Username)) {
+				peer.Conn.Send(mapper.UpdateDicePresets, pset)
+			}
 		}
 	}
 	return nil
@@ -491,9 +530,7 @@ func (a *Application) LogDatabaseContents() error {
 	return nil
 }
 
-//
 // Remove all stored image definitions matching a regular expression
-//
 func (a *Application) FilterImages(f mapper.FilterImagesMessagePayload) error {
 	var namesToDelete []string
 
@@ -539,9 +576,9 @@ func (a *Application) FilterImages(f mapper.FilterImagesMessagePayload) error {
 	return nil
 }
 
-// @[00]@| Go-GMA 5.26.0
+// @[00]@| Go-GMA 5.27.0
 // @[01]@|
-// @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
+// @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
 // @[12]@| Aloha, Oregon, USA. All Rights Reserved. Some components were introduced at different
 // @[13]@| points along that historical time line.

@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______   ______     _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) / ____ \   (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |( (    \/   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )| (____     | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / |  ___ \    | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/  | (   ) )   |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\( (___) ) _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_____/ (_)(_______)     #
+#  _______  _______  _______             _______     _______  ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   )  )   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____         /   )    /  /    | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    /  /     | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/    /  /      |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ /  /     _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_/     (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -67,6 +67,7 @@ type ClientConnection struct {
 	Features struct {
 		DiceColorBoxes  bool
 		DiceColorLabels bool
+		GMAMarkup       bool
 	}
 
 	// The client's host and port number
@@ -601,12 +602,16 @@ mainloop:
 				case AllowMessagePayload:
 					c.Features.DiceColorBoxes = false
 					c.Features.DiceColorLabels = false
+					c.Features.GMAMarkup = false
 
 					for _, feature := range p.Features {
-						if feature == "DICE-COLOR-BOXES" {
+						switch feature {
+						case "DICE-COLOR-BOXES":
 							c.Features.DiceColorBoxes = true
-						} else if feature == "DICE-COLOR-LABELS" {
+						case "DICE-COLOR-LABELS":
 							c.Features.DiceColorLabels = true
+						case "GMA-MARKUP":
+							c.Features.GMAMarkup = true
 						}
 					}
 
@@ -820,6 +825,13 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 					}
 				}
 
+				if strings.HasPrefix(packet.User, "SYS$") {
+					c.Logf("denied access to restricted username")
+					c.Conn.Send(Denied, DeniedMessagePayload{Reason: "login incorrect"})
+					_ = c.Conn.Flush()
+					done <- fmt.Errorf("access denied")
+					return
+				}
 				if newSecret := c.Server.GetPersonalCredentials(packet.User); newSecret != nil {
 					c.Auth.SetSecret(newSecret)
 				}

@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______   ______     _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) / ____ \   (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |( (    \/   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )| (____     | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / |  ___ \    | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/  | (   ) )   |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\( (___) ) _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_____/ (_)(_______)     #
+#  _______  _______  _______             _______     _______  ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   )  )   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____         /   )    /  /    | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    /  /     | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/    /  /      |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ /  /     _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_/     (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -30,7 +30,7 @@ import (
 
 const (
 	GMAMapperPreferencesMinimumVersion int = 1
-	GMAMapperPreferencesMaximumVersion int = 8
+	GMAMapperPreferencesMaximumVersion int = 9
 	GMAPreferencesMinimumVersion       int = 1
 	GMAPreferencesMaximumVersion       int = 2
 )
@@ -329,6 +329,7 @@ type UserPreferences struct {
 	} `json:"guide_lines,omitempty"`
 	ImageFormat   ImageType           `json:"image_format,omitempty"`
 	KeepTools     bool                `json:"keep_tools,omitempty"`
+	MarkupEnabled bool                `json:"markup_enabled,omitempty"`
 	MenuButton    bool                `json:"menu_button,omitempty"`
 	NeverAnimate  bool                `json:"never_animate,omitempty"`
 	PreloadImages bool                `json:"preload,omitempty"`
@@ -549,6 +550,32 @@ func DefaultPreferences() UserPreferences {
 				Family: "Helvetica",
 				Size:   24,
 			},
+			"Bold": UserFont{
+				Family: "Helvetica",
+				Size:   12,
+				Weight: Bold,
+			},
+			"Italic": UserFont{
+				Family: "Helvetica",
+				Size:   12,
+				Slant:  Italic,
+			},
+			"BoldItalic": UserFont{
+				Family: "Helvetica",
+				Size:   12,
+				Slant:  Italic,
+				Weight: Bold,
+			},
+			"Title": UserFont{
+				Family: "Helvetica",
+				Size:   16,
+				Weight: Bold,
+			},
+			"Subtitle": UserFont{
+				Family: "Helvetica",
+				Size:   14,
+				Weight: Bold,
+			},
 		},
 		Styles: StyleDescription{
 			Clocks: ClockStyles{
@@ -588,10 +615,19 @@ func DefaultPreferences() UserPreferences {
 			DieRolls: DieRollStyles{
 				CompactRecents: false,
 				Components: map[string]DieRollComponent{
+					"begingroup": DieRollComponent{
+						FontName: "Normal",
+					},
 					"best": DieRollComponent{
 						FG:       ColorSet{Dark: "#aaaaaa", Light: "#888888"},
 						FontName: "Special",
 						Format:   " best of %s",
+					},
+					"bold": DieRollComponent{
+						FontName: "Bold",
+					},
+					"bolditalic": DieRollComponent{
+						FontName: "BoldItalic",
 					},
 					"bonus": DieRollComponent{
 						FG:       ColorSet{Dark: "#fffb00", Light: "#f05b00"},
@@ -657,6 +693,9 @@ func DefaultPreferences() UserPreferences {
 						BG:       ColorSet{Dark: "white", Light: "blue"},
 						FontName: "FullResult",
 					},
+					"italic": DieRollComponent{
+						FontName: "Italic",
+					},
 					"iteration": DieRollComponent{
 						FG:       ColorSet{Dark: "#aaaaaa", Light: "#888888"},
 						FontName: "Special",
@@ -721,6 +760,9 @@ func DefaultPreferences() UserPreferences {
 						FontName: "Normal",
 						Format:   "{%s}",
 					},
+					"section": DieRollComponent{
+						FontName: "Title",
+					},
 					"separator": DieRollComponent{
 						FontName: "Normal",
 						Format:   "=",
@@ -733,6 +775,9 @@ func DefaultPreferences() UserPreferences {
 						FG:       ColorSet{Dark: "red", Light: "red"},
 						FontName: "Special",
 						Format:   " missed DC by %s",
+					},
+					"subsection": DieRollComponent{
+						FontName: "Subtitle",
 					},
 					"subtotal": DieRollComponent{
 						FG:       ColorSet{Dark: "#00fa92", Light: "green"},
@@ -1023,9 +1068,9 @@ func SearchInPath(program string) (string, error) {
 	return "", fmt.Errorf("file not found in PATH")
 }
 
-// @[00]@| Go-GMA 5.26.0
+// @[00]@| Go-GMA 5.27.0
 // @[01]@|
-// @[10]@| Overall GMA package Copyright © 1992–2024 by Steven L. Willoughby (AKA MadScienceZone)
+// @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
 // @[12]@| Aloha, Oregon, USA. All Rights Reserved. Some components were introduced at different
 // @[13]@| points along that historical time line.

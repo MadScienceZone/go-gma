@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______   ______     _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) / ____ \   (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |( (    \/   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )| (____     | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   / |  ___ \    | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/  | (   ) )   |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\( (___) ) _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_____/ (_)(_______)     #
+#  _______  _______  _______             _______     _______  ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   )  )   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____         /   )    /  /    | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    /  /     | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/    /  /      |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ /  /     _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_/     (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -33,10 +33,13 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/auth"
 	"github.com/MadScienceZone/go-gma/v5/dice"
 	"github.com/MadScienceZone/go-gma/v5/mapper"
+	"github.com/MadScienceZone/go-gma/v5/text"
 	"github.com/MadScienceZone/go-gma/v5/util"
 	"github.com/newrelic/go-agent/v3/newrelic"
 	"golang.org/x/exp/slices"
 )
+
+const GlobalPresetUser string = "SYS$PRESET"
 
 type DebugFlags uint64
 
@@ -815,6 +818,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 						receiptPayload.Title = receiptLabel
 					}
 
+					receiptPayload.Origin = peer == requester
 					peer.Conn.Send(mapper.RollResult, receiptPayload)
 				}
 			}
@@ -852,6 +856,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 					response.Title = genericLabel
 				}
 
+				response.Origin = peer == requester
 				if !peer.Features.DiceColorLabels {
 					if err := peer.Conn.Send(mapper.RollResult, stripColorsFromResponse(response)); err != nil {
 						a.Logf("error sending color-stripped die-roll result %v to %v: %v", response, peer.IdTag(), err)
@@ -874,6 +879,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		}
 
 		target := requester.Auth.Username
+		dataset := target
 		if p.For != "" && p.For != target {
 			if requester.Auth.GmMode {
 				target = p.For
@@ -902,11 +908,22 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				}
 			}
 		}
+		if p.Global {
+			if !requester.Auth.GmMode {
+				a.Logf("refusing to allow non-privileged command %v %v for non-GM user %s", p.MessageType(), p, requester.Auth.Username)
+				requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+					Command: p.RawMessage(),
+					Reason:  "You are not authorized to alter the system-wide global die-roll preset list",
+				})
+				return
+			}
+			dataset = GlobalPresetUser
+		}
 
-		if err := a.StoreDicePresets(target, p.Presets, true); err != nil {
+		if err := a.StoreDicePresets(dataset, p.Presets, true); err != nil {
 			a.Logf("error storing die-roll preset: %v", err)
 		}
-		if err := a.SendDicePresets(target); err != nil {
+		if err := a.SendDicePresets(target, p.Global, true); err != nil {
 			a.Logf("error sending die-roll presets after changing them: %v", err)
 		}
 
@@ -934,7 +951,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		if err := a.StoreDicePresetDelegates(target, p.Delegates); err != nil {
 			a.Logf("error storing die-roll preset delegates: %v", err)
 		}
-		if err := a.SendDicePresets(target); err != nil {
+		if err := a.SendDicePresets(target, false, true); err != nil {
 			a.Logf("error sending die-roll presets after changing delegates: %v", err)
 		}
 
@@ -945,6 +962,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		}
 
 		target := requester.Auth.Username
+		dataset := target
 		if p.For != "" && p.For != target {
 			if requester.Auth.GmMode {
 				target = p.For
@@ -973,11 +991,22 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				}
 			}
 		}
+		if p.Global {
+			if !requester.Auth.GmMode {
+				a.Logf("refusing to execute privileged command %v %v for non-GM user %s", p.MessageType(), p, requester.Auth.Username)
+				requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+					Command: p.RawMessage(),
+					Reason:  "You are not authorized to change the system-wide global die-roll preset list",
+				})
+				return
+			}
+			dataset = GlobalPresetUser
+		}
 
-		if err := a.StoreDicePresets(target, p.Presets, false); err != nil {
+		if err := a.StoreDicePresets(dataset, p.Presets, false); err != nil {
 			a.Logf("error adding to die-roll preset: %v", err)
 		}
-		if err := a.SendDicePresets(target); err != nil {
+		if err := a.SendDicePresets(target, p.Global, true); err != nil {
 			a.Logf("error sending die-roll presets after changing them: %v", err)
 		}
 
@@ -1032,6 +1061,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		}
 
 		target := requester.Auth.Username
+		dataset := target
 		if p.For != "" && p.For != target {
 			if requester.Auth.GmMode {
 				target = p.For
@@ -1060,11 +1090,22 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				}
 			}
 		}
+		if p.Global {
+			if !requester.Auth.GmMode {
+				a.Logf("refusing to execute privileged command %v %v for non-GM user %s", p.MessageType(), p, requester.Auth.Username)
+				requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+					Command: p.RawMessage(),
+					Reason:  "You are not authorized to filter the system-wide global die-roll presets",
+				})
+				return
+			}
+			dataset = GlobalPresetUser
+		}
 
-		if err := a.FilterDicePresets(target, p); err != nil {
+		if err := a.FilterDicePresets(dataset, p); err != nil {
 			a.Logf("error filtering die-roll preset for %s with /%s/: %v", target, p.Filter, err)
 		}
-		if err := a.SendDicePresets(target); err != nil {
+		if err := a.SendDicePresets(target, p.Global, true); err != nil {
 			a.Logf("error sending die-roll presets after filtering them: %v", err)
 		}
 
@@ -1119,7 +1160,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			}
 		}
 
-		if err := a.SendDicePresets(target); err != nil {
+		if err := a.SendDicePresets(target, p.Global, false); err != nil {
 			a.Logf("error sending die-roll presets: %v", err)
 		}
 
@@ -1144,6 +1185,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			a.Logf("unable to add ChatMessage event to chat history: %v", err)
 		}
 
+		var cleanedText string
 		for _, peer := range a.GetClients() {
 			if p.ToGM {
 				if peer.Auth == nil || (!peer.Auth.GmMode && peer.Auth.Username != requester.Auth.Username) {
@@ -1161,8 +1203,26 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				}
 			}
 
-			if err := peer.Conn.Send(mapper.ChatMessage, p); err != nil {
-				a.Logf("error sending message %v to %v: %v", p, peer.IdTag(), err)
+			p.Origin = peer == requester
+			if p.Markup && !peer.Features.GMAMarkup {
+				var err error
+				if cleanedText == "" {
+					cleanedText, err = text.Render(p.Text, text.AsPlainText)
+					if err != nil {
+						a.Logf("error stripping markup text from chat message: %v", err)
+						cleanedText = fmt.Sprintf("%s (formatting error: %v)", p.Text, err)
+					}
+				}
+				t := p.Text
+				p.Text, p.Markup = cleanedText, false
+				if err := peer.Conn.Send(mapper.ChatMessage, p); err != nil {
+					a.Logf("error sending cleaned message %v to %v: %v", p, peer.IdTag(), err)
+				}
+				p.Markup, p.Text = true, t
+			} else {
+				if err := peer.Conn.Send(mapper.ChatMessage, p); err != nil {
+					a.Logf("error sending message %v to %v: %v", p, peer.IdTag(), err)
+				}
 			}
 		}
 
