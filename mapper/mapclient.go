@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______  ______      _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___  \    (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   )  )   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )    /  /    | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    /  /     | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/    /  /      |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ /  /     _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_/     (_)(_______)     #
+#  _______  _______  _______             _______     _______  ______       __          #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___  \     /  \         #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   )  )    \/) )        #
+# | |      | || || || (___) | Assistant | (____         /   )    /  /       | |        #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    /  /        | |        #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/    /  /         | |        #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ /  /     _  __) (_       #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_/     (_) \____/       #
 #                                                                                      #
 ########################################################################################
 */
@@ -1093,6 +1093,10 @@ type ChatCommon struct {
 	// as opposed to a peer just getting a copy of the message as it is being
 	// broadcast out to everyone else.
 	Origin bool `json:",omitempty"`
+
+	// True if the message is being replayed back to the client as opposed to
+	// being sent for the first time.
+	Replay bool `json:",omitempty"`
 
 	// The name of the person sending the message.
 	Sender string `json:",omitempty"`
@@ -3898,7 +3902,7 @@ func (c *Connection) CheckVersionOf(packageName, myVersionNumber string) (*Packa
 	return availableVersion, nil
 }
 
-// @[00]@| Go-GMA 5.27.0
+// @[00]@| Go-GMA 5.27.1
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

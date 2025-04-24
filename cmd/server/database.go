@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______  ______      _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___  \    (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   )  )   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )    /  /    | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    /  /     | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/    /  /      |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ /  /     _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_/     (_)(_______)     #
+#  _______  _______  _______             _______     _______  ______       __          #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___  \     /  \         #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   )  )    \/) )        #
+# | |      | || || || (___) | Assistant | (____         /   )    /  /       | |        #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    /  /        | |        #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/    /  /         | |        #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ /  /     _  __) (_       #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_/     (_) \____/       #
 #                                                                                      #
 ########################################################################################
 */
@@ -293,6 +293,7 @@ func (a *Application) QueryChatHistory(target int, requester *mapper.ClientConne
 			if err := json.Unmarshal([]byte(jdata), &chat); err != nil {
 				return err
 			}
+			chat.Replay = true
 			if chat.ToAll || (chat.ToGM && requester.Auth.GmMode) || slices.Contains(chat.Recipients, requester.Auth.Username) {
 				if chat.Markup && !requester.Features.GMAMarkup {
 					chat.Markup = false
@@ -308,6 +309,7 @@ func (a *Application) QueryChatHistory(target int, requester *mapper.ClientConne
 			if err := json.Unmarshal([]byte(jdata), &rr); err != nil {
 				return err
 			}
+			rr.Replay = true
 			if rr.ToAll || (rr.ToGM && requester.Auth.GmMode) || slices.Contains(rr.Recipients, requester.Auth.Username) {
 				requester.Conn.Send(mapper.RollResult, rr)
 			}
@@ -576,7 +578,7 @@ func (a *Application) FilterImages(f mapper.FilterImagesMessagePayload) error {
 	return nil
 }
 
-// @[00]@| Go-GMA 5.27.0
+// @[00]@| Go-GMA 5.27.1
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

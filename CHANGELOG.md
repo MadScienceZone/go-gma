@@ -1,8 +1,8 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.27.0                <!-- @@##@@ -->
- * Effective Date: 23-Apr-2025			<!-- @@##@@ -->
+ * This Package Version: 5.27.1                <!-- @@##@@ -->
+ * Effective Date: 24-Apr-2025			<!-- @@##@@ -->
 
 ## Compatibility
  * GMA Core API Library Version: 6.29		<!-- @@##@@ -->
@@ -18,6 +18,10 @@ When upgrading an existing server to version 5.15.0 or later, be sure to run `sc
 In addition, if your server didn't have the following update installed previously, do it as well:
 
 When upgrading an existing server to version 5.13.1 or later, be sure to run `scripts/upgrade-5.13.1` on each database file to update it to the new chat history encoding scheme introduced at 5.13.1. If you don't, the server will ignore some or all of your historic chat and die roll messages. Alternatively, you can delete the old database and make a new one with the current server.
+
+## v5.27.1
+### Fixed
+ * Added the missing `Replay` feild to the `TO` and `ROLL` messages in the mapper protocol.
 
 ## v5.27.0
 ### Enhanced
