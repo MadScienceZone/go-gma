@@ -293,6 +293,7 @@ func (a *Application) QueryChatHistory(target int, requester *mapper.ClientConne
 			if err := json.Unmarshal([]byte(jdata), &chat); err != nil {
 				return err
 			}
+			chat.Replay = true
 			if chat.ToAll || (chat.ToGM && requester.Auth.GmMode) || slices.Contains(chat.Recipients, requester.Auth.Username) {
 				if chat.Markup && !requester.Features.GMAMarkup {
 					chat.Markup = false
@@ -308,6 +309,7 @@ func (a *Application) QueryChatHistory(target int, requester *mapper.ClientConne
 			if err := json.Unmarshal([]byte(jdata), &rr); err != nil {
 				return err
 			}
+			rr.Replay = true
 			if rr.ToAll || (rr.ToGM && requester.Auth.GmMode) || slices.Contains(rr.Recipients, requester.Auth.Username) {
 				requester.Conn.Send(mapper.RollResult, rr)
 			}
