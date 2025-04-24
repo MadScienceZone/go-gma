@@ -1,8 +1,8 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.27.0                <!-- @@##@@ -->
- * Effective Date: 23-Apr-2025			<!-- @@##@@ -->
+ * This Package Version: 5.27.1                <!-- @@##@@ -->
+ * Effective Date: 24-Apr-2025			<!-- @@##@@ -->
 
 ## Compatibility
  * GMA Core API Library Version: 6.29		<!-- @@##@@ -->
