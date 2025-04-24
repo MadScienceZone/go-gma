@@ -1094,6 +1094,10 @@ type ChatCommon struct {
 	// broadcast out to everyone else.
 	Origin bool `json:",omitempty"`
 
+	// True if the message is being replayed back to the client as opposed to
+	// being sent for the first time.
+	Replay bool `json:",omitempty"`
+
 	// The name of the person sending the message.
 	Sender string `json:",omitempty"`
 
