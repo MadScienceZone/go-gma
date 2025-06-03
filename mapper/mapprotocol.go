@@ -50,10 +50,10 @@ import (
 // The GMA Mapper Protocol version number current as of this build,
 // and protocol versions supported by this code.
 const (
-	GMAMapperProtocol           = 417      // @@##@@ auto-configured
+	GMAMapperProtocol           = 418      // @@##@@ auto-configured
 	GoVersionNumber             = "5.27.1" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
-	MaximumSupportedMapProtocol = 417
+	MaximumSupportedMapProtocol = 418
 )
 
 func init() {
