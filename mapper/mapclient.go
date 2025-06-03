@@ -641,6 +641,8 @@ const (
 	FilterDicePresets
 	FilterImages
 	Granted
+	HitPointAcknowledge
+	HitPointRequest
 	LoadFrom
 	LoadArcObject
 	LoadCircleObject
@@ -712,6 +714,8 @@ var ServerMessageByName = map[string]ServerMessage{
 	"FilterCoreData":              FilterCoreData,
 	"FilterDicePresets":           FilterDicePresets,
 	"FilterImages":                FilterImages,
+	"HitPointAcknowledge":         HitPointAcknowledge,
+	"HitPointRequest":             HitPointRequest,
 	"Granted":                     Granted,
 	"LoadFrom":                    LoadFrom,
 	"LoadArcObject":               LoadArcObject,
@@ -1783,6 +1787,102 @@ type FilterImagesMessagePayload struct {
 type GrantedMessagePayload struct {
 	BaseMessagePayload
 	User string
+}
+
+//  _   _ _ _   ____       _       _      _        _                        _          _
+// | | | (_) |_|  _ \ ___ (_)_ __ | |_   / \   ___| | ___ __   _____      _| | ___  __| | __ _  ___
+// | |_| | | __| |_) / _ \| | '_ \| __| / _ \ / __| |/ / '_ \ / _ \ \ /\ / / |/ _ \/ _` |/ _` |/ _ \
+// |  _  | | |_|  __/ (_) | | | | | |_ / ___ \ (__|   <| | | | (_) \ V  V /| |  __/ (_| | (_| |  __/
+// |_| |_|_|\__|_|   \___/|_|_| |_|\__/_/   \_\___|_|\_\_| |_|\___/ \_/\_/ |_|\___|\__,_|\__, |\___|
+//                                                                                       |___/
+// HitPointAcknowledgeMessagePayload conveys to the requesting client
+// that their HitPointRequest message was accepted.
+type HitPointAcknowledgeMessagePayload struct {
+	BaseMessagePayload
+	RequestID        string
+	RequestingClient string `json:",omitempty"`
+	RequestedBy      string `json:",omitempty"`
+}
+
+//  _   _ _ _   ____       _       _   ____                            _
+// | | | (_) |_|  _ \ ___ (_)_ __ | |_|  _ \ ___  __ _ _   _  ___  ___| |_
+// | |_| | | __| |_) / _ \| | '_ \| __| |_) / _ \/ _` | | | |/ _ \/ __| __|
+// |  _  | | |_|  __/ (_) | | | | | |_|  _ <  __/ (_| | |_| |  __/\__ \ |_
+// |_| |_|_|\__|_|   \___/|_|_| |_|\__|_| \_\___|\__, |\__,_|\___||___/\__|
+//                                                  |_|
+//
+// HitPointRequestMessagePayload requests that the GM add temporary hit points to a creature (usually a PC).
+type HitPointRequestMessagePayload struct {
+	BaseMessagePayload
+
+	// Simple description to explain the request to the GM
+	Description string
+
+	// The creature affected
+	Target string
+
+	// A unique identifier for this request (recommend using a UUID)
+	RequestID string
+
+	// If non-null, request updates to the creature's hit point totals
+	Health *HitPointHealthRequest `json:",omitempty"`
+
+	// If non-null, request a new block of temporary hit points
+	TmpHP *HitPointTmpHPRequest `json:",omitempty"`
+
+	// The server will fill in this information about the requesting client.
+	RequestedBy      string
+	RequestingClient string
+}
+
+type HitPointHealthRequest struct {
+	MaxHP           int `json:",omitempty"`
+	LethalDamage    int `json:",omitempty"`
+	NonLethalDamage int `json:",omitempty"`
+}
+
+type HitPointTmpHPRequest struct {
+	TmpHP     int
+	TmpWounds int `json:",omitempty"`
+	Expires   string
+}
+
+//
+// HitPointRequest sends a hit point request message to the GM. If approved, the necessary updates will be entered into the system.
+//
+func (c *Connection) HitPointUpdateRequest(id, description, target string, maxHP, lethalDamage, nonLethalDamage int) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(HitPointRequest, HitPointRequestMessagePayload{
+		Description: description,
+		Target:      target,
+		RequestID:   id,
+		Health: &HitPointHealthRequest{
+			MaxHP:           maxHP,
+			LethalDamage:    lethalDamage,
+			NonLethalDamage: nonLethalDamage,
+		},
+	})
+}
+
+//
+// TemporaryHitPointRequest sends a temporary hit point request message to the GM. If approved, the necessary updates will be entered into the system.
+//
+func (c *Connection) TemporaryHitPointUpdateRequest(id, description, target string, maxHP, damage int, expires string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(HitPointRequest, HitPointRequestMessagePayload{
+		Description: description,
+		Target:      target,
+		RequestID:   id,
+		TmpHP: &HitPointTmpHPRequest{
+			TmpHP:     maxHP,
+			TmpWounds: damage,
+			Expires:   expires,
+		},
+	})
 }
 
 //  _                    _ _____

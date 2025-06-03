@@ -843,6 +843,10 @@ type CreatureHealth struct {
 	// The maximum hit points possible for the creature.
 	MaxHP int `json:",omitempty"`
 
+	// Temporary hit point pool.
+	TmpHP     int `json:",omitempty"`
+	TmpDamage int `json:",omitempty"`
+
 	// The amount of lethal and non-lethal damage suffered by the creature.
 	LethalDamage    int `json:",omitempty"`
 	NonLethalDamage int `json:",omitempty"`

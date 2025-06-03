@@ -1054,6 +1054,25 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		}
 		a.Logf("unable to find original requesting client %v to send TMACK message to", p.RequestingClient)
 
+	case mapper.HitPointAcknowledgeMessagePayload:
+		if requester.Auth == nil || !requester.Auth.GmMode {
+			requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+				Command: p.RawMessage(),
+				Reason:  "You are not authorized to send a HPACK message.",
+			})
+			a.Logf("refusing to allow non-GM user to send a HPACK message")
+			return
+		}
+		for _, peer := range a.GetClients() {
+			if peer.Address == p.RequestingClient {
+				if err := peer.Conn.Send(mapper.HitPointAcknowledge, p); err != nil {
+					a.Logf("error sending message %v to %v: %v", p, peer.IdTag(), err)
+				}
+				return
+			}
+		}
+		a.Logf("unable to find original requesting client %v to send HPACK message to", p.RequestingClient)
+
 	case mapper.FilterDicePresetsMessagePayload:
 		if requester.Auth == nil {
 			a.Logf("Unable to filter die-roll preset for unauthenticated user")
@@ -1234,6 +1253,19 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		for _, peer := range a.GetClients() {
 			if peer.Auth != nil && peer.Auth.GmMode {
 				if err := peer.Conn.Send(mapper.TimerRequest, p); err != nil {
+					a.Logf("error sending %v to %v: %v", p, peer.IdTag(), err)
+				}
+			}
+		}
+
+	case mapper.HitPointRequestMessagePayload:
+		if requester.Auth != nil {
+			p.RequestedBy = requester.Auth.Username
+		}
+		p.RequestingClient = requester.Address
+		for _, peer := range a.GetClients() {
+			if peer.Auth != nil && peer.Auth.GmMode {
+				if err := peer.Conn.Send(mapper.HitPointRequest, p); err != nil {
 					a.Logf("error sending %v to %v: %v", p, peer.IdTag(), err)
 				}
 			}

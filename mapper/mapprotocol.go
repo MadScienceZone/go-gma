@@ -50,8 +50,8 @@ import (
 // The GMA Mapper Protocol version number current as of this build,
 // and protocol versions supported by this code.
 const (
-	GMAMapperProtocol=417      // @@##@@ auto-configured
-	GoVersionNumber="5.27.1" // @@##@@ auto-configured
+	GMAMapperProtocol           = 417      // @@##@@ auto-configured
+	GoVersionNumber             = "5.27.1" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
 	MaximumSupportedMapProtocol = 417
 )
@@ -214,6 +214,14 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 	case Granted:
 		if reason, ok := data.(GrantedMessagePayload); ok {
 			return c.sendJSON("GRANTED", reason)
+		}
+	case HitPointAcknowledge:
+		if ha, ok := data.(HitPointAcknowledgeMessagePayload); ok {
+			return c.sendJSON("HPACK", ha)
+		}
+	case HitPointRequest:
+		if hr, ok := data.(HitPointRequestMessagePayload); ok {
+			return c.sendJSON("HPREQ", hr)
 		}
 	case LoadFrom:
 		if lf, ok := data.(LoadFromMessagePayload); ok {
@@ -817,6 +825,26 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = Granted
+		return p, nil
+
+	case "HPACK":
+		p := HitPointAcknowledgeMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
+		p.messageType = HitPointAcknowledge
+		return p, nil
+
+	case "HPREQ":
+		p := TimerRequestMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
+		p.messageType = HitPointRequest
 		return p, nil
 
 	case "I":
