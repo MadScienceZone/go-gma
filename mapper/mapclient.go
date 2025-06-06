@@ -1789,12 +1789,13 @@ type GrantedMessagePayload struct {
 	User string
 }
 
-//  _   _ _ _   ____       _       _      _        _                        _          _
-// | | | (_) |_|  _ \ ___ (_)_ __ | |_   / \   ___| | ___ __   _____      _| | ___  __| | __ _  ___
-// | |_| | | __| |_) / _ \| | '_ \| __| / _ \ / __| |/ / '_ \ / _ \ \ /\ / / |/ _ \/ _` |/ _` |/ _ \
-// |  _  | | |_|  __/ (_) | | | | | |_ / ___ \ (__|   <| | | | (_) \ V  V /| |  __/ (_| | (_| |  __/
-// |_| |_|_|\__|_|   \___/|_|_| |_|\__/_/   \_\___|_|\_\_| |_|\___/ \_/\_/ |_|\___|\__,_|\__, |\___|
-//                                                                                       |___/
+// .  _   _ _ _   ____       _       _      _        _                        _          _
+// . | | | (_) |_|  _ \ ___ (_)_ __ | |_   / \   ___| | ___ __   _____      _| | ___  __| | __ _  ___
+// . | |_| | | __| |_) / _ \| | '_ \| __| / _ \ / __| |/ / '_ \ / _ \ \ /\ / / |/ _ \/ _` |/ _` |/ _ \
+// . |  _  | | |_|  __/ (_) | | | | | |_ / ___ \ (__|   <| | | | (_) \ V  V /| |  __/ (_| | (_| |  __/
+// . |_| |_|_|\__|_|   \___/|_|_| |_|\__/_/   \_\___|_|\_\_| |_|\___/ \_/\_/ |_|\___|\__,_|\__, |\___|
+// .                                                                                        |___/
+//
 // HitPointAcknowledgeMessagePayload conveys to the requesting client
 // that their HitPointRequest message was accepted.
 type HitPointAcknowledgeMessagePayload struct {
@@ -1804,12 +1805,12 @@ type HitPointAcknowledgeMessagePayload struct {
 	RequestedBy      string `json:",omitempty"`
 }
 
-//  _   _ _ _   ____       _       _   ____                            _
-// | | | (_) |_|  _ \ ___ (_)_ __ | |_|  _ \ ___  __ _ _   _  ___  ___| |_
-// | |_| | | __| |_) / _ \| | '_ \| __| |_) / _ \/ _` | | | |/ _ \/ __| __|
-// |  _  | | |_|  __/ (_) | | | | | |_|  _ <  __/ (_| | |_| |  __/\__ \ |_
-// |_| |_|_|\__|_|   \___/|_|_| |_|\__|_| \_\___|\__, |\__,_|\___||___/\__|
-//                                                  |_|
+// .  _   _ _ _   ____       _       _   ____                            _
+// . | | | (_) |_|  _ \ ___ (_)_ __ | |_|  _ \ ___  __ _ _   _  ___  ___| |_
+// . | |_| | | __| |_) / _ \| | '_ \| __| |_) / _ \/ _` | | | |/ _ \/ __| __|
+// . |  _  | | |_|  __/ (_) | | | | | |_|  _ <  __/ (_| | |_| |  __/\__ \ |_
+// . |_| |_|_|\__|_|   \___/|_|_| |_|\__|_| \_\___|\__, |\__,_|\___||___/\__|
+// .                                                  |_|
 //
 // HitPointRequestMessagePayload requests that the GM add temporary hit points to a creature (usually a PC).
 type HitPointRequestMessagePayload struct {
@@ -1819,7 +1820,7 @@ type HitPointRequestMessagePayload struct {
 	Description string
 
 	// The creature affected
-	Target string
+	Targets []string
 
 	// A unique identifier for this request (recommend using a UUID)
 	RequestID string
@@ -1843,20 +1844,18 @@ type HitPointHealthRequest struct {
 
 type HitPointTmpHPRequest struct {
 	TmpHP     int
-	TmpWounds int `json:",omitempty"`
+	TmpDamage int `json:",omitempty"`
 	Expires   string
 }
 
-//
 // HitPointRequest sends a hit point request message to the GM. If approved, the necessary updates will be entered into the system.
-//
 func (c *Connection) HitPointUpdateRequest(id, description, target string, maxHP, lethalDamage, nonLethalDamage int) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
 	}
 	return c.serverConn.Send(HitPointRequest, HitPointRequestMessagePayload{
 		Description: description,
-		Target:      target,
+		Targets:     []string{target},
 		RequestID:   id,
 		Health: &HitPointHealthRequest{
 			MaxHP:           maxHP,
@@ -1866,20 +1865,18 @@ func (c *Connection) HitPointUpdateRequest(id, description, target string, maxHP
 	})
 }
 
-//
 // TemporaryHitPointRequest sends a temporary hit point request message to the GM. If approved, the necessary updates will be entered into the system.
-//
-func (c *Connection) TemporaryHitPointUpdateRequest(id, description, target string, maxHP, damage int, expires string) error {
+func (c *Connection) TemporaryHitPointUpdateRequest(id, description string, targets []string, maxHP, damage int, expires string) error {
 	if c == nil {
 		return fmt.Errorf("nil Connection")
 	}
 	return c.serverConn.Send(HitPointRequest, HitPointRequestMessagePayload{
 		Description: description,
-		Target:      target,
+		Targets:     targets,
 		RequestID:   id,
 		TmpHP: &HitPointTmpHPRequest{
 			TmpHP:     maxHP,
-			TmpWounds: damage,
+			TmpDamage: damage,
 			Expires:   expires,
 		},
 	})
