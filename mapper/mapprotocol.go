@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______  ______       __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___  \     /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   )  )    \/) )        #
-# | |      | || || || (___) | Assistant | (____         /   )    /  /       | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    /  /        | |        #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/    /  /         | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ /  /     _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_/     (_) \____/       #
+#  _______  _______  _______             _______     _______   _____      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) / ___ \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |( (___) )   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____         /   ) \     /    | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /  / ___ \    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/  ( (   ) )   |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\( (___) ) _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_____/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -50,10 +50,10 @@ import (
 // The GMA Mapper Protocol version number current as of this build,
 // and protocol versions supported by this code.
 const (
-	GMAMapperProtocol=417      // @@##@@ auto-configured
-	GoVersionNumber="5.27.1" // @@##@@ auto-configured
+	GMAMapperProtocol=418              // @@##@@ auto-configured
+	GoVersionNumber="5.28.0" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
-	MaximumSupportedMapProtocol = 417
+	MaximumSupportedMapProtocol = 418
 )
 
 func init() {
@@ -214,6 +214,14 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 	case Granted:
 		if reason, ok := data.(GrantedMessagePayload); ok {
 			return c.sendJSON("GRANTED", reason)
+		}
+	case HitPointAcknowledge:
+		if ha, ok := data.(HitPointAcknowledgeMessagePayload); ok {
+			return c.sendJSON("HPACK", ha)
+		}
+	case HitPointRequest:
+		if hr, ok := data.(HitPointRequestMessagePayload); ok {
+			return c.sendJSON("HPREQ", hr)
 		}
 	case LoadFrom:
 		if lf, ok := data.(LoadFromMessagePayload); ok {
@@ -817,6 +825,26 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = Granted
+		return p, nil
+
+	case "HPACK":
+		p := HitPointAcknowledgeMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
+		p.messageType = HitPointAcknowledge
+		return p, nil
+
+	case "HPREQ":
+		p := HitPointRequestMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
+		p.messageType = HitPointRequest
 		return p, nil
 
 	case "I":

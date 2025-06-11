@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______  ______       __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___  \     /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   )  )    \/) )        #
-# | |      | || || || (___) | Assistant | (____         /   )    /  /       | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    /  /        | |        #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/    /  /         | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ /  /     _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_/     (_) \____/       #
+#  _______  _______  _______             _______     _______   _____      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) / ___ \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |( (___) )   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____         /   ) \     /    | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /  / ___ \    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/  ( (   ) )   |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\( (___) ) _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_____/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -842,6 +842,10 @@ type CreatureHealth struct {
 
 	// The maximum hit points possible for the creature.
 	MaxHP int `json:",omitempty"`
+
+	// Temporary hit point pool.
+	TmpHP     int `json:",omitempty"`
+	TmpDamage int `json:",omitempty"`
 
 	// The amount of lethal and non-lethal damage suffered by the creature.
 	LethalDamage    int `json:",omitempty"`
@@ -2066,7 +2070,7 @@ func loadMapFile(input io.Reader, metaDataOnly bool) ([]any, MapMetaData, error)
 	return nil, meta, fmt.Errorf("invalid map file format: unexpected end of file")
 }
 
-// @[00]@| Go-GMA 5.27.1
+// @[00]@| Go-GMA 5.28.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

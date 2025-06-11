@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______  ______       __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   )/ ___  \     /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |\/   )  )    \/) )        #
-# | |      | || || || (___) | Assistant | (____         /   )    /  /       | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /    /  /        | |        #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/    /  /         | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\ /  /     _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_/     (_) \____/       #
+#  _______  _______  _______             _______     _______   _____      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) / ___ \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |( (___) )   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____         /   ) \     /    | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /  / ___ \    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/  ( (   ) )   |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\( (___) ) _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_____/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -31,18 +31,18 @@ package text
 const CommonPostScriptPreamble = `%!PS
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  _______  _______  _______              ______     _______   _____                   %
-% (  ____ \(       )(  ___  )            / ____ \   / ___   ) / ___ \                  %
-% | (    \/| () () || (   ) |           ( (    \/   \/   )  |( (   ) )                 %
-% | |      | || || || (___) |           | (____         /   )( (___) |                 %
-% | | ____ | |(_)| ||  ___  |           |  ___ \      _/   /  \____  |                 %
-% | | \_  )| |   | || (   ) | Game      | (   ) )    /   _/        ) |                 %
-% | (___) || )   ( || )   ( | Master's  ( (___) ) _ (   (__/\/\____) )                 %
-% (_______)|/     \||/     \| Assistant  \_____/ (_)\_______/\______/                  %
+%  _______  _______  _______              ______     ______   _______         _______  %
+% (  ____ \(       )(  ___  )            / ____ \   / ___  \ / ___   )       (  ___  ) %
+% | (    \/| () () || (   ) |           ( (    \/   \/   \  \\/   )  |       | (   ) | %
+% | |      | || || || (___) |           | (____        ___) /    /   ) _____ | (___) | %
+% | | ____ | |(_)| ||  ___  |           |  ___ \      (___ (   _/   / (_____)|  ___  | %
+% | | \_  )| |   | || (   ) | Game      | (   ) )         ) \ /   _/         | (   ) | %
+% | (___) || )   ( || )   ( | Master's  ( (___) ) _ /\___/  /(   (__/\       | )   ( | %
+% (_______)|/     \||/     \| Assistant  \_____/ (_)\______/ \_______/       |/     \| %
 %                                                                                      %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-% @[00]@| GMA Core 6.29
+% @[00]@| GMA Core 6.32-alpha.0
 % @[01]@|
 % @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 % @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
@@ -683,18 +683,18 @@ const CommonPostScriptPreamble = `%!PS
 // @@:go:gma-preamble:begin:GMAPostScriptPreamble@@
 const GMAPostScriptPreamble = `%!PS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  _______  _______  _______              ______     _______   _____                   %
-% (  ____ \(       )(  ___  )            / ____ \   / ___   ) / ___ \                  %
-% | (    \/| () () || (   ) |           ( (    \/   \/   )  |( (   ) )                 %
-% | |      | || || || (___) |           | (____         /   )( (___) |                 %
-% | | ____ | |(_)| ||  ___  |           |  ___ \      _/   /  \____  |                 %
-% | | \_  )| |   | || (   ) | Game      | (   ) )    /   _/        ) |                 %
-% | (___) || )   ( || )   ( | Master's  ( (___) ) _ (   (__/\/\____) )                 %
-% (_______)|/     \||/     \| Assistant  \_____/ (_)\_______/\______/                  %
+%  _______  _______  _______              ______     ______   _______         _______  %
+% (  ____ \(       )(  ___  )            / ____ \   / ___  \ / ___   )       (  ___  ) %
+% | (    \/| () () || (   ) |           ( (    \/   \/   \  \\/   )  |       | (   ) | %
+% | |      | || || || (___) |           | (____        ___) /    /   ) _____ | (___) | %
+% | | ____ | |(_)| ||  ___  |           |  ___ \      (___ (   _/   / (_____)|  ___  | %
+% | | \_  )| |   | || (   ) | Game      | (   ) )         ) \ /   _/         | (   ) | %
+% | (___) || )   ( || )   ( | Master's  ( (___) ) _ /\___/  /(   (__/\       | )   ( | %
+% (_______)|/     \||/     \| Assistant  \_____/ (_)\______/ \_______/       |/     \| %
 %                                                                                      %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-% @[00]@| GMA Core 6.29
+% @[00]@| GMA Core 6.32-alpha.0
 % @[01]@|
 % @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 % @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
@@ -914,7 +914,7 @@ _my_encoding 8#344 /divide        put
     SetTheme_d20_Blue
     /PageTitleText (Pathfinder Encounter Run Sheet) def
     /CopyrightText1 (PATHFINDER ENCOUNTER RUN SHEET / ) def
-    /CopyrightText2 (\3452013, 2015, 2023 Steve Willoughby / REV 4 / 07-JUN-2023) def
+    /CopyrightText2 (\3452013, 2015, 2023, 2025 Steve Willoughby / REV 5 / 25-MAY-2025) def
 } def
 /SetTheme_d20_GM_Matrix { 
     SetTheme_d20_Green 
@@ -2434,6 +2434,151 @@ _my_encoding 8#344 /divide        put
     20 add                                      % name block
         RequiredVerticalSpace
 } def
+
+% <#entries> BeginRollPresetBlock --
+% <roll> <desc> <name> RollPreset --
+% EndRollPresetBlock --
+/BeginRollPresetBlock {
+	HeadingFontSize 4 add	% height of title block
+	14	% height of each entry
+	mul	% times each entry we're going to set
+	add
+	RequiredVerticalSpace
+
+	SetColor_data
+	HeadingFont HeadingFontSize HeadingFontSize 4 add BeginDataBlock
+	(PRESET NAME) 150 TitleBlockCtr
+	(DESCRIPTION) 150 TitleBlockCtr
+	(DIE ROLL)    PageTextWidth 300 sub TitleBlockCtr
+	EndDataBlock
+} def
+
+/RollPreset {
+	SetColor_data 
+	DataFont 12 14 BeginDataBlock
+	() 150 BlankHue DataBlock
+	() 150 BlankHue DataBlock
+	() PageTextWidth 300 sub BlankHue DataBlock
+	EndDataBlock
+} def
+
+/EndRollPresetBlock {} def
+/BeginRollModifierBlock { 
+	HeadingFontSize 4 add	% height of title block
+	14	% height of each entry
+	mul	% times each entry we're going to set
+	add
+	RequiredVerticalSpace
+
+	SetColor_data
+	HeadingFont HeadingFontSize HeadingFontSize 4 add BeginDataBlock
+	/DRMB_w PageTextWidth 100 sub 150 sub 50 sub 30 sub def
+	(MODIFIER NAME) DRMB_w TitleBlockCtr
+	(DESCRIPTION) 150 TitleBlockCtr
+	(VALUE)       50 TitleBlockCtr
+	(VARIABLE)    50 TitleBlockCtr
+	(FLAGS)       30 TitleBlockCtr
+	(CLIENT)      50 TitleBlockCtr
+	EndDataBlock
+} def
+
+/RollModifier { 
+	SetColor_data
+	DataFont 12 14 BeginDataBlock
+	() DRMB_w BlankHue DataBlock
+	() 150 BlankHue DataBlock
+	() 50  BlankHue DataBlockR
+	DataFontItalic 12 ChangeDataBlockFont
+	() 50 GreyHue DataBlock
+	() 30 GreyHue DataBlock
+	DataFont 10 ChangeDataBlockFont () 50 GreyHue DataBlock
+	EndDataBlock
+	DataFont 12 ChangeDataBlockFont
+} def
+/EndRollModifierBlock {} def
+/BeginDictPresetBlock { 
+	HeadingFontSize 4 add 14 mul add RequiredVerticalSpace
+	SetColor_data
+	HeadingFont HeadingFontSize HeadingFontSize 4 add BeginDataBlock
+	/DPB_w PageTextWidth 150 sub 150 sub 50 sub def
+	(PRESET NAME) 150 TitleBlockCtr
+	(DESCRIPTION) 150 TitleBlockCtr
+	(DIE ROLL \(RAW DATA\)) DPB_w TitleBlockCtr
+	(CLIENT)       50 TitleBlockCtr
+	EndDataBlock
+} def
+/DictPreset { 
+	SetColor_data
+	DataFont 12 14 BeginDataBlock
+	() 150 BlankHue DataBlock
+	() 150 BlankHue DataBlock
+	() DPB_w BlankHue DataBlock
+	DataFont 10 ChangeDataBlockFont () 50 GreyHue DataBlock
+	EndDataBlock
+	DataFont 12 ChangeDataBlockFont
+} def
+/EndDictPresetBlock {} def
+/BeginLookupTable { 
+	HeadingFontSize 4 add 14 mul add RequiredVerticalSpace
+	SetColor_data
+	HeadingFont HeadingFontSize HeadingFontSize 4 add BeginDataBlock
+	/LTB_w PageTextWidth 150 sub 150 sub 30 sub 50 sub def
+	(TABLE NAME) 150 BlankHue TitleBlockCtr
+	(DESCRIPTION) LTB_w TitleBlockCtr
+	(DIE ROLL) 150 TitleBlockCtr
+	(FLAGS) 30 TitleBlockCtr
+	(CLIENT) 50 TitleBlockCtr
+	EndDataBlock
+	DataFont 12 14 BeginDataBlock
+	() 150 BlankHue DataBlock
+	() LTB_w BlankHue DataBlock
+	() 150 BlankHue DataBlock
+	DataFontItalic 12 ChangeDataBlockFont
+	() 30 GreyHue DataBlock
+	DataFont 10 ChangeDataBlockFont
+	() 50 GreyHue DataBlock
+	EndDataBlock
+	DataFont 12 ChangeDataBlockFont
+} def
+/LookupTableRow { 
+    X Y FontLead_body FontSize_body PsFF_init
+%    dup PageTextWidth 10 sub PsFF_vertspace 12 add RequiredVerticalSpace
+%    36 RequiredVerticalSpace
+%    SetColor_form
+%    HeadingFont HeadingFontSize HeadingFontSize 4 add BeginDataBlock
+%    (NOTES) PageTextWidth TitleBlockCtr
+%    EndDataBlock
+%    SetColor_data
+    FreeFormTextBlock
+} def
+/EndLookupTable {} def
+/BeginImposedConditionBlock {
+	HeadingFontSize 4 add	% height of title block
+	14	% height of each entry
+	mul	% times each entry we're going to set
+	add
+	RequiredVerticalSpace
+	/ic_w PageTextWidth 200 sub 2 div def
+
+	SetColor_data
+	HeadingFont HeadingFontSize HeadingFontSize 4 add BeginDataBlock
+	(ABILITY) ic_w TitleBlockCtr
+	(IMPOSED CONDITIONS) ic_w TitleBlockCtr
+	(ONSET) 100 TitleBlockCtr
+	(DURATION) 100 TitleBlockCtr
+	EndDataBlock
+} def
+/ImposedCondition { 
+	SetColor_data
+	DataFont 12 14 BeginDataBlock
+	() ic_w BlankHue DataBlock
+	() ic_w BlankHue DataBlock
+	() 100 BlankHue DataBlock
+	() 100 BlankHue DataBlock
+	EndDataBlock
+} def
+/EndImposedConditionBlock{} def
+
 /BeginMonster {
     % We need at least the stat, description, 3x defenses, 3x attacks worth of space here.
     % xp cr ref align tag type name generic
@@ -3121,7 +3266,7 @@ _my_encoding 8#344 /divide        put
 `
 // @@:go:gma-preamble:end:@@
 
-// @[00]@| Go-GMA 5.27.1
+// @[00]@| Go-GMA 5.28.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

@@ -10,6 +10,13 @@ binaries:
 
 all: binaries manpages
 
+# for internal testing purposes only
+refresh-alpha:
+	install -d $(DESTDIR)/bin
+	@echo "updating alpha server binary to $(DESTDIR)/bin..."
+	mv -v $(DESTDIR)/bin/server-alpha $(DESTDIR)/bin/server-alpha.$$
+	install cmd/server/server $(DESTDIR)/bin/server-alpha
+
 refresh:
 	install -d $(DESTDIR)/bin
 	@echo "Installing binaries to $(DESTDIR)/bin..."
