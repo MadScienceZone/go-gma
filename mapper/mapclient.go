@@ -3577,6 +3577,16 @@ func (c *Connection) listen(done chan error) {
 				ch <- cmd
 			}
 
+		case HitPointAcknowledgeMessagePayload:
+			if ch, ok := c.Subscriptions[HitPointAcknowledge]; ok {
+				ch <- cmd
+			}
+
+		case HitPointRequestMessagePayload:
+			if ch, ok := c.Subscriptions[HitPointRequest]; ok {
+				ch <- cmd
+			}
+
 		case LoadArcObjectMessagePayload:
 			if ch, ok := c.Subscriptions[LoadArcObject]; ok {
 				ch <- cmd
