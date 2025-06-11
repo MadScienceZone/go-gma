@@ -1251,7 +1251,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		}
 		p.RequestingClient = requester.Address
 		for _, peer := range a.GetClients() {
-			if peer.Auth != nil && peer.Auth.GmMode {
+			if peer.Auth != nil && peer.Auth.GmMode && peer != requester {
 				if err := peer.Conn.Send(mapper.TimerRequest, p); err != nil {
 					a.Logf("error sending %v to %v: %v", p, peer.IdTag(), err)
 				}
@@ -1264,7 +1264,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		}
 		p.RequestingClient = requester.Address
 		for _, peer := range a.GetClients() {
-			if peer.Auth != nil && peer.Auth.GmMode {
+			if peer.Auth != nil && peer.Auth.GmMode && peer != requester {
 				if err := peer.Conn.Send(mapper.HitPointRequest, p); err != nil {
 					a.Logf("error sending %v to %v: %v", p, peer.IdTag(), err)
 				}

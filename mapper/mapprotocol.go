@@ -50,8 +50,8 @@ import (
 // The GMA Mapper Protocol version number current as of this build,
 // and protocol versions supported by this code.
 const (
-	GMAMapperProtocol           = 418      // @@##@@ auto-configured
-	GoVersionNumber             = "5.28.0-alpha.0" // @@##@@ auto-configured
+	GMAMapperProtocol           = 418              // @@##@@ auto-configured
+	GoVersionNumber             = "5.28.0-alpha.1" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
 	MaximumSupportedMapProtocol = 418
 )
@@ -838,7 +838,7 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 		return p, nil
 
 	case "HPREQ":
-		p := TimerRequestMessagePayload{BaseMessagePayload: payload}
+		p := HitPointRequestMessagePayload{BaseMessagePayload: payload}
 		if hasJsonPart {
 			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
 				break

@@ -134,7 +134,7 @@ import (
 // Auto-configured values
 //
 
-const GoVersionNumber = "5.28.0-alpha.0" // @@##@@
+const GoVersionNumber = "5.28.0-alpha.1" // @@##@@
 
 //
 // eventMonitor responds to signals and timers that affect our overall operation

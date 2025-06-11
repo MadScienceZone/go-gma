@@ -210,7 +210,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.27.1" //@@##@@
+const GoVersionNumber = "5.27.1" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -342,6 +342,8 @@ func main() {
 			mapper.CombatMode,
 			mapper.Comment,
 			mapper.Echo,
+			mapper.HitPointAcknowledge,
+			mapper.HitPointRequest,
 			mapper.LoadFrom,
 			mapper.LoadArcObject,
 			mapper.LoadCircleObject,
@@ -594,11 +596,37 @@ func describeObject(mono bool, obj any) string {
 				fieldDesc{"maxHP", (*o).MaxHP},
 				fieldDesc{"lethal", (*o).LethalDamage},
 				fieldDesc{"non", (*o).NonLethalDamage},
+				fieldDesc{"tmp", (*o).TmpHP},
+				fieldDesc{"tmpdmg", (*o).TmpDamage},
 				fieldDesc{"con", (*o).Con},
 				fieldDesc{"flat", (*o).IsFlatFooted},
 				fieldDesc{"stable", (*o).IsStable},
 				fieldDesc{"condition", (*o).Condition},
 				fieldDesc{"blur", (*o).HPBlur},
+			))
+		}
+
+	case *mapper.HitPointHealthRequest:
+		if o == nil {
+			fmt.Fprint(&desc, colorize("HP{nil", "magenta", mono))
+		} else {
+			fmt.Fprint(&desc, colorize("HP{", "magenta", mono))
+			fmt.Fprint(&desc, descFields(mono,
+				fieldDesc{"max", (*o).MaxHP},
+				fieldDesc{"lethal", (*o).LethalDamage},
+				fieldDesc{"non-lethal", (*o).NonLethalDamage},
+			))
+		}
+
+	case *mapper.HitPointTmpHPRequest:
+		if o == nil {
+			fmt.Fprint(&desc, colorize("tmpHP{nil", "magenta", mono))
+		} else {
+			fmt.Fprint(&desc, colorize("tmpHP{", "magenta", mono))
+			fmt.Fprint(&desc, descFields(mono,
+				fieldDesc{"tmpHP", (*o).TmpHP},
+				fieldDesc{"damage", (*o).TmpDamage},
+				fieldDesc{"expires", (*o).Expires},
 			))
 		}
 
@@ -857,6 +885,23 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"(latency)", m.SentTime.Sub(m.ReceivedTime)},
 		)
 
+	case mapper.HitPointAcknowledgeMessagePayload:
+		printFields(mono, "HitPointAcknowledge",
+			fieldDesc{"id", m.RequestID},
+			fieldDesc{"from", m.RequestedBy},
+			fieldDesc{"client", m.RequestingClient},
+		)
+
+	case mapper.HitPointRequestMessagePayload:
+		printFields(mono, "HitPointRequest",
+			fieldDesc{"id", m.RequestID},
+			fieldDesc{"description", m.Description},
+			fieldDesc{"targets", m.Targets},
+			fieldDesc{"health", describeObject(mono, m.Health)},
+			fieldDesc{"tmp", describeObject(mono, m.TmpHP)},
+			fieldDesc{"from", m.RequestedBy},
+			fieldDesc{"client", m.RequestingClient},
+		)
 	case mapper.LoadFromMessagePayload:
 		printFields(mono, "LoadFrom",
 			fieldDesc{"file", m.File},
@@ -962,6 +1007,25 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"requestID", m.RequestID},
 			fieldDesc{"invalid?", m.Result.InvalidRequest},
 			fieldDesc{"suppressed?", m.Result.ResultSuppressed},
+		)
+
+	case mapper.TimerAcknowledgeMessagePayload:
+		printFields(mono, "TimerAcknowledge",
+			fieldDesc{"id", m.RequestID},
+			fieldDesc{"from", m.RequestedBy},
+			fieldDesc{"client", m.RequestingClient},
+		)
+
+	case mapper.TimerRequestMessagePayload:
+		printFields(mono, "TimerRequest",
+			fieldDesc{"id", m.RequestID},
+			fieldDesc{"description", m.Description},
+			fieldDesc{"expires", m.Expires},
+			fieldDesc{"targets", m.Targets},
+			fieldDesc{"toall?", m.ShowToAll},
+			fieldDesc{"running?", m.IsRunning},
+			fieldDesc{"from", m.RequestedBy},
+			fieldDesc{"client", m.RequestingClient},
 		)
 
 	case mapper.ToolbarMessagePayload:
