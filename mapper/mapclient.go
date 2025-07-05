@@ -1133,6 +1133,9 @@ type ChatMessageMessagePayload struct {
 	// True if the message contains GMA markup formatting codes
 	Markup bool `json:",omitempty"`
 
+	// True if this message should be pinned (persistently in view)
+	Pin bool `json:",omitempty"`
+
 	// The text of the chat message we received.
 	Text string
 }
@@ -1218,6 +1221,24 @@ func (c *Connection) ChatMarkupMessageToGM(message string) error {
 			ToGM: true,
 		},
 		Markup: true,
+		Text:   message,
+	})
+}
+
+// ChatMessageWithOptions sends a chat message with all options as parameters.
+// If to is an empty slice, it is equivalent to sending to all clients.
+func (c *Connection) ChatMessageWithOptions(to []string, toGM, useMarkup, pin bool, message string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(ChatMessage, ChatMessageMessagePayload{
+		ChatCommon: ChatCommon{
+			Recipients: to,
+			ToAll:      to == nil,
+			ToGM:       toGM,
+		},
+		Markup: useMarkup,
+		Pin:    pin,
 		Text:   message,
 	})
 }

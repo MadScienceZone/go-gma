@@ -210,7 +210,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.28.0" //@@##@@
+const GoVersionNumber = "5.28.0" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -842,6 +842,7 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"toAll", m.ToAll},
 			fieldDesc{"toGM", m.ToGM},
 			fieldDesc{"markup", m.Markup},
+			fieldDesc{"pin", m.Pin},
 			fieldDesc{"text", m.Text},
 		)
 
