@@ -5,12 +5,12 @@
 # \_|(_)                                                                               #
 #  _______  _______  _______             _______     _______   _____      _______      #
 # (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) / ___ \    (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |( (___) )   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   ) \     /    | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /  / ___ \    | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/  ( (   ) )   |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\( (___) ) _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_____/ (_)(_______)     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |( (   ) )   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____         /   )( (___) |   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /  \____  |   | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/        ) |   |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\/\____) ) _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/\______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -31,18 +31,18 @@ package text
 const CommonPostScriptPreamble = `%!PS
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  _______  _______  _______              ______     ______   _______         _______  %
-% (  ____ \(       )(  ___  )            / ____ \   / ___  \ / ___   )       (  ___  ) %
-% | (    \/| () () || (   ) |           ( (    \/   \/   \  \\/   )  |       | (   ) | %
-% | |      | || || || (___) |           | (____        ___) /    /   ) _____ | (___) | %
-% | | ____ | |(_)| ||  ___  |           |  ___ \      (___ (   _/   / (_____)|  ___  | %
-% | | \_  )| |   | || (   ) | Game      | (   ) )         ) \ /   _/         | (   ) | %
-% | (___) || )   ( || )   ( | Master's  ( (___) ) _ /\___/  /(   (__/\       | )   ( | %
-% (_______)|/     \||/     \| Assistant  \_____/ (_)\______/ \_______/       |/     \| %
+%  _______  _______  _______              ______     ______   ______                   %
+% (  ____ \(       )(  ___  )            / ____ \   / ___  \ / ___  \                  %
+% | (    \/| () () || (   ) |           ( (    \/   \/   \  \\/   \  \                 %
+% | |      | || || || (___) |           | (____        ___) /   ___) /                 %
+% | | ____ | |(_)| ||  ___  |           |  ___ \      (___ (   (___ (                  %
+% | | \_  )| |   | || (   ) | Game      | (   ) )         ) \      ) \                 %
+% | (___) || )   ( || )   ( | Master's  ( (___) ) _ /\___/  //\___/  /                 %
+% (_______)|/     \||/     \| Assistant  \_____/ (_)\______/ \______/                  %
 %                                                                                      %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-% @[00]@| GMA Core 6.32-alpha.0
+% @[00]@| GMA Core 6.33
 % @[01]@|
 % @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 % @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
@@ -683,18 +683,18 @@ const CommonPostScriptPreamble = `%!PS
 // @@:go:gma-preamble:begin:GMAPostScriptPreamble@@
 const GMAPostScriptPreamble = `%!PS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  _______  _______  _______              ______     ______   _______         _______  %
-% (  ____ \(       )(  ___  )            / ____ \   / ___  \ / ___   )       (  ___  ) %
-% | (    \/| () () || (   ) |           ( (    \/   \/   \  \\/   )  |       | (   ) | %
-% | |      | || || || (___) |           | (____        ___) /    /   ) _____ | (___) | %
-% | | ____ | |(_)| ||  ___  |           |  ___ \      (___ (   _/   / (_____)|  ___  | %
-% | | \_  )| |   | || (   ) | Game      | (   ) )         ) \ /   _/         | (   ) | %
-% | (___) || )   ( || )   ( | Master's  ( (___) ) _ /\___/  /(   (__/\       | )   ( | %
-% (_______)|/     \||/     \| Assistant  \_____/ (_)\______/ \_______/       |/     \| %
+%  _______  _______  _______              ______     ______   ______                   %
+% (  ____ \(       )(  ___  )            / ____ \   / ___  \ / ___  \                  %
+% | (    \/| () () || (   ) |           ( (    \/   \/   \  \\/   \  \                 %
+% | |      | || || || (___) |           | (____        ___) /   ___) /                 %
+% | | ____ | |(_)| ||  ___  |           |  ___ \      (___ (   (___ (                  %
+% | | \_  )| |   | || (   ) | Game      | (   ) )         ) \      ) \                 %
+% | (___) || )   ( || )   ( | Master's  ( (___) ) _ /\___/  //\___/  /                 %
+% (_______)|/     \||/     \| Assistant  \_____/ (_)\______/ \______/                  %
 %                                                                                      %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-% @[00]@| GMA Core 6.32-alpha.0
+% @[00]@| GMA Core 6.33
 % @[01]@|
 % @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 % @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
@@ -2436,7 +2436,7 @@ _my_encoding 8#344 /divide        put
 } def
 
 % <#entries> BeginRollPresetBlock --
-% <roll> <desc> <name> RollPreset --
+% <client> <flags> <roll> <desc> <name> RollPreset --
 % EndRollPresetBlock --
 /BeginRollPresetBlock {
 	HeadingFontSize 4 add	% height of title block
@@ -2449,7 +2449,9 @@ _my_encoding 8#344 /divide        put
 	HeadingFont HeadingFontSize HeadingFontSize 4 add BeginDataBlock
 	(PRESET NAME) 150 TitleBlockCtr
 	(DESCRIPTION) 150 TitleBlockCtr
-	(DIE ROLL)    PageTextWidth 300 sub TitleBlockCtr
+	(DIE ROLL)    PageTextWidth 380 sub TitleBlockCtr
+	(FLAGS)        30 TitleBlockCtr
+	(CLIENT)       50 TitleBlockCtr
 	EndDataBlock
 } def
 
@@ -2458,7 +2460,11 @@ _my_encoding 8#344 /divide        put
 	DataFont 12 14 BeginDataBlock
 	() 150 BlankHue DataBlock
 	() 150 BlankHue DataBlock
-	() PageTextWidth 300 sub BlankHue DataBlock
+	() PageTextWidth 380 sub BlankHue DataBlock
+	DataFontItalic 12 ChangeDataBlockFont
+	()  30 GreyHue DataBlock
+	DataFont 10 ChangeDataBlockFont
+	()  50 GreyHue DataBlock
 	EndDataBlock
 } def
 
@@ -2552,13 +2558,36 @@ _my_encoding 8#344 /divide        put
     FreeFormTextBlock
 } def
 /EndLookupTable {} def
+/BeginTemporaryHitPointBlock {
+	HeadingFontSize 4 add
+	14 mul add RequiredVerticalSpace
+	/thp_w PageTextWidth 200 sub def
+
+	SetColor_data
+	HeadingFont HeadingFontSize HeadingFontSize 4 add BeginDataBlock
+	(TMP HP) 50 TitleBlockCtr
+	(TMP DMG) 50 TitleBlockCtr
+	(EXPIRES) 100 TitleBlockCtr
+	(DESCRIPTION) thp_w TitleBlockCtr
+	EndDataBlock
+} def
+/TemporaryHitPoints {
+	SetColor_data
+	DataFont 12 14 BeginDataBlock
+	() 50 BlankHue DataBlockR
+	() 50 BlankHue DataBlockR
+	() 100 BlankHue DataBlock
+	() thp_w BlankHue DataBlock
+	EndDataBlock
+} def
+/EndTemporaryHitPointBlock {} def
 /BeginImposedConditionBlock {
 	HeadingFontSize 4 add	% height of title block
 	14	% height of each entry
 	mul	% times each entry we're going to set
 	add
 	RequiredVerticalSpace
-	/ic_w PageTextWidth 200 sub 2 div def
+	/ic_w PageTextWidth 200 sub 3 div def
 
 	SetColor_data
 	HeadingFont HeadingFontSize HeadingFontSize 4 add BeginDataBlock
@@ -2566,6 +2595,7 @@ _my_encoding 8#344 /divide        put
 	(IMPOSED CONDITIONS) ic_w TitleBlockCtr
 	(ONSET) 100 TitleBlockCtr
 	(DURATION) 100 TitleBlockCtr
+	(PROGRESS) ic_w TitleBlockCtr
 	EndDataBlock
 } def
 /ImposedCondition { 
@@ -2575,6 +2605,7 @@ _my_encoding 8#344 /divide        put
 	() ic_w BlankHue DataBlock
 	() 100 BlankHue DataBlock
 	() 100 BlankHue DataBlock
+	() ic_w BlankHue DataBlock
 	EndDataBlock
 } def
 /EndImposedConditionBlock{} def
@@ -3266,7 +3297,7 @@ _my_encoding 8#344 /divide        put
 `
 // @@:go:gma-preamble:end:@@
 
-// @[00]@| Go-GMA 5.28.0
+// @[00]@| Go-GMA 5.29.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

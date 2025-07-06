@@ -1,13 +1,13 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.28.0                <!-- @@##@@ -->
- * Effective Date: 10-Jun-2025			<!-- @@##@@ -->
+ * This Package Version: 5.29.0                <!-- @@##@@ -->
+ * Effective Date: 05-Jul-2025			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 6.32-alpha.0		<!-- @@##@@ -->
- * GMA Mapper Version: 4.30.2		<!-- @@##@@ -->
- * GMA Mapper Protocol: 418		<!-- @@##@@ -->
+ * GMA Core API Library Version: 6.33		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.32		<!-- @@##@@ -->
+ * GMA Mapper Protocol: 419		<!-- @@##@@ -->
  * GMA Mapper File Format: 23		<!-- @@##@@ -->
  * GMA Mapper Preferences File Format: 9 <!-- @@##@@ -->
  * GMA User Preferences File Format: 2 <!-- @@##@@ -->
@@ -19,8 +19,13 @@ In addition, if your server didn't have the following update installed previousl
 
 When upgrading an existing server to version 5.13.1 or later, be sure to run `scripts/upgrade-5.13.1` on each database file to update it to the new chat history encoding scheme introduced at 5.13.1. If you don't, the server will ignore some or all of your historic chat and die roll messages. Alternatively, you can delete the old database and make a new one with the current server.
 
+## v5.29
+### Added
+ * Implements server protocol 419.
+ * Adds support for pinned chat comments.
+
 ## v5.28
-## Enhanced
+### Enhanced
  * Implements server protocol 418.
  * Supports client hit point requests to the GM (temporary and permanent, and reporting of temporary hit points in health data).
 

@@ -5,12 +5,12 @@
 # \_|(_)                                                                               #
 #  _______  _______  _______             _______     _______   _____      _______      #
 # (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) / ___ \    (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |( (___) )   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   ) \     /    | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /  / ___ \    | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/  ( (   ) )   |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\( (___) ) _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/ \_____/ (_)(_______)     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |( (   ) )   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____         /   )( (___) |   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /  \____  |   | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )    /   _/        ) |   |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\/\____) ) _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\_______/\______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -1133,6 +1133,9 @@ type ChatMessageMessagePayload struct {
 	// True if the message contains GMA markup formatting codes
 	Markup bool `json:",omitempty"`
 
+	// True if this message should be pinned (persistently in view)
+	Pin bool `json:",omitempty"`
+
 	// The text of the chat message we received.
 	Text string
 }
@@ -1218,6 +1221,24 @@ func (c *Connection) ChatMarkupMessageToGM(message string) error {
 			ToGM: true,
 		},
 		Markup: true,
+		Text:   message,
+	})
+}
+
+// ChatMessageWithOptions sends a chat message with all options as parameters.
+// If to is an empty slice, it is equivalent to sending to all clients.
+func (c *Connection) ChatMessageWithOptions(to []string, toGM, useMarkup, pin bool, message string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(ChatMessage, ChatMessageMessagePayload{
+		ChatCommon: ChatCommon{
+			Recipients: to,
+			ToAll:      to == nil,
+			ToGM:       toGM,
+		},
+		Markup: useMarkup,
+		Pin:    pin,
 		Text:   message,
 	})
 }
@@ -4009,7 +4030,7 @@ func (c *Connection) CheckVersionOf(packageName, myVersionNumber string) (*Packa
 	return availableVersion, nil
 }
 
-// @[00]@| Go-GMA 5.28.0
+// @[00]@| Go-GMA 5.29.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
