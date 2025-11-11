@@ -814,6 +814,11 @@ type CreatureToken struct {
 	// If there is a custom reach/threat zone defined for this
 	// creature, it is detailed here.
 	CustomReach CreatureCustomReach `json:",omitempty"`
+
+	// If this creature is targeting others in combat, they are
+	// listed here. Attack rolls target the first name in the list.
+	// Damage rolls target all in the list (e.g., for area of effect damage).
+	Targets []string `json:",omitempty"`
 }
 
 // CreatureCustomReach describes a creature's natural and extended
@@ -866,6 +871,12 @@ type CreatureHealth struct {
 	// Normally this is the empty string which allows the client to calculate it from the
 	// information available to it.
 	Condition string `json:",omitempty"`
+
+	// Armor class and related stats
+	AC           int `json:",omitempty"`
+	FlatFootedAC int `json:",omitempty"`
+	TouchAC      int `json:",omitempty"`
+	CMD          int `json:",omitempty"`
 }
 
 //

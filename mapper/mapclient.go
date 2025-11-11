@@ -1861,6 +1861,10 @@ type HitPointHealthRequest struct {
 	MaxHP           int `json:",omitempty"`
 	LethalDamage    int `json:",omitempty"`
 	NonLethalDamage int `json:",omitempty"`
+	AC              int `json:",omitempty"`
+	FlatFootedAC    int `json:",omitempty"`
+	TouchAC         int `json:",omitempty"`
+	CMD             int `json:",omitempty"`
 }
 
 type HitPointTmpHPRequest struct {
@@ -2321,7 +2325,22 @@ type RollDiceMessagePayload struct {
 
 	// RollSpec describes the dice to be rolled and any modifiers.
 	RollSpec string
+
+	// Creature this die roll targets
+	Target string
+
+	// Die-roll type
+	Type string
 }
+
+// Predefined values for Type field of RollDiceMessagePayload
+const (
+	DTypeAttack = "attack"
+	DTypeAttackFF = "attack-ff"
+	DTypeAttackTouch = "attack-touch"
+	DTypeAttackCMD = "attack-cmd"
+	DTypeDamage = "damage"
+)
 
 // RollDiceToAll is equivalent to RollDice, sending the results to all users.
 func (c *Connection) RollDiceToAll(rollspec string) error {
@@ -2394,6 +2413,12 @@ type RollResultMessagePayload struct {
 
 	// The die roll result and details behind where it came from.
 	Result dice.StructuredResult
+
+	// The creature this roll targeted
+	Target string `json:",omitempty"`
+
+	// The die-roll type
+	Type string `json:",omitempty"`
 }
 
 //  ____  _          ____                     _
@@ -2618,7 +2643,8 @@ type InitiativeSlot struct {
 	// The slot number (currently 0–59, corresponding to the 1/10th second "count" in the initiative round)
 	Slot int
 
-	// The current hit point total for the creature.
+	// Deprecated: The current hit point total for the creature.
+	// Set creature hit points via the OA command instead.
 	CurrentHP int
 
 	// The creature's name as displayed on the map.
