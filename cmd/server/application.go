@@ -738,6 +738,8 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 					Sent:       time.Now(),
 				},
 				RequestID: p.RequestID,
+				Type: p.Type,
+				Targets: p.Targets,
 				Result: dice.StructuredResult{
 					InvalidRequest: true,
 					Details: dice.StructuredDescriptionSet{
@@ -767,6 +769,8 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			},
 			Title:     label,
 			RequestID: p.RequestID,
+			Type:      p.Type,
+			Targets:   p.Targets,
 		}
 
 		if p.ToGM {
@@ -806,6 +810,8 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				RequestID: p.RequestID,
 				Title:     receiptLabel,
 				Result:    receiptResult,
+				Type:      p.Type,
+				Targets:   p.Targets,
 			}
 			if err := a.AddToChatHistory(receiptMessageID, mapper.RollResult, receiptPayload); err != nil {
 				a.Logf("unable to add RollResult receipt to chat history: %v", err)

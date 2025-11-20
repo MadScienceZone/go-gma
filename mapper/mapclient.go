@@ -2286,17 +2286,79 @@ func (c *Connection) RemoveObjAttributes(objID, attrName string, values []string
 // The rollspec may have any form that would be accepted to the
 // dice.Roll function and dice.DieRoller.DoRoll method. See the dice package for details.
 // https://pkg.go.dev/github.com/MadScienceZone/go-gma/v5/dice#DieRoller.DoRoll
-func (c *Connection) RollDice(to []string, rollspec string) error {
+//
+// Added in version 5.30.0: optional list of option parameters to specify different
+// options to the die rolls to avoid needless proliferation of permutations of
+// methods for all the different ways we can arrange die rolls.
+//
+func (c *Connection) RollDice(to []string, rollspec string, opt ...RollDiceOption) error {
+	var options dieRollOptions
+
 	if c == nil {
 		return fmt.Errorf("nil Connection")
 	}
+	for _, o := range opt {
+		o(&options)
+	}
+
 	return c.serverConn.Send(RollDice, RollDiceMessagePayload{
 		ChatCommon: ChatCommon{
 			Recipients: to,
+			ToAll: options.toGM,
+			ToGM: options.toAll,
 		},
 		RollSpec: rollspec,
+		RequestID: options.id,
+		Targets: options.targets,
+		Type: options.dtype,
 	})
 }
+
+type dieRollOptions struct {
+	id string
+	toGM bool
+	toAll bool
+	targets []string
+	dtype string
+}
+
+type RollDiceOption func(*dieRollOptions)
+
+// WithRollType adds a die roll type designation to the roll request.
+func WithRollType(dtype string) RollDiceOption {
+	return func(o *dieRollOptions) {
+		o.dtype = dtype
+	}
+}
+
+// WithRollTargets adds creature targets to the roll request.
+func WithRollTargets(targets []string) RollDiceOption {
+	return func(o *dieRollOptions) {
+		o.targets = targets
+	}
+}
+
+// WithDieRollID adds an ID to a die roll request. 
+func WithDieRollID(id string) RollDiceOption {
+	return func(o *dieRollOptions) {
+		o.id = id
+	}
+}
+
+// RollToAll causes the die roll result to go to all players
+func RollToAll() RollDiceOption {
+	return func(o *dieRollOptions) {
+		o.toAll = true
+	}
+}
+
+// RollToGM causes the die roll result to go to the GM only
+func RollToGM() RollDiceOption {
+	return func(o *dieRollOptions) {
+		o.toGM = true
+	}
+}
+
 
 // RollDiceWithID is identical to RollDice except it passes a user-supplied request ID
 // to the server, which will be sent back with the corresponding result message(s).
@@ -2326,11 +2388,11 @@ type RollDiceMessagePayload struct {
 	// RollSpec describes the dice to be rolled and any modifiers.
 	RollSpec string
 
-	// Creature this die roll targets
-	Target string
+	// Creatures this die roll targets
+	Targets []string `json:",omitempty"`
 
 	// Die-roll type
-	Type string
+	Type string `json:",omitempty"`
 }
 
 // Predefined values for Type field of RollDiceMessagePayload
@@ -2415,7 +2477,7 @@ type RollResultMessagePayload struct {
 	Result dice.StructuredResult
 
 	// The creature this roll targeted
-	Target string `json:",omitempty"`
+	Targets []string `json:",omitempty"`
 
 	// The die-roll type
 	Type string `json:",omitempty"`
@@ -3522,6 +3584,24 @@ func (c *Connection) receiveAddCharacter(d AddCharacterMessagePayload) {
 			critter.AoE = &RadiusAoE{
 				Radius: d.AoE.Radius,
 				Color:  d.AoE.Color,
+			}
+		}
+		if d.Health != nil {
+			critter.Health = &CreatureHealth{
+				IsFlatFooted: d.Health.IsFlatFooted,
+				IsStable: d.Health.IsStable,
+				MaxHP: d.Health.MaxHP,
+				TmpHP: d.Health.TmpHP,
+				TmpDamage: d.Health.TmpDamage,
+				LethalDamage: d.Health.LethalDamage,
+				NonLethalDamage: d.Health.NonLethalDamage,
+				Con: d.Health.Con,
+				HPBlur: d.Health.HPBlur,
+				Condition: d.Health.Condition,
+				AC: d.Health.AC,
+				FlatFootedAC: d.Health.FlatFootedAC,
+				TouchAC: d.Health.TouchAC,
+				CMD: d.Health.CMD,
 			}
 		}
 

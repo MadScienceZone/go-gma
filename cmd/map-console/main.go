@@ -603,6 +603,10 @@ func describeObject(mono bool, obj any) string {
 				fieldDesc{"stable", (*o).IsStable},
 				fieldDesc{"condition", (*o).Condition},
 				fieldDesc{"blur", (*o).HPBlur},
+				fieldDesc{"ac", (*o).AC},
+				fieldDesc{"ff", (*o).FlatFootedAC},
+				fieldDesc{"touch", (*o).TouchAC},
+				fieldDesc{"cmd", (*o).CMD},
 			))
 		}
 
@@ -615,6 +619,10 @@ func describeObject(mono bool, obj any) string {
 				fieldDesc{"max", (*o).MaxHP},
 				fieldDesc{"lethal", (*o).LethalDamage},
 				fieldDesc{"non-lethal", (*o).NonLethalDamage},
+				fieldDesc{"ac", (*o).AC},
+				fieldDesc{"ff", (*o).FlatFootedAC},
+				fieldDesc{"touch", (*o).TouchAC},
+				fieldDesc{"cmd", (*o).CMD},
 			))
 		}
 
@@ -746,6 +754,7 @@ func describeObject(mono bool, obj any) string {
 			fieldDesc{"type", o.CreatureType},
 			fieldDesc{"customreach", o.CustomReach},
 			fieldDesc{"polyGM", o.PolyGM},
+			fieldDesc{"targets", o.Targets},
 		))
 
 	case mapper.MapElement:
@@ -1008,6 +1017,8 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"requestID", m.RequestID},
 			fieldDesc{"invalid?", m.Result.InvalidRequest},
 			fieldDesc{"suppressed?", m.Result.ResultSuppressed},
+			fieldDesc{"targets", m.Targets},
+			fieldDesc{"type", m.Type},
 		)
 
 	case mapper.TimerAcknowledgeMessagePayload:
