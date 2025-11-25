@@ -192,6 +192,7 @@ type Application struct {
 		add       chan *mapper.ClientConnection
 		remove    chan *mapper.ClientConnection
 		fetch     chan []*mapper.ClientConnection
+		aka       chan mapper.CharacterNameMessagePayload
 		announcer chan byte
 	}
 
@@ -346,6 +347,18 @@ func (a *Application) manageClientList() {
 			clientListCopy = newClientListCopy()
 			refreshChannel()
 			a.clientData.announcer <- 0
+
+		case p := <-a.clientData.aka:
+			var newAKAList []string
+			if p.Names != nil {
+				newAKAList = make([]string, len(p.Names))
+				copy(newAKAList, p.Names)
+			}
+			for _, c := range clients {
+				if c.Auth != nil && c.Auth.Username == p.User {
+					c.AKA = newAKAList
+				}
+			}
 		}
 	}
 }
@@ -694,7 +707,6 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		}
 
 	case mapper.CharacterNameMessagePayload:
-		// TODO update client connection's AKA array for all connections from that user
 		if requester.Auth == nil {
 			a.Logf("refusing to accept AKA from unauthenticated user")
 			requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
@@ -703,19 +715,8 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			})
 			return
 		}
-		var newAKAList []string
-		if p.Names != nil {
-			newAKAList = make([]string, len(p.Names))
-			copy(newAKAList, p.Names)
-		}
-			
-		clients := a.GetClients()
-		for _, c := range clients {
-			if c.Auth != nil && c.Auth.Username == requester.Auth.Username {
-				c.AKA = newAKAList
-			}
-		}
 		p.User = requester.Auth.Username
+		a.clientData.aka <- p
 		if err := a.SendToAllExcept(requester, mapper.CharacterName, p); err != nil {
 			a.Logf("error sending CharacterName on to peers: %v", err)
 		}
@@ -1449,6 +1450,7 @@ func NewApplication() *Application {
 	app.clientData.add = make(chan *mapper.ClientConnection, 1)
 	app.clientData.remove = make(chan *mapper.ClientConnection, 1)
 	app.clientData.fetch = make(chan []*mapper.ClientConnection, 1)
+	app.clientData.aka = make(chan mapper.CharacterNameMessagePayload, 1)
 	app.clientData.announcer = make(chan byte)
 	return &app
 }

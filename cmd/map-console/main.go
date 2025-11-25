@@ -335,6 +335,7 @@ func main() {
 			mapper.AddImage,
 			mapper.AddObjAttributes,
 			mapper.AdjustView,
+			mapper.CharacterName,
 			mapper.ChatMessage,
 			mapper.Clear,
 			mapper.ClearChat,
@@ -855,6 +856,12 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"text", m.Text},
 		)
 
+	case mapper.CharacterNameMessagePayload:
+		printFields(mono, "CharacterName",
+			fieldDesc{"User", m.User},
+			fieldDesc{"Names", m.Names},
+		)
+
 	case mapper.ClearMessagePayload:
 		printFields(mono, "Clear",
 			fieldDesc{"objID", m.ObjID},
@@ -1136,10 +1143,10 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 	case mapper.UpdatePeerListMessagePayload:
 		printFields(mono, "UpdatePeerList")
 		printFields(mono, "",
-			fieldDesc{"       USERNAME------------ ADDRESS-------------- CLIENT------------------- AU ME PING--", nil})
+			fieldDesc{"       USERNAME------------ ADDRESS-------------- CLIENT------------------- AU ME PING-- AKA", nil})
 		for i, peer := range m.PeerList {
 			printFields(mono, "",
-				fieldDesc{fmt.Sprintf("  [%02d]", i), fmt.Sprintf("%-20s %-21s %-25s %s %s %s",
+				fieldDesc{fmt.Sprintf("  [%02d]", i), fmt.Sprintf("%-20s %-21s %-25s %s %s %s %v",
 					peer.User, peer.Addr, peer.Client,
 					func(b bool) string {
 						if b {
@@ -1161,7 +1168,9 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 							return colorize("Active", "green", mono)
 						}
 						return colorize(fmt.Sprintf("%5.1fs", p), "Red", mono)
-					}(peer.LastPolo))})
+					}(peer.LastPolo),
+					peer.AKA,
+					)})
 		}
 
 	case mapper.UpdateProgressMessagePayload:
