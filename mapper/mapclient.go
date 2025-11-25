@@ -3705,6 +3705,11 @@ func (c *Connection) listen(done chan error) {
 				ch <- cmd
 			}
 
+		case CharacterNameMessagePayload:
+			if ch, ok := c.Subscriptions[CharacterName]; ok {
+				ch <- cmd
+			}
+
 		case ChatMessageMessagePayload:
 			if ch, ok := c.Subscriptions[ChatMessage]; ok {
 				ch <- cmd
