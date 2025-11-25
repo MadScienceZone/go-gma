@@ -327,6 +327,15 @@ func (a *Application) manageClientList() {
 			} else {
 				a.Log("request to add nil client ignored")
 			}
+			// Add the player's AKA list to this connection too
+			if c.Auth != nil {
+				for _, cc := range clients {
+					if cc.Auth != nil && cc.Auth.Username == c.Auth.Username && cc.AKA != nil {
+						c.AKA = cc.AKA
+						break
+					}
+				}
+			}
 			clientListCopy = newClientListCopy()
 			refreshChannel()
 			a.clientData.announcer <- 0
