@@ -51,7 +51,7 @@ import (
 // and protocol versions supported by this code.
 const (
 	GMAMapperProtocol=420              // @@##@@ auto-configured
-	GoVersionNumber="5.30.0-alpha" // @@##@@ auto-configured
+	GoVersionNumber="5.30.0-alpha.1" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
 	MaximumSupportedMapProtocol = 420
 )
@@ -151,6 +151,10 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 	case Challenge:
 		if ch, ok := data.(ChallengeMessagePayload); ok {
 			return c.sendJSON("OK", ch)
+		}
+	case CharacterName:
+		if cn, ok := data.(CharacterNameMessagePayload); ok {
+			return c.sendJSON("AKA", cn)
 		}
 	case ChatMessage:
 		if ch, ok := data.(ChatMessageMessagePayload); ok {
@@ -565,6 +569,16 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = FilterImages
+		return p, nil
+
+	case "AKA":
+		p := CharacterNameMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
+		p.messageType = CharacterName
 		return p, nil
 
 	case "ALLOW":

@@ -693,6 +693,33 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			}
 		}
 
+	case mapper.CharacterNameMessagePayload:
+		// TODO update client connection's AKA array for all connections from that user
+		if requester.Auth == nil {
+			a.Logf("refusing to accept AKA from unauthenticated user")
+			requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+				Command: p.RawMessage(),
+				Reason:  "You are not authorized to issue AKA messages.",
+			})
+			return
+		}
+		var newAKAList []string
+		if p.Names != nil {
+			newAKAList = make([]string, len(p.Names))
+			copy(newAKAList, p.Names)
+		}
+			
+		clients := a.GetClients()
+		for _, c := range clients {
+			if c.Auth != nil && c.Auth.Username == requester.Auth.Username {
+				c.AKA = newAKAList
+			}
+		}
+		p.User = requester.Auth.Username
+		if err := a.SendToAllExcept(requester, mapper.CharacterName, p); err != nil {
+			a.Logf("error sending CharacterName on to peers: %v", err)
+		}
+
 	case mapper.ClearChatMessagePayload:
 		if requester != nil && requester.Auth != nil {
 			p.RequestedBy = requester.Auth.Username
@@ -1343,6 +1370,7 @@ func (a *Application) SendPeerListToAll() {
 			Addr:     peer.Address,
 			LastPolo: time.Since(peer.LastPoloTime).Seconds(),
 			IsMe:     false,
+			AKA:      peer.AKA,
 		}
 		if peer.Auth != nil {
 			thisPeer.User = peer.Auth.Username
@@ -1368,6 +1396,7 @@ func (a *Application) SendPeerListTo(requester *mapper.ClientConnection) {
 			Addr:     peer.Address,
 			LastPolo: time.Since(peer.LastPoloTime).Seconds(),
 			IsMe:     peer == requester,
+			AKA:      peer.AKA,
 		}
 		if peer.Auth != nil {
 			thisPeer.User = peer.Auth.Username

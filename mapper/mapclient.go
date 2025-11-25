@@ -626,6 +626,7 @@ const (
 	Allow
 	Auth
 	Challenge
+	CharacterName
 	ChatMessage
 	Clear
 	ClearChat
@@ -700,6 +701,7 @@ var ServerMessageByName = map[string]ServerMessage{
 	"Allow":                       Allow,
 	"Auth":                        Auth,
 	"Challenge":                   Challenge,
+	"CharacterName":               CharacterName,
 	"ChatMessage":                 ChatMessage,
 	"Clear":                       Clear,
 	"ClearChat":                   ClearChat,
@@ -1082,6 +1084,42 @@ type ChallengeMessagePayload struct {
 	ServerActive  time.Time `json:",omitempty"`
 	ServerTime    time.Time `json:",omitempty"`
 	ServerVersion string    `json:",omitempty"`
+}
+
+
+// 
+//   ____ _                          _            _   _                      
+//  / ___| |__   __ _ _ __ __ _  ___| |_ ___ _ __| \ | | __ _ _ __ ___   ___ 
+// | |   | '_ \ / _` | '__/ _` |/ __| __/ _ \ '__|  \| |/ _` | '_ ` _ \ / _ \
+// | |___| | | | (_| | | | (_| | (__| ||  __/ |  | |\  | (_| | | | | | |  __/
+//  \____|_| |_|\__,_|_|  \__,_|\___|\__\___|_|  |_| \_|\__,_|_| |_| |_|\___|
+//                                                                           
+//
+
+type CharacterNameMessagePayload struct {
+	BaseMessagePayload
+	Names []string
+	User  string   `json:",omitempty"`
+}
+
+// CharacterName declares our character name on the VTT map.
+func (c *Connection) CharacterName(actualName string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(CharacterName, CharacterNameMessagePayload{
+		Names: []string{actualName},
+	})
+}
+
+// CharacterNames declares our character name on the VTT map, to a slice of names.
+func (c *Connection) CharacterNames(actualNames []string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(CharacterName, CharacterNameMessagePayload{
+		Names: actualNames,
+	})
 }
 
 //   ____ _           _   __  __
@@ -2766,6 +2804,9 @@ type Peer struct {
 
 	// The username provided by the peer when it authenticated
 	User string
+
+	// The list of creatures controlled if not the same as User.
+	AKA []string
 
 	// A description of the peer client program (provided by that client)
 	Client string `json:",omitempty"`

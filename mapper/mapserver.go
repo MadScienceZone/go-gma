@@ -83,6 +83,9 @@ type ClientConnection struct {
 	// Authentication information for this user
 	Auth *auth.Authenticator
 
+	// Aliases to map creatures
+	AKA []string
+
 	// Level of debugging requested for this client
 	DebuggingLevel DebugFlags
 
