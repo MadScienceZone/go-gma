@@ -14,7 +14,7 @@ all: binaries manpages
 refresh-alpha:
 	install -d $(DESTDIR)/bin
 	@echo "updating alpha server binary to $(DESTDIR)/bin..."
-	mv -v $(DESTDIR)/bin/server-alpha $(DESTDIR)/bin/server-alpha.$$
+	mv -v $(DESTDIR)/bin/server-alpha $(DESTDIR)/bin/server-alpha.$$$$
 	install cmd/server/server $(DESTDIR)/bin/server-alpha
 
 refresh:
