@@ -5,8 +5,8 @@
  * Effective Date: 27-Nov-2025			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 6.37		<!-- @@##@@ -->
- * GMA Mapper Version: 4.34.1		<!-- @@##@@ -->
+ * GMA Core API Library Version: 6.38		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.35.0		<!-- @@##@@ -->
  * GMA Mapper Protocol: 419		<!-- @@##@@ -->
  * GMA Mapper File Format: 23		<!-- @@##@@ -->
  * GMA Mapper Preferences File Format: 9 <!-- @@##@@ -->
