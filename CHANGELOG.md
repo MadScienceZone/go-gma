@@ -6,10 +6,10 @@
 
 ## Compatibility
  * GMA Core API Library Version: 6.38		<!-- @@##@@ -->
- * GMA Mapper Version: 4.35.0		<!-- @@##@@ -->
- * GMA Mapper Protocol: 419		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.35		<!-- @@##@@ -->
+ * GMA Mapper Protocol: 420		<!-- @@##@@ -->
  * GMA Mapper File Format: 23		<!-- @@##@@ -->
- * GMA Mapper Preferences File Format: 9 <!-- @@##@@ -->
+ * GMA Mapper Preferences File Format: 10 <!-- @@##@@ -->
  * GMA User Preferences File Format: 4 <!-- @@##@@ -->
 
 # Notice
