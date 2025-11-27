@@ -1,16 +1,16 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.29.0                <!-- @@##@@ -->
- * Effective Date: 05-Jul-2025			<!-- @@##@@ -->
+ * This Package Version: 5.30.0                <!-- @@##@@ -->
+ * Effective Date: 27-Nov-2025			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 6.33		<!-- @@##@@ -->
- * GMA Mapper Version: 4.32		<!-- @@##@@ -->
+ * GMA Core API Library Version: 6.37		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.34.1		<!-- @@##@@ -->
  * GMA Mapper Protocol: 419		<!-- @@##@@ -->
  * GMA Mapper File Format: 23		<!-- @@##@@ -->
  * GMA Mapper Preferences File Format: 9 <!-- @@##@@ -->
- * GMA User Preferences File Format: 2 <!-- @@##@@ -->
+ * GMA User Preferences File Format: 4 <!-- @@##@@ -->
 
 # Notice
 When upgrading an existing server to version 5.15.0 or later, be sure to run `scripts/upgrade-5.15.0` on each database file to update it to the new die-roll preset delegate capability.
