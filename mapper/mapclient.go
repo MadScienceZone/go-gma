@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______   _____      _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) / ___ \    (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |( (   ) )   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )( (___) |   | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /  \____  |   | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/        ) |   |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\/\____) ) _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/\______/ (_)(_______)     #
+#  _______  _______  _______             _______     ______   _______     _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ (  __   )   (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \| (  )  |   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /| | /   |   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ ( | (/ /) |   | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \|   / | |   |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /|  (__) | _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_______)(_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -626,6 +626,7 @@ const (
 	Allow
 	Auth
 	Challenge
+	CharacterName
 	ChatMessage
 	Clear
 	ClearChat
@@ -700,6 +701,7 @@ var ServerMessageByName = map[string]ServerMessage{
 	"Allow":                       Allow,
 	"Auth":                        Auth,
 	"Challenge":                   Challenge,
+	"CharacterName":               CharacterName,
 	"ChatMessage":                 ChatMessage,
 	"Clear":                       Clear,
 	"ClearChat":                   ClearChat,
@@ -1082,6 +1084,42 @@ type ChallengeMessagePayload struct {
 	ServerActive  time.Time `json:",omitempty"`
 	ServerTime    time.Time `json:",omitempty"`
 	ServerVersion string    `json:",omitempty"`
+}
+
+
+// 
+//   ____ _                          _            _   _                      
+//  / ___| |__   __ _ _ __ __ _  ___| |_ ___ _ __| \ | | __ _ _ __ ___   ___ 
+// | |   | '_ \ / _` | '__/ _` |/ __| __/ _ \ '__|  \| |/ _` | '_ ` _ \ / _ \
+// | |___| | | | (_| | | | (_| | (__| ||  __/ |  | |\  | (_| | | | | | |  __/
+//  \____|_| |_|\__,_|_|  \__,_|\___|\__\___|_|  |_| \_|\__,_|_| |_| |_|\___|
+//                                                                           
+//
+
+type CharacterNameMessagePayload struct {
+	BaseMessagePayload
+	Names []string
+	User  string   `json:",omitempty"`
+}
+
+// CharacterName declares our character name on the VTT map.
+func (c *Connection) CharacterName(actualName string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(CharacterName, CharacterNameMessagePayload{
+		Names: []string{actualName},
+	})
+}
+
+// CharacterNames declares our character name on the VTT map, to a slice of names.
+func (c *Connection) CharacterNames(actualNames []string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(CharacterName, CharacterNameMessagePayload{
+		Names: actualNames,
+	})
 }
 
 //   ____ _           _   __  __
@@ -1861,6 +1899,10 @@ type HitPointHealthRequest struct {
 	MaxHP           int `json:",omitempty"`
 	LethalDamage    int `json:",omitempty"`
 	NonLethalDamage int `json:",omitempty"`
+	AC              int `json:",omitempty"`
+	FlatFootedAC    int `json:",omitempty"`
+	TouchAC         int `json:",omitempty"`
+	CMD             int `json:",omitempty"`
 }
 
 type HitPointTmpHPRequest struct {
@@ -2282,17 +2324,79 @@ func (c *Connection) RemoveObjAttributes(objID, attrName string, values []string
 // The rollspec may have any form that would be accepted to the
 // dice.Roll function and dice.DieRoller.DoRoll method. See the dice package for details.
 // https://pkg.go.dev/github.com/MadScienceZone/go-gma/v5/dice#DieRoller.DoRoll
-func (c *Connection) RollDice(to []string, rollspec string) error {
+//
+// Added in version 5.30.0: optional list of option parameters to specify different
+// options to the die rolls to avoid needless proliferation of permutations of
+// methods for all the different ways we can arrange die rolls.
+//
+func (c *Connection) RollDice(to []string, rollspec string, opt ...RollDiceOption) error {
+	var options dieRollOptions
+
 	if c == nil {
 		return fmt.Errorf("nil Connection")
 	}
+	for _, o := range opt {
+		o(&options)
+	}
+
 	return c.serverConn.Send(RollDice, RollDiceMessagePayload{
 		ChatCommon: ChatCommon{
 			Recipients: to,
+			ToAll: options.toGM,
+			ToGM: options.toAll,
 		},
 		RollSpec: rollspec,
+		RequestID: options.id,
+		Targets: options.targets,
+		Type: options.dtype,
 	})
 }
+
+type dieRollOptions struct {
+	id string
+	toGM bool
+	toAll bool
+	targets []string
+	dtype string
+}
+
+type RollDiceOption func(*dieRollOptions)
+
+// WithRollType adds a die roll type designation to the roll request.
+func WithRollType(dtype string) RollDiceOption {
+	return func(o *dieRollOptions) {
+		o.dtype = dtype
+	}
+}
+
+// WithRollTargets adds creature targets to the roll request.
+func WithRollTargets(targets []string) RollDiceOption {
+	return func(o *dieRollOptions) {
+		o.targets = targets
+	}
+}
+
+// WithDieRollID adds an ID to a die roll request. 
+func WithDieRollID(id string) RollDiceOption {
+	return func(o *dieRollOptions) {
+		o.id = id
+	}
+}
+
+// RollToAll causes the die roll result to go to all players
+func RollToAll() RollDiceOption {
+	return func(o *dieRollOptions) {
+		o.toAll = true
+	}
+}
+
+// RollToGM causes the die roll result to go to the GM only
+func RollToGM() RollDiceOption {
+	return func(o *dieRollOptions) {
+		o.toGM = true
+	}
+}
+
 
 // RollDiceWithID is identical to RollDice except it passes a user-supplied request ID
 // to the server, which will be sent back with the corresponding result message(s).
@@ -2321,7 +2425,22 @@ type RollDiceMessagePayload struct {
 
 	// RollSpec describes the dice to be rolled and any modifiers.
 	RollSpec string
+
+	// Creatures this die roll targets
+	Targets []string `json:",omitempty"`
+
+	// Die-roll type
+	Type string `json:",omitempty"`
 }
+
+// Predefined values for Type field of RollDiceMessagePayload
+const (
+	DTypeAttack = "attack"
+	DTypeAttackFF = "attack-ff"
+	DTypeAttackTouch = "attack-touch"
+	DTypeAttackCMD = "attack-cmd"
+	DTypeDamage = "damage"
+)
 
 // RollDiceToAll is equivalent to RollDice, sending the results to all users.
 func (c *Connection) RollDiceToAll(rollspec string) error {
@@ -2394,6 +2513,12 @@ type RollResultMessagePayload struct {
 
 	// The die roll result and details behind where it came from.
 	Result dice.StructuredResult
+
+	// The creature this roll targeted
+	Targets []string `json:",omitempty"`
+
+	// The die-roll type
+	Type string `json:",omitempty"`
 }
 
 //  ____  _          ____                     _
@@ -2618,7 +2743,8 @@ type InitiativeSlot struct {
 	// The slot number (currently 0–59, corresponding to the 1/10th second "count" in the initiative round)
 	Slot int
 
-	// The current hit point total for the creature.
+	// Deprecated: The current hit point total for the creature.
+	// Set creature hit points via the OA command instead.
 	CurrentHP int
 
 	// The creature's name as displayed on the map.
@@ -2678,6 +2804,9 @@ type Peer struct {
 
 	// The username provided by the peer when it authenticated
 	User string
+
+	// The list of creatures controlled if not the same as User.
+	AKA []string
 
 	// A description of the peer client program (provided by that client)
 	Client string `json:",omitempty"`
@@ -3498,6 +3627,24 @@ func (c *Connection) receiveAddCharacter(d AddCharacterMessagePayload) {
 				Color:  d.AoE.Color,
 			}
 		}
+		if d.Health != nil {
+			critter.Health = &CreatureHealth{
+				IsFlatFooted: d.Health.IsFlatFooted,
+				IsStable: d.Health.IsStable,
+				MaxHP: d.Health.MaxHP,
+				TmpHP: d.Health.TmpHP,
+				TmpDamage: d.Health.TmpDamage,
+				LethalDamage: d.Health.LethalDamage,
+				NonLethalDamage: d.Health.NonLethalDamage,
+				Con: d.Health.Con,
+				HPBlur: d.Health.HPBlur,
+				Condition: d.Health.Condition,
+				AC: d.Health.AC,
+				FlatFootedAC: d.Health.FlatFootedAC,
+				TouchAC: d.Health.TouchAC,
+				CMD: d.Health.CMD,
+			}
+		}
 
 		c.Characters[d.Name] = PlayerToken{
 			CreatureToken: critter,
@@ -3555,6 +3702,11 @@ func (c *Connection) listen(done chan error) {
 
 		case AdjustViewMessagePayload:
 			if ch, ok := c.Subscriptions[AdjustView]; ok {
+				ch <- cmd
+			}
+
+		case CharacterNameMessagePayload:
+			if ch, ok := c.Subscriptions[CharacterName]; ok {
 				ch <- cmd
 			}
 
@@ -4030,7 +4182,7 @@ func (c *Connection) CheckVersionOf(packageName, myVersionNumber string) (*Packa
 	return availableVersion, nil
 }
 
-// @[00]@| Go-GMA 5.29.0
+// @[00]@| Go-GMA 5.30.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

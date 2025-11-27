@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______   _____      _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) / ___ \    (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |( (   ) )   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )( (___) |   | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /  \____  |   | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/        ) |   |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\/\____) ) _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/\______/ (_)(_______)     #
+#  _______  _______  _______             _______     ______   _______     _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ (  __   )   (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \| (  )  |   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /| | /   |   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ ( | (/ /) |   | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \|   / | |   |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /|  (__) | _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_______)(_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -192,6 +192,7 @@ type Application struct {
 		add       chan *mapper.ClientConnection
 		remove    chan *mapper.ClientConnection
 		fetch     chan []*mapper.ClientConnection
+		aka       chan mapper.CharacterNameMessagePayload
 		announcer chan byte
 	}
 
@@ -326,6 +327,15 @@ func (a *Application) manageClientList() {
 			} else {
 				a.Log("request to add nil client ignored")
 			}
+			// Add the player's AKA list to this connection too
+			if c.Auth != nil {
+				for _, cc := range clients {
+					if cc.Auth != nil && cc.Auth.Username == c.Auth.Username && cc.AKA != nil {
+						c.AKA = cc.AKA
+						break
+					}
+				}
+			}
 			clientListCopy = newClientListCopy()
 			refreshChannel()
 			a.clientData.announcer <- 0
@@ -346,6 +356,18 @@ func (a *Application) manageClientList() {
 			clientListCopy = newClientListCopy()
 			refreshChannel()
 			a.clientData.announcer <- 0
+
+		case p := <-a.clientData.aka:
+			var newAKAList []string
+			if p.Names != nil {
+				newAKAList = make([]string, len(p.Names))
+				copy(newAKAList, p.Names)
+			}
+			for _, c := range clients {
+				if c.Auth != nil && c.Auth.Username == p.User {
+					c.AKA = newAKAList
+				}
+			}
 		}
 	}
 }
@@ -693,6 +715,21 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			}
 		}
 
+	case mapper.CharacterNameMessagePayload:
+		if requester.Auth == nil {
+			a.Logf("refusing to accept AKA from unauthenticated user")
+			requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+				Command: p.RawMessage(),
+				Reason:  "You are not authorized to issue AKA messages.",
+			})
+			return
+		}
+		p.User = requester.Auth.Username
+		a.clientData.aka <- p
+		if err := a.SendToAllExcept(requester, mapper.CharacterName, p); err != nil {
+			a.Logf("error sending CharacterName on to peers: %v", err)
+		}
+
 	case mapper.ClearChatMessagePayload:
 		if requester != nil && requester.Auth != nil {
 			p.RequestedBy = requester.Auth.Username
@@ -738,6 +775,8 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 					Sent:       time.Now(),
 				},
 				RequestID: p.RequestID,
+				Type: p.Type,
+				Targets: p.Targets,
 				Result: dice.StructuredResult{
 					InvalidRequest: true,
 					Details: dice.StructuredDescriptionSet{
@@ -767,6 +806,8 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			},
 			Title:     label,
 			RequestID: p.RequestID,
+			Type:      p.Type,
+			Targets:   p.Targets,
 		}
 
 		if p.ToGM {
@@ -806,6 +847,8 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				RequestID: p.RequestID,
 				Title:     receiptLabel,
 				Result:    receiptResult,
+				Type:      p.Type,
+				Targets:   p.Targets,
 			}
 			if err := a.AddToChatHistory(receiptMessageID, mapper.RollResult, receiptPayload); err != nil {
 				a.Logf("unable to add RollResult receipt to chat history: %v", err)
@@ -1337,6 +1380,7 @@ func (a *Application) SendPeerListToAll() {
 			Addr:     peer.Address,
 			LastPolo: time.Since(peer.LastPoloTime).Seconds(),
 			IsMe:     false,
+			AKA:      peer.AKA,
 		}
 		if peer.Auth != nil {
 			thisPeer.User = peer.Auth.Username
@@ -1362,6 +1406,7 @@ func (a *Application) SendPeerListTo(requester *mapper.ClientConnection) {
 			Addr:     peer.Address,
 			LastPolo: time.Since(peer.LastPoloTime).Seconds(),
 			IsMe:     peer == requester,
+			AKA:      peer.AKA,
 		}
 		if peer.Auth != nil {
 			thisPeer.User = peer.Auth.Username
@@ -1414,6 +1459,7 @@ func NewApplication() *Application {
 	app.clientData.add = make(chan *mapper.ClientConnection, 1)
 	app.clientData.remove = make(chan *mapper.ClientConnection, 1)
 	app.clientData.fetch = make(chan []*mapper.ClientConnection, 1)
+	app.clientData.aka = make(chan mapper.CharacterNameMessagePayload, 1)
 	app.clientData.announcer = make(chan byte)
 	return &app
 }

@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______   _____      _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) / ___ \    (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |( (   ) )   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )( (___) |   | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /  \____  |   | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/        ) |   |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\/\____) ) _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/\______/ (_)(_______)     #
+#  _______  _______  _______             _______     ______   _______     _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ (  __   )   (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \| (  )  |   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /| | /   |   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ ( | (/ /) |   | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \|   / | |   |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /|  (__) | _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_______)(_)(_______)     #
 #                                                                                      #
 ########################################################################################
 #
@@ -210,7 +210,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.29.0" //@@##@@
+const GoVersionNumber="5.30.0" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -335,6 +335,7 @@ func main() {
 			mapper.AddImage,
 			mapper.AddObjAttributes,
 			mapper.AdjustView,
+			mapper.CharacterName,
 			mapper.ChatMessage,
 			mapper.Clear,
 			mapper.ClearChat,
@@ -603,6 +604,10 @@ func describeObject(mono bool, obj any) string {
 				fieldDesc{"stable", (*o).IsStable},
 				fieldDesc{"condition", (*o).Condition},
 				fieldDesc{"blur", (*o).HPBlur},
+				fieldDesc{"ac", (*o).AC},
+				fieldDesc{"ff", (*o).FlatFootedAC},
+				fieldDesc{"touch", (*o).TouchAC},
+				fieldDesc{"cmd", (*o).CMD},
 			))
 		}
 
@@ -615,6 +620,10 @@ func describeObject(mono bool, obj any) string {
 				fieldDesc{"max", (*o).MaxHP},
 				fieldDesc{"lethal", (*o).LethalDamage},
 				fieldDesc{"non-lethal", (*o).NonLethalDamage},
+				fieldDesc{"ac", (*o).AC},
+				fieldDesc{"ff", (*o).FlatFootedAC},
+				fieldDesc{"touch", (*o).TouchAC},
+				fieldDesc{"cmd", (*o).CMD},
 			))
 		}
 
@@ -746,6 +755,7 @@ func describeObject(mono bool, obj any) string {
 			fieldDesc{"type", o.CreatureType},
 			fieldDesc{"customreach", o.CustomReach},
 			fieldDesc{"polyGM", o.PolyGM},
+			fieldDesc{"targets", o.Targets},
 		))
 
 	case mapper.MapElement:
@@ -844,6 +854,12 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"markup", m.Markup},
 			fieldDesc{"pin", m.Pin},
 			fieldDesc{"text", m.Text},
+		)
+
+	case mapper.CharacterNameMessagePayload:
+		printFields(mono, "CharacterName",
+			fieldDesc{"User", m.User},
+			fieldDesc{"Names", m.Names},
 		)
 
 	case mapper.ClearMessagePayload:
@@ -1008,6 +1024,8 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"requestID", m.RequestID},
 			fieldDesc{"invalid?", m.Result.InvalidRequest},
 			fieldDesc{"suppressed?", m.Result.ResultSuppressed},
+			fieldDesc{"targets", m.Targets},
+			fieldDesc{"type", m.Type},
 		)
 
 	case mapper.TimerAcknowledgeMessagePayload:
@@ -1125,10 +1143,10 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 	case mapper.UpdatePeerListMessagePayload:
 		printFields(mono, "UpdatePeerList")
 		printFields(mono, "",
-			fieldDesc{"       USERNAME------------ ADDRESS-------------- CLIENT------------------- AU ME PING--", nil})
+			fieldDesc{"       USERNAME------------ ADDRESS-------------- CLIENT------------------- AU ME PING-- AKA", nil})
 		for i, peer := range m.PeerList {
 			printFields(mono, "",
-				fieldDesc{fmt.Sprintf("  [%02d]", i), fmt.Sprintf("%-20s %-21s %-25s %s %s %s",
+				fieldDesc{fmt.Sprintf("  [%02d]", i), fmt.Sprintf("%-20s %-21s %-25s %s %s %s %v",
 					peer.User, peer.Addr, peer.Client,
 					func(b bool) string {
 						if b {
@@ -1150,7 +1168,9 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 							return colorize("Active", "green", mono)
 						}
 						return colorize(fmt.Sprintf("%5.1fs", p), "Red", mono)
-					}(peer.LastPolo))})
+					}(peer.LastPolo),
+					peer.AKA,
+					)})
 		}
 
 	case mapper.UpdateProgressMessagePayload:
@@ -2079,7 +2099,7 @@ func colorize(text, color string, mono bool) string {
 }
 
 /*
-# @[00]@| Go-GMA 5.29.0
+# @[00]@| Go-GMA 5.30.0
 # @[01]@|
 # @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

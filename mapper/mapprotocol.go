@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______   _____      _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) / ___ \    (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |( (   ) )   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )( (___) |   | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /  \____  |   | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/        ) |   |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\/\____) ) _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/\______/ (_)(_______)     #
+#  _______  _______  _______             _______     ______   _______     _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ (  __   )   (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \| (  )  |   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /| | /   |   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ ( | (/ /) |   | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \|   / | |   |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /|  (__) | _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_______)(_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -50,10 +50,10 @@ import (
 // The GMA Mapper Protocol version number current as of this build,
 // and protocol versions supported by this code.
 const (
-	GMAMapperProtocol=419              // @@##@@ auto-configured
-	GoVersionNumber="5.29.0" // @@##@@ auto-configured
+	GMAMapperProtocol=420              // @@##@@ auto-configured
+	GoVersionNumber="5.30.0" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
-	MaximumSupportedMapProtocol = 419
+	MaximumSupportedMapProtocol = 420
 )
 
 func init() {
@@ -151,6 +151,10 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 	case Challenge:
 		if ch, ok := data.(ChallengeMessagePayload); ok {
 			return c.sendJSON("OK", ch)
+		}
+	case CharacterName:
+		if cn, ok := data.(CharacterNameMessagePayload); ok {
+			return c.sendJSON("AKA", cn)
 		}
 	case ChatMessage:
 		if ch, ok := data.(ChatMessageMessagePayload); ok {
@@ -565,6 +569,16 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = FilterImages
+		return p, nil
+
+	case "AKA":
+		p := CharacterNameMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
+		p.messageType = CharacterName
 		return p, nil
 
 	case "ALLOW":

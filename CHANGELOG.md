@@ -1,16 +1,16 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.29.0                <!-- @@##@@ -->
- * Effective Date: 05-Jul-2025			<!-- @@##@@ -->
+ * This Package Version: 5.30.0                <!-- @@##@@ -->
+ * Effective Date: 27-Nov-2025			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 6.33		<!-- @@##@@ -->
- * GMA Mapper Version: 4.32		<!-- @@##@@ -->
- * GMA Mapper Protocol: 419		<!-- @@##@@ -->
+ * GMA Core API Library Version: 6.38		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.35		<!-- @@##@@ -->
+ * GMA Mapper Protocol: 420		<!-- @@##@@ -->
  * GMA Mapper File Format: 23		<!-- @@##@@ -->
- * GMA Mapper Preferences File Format: 9 <!-- @@##@@ -->
- * GMA User Preferences File Format: 2 <!-- @@##@@ -->
+ * GMA Mapper Preferences File Format: 10 <!-- @@##@@ -->
+ * GMA User Preferences File Format: 4 <!-- @@##@@ -->
 
 # Notice
 When upgrading an existing server to version 5.15.0 or later, be sure to run `scripts/upgrade-5.15.0` on each database file to update it to the new die-roll preset delegate capability.
@@ -19,12 +19,19 @@ In addition, if your server didn't have the following update installed previousl
 
 When upgrading an existing server to version 5.13.1 or later, be sure to run `scripts/upgrade-5.13.1` on each database file to update it to the new chat history encoding scheme introduced at 5.13.1. If you don't, the server will ignore some or all of your historic chat and die roll messages. Alternatively, you can delete the old database and make a new one with the current server.
 
-## v5.29
+## v5.30.0
+### Enhanced
+ * Implemets server protocol 420.
+ * Adds `CharacterName` (`AKA`) server message and corresponding support in other messages.
+ * Adds armor class stats to creature health objects.
+ * Adds targets and type info to die rolls.
+ 
+## v5.29.0
 ### Added
  * Implements server protocol 419.
  * Adds support for pinned chat comments.
 
-## v5.28
+## v5.28.0
 ### Enhanced
  * Implements server protocol 418.
  * Supports client hit point requests to the GM (temporary and permanent, and reporting of temporary hit points in health data).

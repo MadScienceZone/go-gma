@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     _______   _____      _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___   ) / ___ \    (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   )  |( (   ) )   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____         /   )( (___) |   | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      _/   /  \____  |   | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )    /   _/        ) |   |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ (   (__/\/\____) ) _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\_______/\______/ (_)(_______)     #
+#  _______  _______  _______             _______     ______   _______     _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ (  __   )   (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \| (  )  |   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /| | /   |   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ ( | (/ /) |   | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \|   / | |   |   / | |     #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /|  (__) | _ |  (__) |     #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_______)(_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -814,6 +814,11 @@ type CreatureToken struct {
 	// If there is a custom reach/threat zone defined for this
 	// creature, it is detailed here.
 	CustomReach CreatureCustomReach `json:",omitempty"`
+
+	// If this creature is targeting others in combat, they are
+	// listed here. Attack rolls target the first name in the list.
+	// Damage rolls target all in the list (e.g., for area of effect damage).
+	Targets []string `json:",omitempty"`
 }
 
 // CreatureCustomReach describes a creature's natural and extended
@@ -866,6 +871,12 @@ type CreatureHealth struct {
 	// Normally this is the empty string which allows the client to calculate it from the
 	// information available to it.
 	Condition string `json:",omitempty"`
+
+	// Armor class and related stats
+	AC           int `json:",omitempty"`
+	FlatFootedAC int `json:",omitempty"`
+	TouchAC      int `json:",omitempty"`
+	CMD          int `json:",omitempty"`
 }
 
 //
@@ -2070,7 +2081,7 @@ func loadMapFile(input io.Reader, metaDataOnly bool) ([]any, MapMetaData, error)
 	return nil, meta, fmt.Errorf("invalid map file format: unexpected end of file")
 }
 
-// @[00]@| Go-GMA 5.29.0
+// @[00]@| Go-GMA 5.30.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
