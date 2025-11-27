@@ -19,12 +19,19 @@ In addition, if your server didn't have the following update installed previousl
 
 When upgrading an existing server to version 5.13.1 or later, be sure to run `scripts/upgrade-5.13.1` on each database file to update it to the new chat history encoding scheme introduced at 5.13.1. If you don't, the server will ignore some or all of your historic chat and die roll messages. Alternatively, you can delete the old database and make a new one with the current server.
 
-## v5.29
+## v5.30.0
+### Enhanced
+ * Implemets server protocol 420.
+ * Adds `CharacterName` (`AKA`) server message and corresponding support in other messages.
+ * Adds armor class stats to creature health objects.
+ * Adds targets and type info to die rolls.
+ 
+## v5.29.0
 ### Added
  * Implements server protocol 419.
  * Adds support for pinned chat comments.
 
-## v5.28
+## v5.28.0
 ### Enhanced
  * Implements server protocol 418.
  * Supports client hit point requests to the GM (temporary and permanent, and reporting of temporary hit points in health data).
