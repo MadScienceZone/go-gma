@@ -137,7 +137,7 @@ func (a *Application) StoreImageData(imageName string, img mapper.ImageInstance,
 }
 
 func (a *Application) StoreAudioData(snd mapper.AudioDefinition) error {
-	result, err := a.sqldb.Exec(`REPLACE INTO sounds (name, locaion, islocal, format) VALUES (?, ?, ?, ?);`,
+	result, err := a.sqldb.Exec(`REPLACE INTO sounds (name, location, islocal, format) VALUES (?, ?, ?, ?);`,
 		snd.Name, snd.File, snd.IsLocalFile, snd.Format)
 	if err != nil {
 		return err
