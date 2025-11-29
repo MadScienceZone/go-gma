@@ -4000,6 +4000,11 @@ func (c *Connection) listen(done chan error) {
 				ch <- cmd
 			}
 
+		case PlayAudioMessagePayload:
+			if ch, ok := c.Subscriptions[PlayAudio]; ok {
+				ch <- cmd
+			}
+
 		case PlaceSomeoneMessagePayload:
 			if ch, ok := c.Subscriptions[PlaceSomeone]; ok {
 				ch <- cmd
