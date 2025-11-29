@@ -3868,6 +3868,11 @@ func (c *Connection) listen(done chan error) {
 		}
 
 		switch cmd := incomingPacket.(type) {
+		case AddAudioMessagePayload:
+			if aa, ok := c.Subscriptions[AddAudio]; ok {
+				ch <- cmd
+			}
+
 		case AddImageMessagePayload:
 			if ch, ok := c.Subscriptions[AddImage]; ok {
 				ch <- cmd
@@ -4005,6 +4010,11 @@ func (c *Connection) listen(done chan error) {
 				ch <- cmd
 			}
 
+		case QueryAudioMessagePayload:
+			if aa, ok := c.Subscriptions[QueryAudio]; ok {
+				ch <- cmd
+			}
+
 		case QueryImageMessagePayload:
 			if ch, ok := c.Subscriptions[QueryImage]; ok {
 				ch <- cmd
@@ -4098,7 +4108,7 @@ func (c *Connection) listen(done chan error) {
 
 		case AcceptMessagePayload, AddDicePresetsMessagePayload, AllowMessagePayload,
 			AuthMessagePayload, DefineDicePresetsMessagePayload, DefineDicePresetDelegatesMessagePayload,
-			FilterDicePresetsMessagePayload, FilterImagesMessagePayload, PoloMessagePayload,
+			FilterDicePresetsMessagePayload, FilterImagesMessagePayload, FilterAudioMessagePayload, PoloMessagePayload,
 			QueryDicePresetsMessagePayload, QueryPeersMessagePayload,
 			RollDiceMessagePayload, SyncMessagePayload, SyncChatMessagePayload:
 
@@ -4239,6 +4249,8 @@ func (c *Connection) filterSubscriptions() error {
 		//UpdateVersions (forbidden)
 		//World (forbidden)
 
+		case AddAudio:
+			subList = append(sublist, "AA")
 		case AddImage:
 			subList = append(subList, "AI")
 		case AddObjAttributes:
@@ -4281,6 +4293,10 @@ func (c *Connection) filterSubscriptions() error {
 			subList = append(subList, "MARK")
 		case PlaceSomeone:
 			subList = append(subList, "PS")
+		case PlayAudio:
+			subList = append(subList, "SOUND")
+		case QueryAudio:
+			subList = append(subList, "AA?")
 		case QueryImage:
 			subList = append(subList, "AI?")
 		case RemoveObjAttributes:
