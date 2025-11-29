@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______     _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ (  __   )   (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \| (  )  |   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____        ___) /| | /   |   | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ ( | (/ /) |   | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )         ) \|   / | |   |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /|  (__) | _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_______)(_)(_______)     #
+#  _______  _______  _______             _______     ______    __       _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \  /  \     (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \ \/) )    | (  )  |       #
+# | |      | || || || (___) | Assistant | (____        ___) /   | |    | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (    | |    | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )         ) \   | |    |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  / __) (_ _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/  \____/(_)(_______)       #
 #                                                                                      #
 ########################################################################################
 */
@@ -88,7 +88,13 @@ func (a *Application) dbOpen() error {
 				speed integer not null default 0,
 				loops integer not null default 0,
 					primary key (name,zoom)
-		);`)
+			);
+			create table sounds (
+				name	text	primary key,
+				location text not null,
+				islocal integer(1) not null,
+				format text not null
+			);`)
 
 		if err != nil {
 			a.Logf("unable to create sqlite3 database %s contents: %v", a.DatabaseName, err)
@@ -127,6 +133,17 @@ func (a *Application) StoreImageData(imageName string, img mapper.ImageInstance,
 		a.debugDbAffected(result, fmt.Sprintf("stored image record \"%s\"@%v local=%v, ID=%v, frames=%d, speed=%d mS/frame, loops=%d", imageName, img.Zoom, img.IsLocalFile, img.File, anim.Frames, anim.FrameSpeed, anim.Loops))
 	}
 
+	return nil
+}
+
+func (a *Application) StoreAudioData(snd mapper.AudioDefinition) error {
+	result, err := a.sqldb.Exec(`REPLACE INTO sounds (name, location, islocal, format) VALUES (?, ?, ?, ?);`,
+		snd.Name, snd.File, snd.IsLocalFile, snd.Format)
+	if err != nil {
+		return err
+	}
+
+	a.debugDbAffected(result, fmt.Sprintf("stored audio record \"%s\" ID=%v local=%v fmt=%v", snd.Name, snd.File, snd.IsLocalFile, snd.Format))
 	return nil
 }
 
@@ -196,6 +213,32 @@ func (a *Application) QueryImageData(img mapper.ImageDefinition) (mapper.ImageDe
 		a.Debugf(DebugDB, "result: \"%s\"@%v from \"%s\" (local=%v)", img.Name, instance.Zoom, instance.File, instance.IsLocalFile)
 	}
 	return resultSet, rows.Err()
+}
+
+func (a *Application) QueryAudioData(snd mapper.AudioDefinition) (mapper.AudioDefinition, error) {
+	var resultSet mapper.AudioDefinition
+
+	a.Debugf(DebugDB, "query of sound \"%s\"", snd.Name)
+	rows, err := a.sqldb.Query(`SELECT location, islocal, format FROM sounds WHERE name=?`, snd.Name)
+	if err != nil {
+		return resultSet, err
+	}
+	defer rows.Close()
+
+	resultSet.Name = snd.Name
+	if rows.Next() {
+		var isLocal int
+
+		if err := rows.Scan(&resultSet.File, &isLocal, &resultSet.Format); err != nil {
+			return resultSet, err
+		}
+		if isLocal != 0 {
+			resultSet.IsLocalFile = true
+		}
+		a.Debugf(DebugDB, "result: \"%s\" ID=%v (local=%v) fmt=%v", snd.Name, resultSet.File, resultSet.IsLocalFile, resultSet.Format)
+		return resultSet, rows.Err()
+	}
+	return resultSet, sql.ErrNoRows
 }
 
 func (a *Application) QueryPresetDelegates(user string) ([]string, error) {
@@ -578,7 +621,52 @@ func (a *Application) FilterImages(f mapper.FilterImagesMessagePayload) error {
 	return nil
 }
 
-// @[00]@| Go-GMA 5.30.0
+func (a *Application) FilterAudio(f mapper.FilterAudioMessagePayload) error {
+	var namesToDelete []string
+
+	if f.KeepMatching {
+		a.Debugf(DebugDB, "removing existing sounds NOT matching /%s/", f.Filter)
+	} else {
+		a.Debugf(DebugDB, "removing existing sounds matching /%s/", f.Filter)
+	}
+
+	filter, err := regexp.Compile(f.Filter)
+	if err != nil {
+		return err
+	}
+
+	rows, err := a.sqldb.Query(`select name from sounds`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var thisName string
+		if err := rows.Scan(&thisName); err != nil {
+			return err
+		}
+		matches := filter.MatchString(thisName)
+		if (f.KeepMatching && !matches) || (!f.KeepMatching && matches) {
+			namesToDelete = append(namesToDelete, thisName)
+		}
+	}
+	if len(namesToDelete) > 0 {
+		a.Debugf(DebugDB, "--filter pattern matches %v row(s) to be deleted", len(namesToDelete))
+
+		for _, name := range namesToDelete {
+			_, err := a.sqldb.Exec(`delete from sounds where name = ?`, name)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		a.Debugf(DebugDB, "--filter matched no sounds")
+	}
+	return nil
+}
+
+// @[00]@| Go-GMA 5.31.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

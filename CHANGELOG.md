@@ -1,23 +1,33 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.30.0                <!-- @@##@@ -->
- * Effective Date: 27-Nov-2025			<!-- @@##@@ -->
+ * This Package Version: 5.31.0                <!-- @@##@@ -->
+ * Effective Date: 29-Nov-2025			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 6.38		<!-- @@##@@ -->
- * GMA Mapper Version: 4.35		<!-- @@##@@ -->
- * GMA Mapper Protocol: 420		<!-- @@##@@ -->
+ * GMA Core API Library Version: 6.39		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.35.1		<!-- @@##@@ -->
+ * GMA Mapper Protocol: 421		<!-- @@##@@ -->
  * GMA Mapper File Format: 23		<!-- @@##@@ -->
- * GMA Mapper Preferences File Format: 10 <!-- @@##@@ -->
+ * GMA Mapper Preferences File Format: 11 <!-- @@##@@ -->
  * GMA User Preferences File Format: 4 <!-- @@##@@ -->
 
 # Notice
-When upgrading an existing server to version 5.15.0 or later, be sure to run `scripts/upgrade-5.15.0` on each database file to update it to the new die-roll preset delegate capability.
+When upgrading an existing server to version 5.31.0 or later, be sure to run `scripts/upgrade-5.31.0` on each database file to update it to the new schema.
 
-In addition, if your server didn't have the following update installed previously, do it as well:
+This script requires the `sqlite3` command-line tool to be installed.
 
-When upgrading an existing server to version 5.13.1 or later, be sure to run `scripts/upgrade-5.13.1` on each database file to update it to the new chat history encoding scheme introduced at 5.13.1. If you don't, the server will ignore some or all of your historic chat and die roll messages. Alternatively, you can delete the old database and make a new one with the current server.
+In addition, if your server didn't have the following updates installed previously, do them as well. Each of these should be applied from oldest to newest, as needed, and **only** the ones needed.  If you don't need to retain any data when setting up a new server, just delete the database file and the server will create a new one when it starts. These scripts are only needed to patch your old database for use with a newer server.
+
+`scripts/upgrade-5.15.0` for servers older than 5.15.0
+
+`scripts/upgrade-5.13.1` for servers older than 5.13.1
+
+## v5.31.0
+### Enhanced
+ * Implements server protocol 421.
+ * Adds tracking of client platforms.
+ * Adds ability to manage a library of sound files just as the server does for images files, and play them on clients.
 
 ## v5.30.0
 ### Enhanced

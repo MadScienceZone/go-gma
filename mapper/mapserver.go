@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______     _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ (  __   )   (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \| (  )  |   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____        ___) /| | /   |   | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ ( | (/ /) |   | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )         ) \|   / | |   |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /|  (__) | _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_______)(_)(_______)     #
+#  _______  _______  _______             _______     ______    __       _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \  /  \     (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \ \/) )    | (  )  |       #
+# | |      | || || || (___) | Assistant | (____        ___) /   | |    | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (    | |    | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )         ) \   | |    |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  / __) (_ _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/  \____/(_)(_______)       #
 #                                                                                      #
 ########################################################################################
 */
@@ -643,6 +643,10 @@ mainloop:
 						Of:        0,
 					})
 
+				case QueryAudioMessagePayload:
+					// TODO: implement QoS check on these too if necessary
+					c.Server.HandleServerMessage(packet, c)
+
 				case QueryImageMessagePayload:
 					if c.QoS.QueryImage.Threshold > 0 {
 						for _, requestedSize := range p.Sizes {
@@ -855,6 +859,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 							c.Auth.Username = packet.User
 						}
 					}
+					c.Logf("login: client: %s, platform: %s", packet.Client, packet.Platform)
 					c.Conn.Send(Granted, GrantedMessagePayload{User: c.Auth.Username})
 					break awaitUserAuth
 				} else {

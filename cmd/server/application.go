@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______     _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ (  __   )   (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \| (  )  |   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____        ___) /| | /   |   | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ ( | (/ /) |   | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )         ) \|   / | |   |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /|  (__) | _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_______)(_)(_______)     #
+#  _______  _______  _______             _______     ______    __       _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \  /  \     (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \ \/) )    | (  )  |       #
+# | |      | || || || (___) | Assistant | (____        ___) /   | |    | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (    | |    | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )         ) \   | |    |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  / __) (_ _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/  \____/(_)(_______)       #
 #                                                                                      #
 ########################################################################################
 */
@@ -649,7 +649,20 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			}
 		}
 		if err := a.SendToAllExcept(requester, mapper.AddImage, p); err != nil {
-			a.Logf("error sending on AddImage to peer systems: %v", err)
+			a.Logf("error sending AddImage to peer systems: %v", err)
+		}
+	
+	case mapper.AddAudioMessagePayload:
+		if err := a.StoreAudioData(mapper.AudioDefinition{
+			Name:        p.Name,
+			Format:      p.Format,
+			File:        p.File,
+			IsLocalFile: p.IsLocalFile,
+		}); err != nil {
+			a.Logf("error storing audio data for \"%s\": %v", p.Name, err)
+		}
+		if err := a.SendToAllExcept(requester, mapper.AddAudio, p); err != nil {
+			a.Logf("error sending AddAudio to peer systems: %v", err)
 		}
 
 	case mapper.QueryImageMessagePayload:
@@ -714,6 +727,24 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				}
 			}
 		}
+
+	case mapper.QueryAudioMessagePayload:
+		sndData, err := a.QueryAudioData(mapper.AudioDefinition{Name: p.Name})
+		if err != nil {
+			if err != sql.ErrNoRows {
+				a.Logf("unable to answer QueryAudio (%v)", err)
+			}
+			if err := a.SendToAllExcept(requester, mapper.QueryAudio, p); err != nil {
+				a.Logf("error sending QueryAudio on to peers: %v", err)
+			}
+			return
+		}
+
+		if err := requester.Conn.Send(mapper.AddAudio, sndData); err != nil {
+			a.Logf("error sending QueryAudio answer to requester: %v", err)
+		}
+
+		// TODO: adjust QoS
 
 	case mapper.CharacterNameMessagePayload:
 		if requester.Auth == nil {
@@ -1171,6 +1202,21 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			a.Logf("error sending die-roll presets after filtering them: %v", err)
 		}
 
+	case mapper.FilterAudioMessagePayload:
+		if requester.Auth == nil {
+			a.Logf("Unable to filter sound for unauthenticated user")
+			return
+		}
+
+		if !requester.Auth.GmMode {
+			a.Logf("Rejecting unauthorized AA/ command from user %s", requester.Auth.Username)
+			return
+		}
+
+		if err := a.FilterAudio(p); err != nil {
+			a.Logf("error filtering sounds with /%s/: %v", p.Filter, err)
+		}
+
 	case mapper.FilterImagesMessagePayload:
 		if requester.Auth == nil {
 			a.Logf("Unable to filter images for unauthenticated user")
@@ -1310,6 +1356,21 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			if peer.Auth != nil && peer.Auth.GmMode && peer != requester {
 				if err := peer.Conn.Send(mapper.HitPointRequest, p); err != nil {
 					a.Logf("error sending %v to %v: %v", p, peer.IdTag(), err)
+				}
+			}
+		}
+
+	case mapper.PlayAudioMessagePayload:
+		if p.Addrs == nil {
+			a.SendToAllExcept(requester, payload.MessageType(), payload)
+			break
+		}
+
+		// we were given a restricted list of clients to send to, so let's be selective with this.
+		for _, peer := range a.GetClients() {
+			if slices.Contains(p.Addrs, peer.Address) {
+				if err := peer.Conn.Send(mapper.PlayAudio, p); err != nil {
+					a.Logf("error sending PlayAudio \"%s\" to peer \"%s\": %v", p.Name, peer.Address, err)
 				}
 			}
 		}
@@ -1478,6 +1539,18 @@ func (a *Application) managePreambleData() {
 		s := []byte(src.String())
 
 		switch cmd {
+		case "AA":
+			var data mapper.AddImageMessagePayload
+			if err = json.Unmarshal(s, &data); err == nil {
+				b, err = json.Marshal(data)
+			}
+
+		case "AA?":
+			var data mapper.QueryImageMessagePayload
+			if err = json.Unmarshal(s, &data); err == nil {
+				b, err = json.Marshal(data)
+			}
+
 		case "AI":
 			var data mapper.AddImageMessagePayload
 			if err = json.Unmarshal(s, &data); err == nil {

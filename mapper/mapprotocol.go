@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______     _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ (  __   )   (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \| (  )  |   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____        ___) /| | /   |   | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ ( | (/ /) |   | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )         ) \|   / | |   |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /|  (__) | _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ (_______)(_)(_______)     #
+#  _______  _______  _______             _______     ______    __       _______        #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \  /  \     (  __   )       #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \ \/) )    | (  )  |       #
+# | |      | || || || (___) | Assistant | (____        ___) /   | |    | | /   |       #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (    | |    | (/ /) |       #
+# | | \_  )| |   | || (   ) |                 ) )         ) \   | |    |   / | |       #
+# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  / __) (_ _ |  (__) |       #
+# (_______)|/     \||/     \| Client    \______/ (_)\______/  \____/(_)(_______)       #
 #                                                                                      #
 ########################################################################################
 */
@@ -50,10 +50,10 @@ import (
 // The GMA Mapper Protocol version number current as of this build,
 // and protocol versions supported by this code.
 const (
-	GMAMapperProtocol=420              // @@##@@ auto-configured
-	GoVersionNumber="5.30.0" // @@##@@ auto-configured
+	GMAMapperProtocol=421              // @@##@@ auto-configured
+	GoVersionNumber="5.31.0" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
-	MaximumSupportedMapProtocol = 420
+	MaximumSupportedMapProtocol = 421
 )
 
 func init() {
@@ -116,6 +116,13 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 	case Accept:
 		if msgs, ok := data.(AcceptMessagePayload); ok {
 			return c.sendJSON("ACCEPT", msgs)
+		}
+	case AddAudio:
+		if aa, ok := data.(AudioDefinition); ok {
+			return c.sendJSON("AA", aa)
+		}
+		if aa, ok := data.(AddAudioMessagePayload); ok {
+			return c.sendJSON("AA", aa)
 		}
 	case AddCharacter:
 		if ac, ok := data.(AddCharacterMessagePayload); ok {
@@ -202,6 +209,10 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 	case Failed:
 		if fa, ok := data.(FailedMessagePayload); ok {
 			return c.sendJSON("FAILED", fa)
+		}
+	case FilterAudio:
+		if fi, ok := data.(FilterAudioMessagePayload); ok {
+			return c.sendJSON("AA/", fi)
 		}
 	case FilterCoreData:
 		if fi, ok := data.(FilterCoreDataMessagePayload); ok {
@@ -306,6 +317,10 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 		if ps, ok := data.(PlaceSomeoneMessagePayload); ok {
 			return c.sendJSON("PS", ps)
 		}
+	case PlayAudio:
+		if pa, ok := data.(PlayAudioMessagePayload); ok {
+			return c.sendJSON("SOUND", pa)
+		}
 	case Polo:
 		return c.sendln("POLO", "")
 	case Priv:
@@ -314,6 +329,13 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 		}
 	case Protocol:
 		return c.sendln("PROTOCOL", fmt.Sprintf("%v", data))
+	case QueryAudio:
+		if qi, ok := data.(AudioDefinition); ok {
+			return c.sendJSON("AA?", qi)
+		}
+		if qi, ok := data.(QueryAudioMessagePayload); ok {
+			return c.sendJSON("AA?", qi)
+		}
 	case QueryCoreData:
 		if q, ok := data.(QueryCoreDataMessagePayload); ok {
 			return c.sendJSON("CORE", q)
@@ -539,6 +561,36 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = Accept
+		return p, nil
+
+	case "AA":
+		p := AddAudioMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
+		p.messageType = AddAudio
+		return p, nil
+
+	case "AA?":
+		p := QueryAudioMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
+		p.messageType = QueryAudio
+		return p, nil
+
+	case "AA/":
+		p := FilterAudioMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
+		p.messageType = FilterAudio
 		return p, nil
 
 	case "AI":
@@ -1098,6 +1150,16 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = RollResult
+		return p, nil
+
+	case "SOUND":
+		p := PlayAudioMessagePayload{BaseMessagePayload: payload}
+		if hasJsonPart {
+			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+				break
+			}
+		}
+		p.messageType = PlayAudio
 		return p, nil
 
 	case "SYNC":
