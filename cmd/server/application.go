@@ -1361,7 +1361,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		}
 
 	case mapper.PlayAudioMessagePayload:
-		if p.Addrs != nil {
+		if p.Addrs == nil {
 			a.SendToAllExcept(requester, payload.MessageType(), payload)
 			break
 		}
