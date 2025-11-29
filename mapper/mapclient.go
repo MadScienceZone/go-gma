@@ -3869,7 +3869,7 @@ func (c *Connection) listen(done chan error) {
 
 		switch cmd := incomingPacket.(type) {
 		case AddAudioMessagePayload:
-			if aa, ok := c.Subscriptions[AddAudio]; ok {
+			if ch, ok := c.Subscriptions[AddAudio]; ok {
 				ch <- cmd
 			}
 
@@ -4011,7 +4011,7 @@ func (c *Connection) listen(done chan error) {
 			}
 
 		case QueryAudioMessagePayload:
-			if aa, ok := c.Subscriptions[QueryAudio]; ok {
+			if ch, ok := c.Subscriptions[QueryAudio]; ok {
 				ch <- cmd
 			}
 
@@ -4250,7 +4250,7 @@ func (c *Connection) filterSubscriptions() error {
 		//World (forbidden)
 
 		case AddAudio:
-			subList = append(sublist, "AA")
+			subList = append(subList, "AA")
 		case AddImage:
 			subList = append(subList, "AI")
 		case AddObjAttributes:
