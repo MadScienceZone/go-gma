@@ -1478,6 +1478,18 @@ func (a *Application) managePreambleData() {
 		s := []byte(src.String())
 
 		switch cmd {
+		case "AA":
+			var data mapper.AddImageMessagePayload
+			if err = json.Unmarshal(s, &data); err == nil {
+				b, err = json.Marshal(data)
+			}
+
+		case "AA?":
+			var data mapper.QueryImageMessagePayload
+			if err = json.Unmarshal(s, &data); err == nil {
+				b, err = json.Marshal(data)
+			}
+
 		case "AI":
 			var data mapper.AddImageMessagePayload
 			if err = json.Unmarshal(s, &data); err == nil {

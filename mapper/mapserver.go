@@ -855,6 +855,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 							c.Auth.Username = packet.User
 						}
 					}
+					c.Logf("client platform: %s", packet.Platform)
 					c.Conn.Send(Granted, GrantedMessagePayload{User: c.Auth.Username})
 					break awaitUserAuth
 				} else {

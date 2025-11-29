@@ -618,6 +618,7 @@ type ServerMessage byte
 // ServerMessage values (see the comments accompanying the type definition).
 const (
 	Accept ServerMessage = iota
+	AddAudio
 	AddCharacter
 	AddDicePresets
 	AddImage
@@ -638,6 +639,7 @@ const (
 	Denied
 	Echo
 	Failed
+	FilterAudio
 	FilterCoreData
 	FilterDicePresets
 	FilterImages
@@ -656,9 +658,11 @@ const (
 	Marco
 	Mark
 	PlaceSomeone
+	PlayAudio
 	Polo
 	Priv
 	Protocol
+	QueryAudio
 	QueryCoreData
 	QueryCoreIndex
 	QueryDicePresets
@@ -693,6 +697,7 @@ const (
 
 var ServerMessageByName = map[string]ServerMessage{
 	"Accept":                      Accept,
+	"AddAudio":                    AddAudio,
 	"AddCharacter":                AddCharacter,
 	"AddDicePresets":              AddDicePresets,
 	"AddImage":                    AddImage,
@@ -713,6 +718,7 @@ var ServerMessageByName = map[string]ServerMessage{
 	"Denied":                      Denied,
 	"Echo":                        Echo,
 	"Failed":                      Failed,
+	"FilterAudio":                 FilterAudio,
 	"FilterCoreData":              FilterCoreData,
 	"FilterDicePresets":           FilterDicePresets,
 	"FilterImages":                FilterImages,
@@ -731,9 +737,11 @@ var ServerMessageByName = map[string]ServerMessage{
 	"Marco":                       Marco,
 	"Mark":                        Mark,
 	"PlaceSomeone":                PlaceSomeone,
+	"PlayAudio":                   PlayAudio,
 	"Polo":                        Polo,
 	"Priv":                        Priv,
 	"Protocol":                    Protocol,
+	"QueryAudio":                  QueryAudio,
 	"QueryCoreData":               QueryCoreData,
 	"QueryCoreIndex":              QueryCoreIndex,
 	"QueryDicePresets":            QueryDicePresets,
@@ -873,6 +881,36 @@ type AcceptMessagePayload struct {
 type AddCharacterMessagePayload struct {
 	BaseMessagePayload
 	PlayerToken
+}
+
+//________________________________________________________________________________
+//     _       _     _    _             _ _       
+//    / \   __| | __| |  / \  _   _  __| (_) ___  
+//   / _ \ / _` |/ _` | / _ \| | | |/ _` | |/ _ \ 
+//  / ___ \ (_| | (_| |/ ___ \ |_| | (_| | | (_) |
+// /_/   \_\__,_|\__,_/_/   \_\__,_|\__,_|_|\___/ 
+//
+                                               
+type AudioDefinition struct {
+	IsLocalFile bool
+	Name string
+	File string
+	Format string
+}	
+
+// AddAudioMessagePayload holds the information sent by the server's AddAudio
+// message informing the client as to where it can locate an audio clip's data.
+//
+// Call the AddAudio method to send this message out to others if you know
+// of an audio file they should be aware of.
+type AddAudioMessagePayload struct {
+	BaseMessagePayload
+	AudioDefinition
+}
+
+// AddAudio informs the server and peers about an image they can use.
+func (c *Connection) AddAudio(adef AudioDefinition) error {
+	return c.serverConn.Send(AddAudio, adef)
 }
 
 //________________________________________________________________________________
@@ -1043,6 +1081,10 @@ type AuthMessagePayload struct {
 
 	// User gives the username requested by the client. "GM" is privileged. Names beginning with "SYS$" are forbidden.
 	User string `json:",omitempty"`
+
+	// Platform gives the platform information the client's coming in on.
+	// This should look like "OS version machine"
+	Platform string `json:",omitempty"`
 }
 
 //   ____           _          _____ _ _
@@ -1833,6 +1875,43 @@ type FilterImagesMessagePayload struct {
 	Filter       string `json:",omitempty"`
 }
 
+//  _____ _ _ _             _             _ _       
+// |  ___(_) | |_ ___ _ __ / \  _   _  __| (_) ___  
+// | |_  | | | __/ _ \ '__/ _ \| | | |/ _` | |/ _ \ 
+// |  _| | | | ||  __/ | / ___ \ |_| | (_| | | (_) |
+// |_|   |_|_|\__\___|_|/_/   \_\__,_|\__,_|_|\___/ 
+//                                                  
+
+// FilterAudio asks the server to remove all of your defined audio clips that match
+// a regular expression.
+func (c *Connection) FilterAudio(re string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(FilterAudio, FilterAudioMessagePayload{
+		Filter: re,
+	})
+}
+
+// FilterAudioExcept asks the server to remove all of your defined audio clips that don't match
+// a regular expression.
+func (c *Connection) FilterAudioExcept(re string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(FilterAudio, FilterAudioMessagePayload{
+		KeepMatching: true,
+		Filter:       re,
+	})
+}
+
+// FilterAudioMessagePayload holds the filter expression the client sends to the server.
+type FilterAudioMessagePayload struct {
+	BaseMessagePayload
+	KeepMatching bool   `json:",omitempty"`
+	Filter       string `json:",omitempty"`
+}
+
 //
 //   ____                 _           _
 //  / ___|_ __ __ _ _ __ | |_ ___  __| |
@@ -2178,6 +2257,74 @@ func (c *Connection) PlaceSomeone(someone any) error {
 	return c.serverConn.Send(PlaceSomeone, someone)
 }
 
+
+//  ____  _                _             _ _       
+// |  _ \| | __ _ _   _   / \  _   _  __| (_) ___  
+// | |_) | |/ _` | | | | / _ \| | | |/ _` | |/ _ \ 
+// |  __/| | (_| | |_| |/ ___ \ |_| | (_| | | (_) |
+// |_|   |_|\__,_|\__, /_/   \_\__,_|\__,_|_|\___/ 
+//                |___/                            
+// 
+
+// PlayAudioMessagePayload contains the message payload for the request to start or
+// stop playing an audio clip on a client.
+type PlayAudioMessagePayload struct {
+	BaseMessagePayload
+
+	// Name is the sound clip ID as known by the mapper.
+	// This may be "*" to refer to all sounds (e.g., to stop all playing sounds).
+	Name string
+
+	// If Loop is true, the sound will be played in a continuous loop.
+	Loop bool `json:",omitempty"`
+
+	// If Stop is true, stop playing the sound.
+	Stop bool `json:",omitempty"`
+
+	// If IsLocalFilt is true, Name is a local pathname on the client. Otherwise,
+	// it is stored server-side and its location may be obtained via the AA server
+	// command.
+	IsLocalFile bool `json:",omitempty"`
+
+	// If non-empty, Addrs lists the client addresses (as obtained from the Addr field from
+	// the CONN response) of the specific clients which should play the sound clip.
+	Addrs []string
+}
+
+// PlayAudio requests that clients start playing a sound.
+func (c *Connection) PlayAudio(name string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(PlayAudio, PlayAudioMessagePayload{
+		Name: name,
+	})
+}
+
+// StopAudio requests that clients stop playing a sound.
+func (c *Connection) StopAudio(name string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(PlayAudio, PlayAudioMessagePayload{
+		Name: name,
+		Stop: true,
+	})
+}
+
+func (c *Connection) PlayAudioX(name string, loop, stop bool, addrs []string) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(PlayAudio, PlayAudioMessagePayload{
+		Name: name,
+		Stop: stop,
+		Loop: loop,
+		Addrs: addrs,
+	})
+}
+
+
 //  ____       _
 // |  _ \ ___ | | ___
 // | |_) / _ \| |/ _ \
@@ -2237,6 +2384,37 @@ func (c *Connection) QueryImage(idef ImageDefinition) error {
 		return fmt.Errorf("nil Connection")
 	}
 	return c.serverConn.Send(QueryImage, idef)
+}
+
+
+//   ___                           _             _ _       
+//  / _ \ _   _  ___ _ __ _   _   / \  _   _  __| (_) ___  
+// | | | | | | |/ _ \ '__| | | | / _ \| | | |/ _` | |/ _ \ 
+// | |_| | |_| |  __/ |  | |_| |/ ___ \ |_| | (_| | | (_) |
+//  \__\_\\__,_|\___|_|   \__, /_/   \_\__,_|\__,_|_|\___/ 
+//                        |___/                            
+//
+
+// QueryAudioMessagePayload holds the information sent by the server's QueryAudio
+// message. This tells the client
+// that a peer wants to know where to find a given
+// sound file and the server didn't know either. If you know the definition
+// for that audio clip, reply with an AddAudio message of your own.
+//
+// Call the QueryAudio method to send this message out to other clients.
+type QueryAudioMessagePayload struct {
+	BaseMessagePayload
+	AudioDefinition
+}
+
+// QueryAudio asks the server and peers if anyone else knows
+// where to find the data for the given audio clip name.
+// If someone does, you'll receive an AddAudio message.
+func (c *Connection) QueryAudio(idef AudioDefinition) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(QueryAudio, idef)
 }
 
 //  ____                _
