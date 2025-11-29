@@ -53,7 +53,7 @@ const (
 	GMAMapperProtocol=421              // @@##@@ auto-configured
 	GoVersionNumber="5.31.0" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
-	MaximumSupportedMapProtocol = 420
+	MaximumSupportedMapProtocol = 421
 )
 
 func init() {

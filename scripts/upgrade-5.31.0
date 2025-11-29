@@ -4,7 +4,7 @@ echo ""
 echo "YOU MUST ALREADY BE UPGRADED TO 5.15.0 OR LATER BEFORE RUNNING THIS SCRIPT!"
 echo "If you were running an earlier version of the go-gma server, please run the"
 echo "other upgrade scripts first, THEN this one."
-if [ "$1" == "" ]; then
+if [ "$1" = "" ]; then
 	echo "Usage: $0 databasefile"
 	exit 1
 fi
