@@ -15,6 +15,8 @@
 # Notice
 When upgrading an existing server to version 5.31.0 or later, be sure to run `scripts/upgrade-5.31.0` on each database file to update it to the new schema.
 
+This script requires the `sqlite3` command-line tool to be installed.
+
 In addition, if your server didn't have the following updates installed previously, do them as well. Each of these should be applied from oldest to newest, as needed, and **only** the ones needed.  If you don't need to retain any data when setting up a new server, just delete the database file and the server will create a new one when it starts. These scripts are only needed to patch your old database for use with a newer server.
 
 `scripts/upgrade-5.15.0` for servers older than 5.15.0
