@@ -331,6 +331,7 @@ func main() {
 		mapper.WithContext(ctx),
 		mapper.WithSubscription(problems, mapper.ERROR, mapper.UNKNOWN),
 		mapper.WithSubscription(messages,
+			mapper.AddAudio,
 			mapper.AddCharacter,
 			mapper.AddImage,
 			mapper.AddObjAttributes,
@@ -357,7 +358,9 @@ func main() {
 			mapper.Marco,
 			mapper.Mark,
 			mapper.PlaceSomeone,
+			mapper.QueryAudio,
 			mapper.QueryImage,
+			mapper.PlayAudio,
 			mapper.RemoveObjAttributes,
 			mapper.RollResult,
 			mapper.TimerAcknowledge,
@@ -804,6 +807,20 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"size", m.SkinSize},
 			fieldDesc{"skin", m.Skin},
 		)
+	case mapper.PlayAudioMessagePayload:
+		printFields(mono, "PlayAudio",
+			fieldDesc{"name", m.Name},
+			fieldDesc{"loop", m.Loop},
+			fieldDesc{"stop", m.Stop},
+			fieldDesc{"addrs", m.Addrs},
+		)
+	case mapper.AddAudioMessagePayload:
+		printFields(mono, "AddAudio",
+			fieldDesc{"name", m.Name},
+			fieldDesc{"file", m.File},
+			fieldDesc{"format", m.Format},
+			fieldDesc{"local", m.IsLocalFile},
+		)
 	case mapper.AddImageMessagePayload:
 		if m.Animation != nil {
 			printFields(mono, "AddImage animataion parameters",
@@ -997,6 +1014,11 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 				fieldDesc{"local", inst.IsLocalFile},
 			)
 		}
+
+	case mapper.QueryAudioMessagePayload:
+		printFields(mono, "QueryAudio",
+			fieldDesc{"name", m.Name},
+		)
 
 	case mapper.RemoveObjAttributesMessagePayload:
 		printFields(mono, "RemoveObjAttributes",

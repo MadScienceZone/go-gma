@@ -1358,12 +1358,26 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			}
 		}
 
+	case mapper.PlayAudioMessagePayload:
+		if p.Addrs != nil {
+			a.SendToAllExcept(requester, payload.MessageType(), payload)
+			break
+		}
+
+		// we were given a restricted list of clients to send to, so let's be selective with this.
+		for _, peer := range a.GetClients() {
+			if slices.Contains(p.Addrs, peer.Address) {
+				if err := peer.Conn.Send(mapper.PlayAudio, p); err != nil {
+					a.Logf("error sending PlayAudio \"%s\" to peer \"%s\": %v", p.Name, peer.Address, err)
+				}
+			}
+		}
+
 	case mapper.QueryPeersMessagePayload:
 		a.SendPeerListTo(requester)
 
 	// These commands are passed on to our peers with no further action required.
 	case mapper.MarkMessagePayload,
-	    mapper.PlayAudioMessagePayload,
 		mapper.UpdateProgressMessagePayload:
 		a.SendToAllExcept(requester, payload.MessageType(), payload)
 
