@@ -1,0 +1,20 @@
+#!/bin/sh
+echo "Upgrading database(s) to 5.31.0+ schema (sound support)"
+echo ""
+echo "YOU MUST ALREADY BE UPGRADED TO 5.15.0 OR LATER BEFORE RUNNING THIS SCRIPT!"
+echo "If you were running an earlier version of the go-gma server, please run the"
+echo "other upgrade scripts first, THEN this one."
+if [ "$1" == "" ]; then
+	echo "Usage: $0 databasefile"
+	exit 1
+fi
+if [ -f "$1" ]; then
+	/bin/echo -n "Upgrading database file $1 to 5.31.0 schema in"
+	for i in 10 9 8 7 6 5 4 3 2 1; do /bin/echo -n " $i..."; sleep 1; done
+	echo ""
+else
+	echo "$1 does not exist. Please specify the path to your GMA server database file."
+	exit 1
+fi
+sqlite3 "$1" 'create table sounds (name text primary key, location text not null, islocal integer(1) not null, format text not null);'
+echo Done.
