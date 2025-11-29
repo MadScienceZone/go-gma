@@ -236,8 +236,9 @@ func (a *Application) QueryAudioData(snd mapper.AudioDefinition) (mapper.AudioDe
 			resultSet.IsLocalFile = true
 		}
 		a.Debugf(DebugDB, "result: \"%s\" ID=%v (local=%v) fmt=%v", snd.Name, resultSet.File, resultSet.IsLocalFile, resultSet.Format)
+		return resultSet, rows.Err()
 	}
-	return resultSet, rows.Err()
+	return resultSet, sql.ErrNoRows
 }
 
 func (a *Application) QueryPresetDelegates(user string) ([]string, error) {

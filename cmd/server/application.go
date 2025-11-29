@@ -731,9 +731,11 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 	case mapper.QueryAudioMessagePayload:
 		sndData, err := a.QueryAudioData(mapper.AudioDefinition{Name: p.Name})
 		if err != nil {
-			a.Logf("unable to answer QueryAudio (%v)", err)
+			if err != sql.ErrNoRows {
+				a.Logf("unable to answer QueryAudio (%v)", err)
+			}
 			if err := a.SendToAllExcept(requester, mapper.QueryAudio, p); err != nil {
-				a.Logf("error sending QueryAudio on to peers, as well: %v", err)
+				a.Logf("error sending QueryAudio on to peers: %v", err)
 			}
 			return
 		}
