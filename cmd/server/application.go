@@ -649,7 +649,20 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			}
 		}
 		if err := a.SendToAllExcept(requester, mapper.AddImage, p); err != nil {
-			a.Logf("error sending on AddImage to peer systems: %v", err)
+			a.Logf("error sending AddImage to peer systems: %v", err)
+		}
+	
+	case mapper.AddAudioMessagePayload:
+		if err := a.StoreAudioData(mapper.AudioDefinition{
+			Name:        p.Name,
+			Format:      p.Format,
+			File:        p.File,
+			IsLocalFile: p.IsLocalFile,
+		}); err != nil {
+			a.Logf("error storing audio data for \"%s\": %v", p.Name, err)
+		}
+		if err := a.SendToAllExcept(requester, mapper.AddAudio, p); err != nil {
+			a.Logf("error sending AddAudio to peer systems: %v", err)
 		}
 
 	case mapper.QueryImageMessagePayload:
@@ -714,6 +727,22 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				}
 			}
 		}
+
+	case mapper.QueryAudioMessagePayload:
+		sndData, err := a.QueryAudioData(mapper.AudioDefinition{Name: p.Name})
+		if err != nil {
+			a.Logf("unable to answer QueryAudio (%v)", err)
+			if err := a.SendToAllExcept(requester, mapper.QueryAudio, p); err != nil {
+				a.Logf("error sending QueryAudio on to peers, as well: %v", err)
+			}
+			return
+		}
+
+		if err := requester.Conn.Send(mapper.AddAudio, sndData); err != nil {
+			a.Logf("error sending QueryAudio answer to requester: %v", err)
+		}
+
+		// TODO: adjust QoS
 
 	case mapper.CharacterNameMessagePayload:
 		if requester.Auth == nil {
@@ -1171,6 +1200,21 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 			a.Logf("error sending die-roll presets after filtering them: %v", err)
 		}
 
+	case mapper.FilterAudioMessagePayload:
+		if requester.Auth == nil {
+			a.Logf("Unable to filter sound for unauthenticated user")
+			return
+		}
+
+		if !requester.Auth.GmMode {
+			a.Logf("Rejecting unauthorized AA/ command from user %s", requester.Auth.Username)
+			return
+		}
+
+		if err := a.FilterAudio(p); err != nil {
+			a.Logf("error filtering sounds with /%s/: %v", p.Filter, err)
+		}
+
 	case mapper.FilterImagesMessagePayload:
 		if requester.Auth == nil {
 			a.Logf("Unable to filter images for unauthenticated user")
@@ -1319,6 +1363,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 
 	// These commands are passed on to our peers with no further action required.
 	case mapper.MarkMessagePayload,
+	    mapper.PlayAudioMessagePayload,
 		mapper.UpdateProgressMessagePayload:
 		a.SendToAllExcept(requester, payload.MessageType(), payload)
 

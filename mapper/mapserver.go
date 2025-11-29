@@ -643,6 +643,10 @@ mainloop:
 						Of:        0,
 					})
 
+				case QueryAudioMessagePayload:
+					// TODO: implement QoS check on these too if necessary
+					c.Server.HandleServerMessage(packet, c)
+
 				case QueryImageMessagePayload:
 					if c.QoS.QueryImage.Threshold > 0 {
 						for _, requestedSize := range p.Sizes {
@@ -855,7 +859,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 							c.Auth.Username = packet.User
 						}
 					}
-					c.Logf("client platform: %s", packet.Platform)
+					c.Logf("login: client: %s, platform: %s", packet.Client, packet.Platform)
 					c.Conn.Send(Granted, GrantedMessagePayload{User: c.Auth.Username})
 					break awaitUserAuth
 				} else {
