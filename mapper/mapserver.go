@@ -85,6 +85,7 @@ type ClientConnection struct {
 
 	// Aliases to map creatures
 	AKA []string
+	NotPlaying bool
 
 	// Level of debugging requested for this client
 	DebuggingLevel DebugFlags

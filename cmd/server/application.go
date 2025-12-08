@@ -330,8 +330,9 @@ func (a *Application) manageClientList() {
 			// Add the player's AKA list to this connection too
 			if c.Auth != nil {
 				for _, cc := range clients {
-					if cc.Auth != nil && cc.Auth.Username == c.Auth.Username && cc.AKA != nil {
+					if cc.Auth != nil && cc.Auth.Username == c.Auth.Username && (cc.AKA != nil || cc.NotPlaying) {
 						c.AKA = cc.AKA
+						c.NotPlaying = cc.NotPlaying
 						break
 					}
 				}
@@ -366,6 +367,7 @@ func (a *Application) manageClientList() {
 			for _, c := range clients {
 				if c.Auth != nil && c.Auth.Username == p.User {
 					c.AKA = newAKAList
+					c.NotPlaying = p.NotPlaying
 				}
 			}
 		}
@@ -1442,6 +1444,7 @@ func (a *Application) SendPeerListToAll() {
 			LastPolo: time.Since(peer.LastPoloTime).Seconds(),
 			IsMe:     false,
 			AKA:      peer.AKA,
+			NotPlaying: peer.NotPlaying,
 		}
 		if peer.Auth != nil {
 			thisPeer.User = peer.Auth.Username
@@ -1468,6 +1471,7 @@ func (a *Application) SendPeerListTo(requester *mapper.ClientConnection) {
 			LastPolo: time.Since(peer.LastPoloTime).Seconds(),
 			IsMe:     peer == requester,
 			AKA:      peer.AKA,
+			NotPlaying: peer.NotPlaying,
 		}
 		if peer.Auth != nil {
 			thisPeer.User = peer.Auth.Username

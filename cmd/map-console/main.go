@@ -877,6 +877,7 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 		printFields(mono, "CharacterName",
 			fieldDesc{"User", m.User},
 			fieldDesc{"Names", m.Names},
+			fieldDesc{"NotPlaying", m.NotPlaying},
 		)
 
 	case mapper.ClearMessagePayload:
@@ -1167,6 +1168,16 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 		printFields(mono, "",
 			fieldDesc{"       USERNAME------------ ADDRESS-------------- CLIENT------------------- AU ME PING-- AKA", nil})
 		for i, peer := range m.PeerList {
+			var aka string
+
+			if peer.NotPlaying {
+				aka = "---"
+			} else if peer.AKA == nil {
+				aka = "(user)"
+			} else {
+				aka = fmt.Sprintf("%v", peer.AKA)
+			}
+
 			printFields(mono, "",
 				fieldDesc{fmt.Sprintf("  [%02d]", i), fmt.Sprintf("%-20s %-21s %-25s %s %s %s %v",
 					peer.User, peer.Addr, peer.Client,
@@ -1191,7 +1202,7 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 						}
 						return colorize(fmt.Sprintf("%5.1fs", p), "Red", mono)
 					}(peer.LastPolo),
-					peer.AKA,
+					aka,
 					)})
 		}
 
