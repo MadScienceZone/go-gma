@@ -25,4 +25,7 @@ require (
 	google.golang.org/protobuf v1.28.1 // indirect
 )
 
-retract v5.8.2 // missing source files
+retract (
+	v5.8.2 // missing source files
+	v5.32.0 // incorrect max protocol version supported
+)
