@@ -1,7 +1,7 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.32.0                <!-- @@##@@ -->
+ * This Package Version: 5.32.1                <!-- @@##@@ -->
  * Effective Date: 10-Dec-2025			<!-- @@##@@ -->
 
 ## Compatibility
@@ -22,6 +22,11 @@ In addition, if your server didn't have the following updates installed previous
 `scripts/upgrade-5.15.0` for servers older than 5.15.0
 
 `scripts/upgrade-5.13.1` for servers older than 5.13.1
+
+## v5.32.1
+### Fixed
+ * Corrects error in supported protocol number in mapper package.
+ * Retracts 5.32.0 which contains this error.
 
 ## v5.32.0
 ### Enhanced
