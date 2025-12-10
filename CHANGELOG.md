@@ -1,15 +1,15 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.31.0                <!-- @@##@@ -->
- * Effective Date: 29-Nov-2025			<!-- @@##@@ -->
+ * This Package Version: 5.32.0                <!-- @@##@@ -->
+ * Effective Date: 10-Dec-2025			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 6.39		<!-- @@##@@ -->
- * GMA Mapper Version: 4.35.1		<!-- @@##@@ -->
- * GMA Mapper Protocol: 421		<!-- @@##@@ -->
+ * GMA Core API Library Version: 6.39.1		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.35.2		<!-- @@##@@ -->
+ * GMA Mapper Protocol: 422		<!-- @@##@@ -->
  * GMA Mapper File Format: 23		<!-- @@##@@ -->
- * GMA Mapper Preferences File Format: 11 <!-- @@##@@ -->
+ * GMA Mapper Preferences File Format: 12 <!-- @@##@@ -->
  * GMA User Preferences File Format: 4 <!-- @@##@@ -->
 
 # Notice
@@ -22,6 +22,13 @@ In addition, if your server didn't have the following updates installed previous
 `scripts/upgrade-5.15.0` for servers older than 5.15.0
 
 `scripts/upgrade-5.13.1` for servers older than 5.13.1
+
+## v5.32.0
+### Enhanced
+ * Implements server protocol 422.
+ * Adds the notion of users logging in with clients but not actually playing any characters in the game.
+### Fixed
+ * Now logs errors when setting different `SkinSize` attributes in party members in server configuration file `AC` directives.
 
 ## v5.31.0
 ### Enhanced
