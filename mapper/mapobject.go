@@ -666,6 +666,7 @@ const (
 // skinSizes takes priority.
 //
 func (c *CreatureToken) SetSizes(skinSize []string, skin int, size string) error {
+    //                                                     __1__      __2__      __3__      _4__ _5__
 	sizeCodeRE := regexp.MustCompile(`^[fFdDtTsSmMlLhHgGcC](\d+)?(?:->(\d+))?(?:=(\d+))?(?::(\*)?(.*))?$`)
 
 	// If no skinSize list was present, just use size as the single item for that list.

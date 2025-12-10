@@ -1140,7 +1140,8 @@ type ChallengeMessagePayload struct {
 
 type CharacterNameMessagePayload struct {
 	BaseMessagePayload
-	Names []string
+	NotPlaying bool `json:",omitempty"`
+	Names []string `json:",omitempty"`
 	User  string   `json:",omitempty"`
 }
 
@@ -1161,6 +1162,16 @@ func (c *Connection) CharacterNames(actualNames []string) error {
 	}
 	return c.serverConn.Send(CharacterName, CharacterNameMessagePayload{
 		Names: actualNames,
+	})
+}
+
+// IAmNotPlaying declares that this user is not playing any characters.
+func (c *Connection) IAmNotPlaying() error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(CharacterName, CharacterNameMessagePayload{
+		NotPlaying: true,
 	})
 }
 
@@ -2983,8 +2994,11 @@ type Peer struct {
 	// The username provided by the peer when it authenticated
 	User string
 
+	// The peer is not actually playing a character at all.
+	NotPlaying bool `json:",omitempty"`
+
 	// The list of creatures controlled if not the same as User.
-	AKA []string
+	AKA []string `json:",omitempty"`
 
 	// A description of the peer client program (provided by that client)
 	Client string `json:",omitempty"`
@@ -3797,8 +3811,12 @@ func (c *Connection) receiveAddCharacter(d AddCharacterMessagePayload) {
 				Natural:  d.CustomReach.Natural,
 				Extended: d.CustomReach.Extended,
 			},
+			Targets:      d.Targets,
 		}
-		critter.SetSizes(d.SkinSize, d.Skin, d.Size)
+		if err := critter.SetSizes(d.SkinSize, d.Skin, d.Size); err != nil {
+			c.Logf("ERROR setting creature %s skinsizes to %v (skin=%v, size=%v): %v", 
+				d.Name, d.SkinSize, d.Skin, d.Size, err)
+		}
 		if d.AoE != nil {
 			critter.AoE = &RadiusAoE{
 				Radius: d.AoE.Radius,
