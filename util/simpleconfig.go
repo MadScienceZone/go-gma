@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) \   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -28,16 +28,13 @@ import (
 
 type SimpleConfigurationData map[string]string
 
-//
 // NewSimpleConfigurationData creates a ready-to-use SampleConfigurationData
 // value which you can call Set, et al. directly without having read in a
 // configuration from a file first.
-//
 func NewSimpleConfigurationData() SimpleConfigurationData {
 	return make(SimpleConfigurationData)
 }
 
-//
 // ParseSimpleConfig parses a minimal configuration file format
 // used by the mapper that isn't a full INI file. Rather, it's
 // a simple "key=value" collection with one entry per line in the file.
@@ -50,17 +47,14 @@ func NewSimpleConfigurationData() SimpleConfigurationData {
 //
 // Lines starting with a # sign (allowing for leading spaces before that)
 // are ignored as comments.
-//
 func ParseSimpleConfig(inputFile io.Reader) (SimpleConfigurationData, error) {
 	data := make(SimpleConfigurationData)
 	err := UpdateSimpleConfig(inputFile, data)
 	return data, err
 }
 
-//
 // UpdateSimpleConfig reads a configuration file as described for ParseSimpleConfig,
 // but instead of creating a new set of config data, it updates an existing data set.
-//
 func UpdateSimpleConfig(inputFile io.Reader, data SimpleConfigurationData) error {
 	foundAlready := make(map[string]bool)
 	commentPattern := regexp.MustCompile(`^\s*#`)
@@ -251,9 +245,9 @@ func OverrideBoolWithNegation(key string, value bool, neg bool) func(SimpleConfi
 	}
 }
 
-// @[00]@| Go-GMA 5.32.1
+// @[00]@| Go-GMA 5.33.0
 // @[01]@|
-// @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
+// @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
 // @[12]@| Aloha, Oregon, USA. All Rights Reserved. Some components were introduced at different
 // @[13]@| points along that historical time line.

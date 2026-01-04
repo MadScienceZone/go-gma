@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) \   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -21,20 +21,16 @@
 
 package namegen
 
-//
 // TianDtang describes the naming conventions for the Tian-dtang
 // culture. Its methods give further details, but generally speaking
 // the main operation to perform on these types is to just call the
 // Generate and GenerateWithSurnames methods to create new names which
 // conform to their cultural patterns.
-//
 type TianDtang struct {
 	BaseCulture
 }
 
-//
 // defaultMinMax returns the minimum and maximum size of Tian-dtang names based on gender.
-//
 func (c TianDtang) defaultMinMax(gender rune) (int, int) {
 	switch gender {
 	case 'F':
@@ -48,31 +44,23 @@ func (c TianDtang) defaultMinMax(gender rune) (int, int) {
 	}
 }
 
-//
 // Genders returns the set of genders defined for the Tian-dtang culture.
-//
 func (c TianDtang) Genders() []rune {
 	return []rune{'F', 'M', 'S'}
 }
 
-//
 // HasSurnames returns true if the Tian-dtang culture defines surnames.
-//
 func (c TianDtang) HasSurnames() bool {
 	return true
 }
 
-//
 // Name returns the name of the culture, i.e., "Tian-dtang".
-//
 func (c TianDtang) Name() string {
 	return "Tian-dtang"
 }
 
-//
 // HasGender returns true if the specified gender code is defined
 // in the Tian-dtang culture.
-//
 func (c TianDtang) HasGender(gender rune) bool {
 	switch gender {
 	case 'F', 'M', 'S':
@@ -82,9 +70,7 @@ func (c TianDtang) HasGender(gender rune) bool {
 	}
 }
 
-//
 // db returns the name data for the given gender in the Tian-dtang culture.
-//
 func (c TianDtang) db(gender rune) map[string][]nameFragment {
 	switch gender {
 	case 'F':
@@ -6895,6 +6881,7 @@ func (c TianDtang) db(gender rune) map[string][]nameFragment {
 		return nil
 	}
 }
+
 //
 // End of generated data
 //

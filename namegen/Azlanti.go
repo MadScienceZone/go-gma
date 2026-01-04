@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) \   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -21,20 +21,16 @@
 
 package namegen
 
-//
 // Azlanti describes the naming conventions for the Azlanti
 // culture. Its methods give further details, but generally speaking
 // the main operation to perform on these types is to just call the
 // Generate and GenerateWithSurnames methods to create new names which
 // conform to their cultural patterns.
-//
 type Azlanti struct {
 	BaseCulture
 }
 
-//
 // defaultMinMax returns the minimum and maximum size of Azlanti names based on gender.
-//
 func (c Azlanti) defaultMinMax(gender rune) (int, int) {
 	switch gender {
 	case 'F':
@@ -46,24 +42,18 @@ func (c Azlanti) defaultMinMax(gender rune) (int, int) {
 	}
 }
 
-//
 // Genders returns the set of genders defined for the Azlanti culture.
-//
 func (c Azlanti) Genders() []rune {
 	return []rune{'F', 'M'}
 }
 
-//
 // Name returns the name of the culture, i.e., "Azlanti".
-//
 func (c Azlanti) Name() string {
 	return "Azlanti"
 }
 
-//
 // HasGender returns true if the specified gender code is defined
 // in the Azlanti culture.
-//
 func (c Azlanti) HasGender(gender rune) bool {
 	switch gender {
 	case 'F', 'M':
@@ -73,9 +63,7 @@ func (c Azlanti) HasGender(gender rune) bool {
 	}
 }
 
-//
 // db returns the name data for the given gender in the Azlanti culture.
-//
 func (c Azlanti) db(gender rune) map[string][]nameFragment {
 	switch gender {
 	case 'F':
@@ -2651,6 +2639,7 @@ func (c Azlanti) db(gender rune) map[string][]nameFragment {
 		return nil
 	}
 }
+
 //
 // End of generated data
 //

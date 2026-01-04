@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) \   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 #
@@ -84,7 +84,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/text"
 )
 
-const GoVersionNumber="5.32.1" //@@##@@
+const GoVersionNumber="5.33.0" //@@##@@
 
 func main() {
 	var err error
@@ -189,19 +189,15 @@ func main() {
 	}
 }
 
-//
 // ReportedData describes the full output of an invocation of the die roller.
 // This includes overall metadata such as the PRNG seed value and a slice of
 // the result set from each discrete die-roll request.
-//
 type ReportedData struct {
 	ResultSet []ReportedResultSet
 	Seed      int64 `json:",omitempty"`
 }
 
-//
 // ResultStats provides statistics about the data set.
-//
 type ResultStats struct {
 	N      int     // population size
 	Mean   float64 // population mean (μ=Σ/N)
@@ -214,26 +210,21 @@ type ResultStats struct {
 // ReportedResultSet describes the result of a single die-roll request.
 // This may involve multiple die rolls, depending on the options included, and each of those
 // may involve multiple dice being rolled.
-//
 type ReportedResultSet struct {
 	Title   string `json:",omitempty"`
 	Results []dice.StructuredResult
 	Stats   *ResultStats `json:",omitempty"`
 }
 
-//
 // AddResult adds a new result set to the output data.
-//
 func (rd *ReportedData) AddResult(r ReportedResultSet) {
 	rd.ResultSet = append(rd.ResultSet, r)
 }
 
-//
 // CalculateStats generates the ResultStats for a given result set,
 // assign it to the receiver's Stats struct member. If there is only
 // a single value, there's not much point so we leave Stats with a nil
 // value in that case.
-//
 func (rs *ReportedResultSet) CalculateStats() {
 	if len(rs.Results) < 2 {
 		rs.Stats = nil
@@ -306,9 +297,7 @@ func (rs *ReportedResultSet) CalculateStats() {
 	}
 }
 
-//
 // WriteJSON outputs reported data in JSON format to the designated output device.
-//
 func (rd ReportedData) WriteJSON(o io.Writer) error {
 	j, err := json.Marshal(rd)
 	if err != nil {
@@ -318,9 +307,7 @@ func (rd ReportedData) WriteJSON(o io.Writer) error {
 	return nil
 }
 
-//
 // WriteText outputs reported data in plain text format.
-//
 func (rd ReportedData) WriteText(o io.Writer) {
 	for i, set := range rd.ResultSet {
 		if i > 0 {
@@ -330,9 +317,7 @@ func (rd ReportedData) WriteText(o io.Writer) {
 	}
 }
 
-//
 // WriteText outputs reported data in plain text format.
-//
 func (rs ReportedResultSet) WriteText(o io.Writer) {
 
 	if rs.Title != "" {

@@ -3,19 +3,18 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) \   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
 
-//
 // Package gma is the main port of the GMA Core API into the Go language.
 // Parts of the API which don't necessarily belong in their own individual packages (e.g., dice, mapper, etc.) will go here.
 // Currently, the game calendar is implemented here.
@@ -24,7 +23,6 @@
 //
 // Call NewCalendar(calSystem) to create a new game calendar which is set up for the particular calendaring system applicable for your world.
 // Then you can set the time and date, advance the time as needed, etc. by calling the various methods described below.
-//
 package gma
 
 import (
@@ -37,9 +35,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/dice"
 )
 
-//
 // MonthInfo describes a month in a given calendar system.
-//
 type MonthInfo struct {
 	// Month's full and abbreviated names
 	FullName, Abbrev string
@@ -48,7 +44,6 @@ type MonthInfo struct {
 	Days, LYDays int
 }
 
-//
 // Calendar describes the calendar system in play and the
 // current date and time.
 //
@@ -58,7 +53,6 @@ type MonthInfo struct {
 // the calendar type in play. Thus, we specify the calendar system
 // when constructing a new Calendar with NewCalendar, which sets up
 // all the parameters for managing a calendar of that type.
-//
 type Calendar struct {
 	// The name of the calendering system in use.
 	System string
@@ -109,33 +103,27 @@ type Calendar struct {
 
 type CalendarOption func(*Calendar)
 
-//
 // WithTime specifies an option to the NewCalendar constructor
 // to set the current time (i.e. the value of the Now attribute)
 // for the newly-created Calendar object.
-//
 func WithTime(timeValue int64) CalendarOption {
 	return func(c *Calendar) {
 		c.Now = timeValue
 	}
 }
 
-//
 // SetTimeValue sets the underlying time value (the Now attribute)
 // of the Calendar receiver.
-//
 func (c *Calendar) SetTimeValue(n int64) {
 	c.Now = n
 	c.recalc()
 }
 
-//
 // Advance adds delta to the current time tracked by the Calendar
 // receiver. If unitName is empty, the default is to interpret delta
 // in units of ticks.
 //
 // Returns the interval in ticks that the clock advanced.
-//
 func (c *Calendar) Advance(delta int64, unitName string) (int64, error) {
 	previous := c.Now
 	if unitName == "" {
@@ -152,18 +140,14 @@ func (c *Calendar) Advance(delta int64, unitName string) (int64, error) {
 
 }
 
-//
 // Delta returns the difference between the receiver and the given Calendar
 // value, in ticks.
-//
 func (c Calendar) Delta(other Calendar) int64 {
 	return c.Now - other.Now
 }
 
-//
 // AdvanceToNext increments the clock to the next even interval unit.
 // Defaults to ticks if unitName is empty.
-//
 func (c *Calendar) AdvanceToNext(unitName string) error {
 	t, err := c.TicksToInterval(unitName)
 	if err != nil {
@@ -173,13 +157,11 @@ func (c *Calendar) AdvanceToNext(unitName string) error {
 	return nil
 }
 
-//
 // Image generates and returns an image of the current calendar
 // year, suitable for printing out in traditional calendar layout.
 // The output is a slice of months, each of which is a slice of weeks,
 // with zeroes or the date in each element of the week
 // sub-slices.
-//
 func (c Calendar) Image() ([][][]int, error) {
 	basis, err := NewCalendar(c.System)
 	if err != nil {
@@ -219,12 +201,10 @@ func (c Calendar) Image() ([][][]int, error) {
 	return cal, nil
 }
 
-//
 // DeltaString returns a formatted string showing a time delta.
 // If strict is true, then the output is strictly conforming to
 // what ScanInterval would accept; otherwise, a more general
 // format is used which is more human-friendly.
-//
 func (c Calendar) DeltaString(delta int64, strict bool) string {
 	var sign = "+"
 	var mult = 1
@@ -302,20 +282,20 @@ func (c Calendar) DeltaString(delta int64, strict bool) string {
 	return res.String()
 }
 
-//
 // ScanInterval reads the provided relative time in one of the
 // following formats:
-//   nil
-//   <n> [<unit>]
-//   <unit>
-//   [<d>:[<hh>:]]<mm>:<ss>[.<t>]
+//
+//	nil
+//	<n> [<unit>]
+//	<unit>
+//	[<d>:[<hh>:]]<mm>:<ss>[.<t>]
+//
 // Returns the number of ticks represented by that interval of time.
 // Square brackets above indicate optional components.
 //
 // If literal square brackets are input (e.g., "[2d6+1] rounds"), then
 // the text inside the brackets is processed as a random die roll, the
 // result of which will be used for the time interval.
-//
 func (c *Calendar) ScanInterval(intSpec string) (int64, error) {
 	if strings.TrimSpace(intSpec) == "nil" {
 		return 0, nil
@@ -414,22 +394,20 @@ func (c *Calendar) ScanInterval(intSpec string) (int64, error) {
 	return int64(delta * float64(mult)), nil
 }
 
-//
 // Scan reads the provided string of the format
-//   [[[yyyy-]mmm-]dd] hh:mm[:ss[.t]]
+//
+//	[[[yyyy-]mmm-]dd] hh:mm[:ss[.t]]
+//
 // where mmm may be numeric or the month's name.
 //
 // Optional values are defaulted from the current date and time
 // in the receiver.
-//
 func (c *Calendar) Scan(timeString string) (int64, error) {
 	return c.ScanRelative(timeString, *c)
 }
 
-//
 // ScanRelative is like Scan but rather than pulling defaults
 // from the receiver it uses the provided Calendar value.
-//
 func (c *Calendar) ScanRelative(timeString string, relativeTo Calendar) (int64, error) {
 	//                           ._______________1__________.
 	//                           |._______2_______.         |            ._______9_______.
@@ -515,9 +493,7 @@ func numberOrDef(value string, defVal int, maxVal int) (int, error) {
 	return v, nil
 }
 
-//
 // SetTime sets the current time and date by discrete values.
-//
 func (c *Calendar) SetTime(year, month, date, hour, min, sec, ticks int) error {
 	mi := month - 1
 	if month < 1 || month > len(c.Months) {
@@ -536,9 +512,7 @@ func (c *Calendar) SetTime(year, month, date, hour, min, sec, ticks int) error {
 	return nil
 }
 
-//
 // SetTimeNamed is like SetTime but uses month names instead of numeric values.
-//
 func (c *Calendar) SetTimeNamed(year int, month string, date, hour, min, sec, ticks int) error {
 	for m, mi := range c.Months {
 		if mi.FullName == month || mi.Abbrev == month {
@@ -548,10 +522,8 @@ func (c *Calendar) SetTimeNamed(year int, month string, date, hour, min, sec, ti
 	return fmt.Errorf("no month named \"%s\"", month)
 }
 
-//
 // TicksToInterval returns the number of ticks between the current time
 // in the Calendar receiver and the start of the next specified interval.
-//
 func (c *Calendar) TicksToInterval(unitName string) (int64, error) {
 	if unitName == "" {
 		return 1, nil
@@ -568,15 +540,14 @@ func (c *Calendar) TicksToInterval(unitName string) (int64, error) {
 	return m - nextMod, nil
 }
 
-//
 // NewCalendar creates a new Calendar object which is set up
 // for the specified calendaring system.
 //
 // Currently supports the following calendar systems:
-//   "donuttus"   The game world created by the author and his friends.
-//   "golarion"   The game world for Paizo's Pathfinder system.
-//   "gregorian"  The calendar used in most of Earth.
 //
+//	"donuttus"   The game world created by the author and his friends.
+//	"golarion"   The game world for Paizo's Pathfinder system.
+//	"gregorian"  The calendar used in most of Earth.
 func NewCalendar(calSystem string, options ...CalendarOption) (Calendar, error) {
 	// The code in here needs some refactoring (for one thing, it fails the open/close principle).
 	const (
@@ -798,25 +769,23 @@ func NewCalendar(calSystem string, options ...CalendarOption) (Calendar, error) 
 	return newCal, nil
 }
 
-//
 // String renders the Calendar value as a string, in the format
-//   <day> <date> <month> <year> <hh>:<mm>:<ss>.<tick> <season> <phase>
+//
+//	<day> <date> <month> <year> <hh>:<mm>:<ss>.<tick> <season> <phase>
 //
 // This is equivalent to calling the ToString(1) method.
-//
 func (c Calendar) String() string {
 	return c.ToString(1)
 }
 
-//
 // ToString renders the Calendar value as a string, in the specified
 // format. Supported formats include:
-//   0: <date> <month> <year> <hh>:<mm>:<ss>.<tick>
-//   1: <day> <date> <month> <year> <hh>:<mm>:<ss>.<tick> <season> <phase>
-//   2: <date>-<month>-<year> <hh>:<mm>:<ss>.<tick>
-//   3: <year>-<month>-<date> <hh>:<mm>:<ss>.<tick>
-//   4: <hh>:<mm>:<ss>.<tick>
 //
+//	0: <date> <month> <year> <hh>:<mm>:<ss>.<tick>
+//	1: <day> <date> <month> <year> <hh>:<mm>:<ss>.<tick> <season> <phase>
+//	2: <date>-<month>-<year> <hh>:<mm>:<ss>.<tick>
+//	3: <year>-<month>-<date> <hh>:<mm>:<ss>.<tick>
+//	4: <hh>:<mm>:<ss>.<tick>
 func (c Calendar) ToString(style int) string {
 	switch style {
 	case 0:
@@ -842,10 +811,8 @@ func (c Calendar) ToString(style int) string {
 	}
 }
 
-//
 // IsLeapYear returns true if the year tracked by the
 // receiver is a leap year.
-//
 func (c *Calendar) IsLeapYear() bool {
 	return c.ly(c.Year)
 }
@@ -889,9 +856,9 @@ func (c *Calendar) recalc() {
 
 /*
 #
-# @[00]@| Go-GMA 5.32.1
+# @[00]@| Go-GMA 5.33.0
 # @[01]@|
-# @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
+# @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
 # @[12]@| Aloha, Oregon, USA. All Rights Reserved. Some components were introduced at different
 # @[13]@| points along that historical time line.

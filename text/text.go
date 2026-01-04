@@ -3,21 +3,19 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) \   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
 
-//
 // Package text provides text processing facilities used by GMA.
-//
 package text
 
 import (
@@ -46,12 +44,12 @@ func sum(ints ...int) int {
 	return s
 }
 
-//  ____                               _   _                                _
+//	____                               _   _                                _
+//
 // |  _ \ ___  _ __ ___   __ _ _ __   | \ | |_   _ _ __ ___   ___ _ __ __ _| |___
 // | |_) / _ \| '_ ` _ \ / _` | '_ \  |  \| | | | | '_ ` _ \ / _ \ '__/ _` | / __|
 // |  _ < (_) | | | | | | (_| | | | | | |\  | |_| | | | | | |  __/ | | (_| | \__ \
 // |_| \_\___/|_| |_| |_|\__,_|_| |_| |_| \_|\__,_|_| |_| |_|\___|_|  \__,_|_|___/
-//
 type romanTableEntry struct {
 	i int
 	r string
@@ -75,10 +73,8 @@ func romanTable() []romanTableEntry {
 	}
 }
 
-//
 // ToRoman converts an integer value to a Roman numeral string.
 // This will return "0" for a zero value.
-//
 func ToRoman(i int) (string, error) {
 	var roman strings.Builder
 
@@ -100,10 +96,8 @@ func ToRoman(i int) (string, error) {
 	return roman.String(), nil
 }
 
-//
 // FromRoman converts a Roman numeral string to integer.
 // Accepts "0" as a zero value.
-//
 func FromRoman(roman string) (int, error) {
 	var v int
 
@@ -138,38 +132,30 @@ func FromRoman(roman string) (int, error) {
 //   |_| |_____/_/\_\ |_|   |_|   \___/|_| \_\_|  |_/_/   \_\_|   |_| |___|_| \_|\____|
 //
 
-//
 // CenterPrefix returns the string of spaces which will need to go before the
 // given string so that, when the string is printed, it will end up centered
 // inside a field of the given width.  If the width is insufficient for the
 // string to be held inside it, the empty string is returned since there
 // will therefore not be any padding that goes to the left of the string.
-//
 func CenterPrefix(s string, width int) string {
 	return strings.Repeat(" ", (width-len(s))/2)
 }
 
-//
 // CenterSuffix is like CenterPrefix but gives the spaces which follow
 // the string to complete the centering operation.
-//
 func CenterSuffix(s string, width int) string {
 	return strings.Repeat(" ", (width-len(s)+1)/2)
 }
 
-//
 // CenterText returns a padded string with the input string s
 // centered within a field of the given width.
-//
 func CenterText(s string, width int) string {
 	l := len(s)
 	return strings.Repeat(" ", (width-l)/2) + s + strings.Repeat(" ", (width-l+1)/2)
 }
 
-//
 // CenterTextPadding takes the number of characters in the string
 // and the field width, and returns the prefix and suffix padding strings.
-//
 func CenterTextPadding(strlen, width int) (string, string) {
 	return strings.Repeat(" ", (width-strlen)/2), strings.Repeat(" ", (width-strlen+1)/2)
 }
@@ -182,10 +168,8 @@ func CenterTextPadding(strlen, width int) (string, string) {
 //   |_| |_____/_/\_\ |_|   |_|  |_/_/   \_\_| \_\_|\_\\___/|_|
 //
 
-//
 // Options to the Render function are tracked in
 // this structure.
-//
 type renderOptSet struct {
 	formatter renderingFormatter
 	bulletSet []rune
@@ -210,7 +194,6 @@ func AsPostScript(o *renderOptSet) {
 	o.formatter = &renderPostScriptFormatter{}
 }
 
-//
 // WithBullets may be added as an option to the Render function to
 // specify a custom set of bullet characters
 // to use for bulleted lists. The bullets passed
@@ -218,27 +201,27 @@ func AsPostScript(o *renderOptSet) {
 // repeats over as necessary for additional levels.
 //
 // Example:
-//  formattedText, err := Render(srcText, AsPlainText, WithBullets('*', '-'))
+//
+//	formattedText, err := Render(srcText, AsPlainText, WithBullets('*', '-'))
+//
 // This will alternate between '*' and '-' as bullets at each level.
 //
 // While the default bullet(s) are chosen appropriately for each output format,
 // no other processing is made to the runes passed here; they are used as-is
 // in each case, but the following special characters are recognized and
 // translated to something sensible in each output format:
-//    •  U+2022 Standard bullet
-//    ‣  U+2023 Triangle bullet
-//    ⁃  U+2043 Hyphen bullet
-//    ○  U+25CB Unfilled circle bullet
-//    ☞  U+261E Pointing index bullet
-//    ★  U+2605 Star bullet
-//
+//   - U+2022 Standard bullet
+//     ‣  U+2023 Triangle bullet
+//     ⁃  U+2043 Hyphen bullet
+//     ○  U+25CB Unfilled circle bullet
+//     ☞  U+261E Pointing index bullet
+//     ★  U+2605 Star bullet
 func WithBullets(bullets ...rune) func(*renderOptSet) {
 	return func(o *renderOptSet) {
 		o.bulletSet = bullets
 	}
 }
 
-//
 // WithCompactText may be added as an option to the Render function to
 // specify that a more compact rendering of text
 // blocks in order to conserve paper real estate.
@@ -246,17 +229,15 @@ func WithBullets(bullets ...rune) func(*renderOptSet) {
 // Currently only supported for PostScript output.
 //
 // Example:
-//  ps, err := Render(srcText, AsPostScript, WithCompactText)
 //
+//	ps, err := Render(srcText, AsPostScript, WithCompactText)
 func WithCompactText(o *renderOptSet) {
 	o.compact = true
 }
 
-//
 // Each output formatter must supply these methods
 // which the Render function will invoke as it parses
 // the marked up source text.
-//
 type renderingFormatter interface {
 	init(renderOptSet)
 	newPar()
@@ -274,15 +255,14 @@ type renderingFormatter interface {
 	toString(string) string
 }
 
+//	____  _       _     _____         _
 //
-//  ____  _       _     _____         _
 // |  _ \| | __ _(_)_ _|_   _|____  _| |_
 // | |_) | |/ _` | | '_ \| |/ _ \ \/ / __|
 // |  __/| | (_| | | | | | |  __/>  <| |_
 // |_|   |_|\__,_|_|_| |_|_|\___/_/\_\\__|
 //
 // Plain Text output formatter
-//
 type renderPlainTextFormatter struct {
 	buf    strings.Builder
 	indent int
@@ -480,15 +460,14 @@ func (f *renderPlainTextFormatter) table(t *textTable) {
 	}
 }
 
+//	_   _ _____ __  __ _
 //
-//  _   _ _____ __  __ _
 // | | | |_   _|  \/  | |
 // | |_| | | | | |\/| | |
 // |  _  | | | | |  | | |___
 // |_| |_| |_| |_|  |_|_____|
 //
 // HTML output formatter
-//
 type renderHTMLFormatter struct {
 	buf       strings.Builder
 	indent    int
@@ -876,16 +855,16 @@ func (f *renderHTMLFormatter) table(t *textTable) {
 	f.buf.WriteString("</TFOOT></TABLE>")
 }
 
+//	____           _   ____            _       _
 //
-//  ____           _   ____            _       _
 // |  _ \ ___  ___| |_/ ___|  ___ _ __(_)_ __ | |_
 // | |_) / _ \/ __| __\___ \ / __| '__| | '_ \| __|
 // |  __/ (_) \__ \ |_ ___) | (__| |  | | |_) | |_
 // |_|   \___/|___/\__|____/ \___|_|  |_| .__/ \__|
-//                                      |_|
+//
+//	|_|
 //
 // PostScript output formatter
-//
 type renderPostScriptFormatter struct {
 	buf          strings.Builder
 	indent       int
@@ -1158,55 +1137,54 @@ func (f *renderPostScriptFormatter) enumListItem(level, counter int) {
 	}
 }
 
+//	For PostScript tables, we handle this by
+//	emitting a routine up front which estimates
+//	the horizontal space required by each column.
+//	this way we let the device, which knows its
+//	output parameters and font metrics, so all
+//	the math the other formatter classes do here
+//	will instead by shipped over to the output
+//	device and written in PostScript.
 //
-//  For PostScript tables, we handle this by
-//  emitting a routine up front which estimates
-//  the horizontal space required by each column.
-//  this way we let the device, which knows its
-//  output parameters and font metrics, so all
-//  the math the other formatter classes do here
-//  will instead by shipped over to the output
-//  device and written in PostScript.
+//	This defines variables called /PsFF_Cw<n>
+//	which hold the size in points for column <n>
+//	of the table (0-origin).
 //
-//  This defines variables called /PsFF_Cw<n>
-//  which hold the size in points for column <n>
-//  of the table (0-origin).
+//	The code for this is essentially:
+//	[ <col <n> row 0> <col <n> row 1> ... ] {
+//	  stringwidth pop dup PsFF_Cw<n> gt {
+//	    /PsFF_Cw<n> exch def
+//	  } { pop } ifelse
+//	} forall
 //
-//  The code for this is essentially:
-//  [ <col <n> row 0> <col <n> row 1> ... ] {
-//    stringwidth pop dup PsFF_Cw<n> gt {
-//      /PsFF_Cw<n> exch def
-//    } { pop } ifelse
-//  } forall
+//	As the table cells are typeset, they are put
+//	into boxes of width PsFF_Cw<n> using the normal
+//	boxed text support we use elsewhere, via the
+//	PsFF_tXX procedures.
 //
-//  As the table cells are typeset, they are put
-//  into boxes of width PsFF_Cw<n> using the normal
-//  boxed text support we use elsewhere, via the
-//  PsFF_tXX procedures.
+//	For spanned columns, we will skip over the
+//	spans when doing the initial calculations,
+//	and then emit code for each span which adjusts
+//	the column widths:
 //
-//  For spanned columns, we will skip over the
-//  spans when doing the initial calculations,
-//  and then emit code for each span which adjusts
-//  the column widths:
+//	% span columns 1-3
+//	<text> stringwidth pop PsFF_Cw1 PsFF_Cw2 add
+//	PsFF_Cw3 add 2 PsFF_TcolSpn mul add gt {
+//	  /PsFF_Cw1 PsFF_Cw1 <x> add def
+//	  /PsFF_Cw2 PsFF_Cw2 <x> add def
+//	  /PsFF_Cw3 PsFF_Cw3 <x> add def
+//	} if
 //
-//  % span columns 1-3
-//  <text> stringwidth pop PsFF_Cw1 PsFF_Cw2 add
-//  PsFF_Cw3 add 2 PsFF_TcolSpn mul add gt {
-//    /PsFF_Cw1 PsFF_Cw1 <x> add def
-//    /PsFF_Cw2 PsFF_Cw2 <x> add def
-//    /PsFF_Cw3 PsFF_Cw3 <x> add def
-//  } if
-//
-//  (note that PsFF_TcolSpn is a constant equal
-//  to the amount of space added in a table between
-//  columns--this needs to be added back into the
-//  size of spanned columns)
+//	(note that PsFF_TcolSpn is a constant equal
+//	to the amount of space added in a table between
+//	columns--this needs to be added back into the
+//	size of spanned columns)
 //
 // CAPTIONS
-//	Captions are added to the table by joining the caption cell(s), formatting with onestyle=true
-//  sending
-//		{PsFF_nl PsFF_rm} [ ...words in caption... ] {PsFF_tbl_caption}
 //
+//		Captions are added to the table by joining the caption cell(s), formatting with onestyle=true
+//	 sending
+//			{PsFF_nl PsFF_rm} [ ...words in caption... ] {PsFF_tbl_caption}
 func (f *renderPostScriptFormatter) table(t *textTable) {
 	var linesPerRow []int
 
@@ -1374,28 +1352,22 @@ PsFF__t__need PsFF__t__have gt {
 // |___|_| |_| .__/ \__,_|\__| |_|   \__,_|_|  |___/\___|_|
 //           |_|
 
-//
 // Incoming list items are marked with one of these, to be expanded
 // later by the output formatter.
-//
 type listItem struct {
 	bullet rune // '*' for bullet lists or '#' for enumerated
 	level  int  // nesting level
 }
 
-//
 // Representation of a table as a slice of rows, each of which
 // is a slice of tableCells.
-//
 type textTable struct {
 	rows      [][]*tableCell
 	footnotes []string
 	captions  []string
 }
 
-//
 // Count number of columns
-//
 func (t *textTable) numCols() int {
 	nc := 0
 	for _, r := range t.rows {
@@ -1404,24 +1376,18 @@ func (t *textTable) numCols() int {
 	return nc
 }
 
-//
 // Add a new caption to a textTable.
-//
 func (t *textTable) addCaption(caption string) {
 	t.captions = append(t.captions, caption)
 }
 
-//
 // Add a new footer line to a textTable.
-//
 func (t *textTable) addFooter(footer string) {
 	t.footnotes = append(t.footnotes, footer)
 }
 
-//
 // Add a new row to a textTable.
 // Handles spanned columns.
-//
 func (t *textTable) addRow(cols []string) error {
 	if t.rows == nil {
 		t.rows = make([][]*tableCell, 0, 32)
@@ -1444,18 +1410,14 @@ func (t *textTable) addRow(cols []string) error {
 	return nil
 }
 
-//
 // Incoming table rows are represented in the input stream
 // with one of these, which notes that this should be a table
 // row and holds the markup text source from that line of input.
-//
 type tableRow struct {
 	src string
 }
 
-//
 // This represents a specific cell in a textTable.
-//
 type tableCell struct {
 	text   string // text that belongs in this cell
 	span   int    // number of columns to the right to take up
@@ -1463,12 +1425,10 @@ type tableCell struct {
 	header bool   // true if this is a header cell
 }
 
-//
 // Create a new tableCell, figuring out alignment
 // from context (based on leading and/or trailing space)
 //
 // Also identifies cells which start with '=' as headers.
-//
 func newTableCell(text string) *tableCell {
 	c := &tableCell{
 		align: '<',
@@ -1489,10 +1449,8 @@ func newTableCell(text string) *tableCell {
 	return c
 }
 
-//
 // General-purpose functions to generate enumerated list
 // numbering.
-//
 func enumType(level int) string {
 	switch (level - 1) % 5 {
 	case 0:
@@ -1763,32 +1721,32 @@ func (f *renderPostScriptFormatter) miniCellFormatter(text string, line int) str
 	return ps.String()
 }
 
-//
 // Render converts its input text (in our simple markup notation described
 // below) to an output format as specified by the option(s) passed after
 // the input text in the parameter list.
 //
 // The set of options which may follow the string to be formatted
 // include these which select the overall output format:
-//   AsPlainText  -- render a text-only version of the input
-//                   (this is the default)
-//   AsHTML       -- render an HTML version of the input
-//   AsPostScript -- render a PostScript version of the input
-//                   (requires the GMA PostScript preamble and
-//                   other supporting code; this merely produces
-//                   the formatted text block to the PostScript
-//                   data being produced by the application)
+//
+//	AsPlainText  -- render a text-only version of the input
+//	                (this is the default)
+//	AsHTML       -- render an HTML version of the input
+//	AsPostScript -- render a PostScript version of the input
+//	                (requires the GMA PostScript preamble and
+//	                other supporting code; this merely produces
+//	                the formatted text block to the PostScript
+//	                data being produced by the application)
 //
 // and these options to control specific formatting in the selected
 // output format:
-//   WithBullets(...)  -- use a custom bullet sequence
-//   WithCompactText   -- squish verbose text blocks down a bit*
 //
-//  *(PostScript format only)
+//	 WithBullets(...)  -- use a custom bullet sequence
+//	 WithCompactText   -- squish verbose text blocks down a bit*
+//
+//	*(PostScript format only)
 //
 // The markup syntax is described in gma-markup-syntax(7) and in the
 // MarkupSyntax constant string in this package.
-//
 func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 	ops := renderOptSet{
 		formatter: &renderPlainTextFormatter{},
@@ -2076,14 +2034,12 @@ func Render(text string, opts ...func(*renderOptSet)) (string, error) {
 	return ops.formatter.finalize(), nil
 }
 
-//
 // Character counter formatter. You can point miniFormatter into this
 // as a rendering engine but all it does is count the characters that
 // were sent to it.
 //
 // This is only intended for use in restricted environments where
 // miniFormatter can work, so not all markup is supported.
-//
 type countingFormatter struct {
 	buf    strings.Builder
 	filter func(string) string
@@ -2274,9 +2230,9 @@ produces:
 
 `
 
-// @[00]@| Go-GMA 5.32.1
+// @[00]@| Go-GMA 5.33.0
 // @[01]@|
-// @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
+// @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
 // @[12]@| Aloha, Oregon, USA. All Rights Reserved. Some components were introduced at different
 // @[13]@| points along that historical time line.

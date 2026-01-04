@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) \   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -21,21 +21,17 @@
 
 package namegen
 
-//
 // Halfling describes the naming conventions for the Halfling
 // culture. Its methods give further details, but generally speaking
 // the main operation to perform on these types is to just call the
 // Generate and GenerateWithSurnames methods to create new names which
 // conform to their cultural patterns.
-//
 type Halfling struct {
 	BaseCulture
 }
 
-//
 // prefix gives the prefix/selector string for each Halfling gender, or an empty
 // string if one is not defined.
-//
 func (c Halfling) prefix(gender rune) string {
 	switch gender {
 	case 'F':
@@ -47,9 +43,7 @@ func (c Halfling) prefix(gender rune) string {
 	}
 }
 
-//
 // defaultMinMax returns the minimum and maximum size of Halfling names based on gender.
-//
 func (c Halfling) defaultMinMax(gender rune) (int, int) {
 	switch gender {
 	case 'F':
@@ -61,24 +55,18 @@ func (c Halfling) defaultMinMax(gender rune) (int, int) {
 	}
 }
 
-//
 // Genders returns the set of genders defined for the Halfling culture.
-//
 func (c Halfling) Genders() []rune {
 	return []rune{'F', 'M'}
 }
 
-//
 // Name returns the name of the culture, i.e., "Halfling".
-//
 func (c Halfling) Name() string {
 	return "Halfling"
 }
 
-//
 // HasGender returns true if the specified gender code is defined
 // in the Halfling culture.
-//
 func (c Halfling) HasGender(gender rune) bool {
 	switch gender {
 	case 'F', 'M':
@@ -88,9 +76,7 @@ func (c Halfling) HasGender(gender rune) bool {
 	}
 }
 
-//
 // db returns the name data for the given gender in the Halfling culture.
-//
 func (c Halfling) db(gender rune) map[string][]nameFragment {
 	switch gender {
 	case 'F':
@@ -5602,6 +5588,7 @@ func (c Halfling) db(gender rune) map[string][]nameFragment {
 		return nil
 	}
 }
+
 //
 // End of generated data
 //

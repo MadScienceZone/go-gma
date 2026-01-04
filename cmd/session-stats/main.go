@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) \   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 #
@@ -55,11 +55,11 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/MadScienceZone/go-gma/v5/text"
 	"html"
 	"io/ioutil"
 	"os"
 	"time"
-	"github.com/MadScienceZone/go-gma/v5/text"
 )
 
 type SessionStats struct {
@@ -74,7 +74,7 @@ type GameSession struct {
 	WorldDates string   `json:"world_dates,omitempty"`
 	BookNumber int      `json:"book"`
 	Synopsis   string   `json:"synopsis,omitempty"`
-	ForumURL   string	`json:"url,omitempty"`
+	ForumURL   string   `json:"url,omitempty"`
 }
 
 type GameDate struct {
@@ -191,7 +191,7 @@ func generateGameSynopsis(stats SessionStats, reverseOrder bool) {
 	}
 
 	if reverseOrder {
-		for i := len(synopses)-1; i >= 0; i-- {
+		for i := len(synopses) - 1; i >= 0; i-- {
 			fmt.Println(synopses[i])
 		}
 	} else {

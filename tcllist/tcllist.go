@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) \   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -31,7 +31,6 @@
 // In our case, we don't have a Tcl interpreter handy,  so we'll implement
 // a simple string scanner in Go which will convert these string representations to and from Go slices.
 
-//
 // Package tcllist converts between Tcl list strings and Go slices.
 //
 // Some of the older elements of GMA (which used to be entirely written in
@@ -49,7 +48,7 @@
 // The tcllist Go package provides an easy interface to manipulate
 // Tcl  lists  as  Go  types.
 //
-// TCL LIST FORMAT
+// # TCL LIST FORMAT
 //
 // In  a  nutshell,  a  Tcl  list (as a string representation) is a space-delimited
 // list of values. Any value which includes spaces  is  enclosed
@@ -63,10 +62,13 @@
 // string that happens to contain spaces or braces is  only  distinguished
 // from a deeply-nested list value when you attempt to interpret it as one
 // or another in the code. Thus, the list
-// 	  “a b {this {is a} string}”
+//
+//	“a b {this {is a} string}”
+//
 // has three elements: “a”, “b”, and “this {is a} string”.   Otherwise,  a
 // lone brace that's part of a string value should be escaped with a backslash:
-// 	  “a b {this \{ too}”
+//
+//	“a b {this \{ too}”
 //
 // Literal backslashes may be escaped with a backslash as well.
 //
@@ -82,68 +84,68 @@ import (
 	"strings"
 )
 
-//--------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------
 //
 // Rather than imperfectly try to mimic the behavior of Tcl list
 // code (and hope we didn't miss some nuance), the following code is
 // our port of the code from the Tcl sources, which is itself released
 // under the following terms:
 //
-//  _______________________________________________________________________
+//	_______________________________________________________________________
+//
 // |  The following terms apply to the all versions of the core Tcl/Tk     |
 // |  releases, the Tcl/Tk browser plug-in version 2.0, and TclBlend       |
-//    and Jacl version 1.0. Please note that the TclPro tools are under
-//    a different license agreement. This agreement is part of the
-//    standard Tcl/Tk distribution as the file named "license.terms".
 //
-//    Tcl/Tk License Terms
+//	  and Jacl version 1.0. Please note that the TclPro tools are under
+//	  a different license agreement. This agreement is part of the
+//	  standard Tcl/Tk distribution as the file named "license.terms".
 //
-//    This software is copyrighted by the Regents of the University of
-//    California, Sun Microsystems, Inc., Scriptics Corporation, and
-//    other parties. The following terms apply to all files associated
-//    with the software unless explicitly disclaimed in individual files.
+//	  Tcl/Tk License Terms
 //
-//    The authors hereby grant permission to use, copy, modify, distribute,
-//    and license this software and its documentation for any purpose,
-//    provided that existing copyright notices are retained in all copies
-//    and that this notice is included verbatim in any distributions. No
-//    written agreement, license, or royalty fee is required for any of
-//    the authorized uses. Modifications to this software may be
-//    copyrighted by their authors and need not follow the licensing
-//    terms described here, provided that the new terms are clearly
-//    indicated on the first page of each file where they apply.
+//	  This software is copyrighted by the Regents of the University of
+//	  California, Sun Microsystems, Inc., Scriptics Corporation, and
+//	  other parties. The following terms apply to all files associated
+//	  with the software unless explicitly disclaimed in individual files.
 //
-//    IN NO EVENT SHALL THE AUTHORS OR DISTRIBUTORS BE LIABLE TO ANY
-//    PARTY FOR DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
-//    DAMAGES ARISING OUT OF THE USE OF THIS SOFTWARE, ITS DOCUMENTATION,
-//    OR ANY DERIVATIVES THEREOF, EVEN IF THE AUTHORS HAVE BEEN ADVISED
-//    OF THE POSSIBILITY OF SUCH DAMAGE.
+//	  The authors hereby grant permission to use, copy, modify, distribute,
+//	  and license this software and its documentation for any purpose,
+//	  provided that existing copyright notices are retained in all copies
+//	  and that this notice is included verbatim in any distributions. No
+//	  written agreement, license, or royalty fee is required for any of
+//	  the authorized uses. Modifications to this software may be
+//	  copyrighted by their authors and need not follow the licensing
+//	  terms described here, provided that the new terms are clearly
+//	  indicated on the first page of each file where they apply.
 //
-//    THE AUTHORS AND DISTRIBUTORS SPECIFICALLY DISCLAIM ANY WARRANTIES,
-//    INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY,
-//    FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. THIS SOFTWARE
-//    IS PROVIDED ON AN "AS IS" BASIS, AND THE AUTHORS AND DISTRIBUTORS HAVE
-//    NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS,
-//    OR MODIFICATIONS.
+//	  IN NO EVENT SHALL THE AUTHORS OR DISTRIBUTORS BE LIABLE TO ANY
+//	  PARTY FOR DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
+//	  DAMAGES ARISING OUT OF THE USE OF THIS SOFTWARE, ITS DOCUMENTATION,
+//	  OR ANY DERIVATIVES THEREOF, EVEN IF THE AUTHORS HAVE BEEN ADVISED
+//	  OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-//    GOVERNMENT USE: If you are acquiring this software on behalf of the
-//    U.S. government, the Government shall have only "Restricted Rights"
-//    in the software and related documentation as defined in the Federal
-//    Acquisition Regulations (FARs) in Clause 52.227.19 (c) (2). If you
-//    are acquiring the software on behalf of the Department of Defense,
-//    the software shall be classified as "Commercial Computer Software"
-//    and the Government shall have only "Restricted Rights" as defined
-//    in Clause 252.227-7013 (c) (1) of DFARs. Notwithstanding the foregoing,
-//    the authors grant the U.S. Government and others acting in its behalf
-//    permission to use and distribute the software in accordance with the
-//  | terms specified in this license.                                    |
-//  |_____________________________________________________________________|
+//	  THE AUTHORS AND DISTRIBUTORS SPECIFICALLY DISCLAIM ANY WARRANTIES,
+//	  INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY,
+//	  FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. THIS SOFTWARE
+//	  IS PROVIDED ON AN "AS IS" BASIS, AND THE AUTHORS AND DISTRIBUTORS HAVE
+//	  NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS,
+//	  OR MODIFICATIONS.
 //
+//	  GOVERNMENT USE: If you are acquiring this software on behalf of the
+//	  U.S. government, the Government shall have only "Restricted Rights"
+//	  in the software and related documentation as defined in the Federal
+//	  Acquisition Regulations (FARs) in Clause 52.227.19 (c) (2). If you
+//	  are acquiring the software on behalf of the Department of Defense,
+//	  the software shall be classified as "Commercial Computer Software"
+//	  and the Government shall have only "Restricted Rights" as defined
+//	  in Clause 252.227-7013 (c) (1) of DFARs. Notwithstanding the foregoing,
+//	  the authors grant the U.S. Government and others acting in its behalf
+//	  permission to use and distribute the software in accordance with the
+//	| terms specified in this license.                                    |
+//	|_____________________________________________________________________|
 //
 // The following code was written for GMA by Steven Willoughby, based on the
 // original C code distributed in the Tcl core source code files "tclUtil.c",
 // "tclParse.c", "tclUtf.c", as a direct port of that original code to Go.
-//
 const tConvertNone = 0
 const tTclDontUseBraces = 1
 const tConvertBrace = 2
@@ -152,12 +154,10 @@ const tConvertMask = (tConvertBrace | tConvertEscape)
 const tTclDontQuoteHash = 8
 const tConvertAny = 16
 
-//
 // Tcl_ScanElement(string, flagPtr) -> len
 // scans the input string, setting flags based on what's in that element
 // and returns the string length needed to hold the string representation
 // of that element (an overestimation for allocation purposes)
-//
 func tclScanElement(element string, flags int) (int, int, error) {
 	length := len(element)
 	nestingLevel := 0
@@ -509,7 +509,6 @@ func ParseTclList(tclString string) ([]string, error) {
 	return l, nil
 }
 
-//
 // ConvertTypes converts some or all of the elements in a string slice
 // such as that returned by ParseTclList to a new slice of values
 // which have been converted to other data types as specified by the
@@ -523,15 +522,17 @@ func ParseTclList(tclString string) ([]string, error) {
 //
 // The types string controls this conversion. Each character indicates
 // the required type for the corresponding element in the input slice, as follows:
-//    "-"  do not convert this element.
-//    "s"  copy the element as a string.
-//    "b"  copy the element as a []byte slice.
-//    "r"  copy the element as a []rune slice.
-//    "f"  convert the element to a float value.
-//    "i"  convert the element to an int value.
-//    "I"  as i, but an empty string is equivalent to 0.
-//    "?"  copy the element as a bool value.
-//    "*"  stop processing here, ignoring any remaining slice elements.
+//
+//	"-"  do not convert this element.
+//	"s"  copy the element as a string.
+//	"b"  copy the element as a []byte slice.
+//	"r"  copy the element as a []rune slice.
+//	"f"  convert the element to a float value.
+//	"i"  convert the element to an int value.
+//	"I"  as i, but an empty string is equivalent to 0.
+//	"?"  copy the element as a bool value.
+//	"*"  stop processing here, ignoring any remaining slice elements.
+//
 // If the value cannot be converted as requested, an error is returned.
 //
 // This provides a simple way to validate the types for all values in
@@ -541,7 +542,6 @@ func ParseTclList(tclString string) ([]string, error) {
 // The input slice must have exactly the number of elements as characters
 // in the type string unless the * character is used in types, so this
 // function also enforces that the expected number of data elements is present.
-//
 func ConvertTypes(list []string, types string) ([]any, error) {
 	converted := make([]any, len(list))
 	var err error
@@ -600,7 +600,6 @@ func Parse(tclString, types string) ([]any, error) {
 	return ConvertTypes(f, types)
 }
 
-//
 // ToDeepTclString takes a number of arbitrarily-typed values and returns
 // a Tcl string which represents them as elements of a list.
 // Supports values of type
@@ -619,7 +618,6 @@ func Parse(tclString, types string) ([]any, error) {
 //
 // For example, ToDeepTclString("a", 12, 13.42, []string{"b", "c"})
 // returns the string "a 12 13.42 {b c}".
-//
 func ToDeepTclString(values ...any) (string, error) {
 	var list []string
 
@@ -679,10 +677,8 @@ func ToDeepTclString(values ...any) (string, error) {
 	return ToTclString(list)
 }
 
-//
 // StripLevel strips away the outermost level of {} characters from a string.
 // The string must begin and end with { and } characters respectively.
-//
 func StripLevel(s string) string {
 	if len(s) > 1 && s[0] == '{' && s[len(s)-1] == '}' {
 		return s[1 : len(s)-1]
@@ -690,9 +686,9 @@ func StripLevel(s string) string {
 	return s
 }
 
-// @[00]@| Go-GMA 5.32.1
+// @[00]@| Go-GMA 5.33.0
 // @[01]@|
-// @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
+// @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
 // @[12]@| Aloha, Oregon, USA. All Rights Reserved. Some components were introduced at different
 // @[13]@| points along that historical time line.

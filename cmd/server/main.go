@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) \   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -50,65 +50,66 @@ To guard against nuisance or malicious port scans and other superfluous connecti
 (In actual production use, we have observed some automated agents which connected and then sat idle for hours, if we didn’t terminate their connections. This prevents that.)
 
 Usage:
-   server [-cpuprofile path] [−debug flags] [−endpoint [hostname]:port] [-help] [−init−file path]
-          [−log−file path] [−password−file path] −sqlite path [−telemetry−log path] [-telemetry-name name]
 
-   -debug flags
-      Add debugging information to the log file. The flags value is a comma-separated
-      list of debugging information to be included, from the following list:
-         all      All possible debugging information.
-         none     No debugging information (this cancels any previously-specified
-                  debug flags, but more may be added after this).
-         auth     Authentication operations.
-         db       Database operations.
-         events   Background events.
-         i/o      Input/output operations.
-         init     Client initialization.
-         messages Message traffic between the server and clients.
-         misc     Miscellaneous debugging.
-		 qos      Quality of Service controls.
-         state    Changes to the game state.
+	   server [-cpuprofile path] [−debug flags] [−endpoint [hostname]:port] [-help] [−init−file path]
+	          [−log−file path] [−password−file path] −sqlite path [−telemetry−log path] [-telemetry-name name]
 
-   -endpoint [hostname]:port
-      Accept incoming client connections on the specified TCP port. (Default ":2323")
+	   -debug flags
+	      Add debugging information to the log file. The flags value is a comma-separated
+	      list of debugging information to be included, from the following list:
+	         all      All possible debugging information.
+	         none     No debugging information (this cancels any previously-specified
+	                  debug flags, but more may be added after this).
+	         auth     Authentication operations.
+	         db       Database operations.
+	         events   Background events.
+	         i/o      Input/output operations.
+	         init     Client initialization.
+	         messages Message traffic between the server and clients.
+	         misc     Miscellaneous debugging.
+			 qos      Quality of Service controls.
+	         state    Changes to the game state.
 
-   -init-file path
-      Initialization file which controls the initial client negotiation upon first
-      connection to the server.
+	   -endpoint [hostname]:port
+	      Accept incoming client connections on the specified TCP port. (Default ":2323")
 
-   -log-file path
-      Write a log of server actions to the specified file. (Default "-", which means
-      to send to standard output.)
+	   -init-file path
+	      Initialization file which controls the initial client negotiation upon first
+	      connection to the server.
 
-   -password-file path
-      Enable server authentication with the set of passwords in the specified file.
-      Each line of the file holds a plaintext password, in the following format:
-          general-user-password
-          gm-only-password
-          user1:password1
-          user2:password2
-          user3:password3
-      Only the first line is required.
+	   -log-file path
+	      Write a log of server actions to the specified file. (Default "-", which means
+	      to send to standard output.)
 
-   -cpuprofile path
-      Enables CPU profiling, saving sampled performance data to the named path, which can
-	  then be analyzed with tools such as "go tool pprof".
+	   -password-file path
+	      Enable server authentication with the set of passwords in the specified file.
+	      Each line of the file holds a plaintext password, in the following format:
+	          general-user-password
+	          gm-only-password
+	          user1:password1
+	          user2:password2
+	          user3:password3
+	      Only the first line is required.
 
-   -sqlite path
-      Specifies the file name of a sqlite database used to keep persistent data used
-      by the server. If path does not exist, server will create a new database with that
-      name.
+	   -cpuprofile path
+	      Enables CPU profiling, saving sampled performance data to the named path, which can
+		  then be analyzed with tools such as "go tool pprof".
 
-   -telemetry-log path
-      If server was compiled to send performance telemetry data, a debugging log of that
-      data is recorded in the specified file. If path is "-", the debugging log will go
-	  to standard output.
+	   -sqlite path
+	      Specifies the file name of a sqlite database used to keep persistent data used
+	      by the server. If path does not exist, server will create a new database with that
+	      name.
 
-   -telemetry-name string
-      If server was compiled to send performance telemetry data, this specifies a custom
-      application name to be reported for this instance of the server.
-	  You can also accomplish this by setting the NEW_RELIC_APP_NAME
-	  environment variable.
+	   -telemetry-log path
+	      If server was compiled to send performance telemetry data, a debugging log of that
+	      data is recorded in the specified file. If path is "-", the debugging log will go
+		  to standard output.
+
+	   -telemetry-name string
+	      If server was compiled to send performance telemetry data, this specifies a custom
+	      application name to be reported for this instance of the server.
+		  You can also accomplish this by setting the NEW_RELIC_APP_NAME
+		  environment variable.
 
 See the full documentation in the accompanying manual file man/man6/server.6.pdf (or run “gma man go server” if you have the GMA Core package installed as well as Go-GMA).
 
@@ -134,12 +135,10 @@ import (
 // Auto-configured values
 //
 
-const GoVersionNumber="5.32.1" // @@##@@
+const GoVersionNumber="5.33.0" // @@##@@
 
-//
 // eventMonitor responds to signals and timers that affect our overall operation
 // independent of client requests.
-//
 func eventMonitor(sigChan chan os.Signal, stopChan chan int, app *Application) {
 	ping_signal := time.NewTicker(1 * time.Minute)
 	app.LastPing = time.Now()
@@ -356,9 +355,9 @@ func acceptIncomingConnections(incoming net.Listener, app *Application) {
 	}
 }
 
-// @[00]@| Go-GMA 5.32.1
+// @[00]@| Go-GMA 5.33.0
 // @[01]@|
-// @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
+// @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
 // @[12]@| Aloha, Oregon, USA. All Rights Reserved. Some components were introduced at different
 // @[13]@| points along that historical time line.

@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) \   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -48,25 +48,19 @@ func (e UnsupportedPreferencesVersionError) Error() string {
 	return fmt.Sprintf("preferences data version %d is not a supported version (%d-%d)", e.DataVersion, e.MinimumVersion, e.MaximumVersion)
 }
 
-//
 // GridOffsets provide x and y offsets for grid guides
-//
 type GridOffsets struct {
 	X int `json:"x,omitempty"`
 	Y int `json:"y,omitempty"`
 }
 
-//
 // GridGuide describes extra grid guidelines
-//
 type GridGuide struct {
 	Interval int         `json:"interval,omitempty"`
 	Offsets  GridOffsets `json:"offsets,omitempty"`
 }
 
-//
 // TimerVisibility represents which timers a user wishes to see on their client's display.
-//
 type TimerVisibility byte
 
 const (
@@ -103,9 +97,7 @@ func (tv *TimerVisibility) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-//
 // ButtonSize represents the valid sizes for buttons to be.
-//
 type ButtonSize byte
 
 const (
@@ -143,9 +135,7 @@ func (bs *ButtonSize) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-//
 // ImageType represents the valid bitmap types supported by the mapper.
-//
 type ImageType byte
 
 const (
@@ -174,10 +164,8 @@ func (i *ImageType) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-//
 // ServerProfile describes each set of preferences associated with a given
 // server as opposed to global settings which apply regardless of server.
-//
 type ServerProfile struct {
 	Name         string `json:"name"`
 	Host         string `json:"host,omitempty"`
@@ -202,9 +190,7 @@ type ServerProfile struct {
 	SshPath      string `json:"ssh_path,omitempty"`
 }
 
-//
 // FontWeight is the set of valid font weight values
-//
 type FontWeight byte
 
 const (
@@ -212,9 +198,7 @@ const (
 	Bold
 )
 
-//
 // FontSlant is the set of valid font slant values
-//
 type FontSlant byte
 
 const (
@@ -222,9 +206,7 @@ const (
 	Italic
 )
 
-//
 // UserFont describes a user-defined font.
-//
 type UserFont struct {
 	Family     string     `json:"family,omitempty"`
 	Size       float64    `json:"size,omitempty"`
@@ -234,9 +216,7 @@ type UserFont struct {
 	Underline  string     `json:"underline,omitempty"`
 }
 
-//
 // ColorSet encapsulates the colors to use in light and dark mode.
-//
 type ColorSet struct {
 	Dark  string `json:"dark,omitempty"`
 	Light string `json:"light,omitempty"`
@@ -291,10 +271,8 @@ const (
 	DefaultPresetNameDark   = "cyan"
 )
 
-//
 // DieRollComponent describes the settings for a specific chat or die-roll style
 // component.
-//
 type DieRollComponent struct {
 	FG             ColorSet `json:"fg,omitempty"`
 	BG             ColorSet `json:"bg,omitempty"`
@@ -305,11 +283,9 @@ type DieRollComponent struct {
 	BaselineOffset int      `json:"offset,omitempty"`
 }
 
-//
 // UserPreferences represents the preferences settings for the GMA Mapper.
 //
 // This represents preferences version 4.
-//
 type UserPreferences struct {
 	GMAMapperPreferencesVersion int        `json:"GMA_Mapper_preferences_version"`
 	Animate                     bool       `json:"animate,omitempty"`
@@ -340,9 +316,7 @@ type UserPreferences struct {
 	Styles        StyleDescription    `json:"styles,omitempty"`
 }
 
-//
 // InitiativeSeedData represents each entry in the GMA initiative seed list.
-//
 type InitiativeSeedData struct {
 	Name         string `json:"name"`
 	Dexterity    int    `json:"dex"`
@@ -354,17 +328,13 @@ type InitiativeSeedData struct {
 	DieSpec      string `json:"die_spec"`
 }
 
-//
 // CasterData represents each entry in the GMA caster level list.
-//
 type CasterData struct {
 	Name string `json:"name"`
 	CL   int    `json:"cl"`
 }
 
-//
 // GMAPreferences represents the preferences settings for GMA and its supporting utilities.
-//
 type GMAPreferences struct {
 	GMAPreferencesVersion int    `json:"gma_preferences_file_version"`
 	CoreDBPath            string `json:"core_db"`
@@ -378,9 +348,7 @@ type GMAPreferences struct {
 	CurrentNetworkName string                       `json:"network_profile"`
 }
 
-//
 // GMAWorld represents the preferences settings for each campaign world.
-//
 type GMAWorld struct {
 	CalendarType         string               `json:"calendar_type"`
 	ModulePath           string               `json:"module,omitempty"`
@@ -393,17 +361,13 @@ type GMAWorld struct {
 	CasterLevels         []CasterData         `json:"caster_levels"`
 }
 
-//
 // GMANetworkProfile represents the preferences settings for each network profile.
-//
 type GMANetworkProfile struct {
 	Hostname string `json:"hostname,omitempty"`
 	Port     int    `json:"port,omitempty"`
 }
 
-//
 // StyleDescription describes the different kinds of style settings.
-//
 type StyleDescription struct {
 	Clocks   ClockStyles   `json:"clocks,omitempty"`
 	Dialogs  DialogStyles  `json:"dialogs,omitempty"`
@@ -451,9 +415,7 @@ type DialogStyles struct {
 	PresetNameColor  ColorSet `json:"preset_name,omitempty"`
 }
 
-//
 // DefaultGMAPreferences returns a GMAPreferences value with default values.
-//
 func DefaultGMAPreferences() (GMAPreferences, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -469,10 +431,8 @@ func DefaultGMAPreferences() (GMAPreferences, error) {
 	}, nil
 }
 
-//
 // DefaultPreferences returns a UserPreferences list with a
 // reasonable set of default values.
-//
 func DefaultPreferences() UserPreferences {
 
 	curlPath, err := SearchInPath("curl")
@@ -823,10 +783,8 @@ func DefaultPreferences() UserPreferences {
 	}
 }
 
-//
 // LoadGMAPreferencesWithDefaults is like LoadPreferencesWithDefaults but for
 // the GMA preferences file instead of the mapper's.
-//
 func LoadGMAPreferencesWithDefaults(stream io.Reader) (GMAPreferences, error) {
 	prefs, err := DefaultGMAPreferences()
 	if err != nil {
@@ -845,11 +803,9 @@ func LoadGMAPreferencesWithDefaults(stream io.Reader) (GMAPreferences, error) {
 	return prefs, nil
 }
 
-//
 // LoadPreferencesWithDefaults reads a set of saved preferences from an open file
 // or other io.Reader object. It provides default values for fields not specified in
 // the input data.
-//
 func LoadPreferencesWithDefaults(stream io.Reader) (UserPreferences, error) {
 	prefs := DefaultPreferences()
 	err := prefs.Update(stream)
@@ -866,11 +822,9 @@ func LoadPreferencesWithDefaults(stream io.Reader) (UserPreferences, error) {
 	return prefs, nil
 }
 
-//
 // LoadPreferences reads a set of saved preferences from an io.Reader,
 // returning a new UserPreferences value from that data. Any fields not specified
 // in the input data will have zero values.
-//
 func LoadPreferences(stream io.Reader) (UserPreferences, error) {
 	var prefs UserPreferences
 	err := prefs.Update(stream)
@@ -887,11 +841,9 @@ func LoadPreferences(stream io.Reader) (UserPreferences, error) {
 	return prefs, nil
 }
 
-//
 // Update reads a set of saved preferences as LoadPreferences does, but
 // rather than returning a new UserPreferences value, it updates the
 // values of an existing UserPreferences value with the input data.
-//
 func (prefs *UserPreferences) Update(stream io.Reader) error {
 	err := json.NewDecoder(stream).Decode(prefs)
 	if err != nil {
@@ -907,11 +859,9 @@ func (prefs *UserPreferences) Update(stream io.Reader) error {
 	return nil
 }
 
-//
 // Update reads a set of saved preferences as LoadGMAPreferences does, but
 // rather than returning a new GMAPreferences value, it updates the
 // values of an existing GMAPreferences value with the input data.
-//
 func (prefs *GMAPreferences) Update(stream io.Reader) error {
 	err := json.NewDecoder(stream).Decode(prefs)
 	if err != nil {
@@ -927,11 +877,9 @@ func (prefs *GMAPreferences) Update(stream io.Reader) error {
 	return nil
 }
 
-//
 // UpdateFromSimpleConfig updates the corresponding
 // configuration values in a UserPreferences value from a set of
 // key=value pairs read from a simple config file.
-//
 func (prefs *UserPreferences) UpdateFromSimpleConfig(profileName string, cfg SimpleConfigurationData) error {
 	var profile int = -1
 	var err error
@@ -1049,10 +997,8 @@ func (prefs *UserPreferences) UpdateFromSimpleConfig(profileName string, cfg Sim
 	return nil
 }
 
-//
 // SearchInPath looks for an executable program name by searching
 // the user's execution path ($PATH environment variable)
-//
 func SearchInPath(program string) (string, error) {
 	PATH, isValid := os.LookupEnv("PATH")
 	if !isValid {
@@ -1068,9 +1014,9 @@ func SearchInPath(program string) (string, error) {
 	return "", fmt.Errorf("file not found in PATH")
 }
 
-// @[00]@| Go-GMA 5.32.1
+// @[00]@| Go-GMA 5.33.0
 // @[01]@|
-// @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
+// @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
 // @[12]@| Aloha, Oregon, USA. All Rights Reserved. Some components were introduced at different
 // @[13]@| points along that historical time line.

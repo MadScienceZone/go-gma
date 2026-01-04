@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) \   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -21,21 +21,17 @@
 
 package namegen
 
-//
 // HalfOrc describes the naming conventions for the Half-orc
 // culture. Its methods give further details, but generally speaking
 // the main operation to perform on these types is to just call the
 // Generate and GenerateWithSurnames methods to create new names which
 // conform to their cultural patterns.
-//
 type HalfOrc struct {
 	BaseCulture
 }
 
-//
 // prefix gives the prefix/selector string for each Half-orc gender, or an empty
 // string if one is not defined.
-//
 func (c HalfOrc) prefix(gender rune) string {
 	switch gender {
 	case 'F':
@@ -47,9 +43,7 @@ func (c HalfOrc) prefix(gender rune) string {
 	}
 }
 
-//
 // defaultMinMax returns the minimum and maximum size of Half-orc names based on gender.
-//
 func (c HalfOrc) defaultMinMax(gender rune) (int, int) {
 	switch gender {
 	case 'F':
@@ -61,24 +55,18 @@ func (c HalfOrc) defaultMinMax(gender rune) (int, int) {
 	}
 }
 
-//
 // Genders returns the set of genders defined for the Half-orc culture.
-//
 func (c HalfOrc) Genders() []rune {
 	return []rune{'F', 'M'}
 }
 
-//
 // Name returns the name of the culture, i.e., "Half-orc".
-//
 func (c HalfOrc) Name() string {
 	return "Half-orc"
 }
 
-//
 // HasGender returns true if the specified gender code is defined
 // in the Half-orc culture.
-//
 func (c HalfOrc) HasGender(gender rune) bool {
 	switch gender {
 	case 'F', 'M':
@@ -88,9 +76,7 @@ func (c HalfOrc) HasGender(gender rune) bool {
 	}
 }
 
-//
 // db returns the name data for the given gender in the Half-orc culture.
-//
 func (c HalfOrc) db(gender rune) map[string][]nameFragment {
 	switch gender {
 	case 'F':
@@ -5234,6 +5220,7 @@ func (c HalfOrc) db(gender rune) map[string][]nameFragment {
 		return nil
 	}
 }
+
 //
 // End of generated data
 //

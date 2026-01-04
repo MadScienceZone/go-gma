@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) \   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -653,7 +653,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		if err := a.SendToAllExcept(requester, mapper.AddImage, p); err != nil {
 			a.Logf("error sending AddImage to peer systems: %v", err)
 		}
-	
+
 	case mapper.AddAudioMessagePayload:
 		if err := a.StoreAudioData(mapper.AudioDefinition{
 			Name:        p.Name,
@@ -808,8 +808,8 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 					Sent:       time.Now(),
 				},
 				RequestID: p.RequestID,
-				Type: p.Type,
-				Targets: p.Targets,
+				Type:      p.Type,
+				Targets:   p.Targets,
 				Result: dice.StructuredResult{
 					InvalidRequest: true,
 					Details: dice.StructuredDescriptionSet{
@@ -1440,10 +1440,10 @@ func (a *Application) SendPeerListToAll() {
 
 	for _, peer := range allClients {
 		thisPeer := mapper.Peer{
-			Addr:     peer.Address,
-			LastPolo: time.Since(peer.LastPoloTime).Seconds(),
-			IsMe:     false,
-			AKA:      peer.AKA,
+			Addr:       peer.Address,
+			LastPolo:   time.Since(peer.LastPoloTime).Seconds(),
+			IsMe:       false,
+			AKA:        peer.AKA,
 			NotPlaying: peer.NotPlaying,
 		}
 		if peer.Auth != nil {
@@ -1467,10 +1467,10 @@ func (a *Application) SendPeerListTo(requester *mapper.ClientConnection) {
 	var peers mapper.UpdatePeerListMessagePayload
 	for _, peer := range a.GetClients() {
 		thisPeer := mapper.Peer{
-			Addr:     peer.Address,
-			LastPolo: time.Since(peer.LastPoloTime).Seconds(),
-			IsMe:     peer == requester,
-			AKA:      peer.AKA,
+			Addr:       peer.Address,
+			LastPolo:   time.Since(peer.LastPoloTime).Seconds(),
+			IsMe:       peer == requester,
+			AKA:        peer.AKA,
 			NotPlaying: peer.NotPlaying,
 		}
 		if peer.Auth != nil {

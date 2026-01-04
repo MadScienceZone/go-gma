@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) \   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 #
@@ -68,31 +68,35 @@ type CorePreferences struct {
 
 // CoreImport is the main interface for importing data from JSON files into the GMA core database.
 // The format of the input JSON file must be:
-//   {
-//      "GMA_Core_Database_Export_Version": <v>,
-//      <type>: [
-//         <objects of that type>, ...
-//      ],
-//      ...
-//      "SRD": <srd_bool>
-//   }
+//
+//	{
+//	   "GMA_Core_Database_Export_Version": <v>,
+//	   <type>: [
+//	      <objects of that type>, ...
+//	   ],
+//	   ...
+//	   "SRD": <srd_bool>
+//	}
+//
 // The amount of whitespace between JSON elements is immaterial but GMA_Core_Database_Export_Version
 // must appear first, and SRD must appear last.
-//   <v>        ::= <integer> (file format version; currently must be 1)
-//   <type>     ::= Bestiary | Classes | Feats | Languages | Skills | Spells | Weapons
-//   <srd_bool> ::= true | false (true if importing/exporting SRD data; false for local entries)
+//
+//	<v>        ::= <integer> (file format version; currently must be 1)
+//	<type>     ::= Bestiary | Classes | Feats | Languages | Skills | Spells | Weapons
+//	<srd_bool> ::= true | false (true if importing/exporting SRD data; false for local entries)
 //
 // Given an open database connection db and a file fp open for reading, this will read through the
 // JSON-encoded data from fp, calling the appropriate subordinate functions to handle the import of
 // each data object found:
-//   JSON Field  Go Type      Subordinate Function
-//   Bestiary    Monster      ImportMonster
-//   Classes     Class        ImportClass
-//   Feats       Feat         ImportFeat
-//   Languages   BaseLanguage ImportLanguage
-//   Skills      Skill        ImportSkill
-//   Spells      Spell        ImportSpell
-//   Weapons     Weapon       ImportWeapon
+//
+//	JSON Field  Go Type      Subordinate Function
+//	Bestiary    Monster      ImportMonster
+//	Classes     Class        ImportClass
+//	Feats       Feat         ImportFeat
+//	Languages   BaseLanguage ImportLanguage
+//	Skills      Skill        ImportSkill
+//	Spells      Spell        ImportSpell
+//	Weapons     Weapon       ImportWeapon
 //
 // The prefs parameter specifies debugging flags which control what information is logged during the
 // import operation, as well as filtering options which specify which subset of the file data to
@@ -101,7 +105,6 @@ type CorePreferences struct {
 //
 // Note that the SRD field in the JSON file merely indicates whether the data previously exported into that file
 // was public SRD data or local entries; it is ignored by the CoreImport function.
-//
 func CoreImport(db *sql.DB, prefs *CorePreferences, fp io.Reader) error {
 	var token json.Token
 	var delim json.Delim
@@ -216,20 +219,20 @@ func CoreImport(db *sql.DB, prefs *CorePreferences, fp io.Reader) error {
 // Given an open database connection db and a file fp open for writing, this will read through the
 // database entries, calling the appropriate subordinate functions to handle the export of
 // each data object found:
-//   JSON Field  Go Type      Subordinate Function
-//   Bestiary    Monster      ExportBestiary
-//   Classes     Class        ExportClasses
-//   Feats       Feat         ExportFeats
-//   Languages   BaseLanguage ExportLanguages
-//   Skills      Skill        ExportSkills
-//   Spells      Spell        ExportSpells
-//   Weapons     Weapon       ExportWeapons
+//
+//	JSON Field  Go Type      Subordinate Function
+//	Bestiary    Monster      ExportBestiary
+//	Classes     Class        ExportClasses
+//	Feats       Feat         ExportFeats
+//	Languages   BaseLanguage ExportLanguages
+//	Skills      Skill        ExportSkills
+//	Spells      Spell        ExportSpells
+//	Weapons     Weapon       ExportWeapons
 //
 // The prefs parameter specifies debugging flags which control what information is logged during the
 // export operation, as well as filtering options which specify which subset of the core database to
 // actually export. The prefs.SRD field indicates whether the public SRD records should be exported
 // (if true) or if the local entries should be exported instead (if false).
-//
 func CoreExport(db *sql.DB, prefs *CorePreferences, fp *os.File) error {
 	var err error
 
@@ -4636,9 +4639,9 @@ func ExportSpells(fp *os.File, db *sql.DB, prefs *CorePreferences) error {
 }
 
 /*
-# @[00]@| Go-GMA 5.32.1
+# @[00]@| Go-GMA 5.33.0
 # @[01]@|
-# @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
+# @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
 # @[12]@| Aloha, Oregon, USA. All Rights Reserved. Some components were introduced at different
 # @[13]@| points along that historical time line.

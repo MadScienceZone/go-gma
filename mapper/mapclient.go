@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) \   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -884,19 +884,19 @@ type AddCharacterMessagePayload struct {
 }
 
 //________________________________________________________________________________
-//     _       _     _    _             _ _       
-//    / \   __| | __| |  / \  _   _  __| (_) ___  
-//   / _ \ / _` |/ _` | / _ \| | | |/ _` | |/ _ \ 
+//     _       _     _    _             _ _
+//    / \   __| | __| |  / \  _   _  __| (_) ___
+//   / _ \ / _` |/ _` | / _ \| | | |/ _` | |/ _ \
 //  / ___ \ (_| | (_| |/ ___ \ |_| | (_| | | (_) |
-// /_/   \_\__,_|\__,_/_/   \_\__,_|\__,_|_|\___/ 
+// /_/   \_\__,_|\__,_/_/   \_\__,_|\__,_|_|\___/
 //
-                                               
+
 type AudioDefinition struct {
 	IsLocalFile bool
-	Name string
-	File string
-	Format string
-}	
+	Name        string
+	File        string
+	Format      string
+}
 
 // AddAudioMessagePayload holds the information sent by the server's AddAudio
 // message informing the client as to where it can locate an audio clip's data.
@@ -1128,21 +1128,20 @@ type ChallengeMessagePayload struct {
 	ServerVersion string    `json:",omitempty"`
 }
 
-
-// 
-//   ____ _                          _            _   _                      
-//  / ___| |__   __ _ _ __ __ _  ___| |_ ___ _ __| \ | | __ _ _ __ ___   ___ 
+//
+//   ____ _                          _            _   _
+//  / ___| |__   __ _ _ __ __ _  ___| |_ ___ _ __| \ | | __ _ _ __ ___   ___
 // | |   | '_ \ / _` | '__/ _` |/ __| __/ _ \ '__|  \| |/ _` | '_ ` _ \ / _ \
 // | |___| | | | (_| | | | (_| | (__| ||  __/ |  | |\  | (_| | | | | | |  __/
 //  \____|_| |_|\__,_|_|  \__,_|\___|\__\___|_|  |_| \_|\__,_|_| |_| |_|\___|
-//                                                                           
+//
 //
 
 type CharacterNameMessagePayload struct {
 	BaseMessagePayload
-	NotPlaying bool `json:",omitempty"`
-	Names []string `json:",omitempty"`
-	User  string   `json:",omitempty"`
+	NotPlaying bool     `json:",omitempty"`
+	Names      []string `json:",omitempty"`
+	User       string   `json:",omitempty"`
 }
 
 // CharacterName declares our character name on the VTT map.
@@ -1886,12 +1885,12 @@ type FilterImagesMessagePayload struct {
 	Filter       string `json:",omitempty"`
 }
 
-//  _____ _ _ _             _             _ _       
-// |  ___(_) | |_ ___ _ __ / \  _   _  __| (_) ___  
-// | |_  | | | __/ _ \ '__/ _ \| | | |/ _` | |/ _ \ 
+//  _____ _ _ _             _             _ _
+// |  ___(_) | |_ ___ _ __ / \  _   _  __| (_) ___
+// | |_  | | | __/ _ \ '__/ _ \| | | |/ _` | |/ _ \
 // |  _| | | | ||  __/ | / ___ \ |_| | (_| | | (_) |
-// |_|   |_|_|\__\___|_|/_/   \_\__,_|\__,_|_|\___/ 
-//                                                  
+// |_|   |_|_|\__\___|_|/_/   \_\__,_|\__,_|_|\___/
+//
 
 // FilterAudio asks the server to remove all of your defined audio clips that match
 // a regular expression.
@@ -2268,14 +2267,13 @@ func (c *Connection) PlaceSomeone(someone any) error {
 	return c.serverConn.Send(PlaceSomeone, someone)
 }
 
-
-//  ____  _                _             _ _       
-// |  _ \| | __ _ _   _   / \  _   _  __| (_) ___  
-// | |_) | |/ _` | | | | / _ \| | | |/ _` | |/ _ \ 
+//  ____  _                _             _ _
+// |  _ \| | __ _ _   _   / \  _   _  __| (_) ___
+// | |_) | |/ _` | | | | / _ \| | | |/ _` | |/ _ \
 // |  __/| | (_| | |_| |/ ___ \ |_| | (_| | | (_) |
-// |_|   |_|\__,_|\__, /_/   \_\__,_|\__,_|_|\___/ 
-//                |___/                            
-// 
+// |_|   |_|\__,_|\__, /_/   \_\__,_|\__,_|_|\___/
+//                |___/
+//
 
 // PlayAudioMessagePayload contains the message payload for the request to start or
 // stop playing an audio clip on a client.
@@ -2328,13 +2326,12 @@ func (c *Connection) PlayAudioX(name string, loop, stop bool, addrs []string) er
 		return fmt.Errorf("nil Connection")
 	}
 	return c.serverConn.Send(PlayAudio, PlayAudioMessagePayload{
-		Name: name,
-		Stop: stop,
-		Loop: loop,
+		Name:  name,
+		Stop:  stop,
+		Loop:  loop,
 		Addrs: addrs,
 	})
 }
-
 
 //  ____       _
 // |  _ \ ___ | | ___
@@ -2397,13 +2394,12 @@ func (c *Connection) QueryImage(idef ImageDefinition) error {
 	return c.serverConn.Send(QueryImage, idef)
 }
 
-
-//   ___                           _             _ _       
-//  / _ \ _   _  ___ _ __ _   _   / \  _   _  __| (_) ___  
-// | | | | | | |/ _ \ '__| | | | / _ \| | | |/ _` | |/ _ \ 
+//   ___                           _             _ _
+//  / _ \ _   _  ___ _ __ _   _   / \  _   _  __| (_) ___
+// | | | | | | |/ _ \ '__| | | | / _ \| | | |/ _` | |/ _ \
 // | |_| | |_| |  __/ |  | |_| |/ ___ \ |_| | (_| | | (_) |
-//  \__\_\\__,_|\___|_|   \__, /_/   \_\__,_|\__,_|_|\___/ 
-//                        |___/                            
+//  \__\_\\__,_|\___|_|   \__, /_/   \_\__,_|\__,_|_|\___/
+//                        |___/
 //
 
 // QueryAudioMessagePayload holds the information sent by the server's QueryAudio
@@ -2517,7 +2513,6 @@ func (c *Connection) RemoveObjAttributes(objID, attrName string, values []string
 // Added in version 5.30.0: optional list of option parameters to specify different
 // options to the die rolls to avoid needless proliferation of permutations of
 // methods for all the different ways we can arrange die rolls.
-//
 func (c *Connection) RollDice(to []string, rollspec string, opt ...RollDiceOption) error {
 	var options dieRollOptions
 
@@ -2531,22 +2526,22 @@ func (c *Connection) RollDice(to []string, rollspec string, opt ...RollDiceOptio
 	return c.serverConn.Send(RollDice, RollDiceMessagePayload{
 		ChatCommon: ChatCommon{
 			Recipients: to,
-			ToAll: options.toGM,
-			ToGM: options.toAll,
+			ToAll:      options.toGM,
+			ToGM:       options.toAll,
 		},
-		RollSpec: rollspec,
+		RollSpec:  rollspec,
 		RequestID: options.id,
-		Targets: options.targets,
-		Type: options.dtype,
+		Targets:   options.targets,
+		Type:      options.dtype,
 	})
 }
 
 type dieRollOptions struct {
-	id string
-	toGM bool
-	toAll bool
+	id      string
+	toGM    bool
+	toAll   bool
 	targets []string
-	dtype string
+	dtype   string
 }
 
 type RollDiceOption func(*dieRollOptions)
@@ -2565,7 +2560,7 @@ func WithRollTargets(targets []string) RollDiceOption {
 	}
 }
 
-// WithDieRollID adds an ID to a die roll request. 
+// WithDieRollID adds an ID to a die roll request.
 func WithDieRollID(id string) RollDiceOption {
 	return func(o *dieRollOptions) {
 		o.id = id
@@ -2585,7 +2580,6 @@ func RollToGM() RollDiceOption {
 		o.toGM = true
 	}
 }
-
 
 // RollDiceWithID is identical to RollDice except it passes a user-supplied request ID
 // to the server, which will be sent back with the corresponding result message(s).
@@ -2624,11 +2618,11 @@ type RollDiceMessagePayload struct {
 
 // Predefined values for Type field of RollDiceMessagePayload
 const (
-	DTypeAttack = "attack"
-	DTypeAttackFF = "attack-ff"
+	DTypeAttack      = "attack"
+	DTypeAttackFF    = "attack-ff"
 	DTypeAttackTouch = "attack-touch"
-	DTypeAttackCMD = "attack-cmd"
-	DTypeDamage = "damage"
+	DTypeAttackCMD   = "attack-cmd"
+	DTypeDamage      = "damage"
 )
 
 // RollDiceToAll is equivalent to RollDice, sending the results to all users.
@@ -3811,10 +3805,10 @@ func (c *Connection) receiveAddCharacter(d AddCharacterMessagePayload) {
 				Natural:  d.CustomReach.Natural,
 				Extended: d.CustomReach.Extended,
 			},
-			Targets:      d.Targets,
+			Targets: d.Targets,
 		}
 		if err := critter.SetSizes(d.SkinSize, d.Skin, d.Size); err != nil {
-			c.Logf("ERROR setting creature %s skinsizes to %v (skin=%v, size=%v): %v", 
+			c.Logf("ERROR setting creature %s skinsizes to %v (skin=%v, size=%v): %v",
 				d.Name, d.SkinSize, d.Skin, d.Size, err)
 		}
 		if d.AoE != nil {
@@ -3825,20 +3819,20 @@ func (c *Connection) receiveAddCharacter(d AddCharacterMessagePayload) {
 		}
 		if d.Health != nil {
 			critter.Health = &CreatureHealth{
-				IsFlatFooted: d.Health.IsFlatFooted,
-				IsStable: d.Health.IsStable,
-				MaxHP: d.Health.MaxHP,
-				TmpHP: d.Health.TmpHP,
-				TmpDamage: d.Health.TmpDamage,
-				LethalDamage: d.Health.LethalDamage,
+				IsFlatFooted:    d.Health.IsFlatFooted,
+				IsStable:        d.Health.IsStable,
+				MaxHP:           d.Health.MaxHP,
+				TmpHP:           d.Health.TmpHP,
+				TmpDamage:       d.Health.TmpDamage,
+				LethalDamage:    d.Health.LethalDamage,
 				NonLethalDamage: d.Health.NonLethalDamage,
-				Con: d.Health.Con,
-				HPBlur: d.Health.HPBlur,
-				Condition: d.Health.Condition,
-				AC: d.Health.AC,
-				FlatFootedAC: d.Health.FlatFootedAC,
-				TouchAC: d.Health.TouchAC,
-				CMD: d.Health.CMD,
+				Con:             d.Health.Con,
+				HPBlur:          d.Health.HPBlur,
+				Condition:       d.Health.Condition,
+				AC:              d.Health.AC,
+				FlatFootedAC:    d.Health.FlatFootedAC,
+				TouchAC:         d.Health.TouchAC,
+				CMD:             d.Health.CMD,
 			}
 		}
 
@@ -4399,9 +4393,9 @@ func (c *Connection) CheckVersionOf(packageName, myVersionNumber string) (*Packa
 	return availableVersion, nil
 }
 
-// @[00]@| Go-GMA 5.32.1
+// @[00]@| Go-GMA 5.33.0
 // @[01]@|
-// @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
+// @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
 // @[12]@| Aloha, Oregon, USA. All Rights Reserved. Some components were introduced at different
 // @[13]@| points along that historical time line.
