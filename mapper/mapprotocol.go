@@ -44,16 +44,18 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 // The GMA Mapper Protocol version number current as of this build,
 // and protocol versions supported by this code.
 const (
-	GMAMapperProtocol=422              // @@##@@ auto-configured
-	GoVersionNumber="5.32.1" // @@##@@ auto-configured
+	GMAMapperProtocol           = 422      // @@##@@ auto-configured
+	GoVersionNumber             = "5.32.1" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
-	MaximumSupportedMapProtocol = 422
+	MaximumSupportedMapProtocol = 423
+	MaxServerMessageSize        = 60 * 1024 // don't send server messages bigger than this
 )
 
 func init() {
@@ -71,13 +73,63 @@ func init() {
 var ErrProtocol = errors.New("internal protocol error")
 
 type MapConnection struct {
-	conn     net.Conn       // network socket
-	reader   *bufio.Scanner // read interface to socket
-	writer   *bufio.Writer  // write interface to socket
-	sendBuf  []string       // internal buffer of outgoing packets
-	sendChan chan string    // outgoing packets go through this channel
+	conn     net.Conn               // network socket
+	reader   *bufio.Scanner         // read interface to socket
+	writer   *bufio.Writer          // write interface to socket
+	sendBuf  []string               // internal buffer of outgoing packets
+	sendChan chan string            // outgoing packets go through this channel
+	batches  map[string]map[int]any // storage for incoming batched packets	(batchID->batch#->packet)
+	bLock    *sync.Mutex            // mutex protecting batches
 	debug    func(DebugFlags, string)
 	debugf   func(DebugFlags, string, ...any)
+}
+
+// RetrieveBatches retrieves all the batches belonging to a set and removes them from storage
+func (m *MapConnection) RetrieveBatches(packet any) ([]any, error) {
+	if b, isBatch := packet.(BatchableMessagePayload); isBatch {
+		m.bLock.Lock()
+		defer m.bLock.Unlock()
+
+		storage := m.batches[b.BatchGroup]
+		storageLen := len(storage)
+		if storageLen != b.TotalBatches {
+			delete(m.batches, b.BatchGroup)
+			return nil, fmt.Errorf("incomplete or corrupt batched payload: expected %d, received %d", b.TotalBatches, storageLen)
+		}
+
+		packets := make([]any, 0)
+		for i := range storageLen {
+			packets = append(packets, storage[i])
+		}
+		delete(m.batches, b.BatchGroup)
+		return packets, nil
+	}
+	return nil, fmt.Errorf("incoming packet does not appear to be a batch we can unpack")
+}
+
+// StashBatch stashes an incoming message payload which is part of a batched set, assuming we'll assemble all of the
+// pieces later. It returns true if we are still expecting more to arrive and an error if one occurred.
+// If an error is returned, the meaning of the boolean return value is undefined.
+func (m *MapConnection) StashBatch(packet any) (bool, error) {
+	if b, isBatch := packet.(BatchableMessagePayload); isBatch {
+		if b.BatchGroup == "" {
+			return false, fmt.Errorf("missing BatchGroup")
+		}
+
+		m.bLock.Lock()
+		defer m.bLock.Unlock()
+
+		if m.batches == nil {
+			m.batches = make(map[string]map[int]any)
+		}
+		if m.batches[b.BatchGroup] == nil {
+			m.batches[b.BatchGroup] = make(map[int]any)
+		} else {
+			m.batches[b.BatchGroup][b.Batch] = packet
+		}
+		return b.TotalBatches > len(m.batches[b.BatchGroup]), nil
+	}
+	return false, fmt.Errorf("packet does not appear to be part of a batch")
 }
 
 func (m *MapConnection) IsReady() bool {
@@ -97,6 +149,15 @@ func (c *MapConnection) Close() {
 	if c != nil && c.conn != nil {
 		c.conn.Close()
 	}
+}
+
+// Batchable is any payload which may be split up into multiple batches.
+type Batchable interface {
+	NeedsToBeSplit() bool                            // does this payload need to be split up because it's already too large to be sent as it is?
+	IsBatched() bool                                 // is this payload part of an incoming batch of payloads?
+	Split() []any                                    // split up the message, returning the slice of batched payloads
+	AbortPayload(reason string, batchNumber int) any // generate an abort payload
+	Reassemble([]any) error                          // reassemble a slice of batches into a single payload structure
 }
 
 // SendEchoWithTimestamp is identical to Send, but only takes an EchoMessagePayload parameter
@@ -454,8 +515,44 @@ func (c *MapConnection) sendJSON(commandWord string, data any) error {
 	if data == nil {
 		return c.sendln(commandWord, "")
 	}
-	if j, err := json.Marshal(data); err == nil {
+
+	bail := func(b Batchable, reason string, origError error, batch int) error {
+		j, err := json.Marshal(b.AbortPayload(fmt.Sprintf("Error: %s: %v", reason, origError), batch))
+		if err != nil {
+			return fmt.Errorf("send error %v for batch %d: %v", origError, batch, err)
+		}
 		return c.sendln(commandWord, string(j))
+	}
+
+	splitIntoBatches := func(b Batchable) error {
+		for i, batch := range b.Split() {
+			j, err := json.Marshal(batch)
+			if err != nil {
+				return bail(b, "marshaling payload", err, i)
+			}
+			err = c.sendln(commandWord, string(j))
+			if err != nil {
+				return bail(b, "sending payload", err, i)
+			}
+		}
+		return nil
+	}
+
+	if b, isBatchable := data.(Batchable); isBatchable && b.NeedsToBeSplit() {
+		return splitIntoBatches(b)
+	}
+
+	if j, err := json.Marshal(data); err == nil {
+		sj := string(j)
+		if len(sj)+len(commandWord)+2 > MaxServerMessageSize {
+			if b, isBatchable := data.(Batchable); isBatchable {
+				// the up-front batchable check didn't predict we needed to do this but we ended up here anyway,
+				// perhaps because of the cost of character encoding or something. Let's split it up now.
+				return splitIntoBatches(b)
+			}
+			// Otherwise this will fail, but we handle that case in sendln...
+		}
+		return c.sendln(commandWord, sj)
 	}
 	return fmt.Errorf("send: %v", err)
 }
@@ -467,11 +564,17 @@ func (c *MapConnection) sendln(commandWord, data string) error {
 	if c.debugf != nil {
 		c.debugf(DebugIO|DebugMessages, "->%s %s", commandWord, data)
 	}
+
 	if strings.ContainsAny(data, "\n\r") {
 		return fmt.Errorf("protocol error: outgoing data packet may not contain newlines")
 	}
-	var packet strings.Builder
 
+	if len(data)+len(commandWord)+2 > MaxServerMessageSize {
+		c.sendChan <- fmt.Sprintf("FAILED {\"Command\": \"%s\",\"Reason\":\"Transmission failed for server message; payload length %d exceeds maximum allowed\"}\n", commandWord, len(data))
+		return fmt.Errorf("protocol error: outgoing data packet length %d would exceed maximum allowed", len(data))
+	}
+
+	var packet strings.Builder
 	packet.WriteString(commandWord)
 	if data != "" {
 		packet.WriteString(" ")
@@ -515,9 +618,13 @@ func (c *Connection) UNSAFEsendRaw(data string) error {
 // Receive waits for a message to arrive on the MapConnection's input then returns it.
 func (c *MapConnection) Receive() (MessagePayload, error) {
 	var err error
+	var rescan bool
+
 	if c == nil {
 		return nil, fmt.Errorf("Receive called on nil MapConnection")
 	}
+
+rescan_input:
 	if !c.reader.Scan() {
 		//c.debug(DebugIO, "Receive: scan failed; stopping")
 		if err = c.reader.Err(); err != nil {
@@ -542,6 +649,27 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 		}, nil
 	}
 
+	handleBatching := func(p any) any {
+		var moreRemaining bool
+		rescan = false
+		if b, isBatchable := p.(Batchable); isBatchable && b.IsBatched() {
+			moreRemaining, err = c.StashBatch(p)
+			if err != nil {
+				return p
+			}
+			if moreRemaining {
+				rescan = true
+				return nil
+			}
+			packets, err := c.RetrieveBatches(p)
+			if err != nil {
+				return p
+			}
+			p = b.Reassemble(packets)
+		}
+		return p
+	}
+
 	switch commandWord {
 	case "AC":
 		p := AddCharacterMessagePayload{BaseMessagePayload: payload}
@@ -551,6 +679,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = AddCharacter
+		p = handleBatching(p).(AddCharacterMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "ACCEPT":
@@ -561,6 +696,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = Accept
+		p = handleBatching(p).(AcceptMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "AA":
@@ -571,6 +713,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = AddAudio
+		p = handleBatching(p).(AddAudioMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "AA?":
@@ -581,6 +730,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = QueryAudio
+		p = handleBatching(p).(QueryAudioMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "AA/":
@@ -591,6 +747,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = FilterAudio
+		p = handleBatching(p).(FilterAudioMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "AI":
@@ -601,6 +764,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = AddImage
+		p = handleBatching(p).(AddImageMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "AI?":
@@ -611,6 +781,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = QueryImage
+		p = handleBatching(p).(QueryImageMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "AI/":
@@ -621,6 +798,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = FilterImages
+		p = handleBatching(p).(FilterImagesMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "AKA":
@@ -631,6 +815,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = CharacterName
+		p = handleBatching(p).(CharacterNameMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "ALLOW":
@@ -641,6 +832,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = Allow
+		p = handleBatching(p).(AllowMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "AUTH":
@@ -651,6 +849,9 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = Auth
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "AV":
@@ -661,6 +862,9 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = AdjustView
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "CC":
@@ -671,6 +875,9 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = ClearChat
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "CLR":
@@ -681,6 +888,9 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = Clear
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "CLR@":
@@ -691,6 +901,9 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = ClearFrom
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "CO":
@@ -701,6 +914,9 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = CombatMode
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "CONN":
@@ -711,6 +927,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = UpdatePeerList
+		p = handleBatching(p).(UpdatePeerListMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "CORE":
@@ -721,6 +944,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = QueryCoreData
+		p = handleBatching(p).(QueryCoreDataMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "COREIDX":
@@ -731,6 +961,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = QueryCoreIndex
+		p = handleBatching(p).(QueryCoreIndexMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "CORE/":
@@ -741,6 +978,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = FilterCoreData
+		p = handleBatching(p).(FilterCoreDataMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "CORE=":
@@ -751,6 +995,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = UpdateCoreData
+		p = handleBatching(p).(UpdateCoreDataMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "COREIDX=":
@@ -761,6 +1012,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = UpdateCoreIndex
+		p = handleBatching(p).(UpdateCoreIndexMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "CS":
@@ -771,6 +1029,9 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = UpdateClock
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "D":
@@ -781,6 +1042,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = RollDice
+		p = handleBatching(p).(RollDiceMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "DD":
@@ -791,6 +1059,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = DefineDicePresets
+		p = handleBatching(p).(DefineDicePresetsMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "DDD":
@@ -801,6 +1076,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = DefineDicePresetDelegates
+		p = handleBatching(p).(DefineDicePresetDelegatesMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "DD+":
@@ -811,6 +1093,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = AddDicePresets
+		p = handleBatching(p).(AddDicePresetsMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "DD/":
@@ -821,6 +1110,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = FilterDicePresets
+		p = handleBatching(p).(FilterDicePresetsMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "DD=":
@@ -831,6 +1127,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = UpdateDicePresets
+		p = handleBatching(p).(UpdateDicePresetsMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "DENIED":
@@ -841,6 +1144,9 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = Denied
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "DR":
@@ -851,6 +1157,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = QueryDicePresets
+		p = handleBatching(p).(QueryDicePresetsMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "DSM":
@@ -861,6 +1174,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = UpdateStatusMarker
+		p = handleBatching(p).(UpdateStatusMarkerMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "ECHO":
@@ -871,6 +1191,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = Echo
+		p = handleBatching(p).(EchoMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "FAILED":
@@ -881,6 +1208,9 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = Failed
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "GRANTED":
@@ -891,6 +1221,9 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = Granted
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "HPACK":
@@ -901,6 +1234,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = HitPointAcknowledge
+		p = handleBatching(p).(HitPointAcknowledgeMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "HPREQ":
@@ -911,6 +1251,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = HitPointRequest
+		p = handleBatching(p).(HitPointRequestMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "I":
@@ -921,6 +1268,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = UpdateTurn
+		p = handleBatching(p).(UpdateTurnMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "IL":
@@ -931,6 +1285,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = UpdateInitiative
+		p = handleBatching(p).(UpdateInitiativeMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "L":
@@ -941,6 +1302,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = LoadFrom
+		p = handleBatching(p).(LoadFromMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "LS-ARC":
@@ -951,6 +1319,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = LoadArcObject
+		p = handleBatching(p).(LoadArcObjectMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "LS-CIRC":
@@ -961,6 +1336,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = LoadCircleObject
+		p = handleBatching(p).(LoadCircleObjectMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "LS-LINE":
@@ -971,6 +1353,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = LoadLineObject
+		p = handleBatching(p).(LoadLineObjectMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "LS-POLY":
@@ -981,6 +1370,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = LoadPolygonObject
+		p = handleBatching(p).(LoadPolygonObjectMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "LS-RECT":
@@ -991,6 +1387,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = LoadRectangleObject
+		p = handleBatching(p).(LoadRectangleObjectMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "LS-SAOE":
@@ -1001,6 +1404,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = LoadSpellAreaOfEffectObject
+		p = handleBatching(p).(LoadSpellAreaOfEffectObjectMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "LS-TEXT":
@@ -1011,6 +1421,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = LoadTextObject
+		p = handleBatching(p).(LoadTextObjectMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "LS-TILE":
@@ -1021,11 +1438,21 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = LoadTileObject
+		p = handleBatching(p).(LoadTileObjectMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "MARCO":
 		p := MarcoMessagePayload{BaseMessagePayload: payload}
 		p.messageType = Marco
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "MARK":
@@ -1036,6 +1463,9 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = Mark
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "OA":
@@ -1046,6 +1476,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = UpdateObjAttributes
+		p = handleBatching(p).(UpdateObjAttributesMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "OA+":
@@ -1056,6 +1493,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = AddObjAttributes
+		p = handleBatching(p).(AddObjAttributesMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "OA-":
@@ -1066,6 +1510,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = RemoveObjAttributes
+		p = handleBatching(p).(RemoveObjAttributesMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "OK":
@@ -1076,11 +1527,17 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = Challenge
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "POLO":
 		p := PoloMessagePayload{BaseMessagePayload: payload}
 		p.messageType = Polo
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "PRIV":
@@ -1091,6 +1548,9 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = Priv
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "PROGRESS":
@@ -1101,6 +1561,9 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = UpdateProgress
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "PROTOCOL":
@@ -1125,11 +1588,21 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = PlaceSomeone
+		p = handleBatching(p).(PlaceSomeoneMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "READY":
 		p := ReadyMessagePayload{BaseMessagePayload: payload}
 		p.messageType = Ready
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "REDIRECT":
@@ -1140,6 +1613,9 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = Redirect
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "ROLL":
@@ -1150,6 +1626,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = RollResult
+		p = handleBatching(p).(RollResultMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "SOUND":
@@ -1160,11 +1643,25 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = PlayAudio
+		p = handleBatching(p).(PlayAudioMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "SYNC":
 		p := SyncMessagePayload{BaseMessagePayload: payload}
 		p.messageType = Sync
+		p = handleBatching(p).(SyncMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "SYNC-CHAT":
@@ -1175,6 +1672,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = SyncChat
+		p = handleBatching(p).(SyncChatMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "TB":
@@ -1185,6 +1689,9 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = Toolbar
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "TMACK":
@@ -1195,6 +1702,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = TimerAcknowledge
+		p = handleBatching(p).(TimerAcknowledgeMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "TMRQ":
@@ -1205,6 +1719,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = TimerRequest
+		p = handleBatching(p).(TimerRequestMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "TO":
@@ -1215,6 +1736,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = ChatMessage
+		p = handleBatching(p).(ChatMessageMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "UPDATES":
@@ -1225,6 +1753,13 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = UpdateVersions
+		p = handleBatching(p).(UpdateVersionsMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "WORLD":
@@ -1235,11 +1770,25 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 			}
 		}
 		p.messageType = World
+		p = handleBatching(p).(WorldMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	case "/CONN":
 		p := QueryPeersMessagePayload{BaseMessagePayload: payload}
 		p.messageType = QueryPeers
+		p = handleBatching(p).(QueryPeersMessagePayload)
+		if rescan {
+			goto rescan_input
+		}
+		if err != nil {
+			break
+		}
 		return p, nil
 
 	default:

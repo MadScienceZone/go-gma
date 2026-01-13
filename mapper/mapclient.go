@@ -56,6 +56,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/auth"
 	"github.com/MadScienceZone/go-gma/v5/dice"
 	"github.com/MadScienceZone/go-gma/v5/util"
+	"github.com/google/uuid"
 )
 
 // ErrAuthenticationRequired is the error returned when the server requires authentication but we didn't provide any.
@@ -825,6 +826,37 @@ func (p BaseMessagePayload) RawBytes() []byte   { return []byte(p.rawMessage) }
 //	}
 func (p BaseMessagePayload) MessageType() ServerMessage { return p.messageType }
 
+// BatchableMessagePayload is a type of payload which can be broken into pieces to avoid sending excessively long data.
+type BatchableMessagePayload struct {
+	Batch        int    `json:",omitempty"`
+	TotalBatches int    `json:",omitempty"`
+	BatchGroup   string `json:",omitempty"`
+	BatchError   string `json:",omitempty"`
+}
+
+// NeedsToBeSplit returns true if we estimate that the payload is likely to exceed the maximum message size allowed.
+func (b BatchableMessagePayload) NeedsToBeSplit() bool {
+	return false // this needs to be overridden by specific types that actually have payloads to examine
+}
+
+// IsBatched returns true if this payload is part of a batched set as opposed to a stand-alone packet.
+func (b BatchableMessagePayload) IsBatched() bool {
+	return b.BatchGroup != ""
+}
+
+// Split breaks up a payload into multiple parts, returning a slice of them.
+// This must be defined at the derived type level.
+//func (b BatchableMessagePayload) Split() []any {
+//}
+
+// Reassemble combines fragmented pieces back into a single payload. This must be defined at the derived type level.
+// func (b BatchableMessagePayload) Reassemble([]any) any {}
+
+// AbortPayload generates a new payload of the same type as the original but with batch fields which indicate that we are
+// bailing out on batching up the payload and won't be completing the operation.
+// This must be defined at the derived type level.
+// func (b BatchableMessagePayload) AbortPayload(reason string, batchNumber int) any {}
+
 // ErrorMessagePayload describes
 // an error which encountered when trying to receive a message.
 type ErrorMessagePayload struct {
@@ -884,19 +916,19 @@ type AddCharacterMessagePayload struct {
 }
 
 //________________________________________________________________________________
-//     _       _     _    _             _ _       
-//    / \   __| | __| |  / \  _   _  __| (_) ___  
-//   / _ \ / _` |/ _` | / _ \| | | |/ _` | |/ _ \ 
+//     _       _     _    _             _ _
+//    / \   __| | __| |  / \  _   _  __| (_) ___
+//   / _ \ / _` |/ _` | / _ \| | | |/ _` | |/ _ \
 //  / ___ \ (_| | (_| |/ ___ \ |_| | (_| | | (_) |
-// /_/   \_\__,_|\__,_/_/   \_\__,_|\__,_|_|\___/ 
+// /_/   \_\__,_|\__,_/_/   \_\__,_|\__,_|_|\___/
 //
-                                               
+
 type AudioDefinition struct {
 	IsLocalFile bool
-	Name string
-	File string
-	Format string
-}	
+	Name        string
+	File        string
+	Format      string
+}
 
 // AddAudioMessagePayload holds the information sent by the server's AddAudio
 // message informing the client as to where it can locate an audio clip's data.
@@ -928,7 +960,76 @@ func (c *Connection) AddAudio(adef AudioDefinition) error {
 // of an image file they should be aware of.
 type AddImageMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 	ImageDefinition
+}
+
+func (c AddImageMessagePayload) NeedsToBeSplit() bool {
+	// AI Animation Name Sizes :
+	l := 6              // "AI {}"
+	l = 8 + len(c.Name) // "Name":,
+	if c.Animation != nil {
+		l += 61 // "Animation":{"Frames":99999,"FrameSpeed":99999,"Loops":99999}
+	}
+	for _, i := range c.Sizes {
+		if i.IsLocalFile {
+			l += 19 // "IsLocalFile":true,
+		}
+		if i.ImageData != nil {
+			l += 15 + len(i.ImageData) // "ImageData":"",
+		}
+		l += 10 + len(i.File) // "File":"",
+		l += 17               // "Zoom":99999.9999
+	}
+	return l > MaxServerMessageSize
+}
+
+func (c AddImageMessagePayload) Split() []AddImageMessagePayload {
+	payloads := make([]AddImageMessagePayload, len(c.Sizes))
+	payloads[0].Name = c.Name
+	payloads[0].Animation = c.Animation
+	gid := uuid.NewString()
+	for i, instance := range c.Sizes {
+		payloads[i].Sizes = make([]ImageInstance, 1)
+		payloads[i].Sizes[0] = instance
+		payloads[i].TotalBatches = len(c.Sizes)
+		payloads[i].Batch = i
+		payloads[i].BatchGroup = gid
+		payloads[i].BatchError = ""
+	}
+	return payloads
+}
+
+func (c *AddImageMessagePayload) Reassemble(p []AddImageMessagePayload) error {
+	for i, d := range p {
+		if d.Batch != i {
+			return fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), d.Batch)
+		}
+		if d.TotalBatches != len(p) {
+			return fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, d.TotalBatches, len(p))
+		}
+	}
+
+	c.Name = p[0].Name
+	c.Sizes = make([]ImageInstance, len(p))
+	c.Animation = p[0].Animation
+	for i, d := range p {
+		c.Sizes[i] = d.Sizes[0]
+	}
+	return nil
+}
+
+func (c AddImageMessagePayload) AbortPayload(reason string, batchNumber int) AddImageMessagePayload {
+	return AddImageMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+		ImageDefinition: ImageDefinition{
+			Name: c.Name,
+		},
+	}
 }
 
 // AddImage informs the server and peers about an image they can use.
@@ -950,6 +1051,7 @@ func (c *Connection) AddImage(idef ImageDefinition) error {
 // Call the AddObjAttributes method to send this message out to other clients.
 type AddObjAttributesMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 	ObjID    string
 	AttrName string
 	Values   []string
@@ -1128,21 +1230,20 @@ type ChallengeMessagePayload struct {
 	ServerVersion string    `json:",omitempty"`
 }
 
-
-// 
-//   ____ _                          _            _   _                      
-//  / ___| |__   __ _ _ __ __ _  ___| |_ ___ _ __| \ | | __ _ _ __ ___   ___ 
+//
+//   ____ _                          _            _   _
+//  / ___| |__   __ _ _ __ __ _  ___| |_ ___ _ __| \ | | __ _ _ __ ___   ___
 // | |   | '_ \ / _` | '__/ _` |/ __| __/ _ \ '__|  \| |/ _` | '_ ` _ \ / _ \
 // | |___| | | | (_| | | | (_| | (__| ||  __/ |  | |\  | (_| | | | | | |  __/
 //  \____|_| |_|\__,_|_|  \__,_|\___|\__\___|_|  |_| \_|\__,_|_| |_| |_|\___|
-//                                                                           
+//
 //
 
 type CharacterNameMessagePayload struct {
 	BaseMessagePayload
-	NotPlaying bool `json:",omitempty"`
-	Names []string `json:",omitempty"`
-	User  string   `json:",omitempty"`
+	NotPlaying bool     `json:",omitempty"`
+	Names      []string `json:",omitempty"`
+	User       string   `json:",omitempty"`
 }
 
 // CharacterName declares our character name on the VTT map.
@@ -1219,6 +1320,7 @@ type ChatCommon struct {
 // Call the ChatMessage, ChatMessageToAll, or ChatMessageToGM methods to send this message out to other clients.
 type ChatMessageMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 	ChatCommon
 
 	// True if the message contains GMA markup formatting codes
@@ -1886,12 +1988,12 @@ type FilterImagesMessagePayload struct {
 	Filter       string `json:",omitempty"`
 }
 
-//  _____ _ _ _             _             _ _       
-// |  ___(_) | |_ ___ _ __ / \  _   _  __| (_) ___  
-// | |_  | | | __/ _ \ '__/ _ \| | | |/ _` | |/ _ \ 
+//  _____ _ _ _             _             _ _
+// |  ___(_) | |_ ___ _ __ / \  _   _  __| (_) ___
+// | |_  | | | __/ _ \ '__/ _ \| | | |/ _` | |/ _ \
 // |  _| | | | ||  __/ | / ___ \ |_| | (_| | | (_) |
-// |_|   |_|_|\__\___|_|/_/   \_\__,_|\__,_|_|\___/ 
-//                                                  
+// |_|   |_|_|\__\___|_|/_/   \_\__,_|\__,_|_|\___/
+//
 
 // FilterAudio asks the server to remove all of your defined audio clips that match
 // a regular expression.
@@ -1964,6 +2066,7 @@ type HitPointAcknowledgeMessagePayload struct {
 // HitPointRequestMessagePayload requests that the GM add temporary hit points to a creature (usually a PC).
 type HitPointRequestMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 
 	// Simple description to explain the request to the GM
 	Description string
@@ -2101,48 +2204,56 @@ func (c *Connection) LoadFrom(path string, local bool, merge bool) error {
 // LoadArcObjectMessagePayload holds the information needed to send an arc element to a map.
 type LoadArcObjectMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 	ArcElement
 }
 
 // LoadCircleObjectMessagePayload holds the information needed to send an ellipse element to a map.
 type LoadCircleObjectMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 	CircleElement
 }
 
 // LoadLineObjectMessagePayload holds the information needed to send a line element to a map.
 type LoadLineObjectMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 	LineElement
 }
 
 // LoadPolygonObjectMessagePayload holds the information needed to send a polygon element to a map.
 type LoadPolygonObjectMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 	PolygonElement
 }
 
 // LoadRectangleObjectMessagePayload holds the information needed to send a rectangle element to a map.
 type LoadRectangleObjectMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 	RectangleElement
 }
 
 // LoadSpellAreaOfEffectObjectMessagePayload holds the information needed to send a spell area of effect element to a map.
 type LoadSpellAreaOfEffectObjectMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 	SpellAreaOfEffectElement
 }
 
 // LoadTextObjectMessagePayload holds the information needed to send a text element to a map.
 type LoadTextObjectMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 	TextElement
 }
 
 // LoadTileObjectMessagePayload holds the information needed to send a graphic tile element to a map.
 type LoadTileObjectMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 	TileElement
 }
 
@@ -2245,6 +2356,7 @@ func (c *Connection) Mark(x, y float64) error {
 // Call the PlaceSomeone method to send this message out to other clients.
 type PlaceSomeoneMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 	CreatureToken
 }
 
@@ -2268,19 +2380,19 @@ func (c *Connection) PlaceSomeone(someone any) error {
 	return c.serverConn.Send(PlaceSomeone, someone)
 }
 
-
-//  ____  _                _             _ _       
-// |  _ \| | __ _ _   _   / \  _   _  __| (_) ___  
-// | |_) | |/ _` | | | | / _ \| | | |/ _` | |/ _ \ 
+//  ____  _                _             _ _
+// |  _ \| | __ _ _   _   / \  _   _  __| (_) ___
+// | |_) | |/ _` | | | | / _ \| | | |/ _` | |/ _ \
 // |  __/| | (_| | |_| |/ ___ \ |_| | (_| | | (_) |
-// |_|   |_|\__,_|\__, /_/   \_\__,_|\__,_|_|\___/ 
-//                |___/                            
-// 
+// |_|   |_|\__,_|\__, /_/   \_\__,_|\__,_|_|\___/
+//                |___/
+//
 
 // PlayAudioMessagePayload contains the message payload for the request to start or
 // stop playing an audio clip on a client.
 type PlayAudioMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 
 	// Name is the sound clip ID as known by the mapper.
 	// This may be "*" to refer to all sounds (e.g., to stop all playing sounds).
@@ -2328,13 +2440,12 @@ func (c *Connection) PlayAudioX(name string, loop, stop bool, addrs []string) er
 		return fmt.Errorf("nil Connection")
 	}
 	return c.serverConn.Send(PlayAudio, PlayAudioMessagePayload{
-		Name: name,
-		Stop: stop,
-		Loop: loop,
+		Name:  name,
+		Stop:  stop,
+		Loop:  loop,
 		Addrs: addrs,
 	})
 }
-
 
 //  ____       _
 // |  _ \ ___ | | ___
@@ -2384,6 +2495,7 @@ type PrivMessagePayload struct {
 // Call the QueryImage method to send this message out to other clients.
 type QueryImageMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 	ImageDefinition
 }
 
@@ -2397,13 +2509,12 @@ func (c *Connection) QueryImage(idef ImageDefinition) error {
 	return c.serverConn.Send(QueryImage, idef)
 }
 
-
-//   ___                           _             _ _       
-//  / _ \ _   _  ___ _ __ _   _   / \  _   _  __| (_) ___  
-// | | | | | | |/ _ \ '__| | | | / _ \| | | |/ _` | |/ _ \ 
+//   ___                           _             _ _
+//  / _ \ _   _  ___ _ __ _   _   / \  _   _  __| (_) ___
+// | | | | | | |/ _ \ '__| | | | / _ \| | | |/ _` | |/ _ \
 // | |_| | |_| |  __/ |  | |_| |/ ___ \ |_| | (_| | | (_) |
-//  \__\_\\__,_|\___|_|   \__, /_/   \_\__,_|\__,_|_|\___/ 
-//                        |___/                            
+//  \__\_\\__,_|\___|_|   \__, /_/   \_\__,_|\__,_|_|\___/
+//                        |___/
 //
 
 // QueryAudioMessagePayload holds the information sent by the server's QueryAudio
@@ -2465,6 +2576,7 @@ type ReadyMessagePayload struct {
 // Call the RemoveObjAttributes method to send this message out to other clients.
 type RemoveObjAttributesMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 
 	// The ID of the object to be modified
 	ObjID string
@@ -2517,7 +2629,6 @@ func (c *Connection) RemoveObjAttributes(objID, attrName string, values []string
 // Added in version 5.30.0: optional list of option parameters to specify different
 // options to the die rolls to avoid needless proliferation of permutations of
 // methods for all the different ways we can arrange die rolls.
-//
 func (c *Connection) RollDice(to []string, rollspec string, opt ...RollDiceOption) error {
 	var options dieRollOptions
 
@@ -2531,22 +2642,22 @@ func (c *Connection) RollDice(to []string, rollspec string, opt ...RollDiceOptio
 	return c.serverConn.Send(RollDice, RollDiceMessagePayload{
 		ChatCommon: ChatCommon{
 			Recipients: to,
-			ToAll: options.toGM,
-			ToGM: options.toAll,
+			ToAll:      options.toGM,
+			ToGM:       options.toAll,
 		},
-		RollSpec: rollspec,
+		RollSpec:  rollspec,
 		RequestID: options.id,
-		Targets: options.targets,
-		Type: options.dtype,
+		Targets:   options.targets,
+		Type:      options.dtype,
 	})
 }
 
 type dieRollOptions struct {
-	id string
-	toGM bool
-	toAll bool
+	id      string
+	toGM    bool
+	toAll   bool
 	targets []string
-	dtype string
+	dtype   string
 }
 
 type RollDiceOption func(*dieRollOptions)
@@ -2565,7 +2676,7 @@ func WithRollTargets(targets []string) RollDiceOption {
 	}
 }
 
-// WithDieRollID adds an ID to a die roll request. 
+// WithDieRollID adds an ID to a die roll request.
 func WithDieRollID(id string) RollDiceOption {
 	return func(o *dieRollOptions) {
 		o.id = id
@@ -2586,7 +2697,6 @@ func RollToGM() RollDiceOption {
 	}
 }
 
-
 // RollDiceWithID is identical to RollDice except it passes a user-supplied request ID
 // to the server, which will be sent back with the corresponding result message(s).
 func (c *Connection) RollDiceWithID(to []string, rollspec string, requestID string) error {
@@ -2606,6 +2716,7 @@ func (c *Connection) RollDiceWithID(to []string, rollspec string, requestID stri
 // server when requesting a die roll.
 type RollDiceMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 	ChatCommon
 
 	// If you want to track the results to the requests that created them,
@@ -2624,11 +2735,11 @@ type RollDiceMessagePayload struct {
 
 // Predefined values for Type field of RollDiceMessagePayload
 const (
-	DTypeAttack = "attack"
-	DTypeAttackFF = "attack-ff"
+	DTypeAttack      = "attack"
+	DTypeAttackFF    = "attack-ff"
 	DTypeAttackTouch = "attack-touch"
-	DTypeAttackCMD = "attack-cmd"
-	DTypeDamage = "damage"
+	DTypeAttackCMD   = "attack-cmd"
+	DTypeDamage      = "damage"
 )
 
 // RollDiceToAll is equivalent to RollDice, sending the results to all users.
@@ -2689,6 +2800,7 @@ func (c *Connection) RollDiceToGMWithID(rollspec, requestID string) error {
 // message. This tells the client the results of a die roll.
 type RollResultMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 	ChatCommon
 
 	// True if there will be more results following this one for the same request
@@ -2777,6 +2889,7 @@ func (c *Connection) DefineDicePresetsFor(user string, presets []dice.DieRollPre
 
 type DefineDicePresetsMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 	Global  bool                 `json:",omitempty"`
 	For     string               `json:",omitempty"`
 	Presets []dice.DieRollPreset `json:",omitempty"`
@@ -2912,6 +3025,7 @@ type UpdateDicePresetsMessagePayload struct {
 // notion of the initiative order should be replaced by the one given here.
 type UpdateInitiativeMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 	InitiativeList []InitiativeSlot
 }
 
@@ -2957,6 +3071,7 @@ type InitiativeSlot struct {
 // Call the UpdateObjAttributes method to send this message out to other clients.
 type UpdateObjAttributesMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 
 	// The ID of the object to be modified.
 	ObjID string
@@ -2983,6 +3098,7 @@ func (c *Connection) UpdateObjAttributes(objID string, newAttrs map[string]any) 
 // other connected peers has changed.
 type UpdatePeerListMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 	PeerList []Peer
 }
 
@@ -3227,6 +3343,7 @@ type SyncChatMessagePayload struct {
 
 type UpdateVersionsMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 	Packages []PackageUpdate `json:",omitempty"`
 }
 
@@ -3279,6 +3396,7 @@ type TimerAcknowledgeMessagePayload struct {
 // to the GM's time tracker.
 type TimerRequestMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 
 	// If true, the timer should be visible to the players instead of just the GM
 	ShowToAll bool
@@ -3811,10 +3929,10 @@ func (c *Connection) receiveAddCharacter(d AddCharacterMessagePayload) {
 				Natural:  d.CustomReach.Natural,
 				Extended: d.CustomReach.Extended,
 			},
-			Targets:      d.Targets,
+			Targets: d.Targets,
 		}
 		if err := critter.SetSizes(d.SkinSize, d.Skin, d.Size); err != nil {
-			c.Logf("ERROR setting creature %s skinsizes to %v (skin=%v, size=%v): %v", 
+			c.Logf("ERROR setting creature %s skinsizes to %v (skin=%v, size=%v): %v",
 				d.Name, d.SkinSize, d.Skin, d.Size, err)
 		}
 		if d.AoE != nil {
@@ -3825,20 +3943,20 @@ func (c *Connection) receiveAddCharacter(d AddCharacterMessagePayload) {
 		}
 		if d.Health != nil {
 			critter.Health = &CreatureHealth{
-				IsFlatFooted: d.Health.IsFlatFooted,
-				IsStable: d.Health.IsStable,
-				MaxHP: d.Health.MaxHP,
-				TmpHP: d.Health.TmpHP,
-				TmpDamage: d.Health.TmpDamage,
-				LethalDamage: d.Health.LethalDamage,
+				IsFlatFooted:    d.Health.IsFlatFooted,
+				IsStable:        d.Health.IsStable,
+				MaxHP:           d.Health.MaxHP,
+				TmpHP:           d.Health.TmpHP,
+				TmpDamage:       d.Health.TmpDamage,
+				LethalDamage:    d.Health.LethalDamage,
 				NonLethalDamage: d.Health.NonLethalDamage,
-				Con: d.Health.Con,
-				HPBlur: d.Health.HPBlur,
-				Condition: d.Health.Condition,
-				AC: d.Health.AC,
-				FlatFootedAC: d.Health.FlatFootedAC,
-				TouchAC: d.Health.TouchAC,
-				CMD: d.Health.CMD,
+				Con:             d.Health.Con,
+				HPBlur:          d.Health.HPBlur,
+				Condition:       d.Health.Condition,
+				AC:              d.Health.AC,
+				FlatFootedAC:    d.Health.FlatFootedAC,
+				TouchAC:         d.Health.TouchAC,
+				CMD:             d.Health.CMD,
 			}
 		}
 

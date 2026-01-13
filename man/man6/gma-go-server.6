@@ -148,11 +148,9 @@ Message traffic between the server and clients.
 .TP
 .B misc
 Miscellaneous debugging.
-'\" <<New>>
 .TP
 .B qos
 Quality of service stats (even if no action was taken).
-'\" <</New>>
 .TP
 .B state
 Changes to the game state.
@@ -401,7 +399,6 @@ that condition.
 .RE
 '\" <</>>
 .TP
-'\" <<New>>
 .B QOS
 Sets quality of service limits in the server. If a client session violates any of these
 limits, its session will be terminated immediately. Make sure that whatever values you
@@ -521,7 +518,6 @@ The server will disconnect from the client immediately after issuing the
 command to it.
 .RE
 '\" <</>>
-'\" <</New>>
 .TP
 .B UPDATES
 Advertises to the client the version of each software
@@ -539,7 +535,6 @@ The name of the package, such as
 .BR go-gma ,
 or
 .BR core .
-'\" <<New>>
 .TP
 .B MinimumVersion
 If a server wishes to limit clients from this package to only those with a minimum version number
@@ -585,7 +580,6 @@ backslash (i.e.,
 .BR \e\e )
 to satisfy the encoding requirements for JSON.
 .RE
-'\" <</New>>
 .TP
 .B Instances
 A list of available versions of the package. If multiple
@@ -633,7 +627,6 @@ and
 .RE
 .TP
 .B WORLD
-'\" <<New>>
 Sends campaign information. The fields of the JSON payload include
 '\" <<list>>
 .RS
@@ -669,7 +662,6 @@ for the GM to upload mapper content to the server.
 .RE
 '\" <</>>
 .RE
-'\" <</New>>
 .TP
 .B AUTH
 This command word (without JSON data) in the initialization
@@ -718,9 +710,7 @@ included to be sent to the client:
 .BR OA\- ,
 .BR PROGRESS ,
 .BR PS ,
-'\" <<New>>
 .BR REDIRECT ,
-'\" <</New>>
 .BR ROLL ,
 .BR TB ,
 .BR TO ,
@@ -732,9 +722,7 @@ strongly recommend limiting commands to
 .BR // ,
 .BR AC ,
 .BR DSM ,
-'\" <<New>>
 .BR REDIRECT ,
-'\" <</New>>
 .BR UPDATES ,
 and
 .BR WORLD
