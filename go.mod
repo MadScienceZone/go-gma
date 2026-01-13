@@ -1,11 +1,12 @@
 module github.com/MadScienceZone/go-gma/v5
 
-go 1.21
+go 1.22
 
 //	github.com/mattn/goveralls v0.0.9 // indirect
 require github.com/schwarmco/go-cartesian-product v0.0.0-20180515110546-d5ee747a6dc9
 
 require (
+	github.com/google/uuid v1.3.0
 	github.com/hashicorp/go-version v1.6.0
 	github.com/lestrrat-go/strftime v1.0.6
 	github.com/mattn/go-sqlite3 v1.14.16
@@ -26,6 +27,6 @@ require (
 )
 
 retract (
-	v5.8.2 // missing source files
 	v5.32.0 // incorrect max protocol version supported
+	v5.8.2 // missing source files
 )
