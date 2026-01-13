@@ -84,7 +84,7 @@ type ClientConnection struct {
 	Auth *auth.Authenticator
 
 	// Aliases to map creatures
-	AKA        []string
+	AKA []string
 	NotPlaying bool
 
 	// Level of debugging requested for this client
@@ -368,7 +368,7 @@ func (c *ClientConnection) ServeToClient(ctx context.Context, serverStarted, las
 	// accept as fast as we can send.
 	//
 	// To avoid pegging the CPU in a tight buzz loop which constantly keeps checking to
-	// see if anything showed up in the buffer, we use the
+	// see if anything showed up in the buffer (*cough*pre-v8.5.3*cough*), we use the
 	// bufferReadable channel as a sort of simple semaphore that (due to its blocking
 	// behavior) we can wait for in the select, so this goroutine can fully sleep until either the semaphore (channel)
 	// lights up to indicate the buffer needs service, or an
