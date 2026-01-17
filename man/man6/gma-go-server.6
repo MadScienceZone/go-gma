@@ -410,7 +410,19 @@ If any of these rules are not included in the
 payload, that rule will not be enforced at all.
 '\" <<list>>
 .RS
+'\" <<Warning>>
 .TP 16
+'\" <</ital-is-var>>
+.BI MaxUsers " (int)"
+Sets the maximum number of users allowed to be logged in to the server at any one time. If not present
+or set to 0 (zero), then no limit is imposed. Otherwise, any attempt to log in will be denied if this
+many users are already on the server.
+Although GM logins count against this total number, this limit does not prevent the GM from
+logging into the server.
+Not yet implemented.
+'\" <</ital-is-var>>
+'\" <</Warning>>
+.TP
 .B QueryImage
 Reject clients which excessively ask for the same images after being informed of where
 to find them by the server. There should be a little allowance for the client to take the time
@@ -797,7 +809,8 @@ database to the log file.
 .LP
 .BR gma (6),
 .BR gma-mapper (5),
-.BR gma-mapper (6).
+.BR gma-mapper (6),
+.BR gma-mapper-protocol (7).
 .LP
 The server communications protocol is definitively documented in the
 .BR gma-mapper (6)
@@ -805,6 +818,11 @@ manpage which comes with the GMA-Mapper package.
 .SH AUTHOR
 .LP
 Steve Willoughby / steve@madscience.zone.
+.SH CAVEATS
+.LP
+Note that the server commands included in the initialization file can't exceed the maximum message size allowed by the client-server protocol (60K bytes per message).
+If you configure very long messages in your server file which exceed that limit, it will be necessary to break them into batches as documented in
+.BR gma-mapper-protocol (7).
 .SH BUGS
 .LP
 If the server is not configured to require authentication, that means it won't drop
