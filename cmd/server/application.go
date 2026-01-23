@@ -638,7 +638,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 	switch p := payload.(type) {
 	case mapper.AddImageMessagePayload:
 		for _, instance := range p.Sizes {
-			if instance.ImageData != nil && len(instance.ImageData) > 0 {
+			if len(instance.ImageData) > 0 {
 				a.Logf("not storing image \"%s\"@%v (inline image data not supported)", p.Name, instance.Zoom)
 				continue
 			}

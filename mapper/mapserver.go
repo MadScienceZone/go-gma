@@ -275,10 +275,36 @@ func (c *ClientConnection) Close() {
 	c.Conn.Close()
 }
 
+/*
+
+c is a connection from a client:
+
+go c.ServeToClient(ctx, serverStarted, lastPing, nrApp)
+  login, then set up incomingPacket, done channels
+
+  start daemon blocking for         |incomingPacket[backlog=64]<-c.Conn.Receive() (blocks until message arrives)
+    or expired context between reads|
+
+  start daemon blocking for         |toSend[1] or c.Conn.sendBuf[] <-c.Conn.sendChan[50]
+                                    |toSend[1]<-pop(c.Conn.sendBuf) if possible <-bufferReadable		any time buffer has data
+									|<-ctx.Done()
+
+  start daemon blocking for         |c.Conn.writer.WriteString(),.Flush()<-toSend
+                                    |<-ctx.Done()
+
+  for |<-QoS.Log.Ticker.C
+      |<-QoS.QueryImage.Ticker.C
+	  |<-QoS.MessageRate.Ticker.C
+	  |<-ctx.Done
+	  |<-done
+	  |<-incomingPacket
+
+*/
+
 // ServeToClient is intended to be run in its own thread,
 // and speaks to one client for the duration of its session.
 //
-// If the ctx context value is cancelled, the connection to the client will be closed and this routin will exit.
+// If the ctx context value is cancelled, the connection to the client will be closed and this routine will exit.
 func (c *ClientConnection) ServeToClient(ctx context.Context, serverStarted, lastPing time.Time, nrApp *newrelic.Application) {
 	if c == nil {
 		return
@@ -522,7 +548,7 @@ mainloop:
 						c.QoS.MessageRate.Window.String())
 
 					c.Conn.Send(Denied, DeniedMessagePayload{
-						Reason: fmt.Sprintf("You are sending too many messages, too fast, to the server."),
+						Reason: "You are sending too many messages, too fast, to the server.",
 					})
 					time.Sleep(2 * time.Second)
 					break mainloop
@@ -558,7 +584,7 @@ mainloop:
 						c.QoS.MessageRate.Window.String())
 
 					c.Conn.Send(Denied, DeniedMessagePayload{
-						Reason: fmt.Sprintf("You are sending too many messages, too fast, to the server."),
+						Reason: "You are sending too many messages, too fast, to the server.",
 					})
 					time.Sleep(2 * time.Second)
 					break mainloop
