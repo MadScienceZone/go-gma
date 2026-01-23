@@ -4,13 +4,13 @@
 # /__ _                                                                                #
 # \_|(_)                                                                               #
 #  _______  _______  _______             _______     ______   _______     _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )   (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )   | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /    | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/     |   / | |     #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _ |  (__) |     #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_)(_______)     #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )   / ___   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |   \/   )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /    /   )       /   )     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /      _/   /      #
+# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/      /   _/       #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  /(   (__/\ _ (   (__/\     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \_______/(_)\_______/     #
 #                                                                                      #
 ########################################################################################
 */
@@ -50,8 +50,8 @@ import (
 // The GMA Mapper Protocol version number current as of this build,
 // and protocol versions supported by this code.
 const (
-	GMAMapperProtocol=422              // @@##@@ auto-configured
-	GoVersionNumber="5.32.1" // @@##@@ auto-configured
+	GMAMapperProtocol=422      // @@##@@ auto-configured
+	GoVersionNumber="5.32.2" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
 	MaximumSupportedMapProtocol = 422
 )
@@ -484,14 +484,29 @@ func (c *MapConnection) sendln(commandWord, data string) error {
 	//	default:
 	//		return fmt.Errorf("unable to send to server (Dial() not running or data backed up?")
 	//	}
-	c.sendChan <- packet.String()
-	return nil
+	return c.sendDataToChannel(packet.String())
+}
+
+// We were having a problem with the server deadlocking sometimes.
+// I suspect it might be due to the goroutines which harvest client channel data
+// somehow stopping or getting stuck, which will make the channel writes to those
+// clients start blocking. Routing all the writes through these methods instead
+// will now make those non-blocking, and instead just return an error if the
+// channel is full because we've overrun the channel, so the server can carry
+// on with the rest of what it needs to do.
+func (c *MapConnection) sendDataToChannel(data string) error {
+	select {
+	case c.sendChan <- data:
+		return nil
+	default:
+		return fmt.Errorf("failed to send data packet \"%.10s...\" to client %s (outgoing channel is full and possibly stuck!)", data, c.conn.RemoteAddr().String())
+	}
 }
 
 // blocking raw data sent to other side
 func (c *MapConnection) sendRaw(data string) error {
 	if c != nil {
-		c.sendChan <- data + "\n"
+		return c.sendDataToChannel(data + "\n")
 	}
 	return nil
 }

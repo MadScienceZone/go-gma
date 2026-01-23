@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   _______     _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )   / ___   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |   \/   )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /    /   )       /   )     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /      _/   /      #
+# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/      /   _/       #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  /(   (__/\ _ (   (__/\     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \_______/(_)\_______/     #
 #                                                                                      #
 ########################################################################################
 */
@@ -638,7 +638,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 	switch p := payload.(type) {
 	case mapper.AddImageMessagePayload:
 		for _, instance := range p.Sizes {
-			if instance.ImageData != nil && len(instance.ImageData) > 0 {
+			if len(instance.ImageData) > 0 {
 				a.Logf("not storing image \"%s\"@%v (inline image data not supported)", p.Name, instance.Zoom)
 				continue
 			}
@@ -653,7 +653,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		if err := a.SendToAllExcept(requester, mapper.AddImage, p); err != nil {
 			a.Logf("error sending AddImage to peer systems: %v", err)
 		}
-	
+
 	case mapper.AddAudioMessagePayload:
 		if err := a.StoreAudioData(mapper.AudioDefinition{
 			Name:        p.Name,
@@ -751,10 +751,12 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 	case mapper.CharacterNameMessagePayload:
 		if requester.Auth == nil {
 			a.Logf("refusing to accept AKA from unauthenticated user")
-			requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+			if err := requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
 				Command: p.RawMessage(),
 				Reason:  "You are not authorized to issue AKA messages.",
-			})
+			}); err != nil {
+				a.Logf("write error sending to %s: %v", requester.IdTag(), err)
+			}
 			return
 		}
 		p.User = requester.Auth.Username
@@ -779,7 +781,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 	case mapper.RollDiceMessagePayload:
 		if requester.Auth == nil {
 			a.Logf("refusing to accept die roll from unauthenticated user")
-			requester.Conn.Send(mapper.RollResult, mapper.RollResultMessagePayload{
+			if err := requester.Conn.Send(mapper.RollResult, mapper.RollResultMessagePayload{
 				ChatCommon: mapper.ChatCommon{
 					MessageID: <-a.MessageIDGenerator,
 					Sent:      time.Now(),
@@ -791,14 +793,16 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 						{Type: "error", Value: "I can't accept your die roll request. I don't know who you even are."},
 					},
 				},
-			})
+			}); err != nil {
+				a.Logf("write error sending to %s: %v", requester.IdTag(), err)
+			}
 			return
 		}
 
 		label, results, err := requester.D.DoRoll(p.RollSpec)
 		if err != nil {
 			// Bad request. Notify the requester
-			requester.Conn.Send(mapper.RollResult, mapper.RollResultMessagePayload{
+			if err := requester.Conn.Send(mapper.RollResult, mapper.RollResultMessagePayload{
 				ChatCommon: mapper.ChatCommon{
 					MessageID:  <-a.MessageIDGenerator,
 					Recipients: p.Recipients,
@@ -808,15 +812,17 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 					Sent:       time.Now(),
 				},
 				RequestID: p.RequestID,
-				Type: p.Type,
-				Targets: p.Targets,
+				Type:      p.Type,
+				Targets:   p.Targets,
 				Result: dice.StructuredResult{
 					InvalidRequest: true,
 					Details: dice.StructuredDescriptionSet{
 						{Type: "error", Value: fmt.Sprintf("Unable to understand your die-roll request: %v", err)},
 					},
 				},
-			})
+			}); err != nil {
+				a.Logf("error writing to %s: %v", requester.IdTag(), err)
+			}
 			return
 		}
 		var genericParts []string
@@ -895,7 +901,9 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 					}
 
 					receiptPayload.Origin = peer == requester
-					peer.Conn.Send(mapper.RollResult, receiptPayload)
+					if err := peer.Conn.Send(mapper.RollResult, receiptPayload); err != nil {
+						a.Logf("error writing to %s: %v", peer.IdTag(), err)
+					}
 				}
 			}
 		}
@@ -964,10 +972,12 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				delegates, err := a.QueryPresetDelegates(p.For)
 				if err != nil {
 					a.Logf("error getting delegate list for %s: %v", p.For, err)
-					requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+					if err := requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
 						Command: p.RawMessage(),
 						Reason:  "we were unable to verify if you are a delegate for the target user",
-					})
+					}); err != nil {
+						a.Logf("error writing to %s: %v", requester.IdTag(), err)
+					}
 					return
 				} else {
 					if slices.Contains(delegates, requester.Auth.Username) {
@@ -975,10 +985,12 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 						a.Debugf(DebugIO, "Delegate %s requests storage of die-roll presets for %s", requester.Auth.Username, target)
 					} else {
 						a.Logf("refusing to execute privileged command %v %v for non-GM, non-delegate user %s", p.MessageType(), p, requester.Auth.Username)
-						requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+						if err := requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
 							Command: p.RawMessage(),
 							Reason:  "You are not authorized to change the presets for that user",
-						})
+						}); err != nil {
+							a.Logf("error writing to %s: %v", requester.IdTag(), err)
+						}
 						return
 					}
 				}
@@ -987,10 +999,12 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		if p.Global {
 			if !requester.Auth.GmMode {
 				a.Logf("refusing to allow non-privileged command %v %v for non-GM user %s", p.MessageType(), p, requester.Auth.Username)
-				requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+				if err := requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
 					Command: p.RawMessage(),
 					Reason:  "You are not authorized to alter the system-wide global die-roll preset list",
-				})
+				}); err != nil {
+					a.Logf("error writing to %s: %v", requester.IdTag(), err)
+				}
 				return
 			}
 			dataset = GlobalPresetUser
@@ -1016,10 +1030,12 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				a.Debugf(DebugIO, "GM requests storage of die-roll preset delegates for %s", target)
 			} else {
 				a.Logf("refusing to execute privileged command %v %v for non-GM, non-delegate user %s", p.MessageType(), p, requester.Auth.Username)
-				requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+				if err := requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
 					Command: p.RawMessage(),
 					Reason:  "You are not authorized to change the preset delegates for that user",
-				})
+				}); err != nil {
+					a.Logf("error writing to %s: %v", requester.IdTag(), err)
+				}
 				return
 			}
 		}
@@ -1047,10 +1063,12 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				delegates, err := a.QueryPresetDelegates(p.For)
 				if err != nil {
 					a.Logf("error getting delegate list for %s: %v", p.For, err)
-					requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+					if err := requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
 						Command: p.RawMessage(),
 						Reason:  "we were unable to verify if you are a delegate for the target user",
-					})
+					}); err != nil {
+						a.Logf("error writing to %s: %v", requester.IdTag(), err)
+					}
 					return
 				} else {
 					if slices.Contains(delegates, requester.Auth.Username) {
@@ -1058,10 +1076,12 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 						a.Debugf(DebugIO, "Delegate %s requests to add to die-roll presets for %s", requester.Auth.Username, target)
 					} else {
 						a.Logf("refusing to execute privileged command %v %v for non-GM, non-delegate user %s", p.MessageType(), p, requester.Auth.Username)
-						requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+						if err := requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
 							Command: p.RawMessage(),
 							Reason:  "You are not authorized to add to the presets for that user",
-						})
+						}); err != nil {
+							a.Logf("error writing to %s: %v", requester.IdTag(), err)
+						}
 						return
 					}
 				}
@@ -1070,10 +1090,12 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		if p.Global {
 			if !requester.Auth.GmMode {
 				a.Logf("refusing to execute privileged command %v %v for non-GM user %s", p.MessageType(), p, requester.Auth.Username)
-				requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+				if err := requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
 					Command: p.RawMessage(),
 					Reason:  "You are not authorized to change the system-wide global die-roll preset list",
-				})
+				}); err != nil {
+					a.Logf("error writing to %s: %v", requester.IdTag(), err)
+				}
 				return
 			}
 			dataset = GlobalPresetUser
@@ -1093,10 +1115,12 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 
 	case mapper.FailedMessagePayload:
 		if requester.Auth == nil || !requester.Auth.GmMode {
-			requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+			if err := requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
 				Command: p.RawMessage(),
 				Reason:  "You are not authorized to issue FAILED messages for requests.",
-			})
+			}); err != nil {
+				a.Logf("error writing to %s: %v", requester.IdTag(), err)
+			}
 			a.Logf("refusing to allow non-GM user send a FAILED message")
 			return
 		}
@@ -1113,10 +1137,12 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 
 	case mapper.TimerAcknowledgeMessagePayload:
 		if requester.Auth == nil || !requester.Auth.GmMode {
-			requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+			if err := requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
 				Command: p.RawMessage(),
 				Reason:  "You are not authorized to send a TMACK message.",
-			})
+			}); err != nil {
+				a.Logf("error writing to %s: %v", requester.IdTag(), err)
+			}
 			a.Logf("refusing to allow non-GM user to send a TMACK message")
 			return
 		}
@@ -1132,10 +1158,12 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 
 	case mapper.HitPointAcknowledgeMessagePayload:
 		if requester.Auth == nil || !requester.Auth.GmMode {
-			requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+			if err := requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
 				Command: p.RawMessage(),
 				Reason:  "You are not authorized to send a HPACK message.",
-			})
+			}); err != nil {
+				a.Logf("error writing to %s: %v", requester.IdTag(), err)
+			}
 			a.Logf("refusing to allow non-GM user to send a HPACK message")
 			return
 		}
@@ -1165,10 +1193,12 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				delegates, err := a.QueryPresetDelegates(p.For)
 				if err != nil {
 					a.Logf("error getting delegate list for %s: %v", p.For, err)
-					requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+					if err := requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
 						Command: p.RawMessage(),
 						Reason:  "we were unable to verify if you are a delegate for the target user",
-					})
+					}); err != nil {
+						a.Logf("error writing to %s: %v", requester.IdTag(), err)
+					}
 					return
 				} else {
 					if slices.Contains(delegates, requester.Auth.Username) {
@@ -1176,10 +1206,12 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 						a.Debugf(DebugIO, "Delegate %s requests filter of die-roll presets for %s", requester.Auth.Username, target)
 					} else {
 						a.Logf("refusing to execute privileged command %v %v for non-GM, non-delegate user %s", p.MessageType(), p, requester.Auth.Username)
-						requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+						if err := requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
 							Command: p.RawMessage(),
 							Reason:  "You are not authorized to filter the presets for that user",
-						})
+						}); err != nil {
+							a.Logf("error writing to %s: %v", requester.IdTag(), err)
+						}
 						return
 					}
 				}
@@ -1188,10 +1220,12 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		if p.Global {
 			if !requester.Auth.GmMode {
 				a.Logf("refusing to execute privileged command %v %v for non-GM user %s", p.MessageType(), p, requester.Auth.Username)
-				requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+				if err := requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
 					Command: p.RawMessage(),
 					Reason:  "You are not authorized to filter the system-wide global die-roll presets",
-				})
+				}); err != nil {
+					a.Logf("error writing to %s: %v", requester.IdTag(), err)
+				}
 				return
 			}
 			dataset = GlobalPresetUser
@@ -1249,10 +1283,12 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				delegates, err := a.QueryPresetDelegates(p.For)
 				if err != nil {
 					a.Logf("error getting delegate list for %s: %v", p.For, err)
-					requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+					if err := requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
 						Command: p.RawMessage(),
 						Reason:  "we were unable to verify if you are a delegate for the target user",
-					})
+					}); err != nil {
+						a.Logf("error writing to %s: %v", requester.IdTag(), err)
+					}
 					return
 				} else {
 					if slices.Contains(delegates, requester.Auth.Username) {
@@ -1260,10 +1296,12 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 						a.Debugf(DebugIO, "Delegate %s requests retrieval of die-roll presets for %s", requester.Auth.Username, target)
 					} else {
 						a.Logf("refusing to execute privileged command %v %v for non-GM, non-delegate user %s", p.MessageType(), p, requester.Auth.Username)
-						requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+						if err := requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
 							Command: p.RawMessage(),
 							Reason:  "You are not authorized to retrieve the presets for that user",
-						})
+						}); err != nil {
+							a.Logf("error writing to %s: %v", requester.IdTag(), err)
+						}
 						return
 					}
 				}
@@ -1409,18 +1447,22 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		mapper.UpdateClockMessagePayload, mapper.ToolbarMessagePayload:
 		if requester == nil || requester.Auth == nil {
 			a.Logf("refusing to execute privileged command %v for unauthenticated user", p.MessageType())
-			requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+			if err := requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
 				Command: p.RawMessage(),
 				Reason:  "You are not the GM. You might not even be real.",
-			})
+			}); err != nil {
+				a.Logf("error writing to %s: %v", requester.IdTag(), err)
+			}
 			return
 		}
 		if !requester.Auth.GmMode {
 			a.Logf("refusing to execute privileged command %v %v for non-GM user %s", p.MessageType(), p, requester.Auth.Username)
-			requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+			if err := requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
 				Command: p.RawMessage(),
 				Reason:  "You are not the GM.",
-			})
+			}); err != nil {
+				a.Logf("error writing to %s: %v", requester.IdTag(), err)
+			}
 			return
 		}
 		a.SendToAllExcept(requester, payload.MessageType(), payload)
@@ -1440,10 +1482,10 @@ func (a *Application) SendPeerListToAll() {
 
 	for _, peer := range allClients {
 		thisPeer := mapper.Peer{
-			Addr:     peer.Address,
-			LastPolo: time.Since(peer.LastPoloTime).Seconds(),
-			IsMe:     false,
-			AKA:      peer.AKA,
+			Addr:       peer.Address,
+			LastPolo:   time.Since(peer.LastPoloTime).Seconds(),
+			IsMe:       false,
+			AKA:        peer.AKA,
 			NotPlaying: peer.NotPlaying,
 		}
 		if peer.Auth != nil {
@@ -1467,10 +1509,10 @@ func (a *Application) SendPeerListTo(requester *mapper.ClientConnection) {
 	var peers mapper.UpdatePeerListMessagePayload
 	for _, peer := range a.GetClients() {
 		thisPeer := mapper.Peer{
-			Addr:     peer.Address,
-			LastPolo: time.Since(peer.LastPoloTime).Seconds(),
-			IsMe:     peer == requester,
-			AKA:      peer.AKA,
+			Addr:       peer.Address,
+			LastPolo:   time.Since(peer.LastPoloTime).Seconds(),
+			IsMe:       peer == requester,
+			AKA:        peer.AKA,
 			NotPlaying: peer.NotPlaying,
 		}
 		if peer.Auth != nil {
@@ -2293,49 +2335,77 @@ func (a *Application) manageGameState() {
 					}
 				}
 				a.Debugf(DebugState, "client %v requests SYNC", client.IdTag())
-				client.Conn.Send(mapper.CombatMode, mapper.CombatModeMessagePayload{Enabled: isInCombatMode})
-				client.Conn.Send(mapper.Toolbar, mapper.ToolbarMessagePayload{Enabled: !toolbarHidden})
-				client.Conn.Send(mapper.AdjustView, mapper.AdjustViewMessagePayload{Grid: viewg, XView: viewx, YView: viewy})
+				if err := client.Conn.Send(mapper.CombatMode, mapper.CombatModeMessagePayload{Enabled: isInCombatMode}); err != nil {
+					a.Logf("error writing to %s: %v", client.IdTag(), err)
+				}
+				if err := client.Conn.Send(mapper.Toolbar, mapper.ToolbarMessagePayload{Enabled: !toolbarHidden}); err != nil {
+					a.Logf("error writing to %s: %v", client.IdTag(), err)
+				}
+				if err := client.Conn.Send(mapper.AdjustView, mapper.AdjustViewMessagePayload{Grid: viewg, XView: viewx, YView: viewy}); err != nil {
+					a.Logf("error writing to %s: %v", client.IdTag(), err)
+				}
 				if currentTurn == nil {
-					client.Conn.Send(mapper.Comment, "no current turn set")
+					if err := client.Conn.Send(mapper.Comment, "no current turn set"); err != nil {
+						a.Logf("error writing to %s: %v", client.IdTag(), err)
+					}
 				} else {
-					client.Conn.Send(mapper.UpdateTurn, *currentTurn)
+					if err := client.Conn.Send(mapper.UpdateTurn, *currentTurn); err != nil {
+						a.Logf("error writing to %s: %v", client.IdTag(), err)
+					}
 				}
 				if currentInitiativeList == nil {
-					client.Conn.Send(mapper.Comment, "no current initiative list set")
+					if err := client.Conn.Send(mapper.Comment, "no current initiative list set"); err != nil {
+						a.Logf("error writing to %s: %v", client.IdTag(), err)
+					}
 				} else {
-					client.Conn.Send(mapper.UpdateInitiative, *currentInitiativeList)
+					if err := client.Conn.Send(mapper.UpdateInitiative, *currentInitiativeList); err != nil {
+						a.Logf("error writing to %s: %v", client.IdTag(), err)
+					}
 				}
 				if currentTime == nil {
-					client.Conn.Send(mapper.Comment, "no current time set")
+					if err := client.Conn.Send(mapper.Comment, "no current time set"); err != nil {
+						a.Logf("error writing to %s: %v", client.IdTag(), err)
+					}
 				} else {
-					client.Conn.Send(mapper.UpdateClock, *currentTime)
+					if err := client.Conn.Send(mapper.UpdateClock, *currentTime); err != nil {
+						a.Logf("error writing to %s: %v", client.IdTag(), err)
+					}
 				}
 				for _, marker := range newStatusMarkers {
-					client.Conn.Send(mapper.UpdateStatusMarker, marker)
+					if err := client.Conn.Send(mapper.UpdateStatusMarker, marker); err != nil {
+						a.Logf("error writing to %s: %v", client.IdTag(), err)
+					}
 				}
 
 				for k, e := range eventHistory {
 					if strings.HasPrefix(k, "llf:") || strings.HasPrefix(k, "lsf:") {
-						client.Conn.Send((*e).MessageType(), *e)
+						if err := client.Conn.Send((*e).MessageType(), *e); err != nil {
+							a.Logf("error writing to %s: %v", client.IdTag(), err)
+						}
 					}
 				}
 
 				for k, e := range eventHistory {
 					if strings.HasPrefix(k, "ulf:") || strings.HasPrefix(k, "usf:") {
-						client.Conn.Send((*e).MessageType(), *e)
+						if err := client.Conn.Send((*e).MessageType(), *e); err != nil {
+							a.Logf("error writing to %s: %v", client.IdTag(), err)
+						}
 					}
 				}
 
 				for k, e := range eventHistory {
 					if strings.HasPrefix(k, "new:") {
-						client.Conn.Send((*e).MessageType(), *e)
+						if err := client.Conn.Send((*e).MessageType(), *e); err != nil {
+							a.Logf("error writing to %s: %v", client.IdTag(), err)
+						}
 					}
 				}
 
 				for k, e := range eventHistory {
 					if strings.HasPrefix(k, "add:") || strings.HasPrefix(k, "del:") || strings.HasPrefix(k, "mod:") {
-						client.Conn.Send((*e).MessageType(), *e)
+						if err := client.Conn.Send((*e).MessageType(), *e); err != nil {
+							a.Logf("error writing to %s: %v", client.IdTag(), err)
+						}
 					}
 				}
 
@@ -2357,7 +2427,7 @@ func (a *Application) SendGameState(client *mapper.ClientConnection) {
 func stripColorsFromResponse(result mapper.RollResultMessagePayload) mapper.RollResultMessagePayload {
 	if func() bool {
 		for _, detail := range result.Result.Details {
-			if strings.IndexRune(detail.Value, '≡') >= 0 {
+			if strings.ContainsRune(detail.Value, '≡') {
 				return false
 			}
 		}

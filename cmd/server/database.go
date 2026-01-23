@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   _______     _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )   / ___   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |   \/   )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /    /   )       /   )     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /      _/   /      #
+# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/      /   _/       #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  /(   (__/\ _ (   (__/\     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \_______/(_)\_______/     #
 #                                                                                      #
 ########################################################################################
 */
@@ -329,7 +329,10 @@ func (a *Application) QueryChatHistory(target int, requester *mapper.ClientConne
 			if err := json.Unmarshal([]byte(jdata), &cc); err != nil {
 				return err
 			}
-			requester.Conn.Send(mapper.ClearChat, cc)
+			if err := requester.Conn.Send(mapper.ClearChat, cc); err != nil {
+				a.Logf("error writing to %s: %v", requester.IdTag(), err)
+				return err
+			}
 
 		case MsgTypeChatMessage:
 			var chat mapper.ChatMessageMessagePayload
@@ -344,7 +347,10 @@ func (a *Application) QueryChatHistory(target int, requester *mapper.ClientConne
 						chat.Text = cleaned
 					}
 				}
-				requester.Conn.Send(mapper.ChatMessage, chat)
+				if err := requester.Conn.Send(mapper.ChatMessage, chat); err != nil {
+					a.Logf("error writing to %s: %v", requester.IdTag(), err)
+					return err
+				}
 			}
 
 		case MsgTypeRollResult:
@@ -354,7 +360,10 @@ func (a *Application) QueryChatHistory(target int, requester *mapper.ClientConne
 			}
 			rr.Replay = true
 			if rr.ToAll || (rr.ToGM && requester.Auth.GmMode) || slices.Contains(rr.Recipients, requester.Auth.Username) {
-				requester.Conn.Send(mapper.RollResult, rr)
+				if err := requester.Conn.Send(mapper.RollResult, rr); err != nil {
+					a.Logf("error writing to %s: %v", requester.IdTag(), err)
+					return err
+				}
 			}
 
 		default:
@@ -504,7 +513,10 @@ func (a *Application) SendDicePresets(user string, onlyGlobal bool, broadcast bo
 	for _, peer := range a.GetClients() {
 		if peer.Auth != nil {
 			if (onlyGlobal && broadcast) || (peer.Auth.Username == user || slices.Contains(delegates, peer.Auth.Username)) {
-				peer.Conn.Send(mapper.UpdateDicePresets, pset)
+				if err := peer.Conn.Send(mapper.UpdateDicePresets, pset); err != nil {
+					a.Logf("error writing to %s: %v", peer.IdTag(), err)
+					return err
+				}
 			}
 		}
 	}
@@ -666,9 +678,9 @@ func (a *Application) FilterAudio(f mapper.FilterAudioMessagePayload) error {
 	return nil
 }
 
-// @[00]@| Go-GMA 5.32.1
+// @[00]@| Go-GMA 5.32.2
 // @[01]@|
-// @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
+// @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
 // @[12]@| Aloha, Oregon, USA. All Rights Reserved. Some components were introduced at different
 // @[13]@| points along that historical time line.

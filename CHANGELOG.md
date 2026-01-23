@@ -1,15 +1,15 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.32.1                <!-- @@##@@ -->
- * Effective Date: 10-Dec-2025			<!-- @@##@@ -->
+ * This Package Version: 5.32.2                <!-- @@##@@ -->
+ * Effective Date: 23-Jan-2026			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 6.39.1		<!-- @@##@@ -->
- * GMA Mapper Version: 4.35.2		<!-- @@##@@ -->
+ * GMA Core API Library Version: 6.41		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.36.5		<!-- @@##@@ -->
  * GMA Mapper Protocol: 422		<!-- @@##@@ -->
  * GMA Mapper File Format: 23		<!-- @@##@@ -->
- * GMA Mapper Preferences File Format: 12 <!-- @@##@@ -->
+ * GMA Mapper Preferences File Format: 13 <!-- @@##@@ -->
  * GMA User Preferences File Format: 4 <!-- @@##@@ -->
 
 # Notice
@@ -22,6 +22,10 @@ In addition, if your server didn't have the following updates installed previous
 `scripts/upgrade-5.15.0` for servers older than 5.15.0
 
 `scripts/upgrade-5.13.1` for servers older than 5.13.1
+
+## v5.32.2
+### Fixed
+ * Experimental fix to try to mitigate server lock-up bug.
 
 ## v5.32.1
 ### Fixed

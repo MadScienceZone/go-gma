@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   _______     _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )   / ___   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |   \/   )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /    /   )       /   )     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /      _/   /      #
+# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/      /   _/       #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  /(   (__/\ _ (   (__/\     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \_______/(_)\_______/     #
 #                                                                                      #
 ########################################################################################
 */
@@ -84,7 +84,7 @@ type ClientConnection struct {
 	Auth *auth.Authenticator
 
 	// Aliases to map creatures
-	AKA []string
+	AKA        []string
 	NotPlaying bool
 
 	// Level of debugging requested for this client
@@ -499,9 +499,11 @@ mainloop:
 							c.QoS.QueryImage.Threshold,
 							c.QoS.QueryImage.Window.String())
 
-						c.Conn.Send(Denied, DeniedMessagePayload{
+						if err := c.Conn.Send(Denied, DeniedMessagePayload{
 							Reason: fmt.Sprintf("You are sending too many repeated requests for the image \"%s\"; this probably means your client is unable to continue running and is flooding the server with requests.", q),
-						})
+						}); err != nil {
+							c.Logf("write error: %v", err)
+						}
 						time.Sleep(2 * time.Second)
 						break mainloop
 					}
@@ -521,9 +523,11 @@ mainloop:
 						util.PluralizeString("message", int(c.QoS.MessageRate.Count)),
 						c.QoS.MessageRate.Window.String())
 
-					c.Conn.Send(Denied, DeniedMessagePayload{
-						Reason: fmt.Sprintf("You are sending too many messages, too fast, to the server."),
-					})
+					if err := c.Conn.Send(Denied, DeniedMessagePayload{
+						Reason: "You are sending too many messages, too fast, to the server.",
+					}); err != nil {
+						c.Logf("write error: %v", err)
+					}
 					time.Sleep(2 * time.Second)
 					break mainloop
 				}
@@ -557,9 +561,11 @@ mainloop:
 						util.PluralizeString("message", int(c.QoS.MessageRate.Count)),
 						c.QoS.MessageRate.Window.String())
 
-					c.Conn.Send(Denied, DeniedMessagePayload{
-						Reason: fmt.Sprintf("You are sending too many messages, too fast, to the server."),
-					})
+					if err := c.Conn.Send(Denied, DeniedMessagePayload{
+						Reason: "You are sending too many messages, too fast, to the server.",
+					}); err != nil {
+						c.Logf("write error: %v", err)
+					}
 					time.Sleep(2 * time.Second)
 					break mainloop
 				}
@@ -580,16 +586,20 @@ mainloop:
 					RollResultMessagePayload, UpdateCoreDataMessagePayload, UpdateCoreIndexMessagePayload,
 					UpdatePeerListMessagePayload,
 					UpdateVersionsMessagePayload, WorldMessagePayload:
-					c.Conn.Send(Priv, PrivMessagePayload{
+					if err := c.Conn.Send(Priv, PrivMessagePayload{
 						Command: p.RawMessage(),
 						Reason:  "I get to send that command, not you.",
-					})
+					}); err != nil {
+						c.Logf("write error: %v", err)
+					}
 
 				case AuthMessagePayload:
-					c.Conn.Send(Priv, PrivMessagePayload{
+					if err := c.Conn.Send(Priv, PrivMessagePayload{
 						Command: p.RawMessage(),
 						Reason:  "It's not the right time in our conversation for that.",
-					})
+					}); err != nil {
+						c.Logf("write error: %v", err)
+					}
 
 				case AcceptMessagePayload:
 					if len(p.Messages) == 0 || slices.Index(p.Messages, "*") < 0 {
@@ -627,22 +637,28 @@ mainloop:
 					c.Server.HandleServerMessage(p, c)
 
 				case FilterCoreDataMessagePayload:
-					c.Conn.Send(Comment, "FilterCoreData message ignored since the core database is not yet implemented.")
+					if err := c.Conn.Send(Comment, "FilterCoreData message ignored since the core database is not yet implemented."); err != nil {
+						c.Logf("write error: %v", err)
+					}
 
 				case QueryCoreDataMessagePayload:
-					c.Conn.Send(UpdateCoreData, UpdateCoreDataMessagePayload{
+					if err := c.Conn.Send(UpdateCoreData, UpdateCoreDataMessagePayload{
 						RequestID:   p.RequestID,
 						NoSuchEntry: true,
-					})
+					}); err != nil {
+						c.Logf("write error: %v", err)
+					}
 
 				case QueryCoreIndexMessagePayload:
-					c.Conn.Send(UpdateCoreIndex, UpdateCoreIndexMessagePayload{
+					if err := c.Conn.Send(UpdateCoreIndex, UpdateCoreIndexMessagePayload{
 						RequestID: p.RequestID,
 						Type:      p.Type,
 						IsDone:    true,
 						N:         0,
 						Of:        0,
-					})
+					}); err != nil {
+						c.Logf("write error: %v", err)
+					}
 
 				case QueryAudioMessagePayload:
 					// TODO: implement QoS check on these too if necessary
@@ -661,9 +677,11 @@ mainloop:
 										c.QoS.QueryImage.Threshold,
 										c.QoS.QueryImage.Window.String())
 
-									c.Conn.Send(Denied, DeniedMessagePayload{
+									if err := c.Conn.Send(Denied, DeniedMessagePayload{
 										Reason: fmt.Sprintf("You are sending too many repeated requests for the image \"%s\"; this probably means your client is unable to continue running and is flooding the server with requests.", id),
-									})
+									}); err != nil {
+										c.Logf("write error: %v", err)
+									}
 									time.Sleep(2 * time.Second)
 									return fmt.Errorf("QoS violation")
 								}
@@ -701,11 +719,15 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 	} else {
 		c.Log("got nil preamble data!")
 	}
-	c.Conn.Send(Protocol, GMAMapperProtocol)
+	if err := c.Conn.Send(Protocol, GMAMapperProtocol); err != nil {
+		c.Logf("write error: %v", err)
+	}
 	if preamble != nil {
 		for i, line := range preamble.Preamble {
 			c.debugf(DebugIO, "preamble line %d: %s", i, line)
-			c.Conn.sendRaw(line)
+			if err := c.Conn.sendRaw(line); err != nil {
+				c.Logf("write error: %v", err)
+			}
 			if err := c.Conn.Flush(); err != nil {
 				done <- err
 				return
@@ -713,8 +735,12 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 			if strings.HasPrefix(line, "REDIRECT ") {
 				c.debugf(DebugIO, "preamble includes REDIRECT statement; not continuing further")
 				time.Sleep(time.Second * 5)
-				c.Conn.sendRaw("// Disconnecting now. See you on the other server!")
-				c.Conn.Flush()
+				if err := c.Conn.sendRaw("// Disconnecting now. See you on the other server!"); err != nil {
+					c.Logf("write error: %v", err)
+				}
+				if err := c.Conn.Flush(); err != nil {
+					c.Logf("flush error: %v", err)
+				}
 				time.Sleep(time.Second * 2)
 				done <- fmt.Errorf("login cancelled due to redirect")
 				return
@@ -730,7 +756,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 			done <- fmt.Errorf("error generating authentication challenge: %v", err)
 			return
 		}
-		c.Conn.Send(Challenge, ChallengeMessagePayload{
+		if err := c.Conn.Send(Challenge, ChallengeMessagePayload{
 			Protocol:      GMAMapperProtocol,
 			Challenge:     challenge,
 			Iterations:    iterations,
@@ -738,7 +764,11 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 			ServerActive:  lastPing,
 			ServerTime:    time.Now(),
 			ServerVersion: GoVersionNumber,
-		})
+		}); err != nil {
+			c.Logf("write error: %v", err)
+			done <- err
+			return
+		}
 		if err := c.Conn.Flush(); err != nil {
 			done <- err
 			return
@@ -774,7 +804,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 			select {
 			case <-ctx.Done():
 				c.Log("Timeout/cancel while waiting for authentication from client")
-				c.Conn.Send(Denied, DeniedMessagePayload{Reason: "Life is short indeed / I don't have time for waiting / For you to log in"})
+				_ = c.Conn.Send(Denied, DeniedMessagePayload{Reason: "Life is short indeed / I don't have time for waiting / For you to log in"})
 				_ = c.Conn.Flush()
 				time.Sleep(1 * time.Second)
 				done <- fmt.Errorf("timeout waiting for client auth")
@@ -805,7 +835,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 
 						if fields[1] == "" {
 							c.debugf(DebugAuth, "client %s matches pattern %s for %s, but does not announce its version; denied", packet.Client, allowedClient.VersionPattern, allowedClient.Name)
-							c.Conn.Send(Denied, DeniedMessagePayload{Reason: "disallowed client version"})
+							_ = c.Conn.Send(Denied, DeniedMessagePayload{Reason: "disallowed client version"})
 							_ = c.Conn.Flush()
 							done <- fmt.Errorf("client denied")
 							return
@@ -814,7 +844,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 						relVer, err := util.VersionCompare(fields[1], allowedClient.MinimumVersion)
 						if err != nil {
 							c.debugf(DebugAuth, "Error parsing client version %s and minimum version %s: %v", fields[1], allowedClient.MinimumVersion, err)
-							c.Conn.Send(Denied, DeniedMessagePayload{Reason: "unable to understand client version"})
+							_ = c.Conn.Send(Denied, DeniedMessagePayload{Reason: "unable to understand client version"})
 							_ = c.Conn.Flush()
 							done <- fmt.Errorf("client version error")
 							return
@@ -822,7 +852,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 
 						if relVer < 0 {
 							c.debugf(DebugAuth, "%s client version %s is older than minimum version %s; denied", allowedClient.Name, fields[1], allowedClient.MinimumVersion)
-							c.Conn.Send(Denied, DeniedMessagePayload{Reason: allowedClient.Name + " client is older than minimum allowed version"})
+							_ = c.Conn.Send(Denied, DeniedMessagePayload{Reason: allowedClient.Name + " client is older than minimum allowed version"})
 							_ = c.Conn.Flush()
 							done <- fmt.Errorf("client version not allowed")
 							return
@@ -835,7 +865,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 
 				if strings.HasPrefix(packet.User, "SYS$") {
 					c.Logf("denied access to restricted username")
-					c.Conn.Send(Denied, DeniedMessagePayload{Reason: "login incorrect"})
+					_ = c.Conn.Send(Denied, DeniedMessagePayload{Reason: "login incorrect"})
 					_ = c.Conn.Flush()
 					done <- fmt.Errorf("access denied")
 					return
@@ -861,7 +891,9 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 						}
 					}
 					c.Logf("login: client: %s, platform: %s", packet.Client, packet.Platform)
-					c.Conn.Send(Granted, GrantedMessagePayload{User: c.Auth.Username})
+					if err := c.Conn.Send(Granted, GrantedMessagePayload{User: c.Auth.Username}); err != nil {
+						c.Logf("write error: %v", err)
+					}
 					break awaitUserAuth
 				} else {
 					c.Conn.Send(Denied, DeniedMessagePayload{Reason: "login incorrect"})
@@ -873,13 +905,17 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 		}
 	} else {
 		c.debug(DebugIO, "proceeding without authentication")
-		c.Conn.Send(Challenge, ChallengeMessagePayload{
+		if err := c.Conn.Send(Challenge, ChallengeMessagePayload{
 			Protocol:      GMAMapperProtocol,
 			ServerStarted: serverStarted,
 			ServerActive:  lastPing,
 			ServerVersion: GoVersionNumber,
-		})
+		}); err != nil {
+			c.Logf("write error: %v", err)
+			done <- err
+		}
 		if err := c.Conn.Flush(); err != nil {
+			c.Logf("flush error: %v", err)
 			done <- err
 		}
 	}
@@ -887,23 +923,33 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 	if preamble != nil {
 		for i, line := range preamble.PostAuth {
 			c.debugf(DebugIO, "post-auth preamble line %d: %s", i, line)
-			c.Conn.sendRaw(line)
+			if err := c.Conn.sendRaw(line); err != nil {
+				c.Logf("write error: %v", err)
+				done <- err
+			}
 			if err := c.Conn.Flush(); err != nil {
+				c.Logf("flush error: %v", err)
 				done <- err
 			}
 		}
 	}
 
 	c.debug(DebugIO, "signalling end of login step")
-	c.Conn.Send(Ready, nil)
+	if err := c.Conn.Send(Ready, nil); err != nil {
+		c.Logf("write error: %v", err)
+		done <- err
+	}
 	if err := c.Conn.Flush(); err != nil {
+		c.Logf("flush error: %v", err)
 		done <- err
 	}
 	done <- nil // login is done at this point, let the caller start the normal client listener for I/O
 	if preamble != nil {
 		for i, line := range preamble.PostReady {
 			c.debugf(DebugIO, "post-ready preamble line %d: %s", i, line)
-			c.Conn.sendRaw(line)
+			if err := c.Conn.sendRaw(line); err != nil {
+				c.Logf("write error: %v", err)
+			}
 		}
 		if preamble.SyncData {
 			c.Log("syncing client to current game state...")

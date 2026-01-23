@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   _______     _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )   / ___   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |   \/   )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /    /   )       /   )     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /      _/   /      #
+# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/      /   _/       #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  /(   (__/\ _ (   (__/\     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \_______/(_)\_______/     #
 #                                                                                      #
 ########################################################################################
 */
@@ -31,20 +31,20 @@ package text
 const CommonPostScriptPreamble = `%!PS
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  _______  _______  _______              ______     ______    _____       __          %
-% (  ____ \(       )(  ___  )            / ____ \   / ___  \  / ___ \     /  \         %
-% | (    \/| () () || (   ) |           ( (    \/   \/   \  \( (   ) )    \/) )        %
-% | |      | || || || (___) |           | (____        ___) /( (___) |      | |        %
-% | | ____ | |(_)| ||  ___  |           |  ___ \      (___ (  \____  |      | |        %
-% | | \_  )| |   | || (   ) | Game      | (   ) )         ) \      ) |      | |        %
-% | (___) || )   ( || )   ( | Master's  ( (___) ) _ /\___/  //\____) ) _  __) (_       %
-% (_______)|/     \||/     \| Assistant  \_____/ (_)\______/ \______/ (_) \____/       %
+%  _______  _______  _______              ______        ___     __                     %
+% (  ____ \(       )(  ___  )            / ____ \      /   )   /  \                    %
+% | (    \/| () () || (   ) |           ( (    \/     / /) |   \/) )                   %
+% | |      | || || || (___) |           | (____      / (_) (_    | |                   %
+% | | ____ | |(_)| ||  ___  |           |  ___ \    (____   _)   | |                   %
+% | | \_  )| |   | || (   ) | Game      | (   ) )        ) (     | |                   %
+% | (___) || )   ( || )   ( | Master's  ( (___) ) _      | |   __) (_                  %
+% (_______)|/     \||/     \| Assistant  \_____/ (_)     (_)   \____/                  %
 %                                                                                      %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-% @[00]@| GMA Core 6.39.1
+% @[00]@| GMA Core 6.41
 % @[01]@|
-% @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
+% @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 % @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
 % @[12]@| Aloha, Oregon, USA. All Rights Reserved. Some components were introduced at different
 % @[13]@| points along that historical time line.
@@ -683,20 +683,20 @@ const CommonPostScriptPreamble = `%!PS
 // @@:go:gma-preamble:begin:GMAPostScriptPreamble@@
 const GMAPostScriptPreamble = `%!PS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  _______  _______  _______              ______     ______    _____       __          %
-% (  ____ \(       )(  ___  )            / ____ \   / ___  \  / ___ \     /  \         %
-% | (    \/| () () || (   ) |           ( (    \/   \/   \  \( (   ) )    \/) )        %
-% | |      | || || || (___) |           | (____        ___) /( (___) |      | |        %
-% | | ____ | |(_)| ||  ___  |           |  ___ \      (___ (  \____  |      | |        %
-% | | \_  )| |   | || (   ) | Game      | (   ) )         ) \      ) |      | |        %
-% | (___) || )   ( || )   ( | Master's  ( (___) ) _ /\___/  //\____) ) _  __) (_       %
-% (_______)|/     \||/     \| Assistant  \_____/ (_)\______/ \______/ (_) \____/       %
+%  _______  _______  _______              ______        ___     __                     %
+% (  ____ \(       )(  ___  )            / ____ \      /   )   /  \                    %
+% | (    \/| () () || (   ) |           ( (    \/     / /) |   \/) )                   %
+% | |      | || || || (___) |           | (____      / (_) (_    | |                   %
+% | | ____ | |(_)| ||  ___  |           |  ___ \    (____   _)   | |                   %
+% | | \_  )| |   | || (   ) | Game      | (   ) )        ) (     | |                   %
+% | (___) || )   ( || )   ( | Master's  ( (___) ) _      | |   __) (_                  %
+% (_______)|/     \||/     \| Assistant  \_____/ (_)     (_)   \____/                  %
 %                                                                                      %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-% @[00]@| GMA Core 6.39.1
+% @[00]@| GMA Core 6.41
 % @[01]@|
-% @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
+% @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 % @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
 % @[12]@| Aloha, Oregon, USA. All Rights Reserved. Some components were introduced at different
 % @[13]@| points along that historical time line.
@@ -3297,9 +3297,9 @@ _my_encoding 8#344 /divide        put
 `
 // @@:go:gma-preamble:end:@@
 
-// @[00]@| Go-GMA 5.32.1
+// @[00]@| Go-GMA 5.32.2
 // @[01]@|
-// @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
+// @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
 // @[12]@| Aloha, Oregon, USA. All Rights Reserved. Some components were introduced at different
 // @[13]@| points along that historical time line.
