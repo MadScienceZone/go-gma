@@ -408,7 +408,7 @@ func (a *Application) Logf(format string, args ...any) {
 // list just like fmt.Printf does.
 func (a *Application) Debugf(level DebugFlags, format string, args ...any) {
 	if a != nil && a.Logger != nil && (a.DebugLevel&level) != 0 {
-		a.Logger.Printf(DebugFlagNames(level)+" "+format, args...)
+		a.Logger.Printf(DebugFlagNames(level)+" (p="+time.Since(a.LastPing).String()+") "+format, args...)
 	}
 }
 
