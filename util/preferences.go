@@ -32,7 +32,7 @@ const (
 	GMAMapperPreferencesMinimumVersion int = 1
 	GMAMapperPreferencesMaximumVersion int = 13
 	GMAPreferencesMinimumVersion       int = 1
-	GMAPreferencesMaximumVersion       int = 2
+	GMAPreferencesMaximumVersion       int = 6
 )
 
 type UnsupportedPreferencesVersionError struct {
@@ -365,6 +365,22 @@ type InitiativeSeedData struct {
 	BlurHP       int    `json:"blur_hp"`
 	IsPC         bool   `json:"is_pc"`
 	DieSpec      string `json:"die_spec"`
+	Tactical     MonsterTacticalData `json:"tactical,omitempty"`
+}
+
+type MonsterTacticalData struct {
+	AC struct { 
+		AC int `json:"ac"`
+		Touch int `json:"touch"`
+		Flat int `json:"flat"`
+	} `json:"ac"`
+	CMD struct {
+		CMD int `json:"cmd"`
+		Text string `json:"text"`
+	} `json:"cmd"`
+	SpellResistance int `json:"sr"`
+	Speed string `json:"move"`
+	Alignment string `json:"align"`
 }
 
 //
@@ -373,6 +389,20 @@ type InitiativeSeedData struct {
 type CasterData struct {
 	Name string `json:"name"`
 	CL   int    `json:"cl"`
+}
+
+//
+// ProgressClockType describes the custom types of progress clocks.
+//
+type ProgressClockType struct {
+	Steps int `json:"steps"`
+	TerminalQty int `json:"terminal_qty,omitempty"`
+	States map[string]string `json:"states"`	
+	TerminalState string `json:"terminal_state"`
+	AdvanceState string `json:"advance_state"`
+	InitialState string `json:"initial_state"`
+	Consecutive bool `json:"consecutive,omitempty"`
+	InitialQty int `json:"initial_qty,omitempty"`
 }
 
 //
@@ -387,6 +417,9 @@ type GMAPreferences struct {
 	} `json:"appearance"`
 	Worlds             map[string]GMAWorld          `json:"worlds"`
 	Networks           map[string]GMANetworkProfile `json:"networks"`
+	ProgressClockTypes []ProgressClockType			`json:"progress_clock_types"`
+	MassiveDamagePct   int							`json:"massive_damage_pct,omitempty"`
+	MassiveDamageMinimum int						`json:"massive_damage_minimum,omitempty"`
 	CurrentWorldName   string                       `json:"current_world"`
 	CurrentNetworkName string                       `json:"network_profile"`
 }
@@ -401,6 +434,8 @@ type GMAWorld struct {
 	DBName               string               `json:"db_name"`
 	DisplayName          string               `json:"display_name"`
 	InitiativeBackupPath string               `json:"initiative_backup_path,omitempty"`
+	SummaryIndexURL      string               `json:"summary_index_url"`
+	ForumImageURLBase    string				  `json:"forum_image_url_base"`
 	Password             string               `json:"password,omitempty"`
 	InitiativeSeed       []InitiativeSeedData `json:"initiative_seed"`
 	CasterLevels         []CasterData         `json:"caster_levels"`
