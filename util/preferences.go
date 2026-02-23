@@ -30,7 +30,7 @@ import (
 
 const (
 	GMAMapperPreferencesMinimumVersion int = 1
-	GMAMapperPreferencesMaximumVersion int = 9
+	GMAMapperPreferencesMaximumVersion int = 13
 	GMAPreferencesMinimumVersion       int = 1
 	GMAPreferencesMaximumVersion       int = 2
 )
@@ -306,9 +306,16 @@ type DieRollComponent struct {
 }
 
 //
+// MapperA11y describes accessibility options for mapper clients.
+//
+type MapperA11y struct {
+	ColorizeDieLabels		bool	   `json:"colorize_die_labels,omitempty"`
+}
+
+//
 // UserPreferences represents the preferences settings for the GMA Mapper.
 //
-// This represents preferences version 4.
+// This represents preferences version 13.
 //
 type UserPreferences struct {
 	GMAMapperPreferencesVersion int        `json:"GMA_Mapper_preferences_version"`
@@ -316,6 +323,7 @@ type UserPreferences struct {
 	ButtonSize                  ButtonSize `json:"button_size,omitempty"`
 	ChatTimestamp               bool       `json:"chat_timestamp,omitempty"`
 	ColorizeDieRolls            bool       `json:"colorize_die_rolls,omitempty"`
+	A11y                        MapperA11y `json:"a11y"`
 	CurlPath                    string     `json:"curl_path,omitempty"`
 	CurlInsecure                bool       `json:"curl_insecure,omitempty"`
 	CurrentProfile              string     `json:"current_profile,omitempty"`
@@ -332,12 +340,17 @@ type UserPreferences struct {
 	MarkupEnabled bool                `json:"markup_enabled,omitempty"`
 	MenuButton    bool                `json:"menu_button,omitempty"`
 	NeverAnimate  bool                `json:"never_animate,omitempty"`
+	NoDice        bool				  `json:"no_dice,omitempty"`
+	NoOnDeckAudio bool				  `json:"no_ondeck_audio,omitempty"`
+	NoSFX		  bool				  `json:"no_sfx,omitempty"`
+	NotPlaying    bool                `json:"not_playing,omitempty"`
 	PreloadImages bool                `json:"preload,omitempty"`
 	Profiles      []ServerProfile     `json:"profiles,omitempty"`
 	Fonts         map[string]UserFont `json:"fonts,omitempty"`
 	Scaling       float64             `json:"scaling,omitempty"`
 	ShowTimers    TimerVisibility     `json:"show_timers,omitempty"`
 	Styles        StyleDescription    `json:"styles,omitempty"`
+	SuppressAKA	  bool				  `json:"suppress_aka,omitempty"`
 }
 
 //
@@ -493,11 +506,19 @@ func DefaultPreferences() UserPreferences {
 	}
 
 	return UserPreferences{
+		A11y:			  MapperA11y{
+			ColorizeDieLabels: false,
+		},
 		ButtonSize:       SmallButtons,
 		ChatTimestamp:    true,
 		ColorizeDieRolls: true,
 		CurlPath:         curlPath,
 		CurrentProfile:   "offline",
+		NoDice: false,
+		NoOnDeckAudio: false,
+		NoSFX: false,
+		SuppressAKA: false,
+		NotPlaying: false,
 		ImageFormat:      PNG,
 		ShowTimers:       ShowMyTimers,
 		Profiles: []ServerProfile{
