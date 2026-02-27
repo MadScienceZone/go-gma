@@ -56,12 +56,9 @@ import (
 	"flag"
 	"fmt"
 	"html"
-	"io/ioutil"
 	"os"
 	"strings"
 	"time"
-
-	"github.com/MadScienceZone/go-gma/v5/text"
 
 	"github.com/MadScienceZone/go-gma/v5/text"
 )
@@ -135,7 +132,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	gameData, err := ioutil.ReadFile(flag.Arg(0))
+	gameData, err := os.ReadFile(flag.Arg(0))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(2)

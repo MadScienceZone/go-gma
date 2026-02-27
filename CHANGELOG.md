@@ -2,15 +2,15 @@
 # Release Notes
 ## Current Version Information
  * This Package Version: 5.33.0                <!-- @@##@@ -->
- * Effective Date: 04-Jan-2026			<!-- @@##@@ -->
+ * Effective Date: 27-Feb-2026			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 6.41		<!-- @@##@@ -->
- * GMA Mapper Version: 4.36.4		<!-- @@##@@ -->
+ * GMA Core API Library Version: 6.42		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.36.7		<!-- @@##@@ -->
  * GMA Mapper Protocol: 423		<!-- @@##@@ -->
  * GMA Mapper File Format: 23		<!-- @@##@@ -->
  * GMA Mapper Preferences File Format: 13 <!-- @@##@@ -->
- * GMA User Preferences File Format: 4 <!-- @@##@@ -->
+ * GMA User Preferences File Format: 6 <!-- @@##@@ -->
 
 # Notice
 When upgrading an existing server to version 5.31.0 or later, be sure to run `scripts/upgrade-5.31.0` on each database file to update it to the new schema.
