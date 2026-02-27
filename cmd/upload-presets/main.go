@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) \   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 #
@@ -33,25 +33,25 @@ Upload-presets connects to a GMA server and uploads the die-roll presets from on
 
 The files must be in the format documented by dice(5), in either format version 1 or 2.
 
-OPTIONS
+# OPTIONS
 
 The following options control the action of upload-presets.
 
-   −endpoint [hostname]: port
-      Connect to the server at the specified TCP port.
+	−endpoint [hostname]: port
+	   Connect to the server at the specified TCP port.
 
-   −for username
-      Store the presets for username instead of the user you are logged in as.
+	−for username
+	   Store the presets for username instead of the user you are logged in as.
 
-   −pass password
-      Log in to the server with the specified password
+	−pass password
+	   Log in to the server with the specified password
 
-   −replace
-      Replace the user’s entire set of presets with the uploaded data.
-      By default the uploaded presets will be added to any that already exist for that user.
+	−replace
+	   Replace the user’s entire set of presets with the uploaded data.
+	   By default the uploaded presets will be added to any that already exist for that user.
 
-   −user username
-      Log in to the server with the specified username (default “GM”).
+	−user username
+	   Log in to the server with the specified username (default “GM”).
 */
 package main
 

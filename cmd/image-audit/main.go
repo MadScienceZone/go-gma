@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) \   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 #
@@ -40,39 +40,41 @@ image files being served for them.
 # SYNOPSIS
 
 (If using the full GMA core tool suite)
-   gma go image-audit ...
+
+	gma go image-audit ...
 
 (Otherwise)
-   image-audit -help
-   image-audit [-delete] [-list] -sqlite dbfile -webroot gma_web_dir
+
+	image-audit -help
+	image-audit [-delete] [-list] -sqlite dbfile -webroot gma_web_dir
 
 # OPTIONS
 
 The command-line options described below may be introduced with either one or two hyphens (e.g., -delete or --delete).
 
-Options which take parameter values may have the value separated from the option name by a space or an equals sign (e.g., -sqlite=game.db or -sqlite game.db), except for boolean flags which may be given alone (e.g., -delete) to indicate that the option is set to ``true'' or may be given an explicit value which must be attached to the option with an equals sign (e.g., -delete=true or -delete=false).
+Options which take parameter values may have the value separated from the option name by a space or an equals sign (e.g., -sqlite=game.db or -sqlite game.db), except for boolean flags which may be given alone (e.g., -delete) to indicate that the option is set to “true” or may be given an explicit value which must be attached to the option with an equals sign (e.g., -delete=true or -delete=false).
 
-   -delete
-     Delete images from the server's database which do not actually appear in the database
+	   -delete
+	     Delete images from the server's database which do not actually appear in the database
 
-   -help
-      Print a command summary and exit.
+	   -help
+	      Print a command summary and exit.
 
-   -list
-      Print a list of images listed in the database and whether or not they
-	  correspond to web server files. Also lists files in the web directory
-	  which are not mentioned in the database.
+	   -list
+	      Print a list of images listed in the database and whether or not they
+		  correspond to web server files. Also lists files in the web directory
+		  which are not mentioned in the database.
 
-   -sqlite dbfile
-      Read dbfile as the game server's database file (as specified to the server program's -sqlite option)
-	  Image-audit may be run while the server is also accessing this file, but note that updating the database
-	  by either program may briefly lock the other out from accessing it. Therefore, it is best to run
-	  image-audit when the server is shut down or at least quiescent.
+	   -sqlite dbfile
+	      Read dbfile as the game server's database file (as specified to the server program's -sqlite option)
+		  Image-audit may be run while the server is also accessing this file, but note that updating the database
+		  by either program may briefly lock the other out from accessing it. Therefore, it is best to run
+		  image-audit when the server is shut down or at least quiescent.
 
-   -webroot dir
-      Consider all the files from dir down to be the directory structure behind what the GMA mapper client
-	  knows as the "image base URL". Thus, a server image ID of "abcdef" corresponds to disk file
-	  <dir>/a/ab/abcdef.png, et al.
+	   -webroot dir
+	      Consider all the files from dir down to be the directory structure behind what the GMA mapper client
+		  knows as the "image base URL". Thus, a server image ID of "abcdef" corresponds to disk file
+		  <dir>/a/ab/abcdef.png, et al.
 */
 package main
 
@@ -90,7 +92,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-const GoVersionNumber="5.32.1" //@@##@@
+const GoVersionNumber="5.33.0" //@@##@@
 
 type FileType byte
 

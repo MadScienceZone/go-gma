@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) \   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -119,11 +119,11 @@
 //
 // Given:
 //
-//	C:    the server's challenge as a byte slice
-//  i:    the number of hash iterations (rounds) to perform
-//	h(x): the binary SHA-256 hash digest of byte slice x
-//	P:    the password needed to authenticate to the server
-//	x‖y:  means to concatenate x and y
+//		C:    the server's challenge as a byte slice
+//	 i:    the number of hash iterations (rounds) to perform
+//		h(x): the binary SHA-256 hash digest of byte slice x
+//		P:    the password needed to authenticate to the server
+//		x‖y:  means to concatenate x and y
 //
 // To calculate the response to the server's authentication challenge,
 // the client must do the following:
@@ -447,7 +447,6 @@ func (a *Authenticator) AcceptChallenge(challenge string) (string, error) {
 //
 // If iterations is 0, this falls back to the old behavior of deriving the iterations (hash rounds)
 // from the first two bytes of the challenge nonce.
-//
 func (a *Authenticator) AcceptChallengeWithIterations(challenge string, iterations int) (string, error) {
 	c, err := base64.StdEncoding.DecodeString(challenge)
 	if err != nil {
@@ -484,7 +483,6 @@ func (a *Authenticator) AcceptChallengeBytes(challenge []byte) ([]byte, error) {
 //
 // If iterations is 0, this falls back to the old behavior of deriving the iterations (hash rounds)
 // from the first two bytes of the challenge nonce.
-//
 func (a *Authenticator) AcceptChallengeBytesWithIterations(challenge []byte, iterations int) ([]byte, error) {
 	a.Challenge = challenge
 	a.Iterations = iterations
@@ -581,9 +579,9 @@ func NewClientAuthenticator(username string, secret []byte, client string) *Auth
 	return a
 }
 
-// @[00]@| Go-GMA 5.32.1
+// @[00]@| Go-GMA 5.33.0
 // @[01]@|
-// @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
+// @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
 // @[12]@| Aloha, Oregon, USA. All Rights Reserved. Some components were introduced at different
 // @[13]@| points along that historical time line.

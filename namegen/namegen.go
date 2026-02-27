@@ -3,19 +3,18 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) \   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
 
-//
 // Package namegen implements random name generation.
 //
 // It builds names according to letter and phrase patterns representative of naming  conventions
@@ -50,7 +49,6 @@
 // Policy (paizo.com/communityuse). We are expressly prohibited from charging you to
 // use or access this content. GMA is not published, endorsed, or specifically approved
 // by Paizo. For more information about Paizo Inc. and Paizo products, visit paizo.com.
-//
 package namegen
 
 import (
@@ -60,14 +58,12 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/dice"
 )
 
-//
 // Cultures lists the cultures that are defined in this package as distributed.
 // Programs may use this to offer a choice of cultures to the user or to get a
 // value which can be passed to Generate or GenerateWithSurnames.
 //
 // The keys of this map are culture names. Their associated values are values
 // of the corresponding Culture type.
-//
 var Cultures = map[string]Culture{
 	"Azlanti":    Azlanti{},
 	"Bekyar":     Bekyar{},
@@ -98,9 +94,7 @@ var Cultures = map[string]Culture{
 	"Zenj":       Zenj{},
 }
 
-//
 // Culture is any specific cultural group with a distinctive naming convention.
-//
 type Culture interface {
 	Name() string
 	Genders() []rune
@@ -114,10 +108,8 @@ type Culture interface {
 	db(rune) map[string][]nameFragment
 }
 
-//
 // BaseCulture provides a baseline common to all cultures.
 // Each individual culture should include BaseCulture.
-//
 type BaseCulture struct {
 }
 
@@ -133,23 +125,17 @@ func (c BaseCulture) defaultMinMax(gender rune) (int, int) {
 	return 1, 1
 }
 
-//
 // Genders returns a list of gender codes supported by this Culture.
-//
 func (c BaseCulture) Genders() []rune {
 	return nil
 }
 
-//
 // HasSurnames returns true if this Culture implements surnames.
-//
 func (c BaseCulture) HasSurnames() bool {
 	return false
 }
 
-//
 // Name returns a human-readable name of the Culture.
-//
 func (c BaseCulture) Name() string {
 	return "(base culture)"
 }
@@ -166,10 +152,8 @@ func (c BaseCulture) db(gender rune) map[string][]nameFragment {
 	return nil
 }
 
-//
 // generateOptions holds the configuration data to control
 // how we generate names for a particular run.
-//
 type generateOptions struct {
 	dieRoller      *dice.DieRoller
 	startingLetter rune
@@ -177,42 +161,35 @@ type generateOptions struct {
 	maxLength      int
 }
 
-//
 // WithStartingLetter modifies a Generate or GenerateWithSurnames function call by
 // specifying the initial letter for the names to be generated. If this is 0
 // or this option is not present, names starting with any letter may be created.
-//
 func WithStartingLetter(start rune) func(*generateOptions) {
 	return func(o *generateOptions) {
 		o.startingLetter = start
 	}
 }
 
-//
 // WithMinLength modifies a Generate or GenerateWithSurnames function call by
 // specifying the minimum length for the names to be generated. If the value
 // given is 0 or this option is not present, the minimum length defined by
 // the culture will be used.
-//
 func WithMinLength(minlen int) func(*generateOptions) {
 	return func(o *generateOptions) {
 		o.minLength = minlen
 	}
 }
 
-//
 // WithMaxLength modifies a Generate or GenerateWithSurnames function call by
 // specifying the maximum length for the names to be generated. If the value
 // given is 0 or this option is not present, the maximum length defined by
 // the culture will be used.
-//
 func WithMaxLength(maxlen int) func(*generateOptions) {
 	return func(o *generateOptions) {
 		o.maxLength = maxlen
 	}
 }
 
-//
 // WithDieRoller modifies a Generate or GenerateWithSurnames function call by
 // specifying the DieRoller to use for random number generation. If this is
 // not specified, or if a nil value is passed, a standard pseudorandom number
@@ -220,17 +197,14 @@ func WithMaxLength(maxlen int) func(*generateOptions) {
 // are generating names along with other character data that must remain
 // consistent from one run of the program to the next, and as such you already
 // have a seeded DieRoller in use, that you wish to use for the names as well.
-//
 func WithDieRoller(dr *dice.DieRoller) func(*generateOptions) {
 	return func(o *generateOptions) {
 		o.dieRoller = dr
 	}
 }
 
-//
 // HasGender returns true if the specified gender code is defined
 // for this culture.
-//
 func (c BaseCulture) HasGender(gender rune) bool {
 	for _, g := range c.Genders() {
 		if g == gender {
@@ -240,9 +214,7 @@ func (c BaseCulture) HasGender(gender rune) bool {
 	return false
 }
 
-//
 // initGenerate provides common startup code for Generate and GenerateWithSurnames
-//
 func initGenerate(c Culture, gender rune, options []func(*generateOptions)) (rune, generateOptions, error) {
 	var err error
 
@@ -277,10 +249,8 @@ func initGenerate(c Culture, gender rune, options []func(*generateOptions)) (run
 	return gender, opts, nil
 }
 
-//
 // Generate creates the requested quantity of random names for the given culture and gender code.
 // These are returned as a slice of name strings.
-//
 func Generate(c Culture, gender rune, qty int, options ...func(*generateOptions)) ([]string, error) {
 	var err error
 	gender, opts, err := initGenerate(c, gender, options)
@@ -321,11 +291,9 @@ func Generate(c Culture, gender rune, qty int, options ...func(*generateOptions)
 	return names, nil
 }
 
-//
 // GenerateWithSurnames is just like Generate, but for every given name generated it also
 // creates a surname. Names are returned as a slice of names, where each name is a slice of two
 // strings (given name and surname).
-//
 func GenerateWithSurnames(c Culture, gender rune, qty int, options ...func(*generateOptions)) ([][]string, error) {
 	var err error
 	gender, opts, err := initGenerate(c, gender, options)
@@ -372,14 +340,12 @@ func GenerateWithSurnames(c Culture, gender rune, qty int, options ...func(*gene
 	return fullNames, nil
 }
 
-//
 // nameFragment describes a suffix rune that may be added to a name,
 // with the probability in the range [0.0, 1.0] of that suffix being
 // chosen.
 //
 // Suffix may be 0 to indicate the chance of no suffix at all being
 // added.
-//
 type nameFragment struct {
 	Suffix      rune
 	Probability float64
@@ -506,9 +472,9 @@ func pickSuffix(genderData map[string][]nameFragment, prefix string, dr *dice.Di
 	return choices[len(choices)-1].Suffix
 }
 
-// @[00]@| Go-GMA 5.32.1
+// @[00]@| Go-GMA 5.33.0
 // @[01]@|
-// @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
+// @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
 // @[12]@| Aloha, Oregon, USA. All Rights Reserved. Some components were introduced at different
 // @[13]@| points along that historical time line.

@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) \   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 #
@@ -34,34 +34,36 @@ Markup provides a command-line utility that applies the GMA text markup formatte
 # SYNOPSIS
 
 (If using the full GMA core tool suite)
-   gma go markup ...
+
+	gma go markup ...
 
 (Otherwise)
-   markup -help
-   markup -syntax
-   markup -preamble
-   markup [-html] [-ps] <input >output
+
+	markup -help
+	markup -syntax
+	markup -preamble
+	markup [-html] [-ps] <input >output
 
 # OPTIONS
 
 Command-line options may be specified with one or two hyphens (e.g., -html or --html).
 
-  -help
-      Print a command summary and exit.
+	  -help
+	      Print a command summary and exit.
 
-  -html
-      Render the markup input in HTML.
+	  -html
+	      Render the markup input in HTML.
 
-  -preamble
-      Print GMA PostScript preamble before any other output.
+	  -preamble
+	      Print GMA PostScript preamble before any other output.
 
-  -ps
-      Render the markup input in PostScript.
-	  Requires the GMA PostScript preamble, plus PostScript
-	  code to format this output appropriately.
+	  -ps
+	      Render the markup input in PostScript.
+		  Requires the GMA PostScript preamble, plus PostScript
+		  code to format this output appropriately.
 
-  -syntax
-      Print a summary of the markup syntax and exit.
+	  -syntax
+	      Print a summary of the markup syntax and exit.
 */
 package main
 
@@ -74,7 +76,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/text"
 )
 
-const GoVersionNumber="5.32.1" //@@##@@
+const GoVersionNumber="5.33.0" //@@##@@
 
 func main() {
 	var err error

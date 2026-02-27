@@ -3,22 +3,20 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) \   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
 
-//
 // Package util provides miscellaneous utility functions that don't deserve
 // their own package.
-//
 package util
 
 import (
@@ -44,7 +42,6 @@ func splitToInts(s string) ([]int, error) {
 	return al, nil
 }
 
-//
 // VersionCompare compares version strings a and b. These strings must consist of
 // integers separated with dots, such as "2" or "3.1".
 // Any number of version levels are allowed, although generally
@@ -54,7 +51,6 @@ func splitToInts(s string) ([]int, error) {
 // >0 if a is after b, or zero if they are the same.
 //
 // As of version 5.0.0, this is simply a wrapper to the hashicorp go-version package.
-//
 func VersionCompare(a, b string) (int, error) {
 	va, err := version.NewSemver(a)
 	if err != nil {
@@ -69,12 +65,10 @@ func VersionCompare(a, b string) (int, error) {
 	return va.Compare(vb), nil
 }
 
-//
 // LineWrap breaks a long line up on embedded newlines, returning the lines (sans newline) as a slice of strings.
 // The first line is returned with its own prefix string, and subsequent lines with their own, followed by a final prefix for the
 // last line. A single final trailing newline is ignored, but any other embedded blank lines are preserved.
 // If only one line is found, it is prefixed by onlyPrefix.
-//
 func LineWrap(source, onlyPrefix, firstPrefix, nextPrefix, lastPrefix string) []string {
 	var output []string
 	lines := strings.Split(source, "\n")
@@ -115,7 +109,6 @@ type hdopt struct {
 	term  bool
 }
 
-//
 // Hexdump takes an array of bytes and returns a multi-line string
 // representing those bytes in a traditional hexdump format with
 // an address field on the left, starting at address 0, showing 16
@@ -123,10 +116,13 @@ type hdopt struct {
 // ASCII characters found in the hexdump.
 //
 // For example, calling
-//  Hexdump([]byte("\x00\x81\x02\x03Hello, World™<>ABCDEFG"))
+//
+//	Hexdump([]byte("\x00\x81\x02\x03Hello, World™<>ABCDEFG"))
+//
 // will return the string
-//  00000000:  00 81 02 03 48 65 6C 6C 6F 2C 20 57 6F 72 6C 64  |....Hello, World|
-//  00000010:  E2 84 A2 3C 3E 41 42 43 44 45 46 47              |...<>ABCDEFG    |
+//
+//	00000000:  00 81 02 03 48 65 6C 6C 6F 2C 20 57 6F 72 6C 64  |....Hello, World|
+//	00000010:  E2 84 A2 3C 3E 41 42 43 44 45 46 47              |...<>ABCDEFG    |
 //
 // Options may be added after the data slice to control how the hex dump
 // will be formatted:
@@ -136,7 +132,6 @@ type hdopt struct {
 // WithoutNewline,
 // and/or
 // WithoutText.
-//
 func Hexdump(data []byte, opts ...func(*hdopt)) string {
 	var result strings.Builder
 	result.Grow(64)
@@ -191,34 +186,33 @@ func Hexdump(data []byte, opts ...func(*hdopt)) string {
 	return result.String()
 }
 
-//
 // WithoutNewline suppresses the final newline from the Hexdump output.
 //
 // Example:
-//  Hexdump(data, WithoutNewline)
 //
+//	Hexdump(data, WithoutNewline)
 func WithoutNewline(o *hdopt) {
 	o.term = false
 }
 
-//
 // WithStartingAddress may be added as an option to the Hexdump function
 // to change the starting address of the data being shown.
 //
 // Example:
-//  data := []byte("\x00\x81\x02\x03Hello, World™<>ABCDEFG")
-//  Hexdump(data, WithStartingAddress(0x4444))
-// will return the string
-//  00004444:  00 81 02 03 48 65 6C 6C 6F 2C 20 57 6F 72 6C 64  |....Hello, World|
-//  00004454:  E2 84 A2 3C 3E 41 42 43 44 45 46 47              |...<>ABCDEFG    |
 //
+//	data := []byte("\x00\x81\x02\x03Hello, World™<>ABCDEFG")
+//	Hexdump(data, WithStartingAddress(0x4444))
+//
+// will return the string
+//
+//	00004444:  00 81 02 03 48 65 6C 6C 6F 2C 20 57 6F 72 6C 64  |....Hello, World|
+//	00004454:  E2 84 A2 3C 3E 41 42 43 44 45 46 47              |...<>ABCDEFG    |
 func WithStartingAddress(a int) func(*hdopt) {
 	return func(o *hdopt) {
 		o.addr = a
 	}
 }
 
-//
 // WithWidth may be added as an option to the Hexdump function
 // to change the output width in bytes.
 //
@@ -226,56 +220,58 @@ func WithStartingAddress(a int) func(*hdopt) {
 // of the word size.
 //
 // Example:
-//  data := []byte("\x00\x81\x02\x03Hello, World™<>ABCDEFG")
-//  Hexdump(data, WithWidth(8), WithStartingAddress(0x4444))
-// will return the string
-//  00004444:  00 81 02 03 48 65 6C 6C  |....Hell|
-//  0000444C:  6F 2C 20 57 6F 72 6C 64  |o, World|
-//  00004454:  E2 84 A2 3C 3E 41 42 43  |...<>ABC|
-//  0000445C:  44 45 46 47              |DEFG    |
 //
+//	data := []byte("\x00\x81\x02\x03Hello, World™<>ABCDEFG")
+//	Hexdump(data, WithWidth(8), WithStartingAddress(0x4444))
+//
+// will return the string
+//
+//	00004444:  00 81 02 03 48 65 6C 6C  |....Hell|
+//	0000444C:  6F 2C 20 57 6F 72 6C 64  |o, World|
+//	00004454:  E2 84 A2 3C 3E 41 42 43  |...<>ABC|
+//	0000445C:  44 45 46 47              |DEFG    |
 func WithWidth(w int) func(*hdopt) {
 	return func(o *hdopt) {
 		o.width = w
 	}
 }
 
-//
 // WithWordSize may be added as an option to the Hexdump function
 // to change the output word size in bytes.
 //
 // Example:
-//  data := []byte("\x00\x81\x02\x03Hello, World™<>ABCDEFG")
-//  Hexdump(data, WithWordSize(2))
-// will return the string
-//  00000000:  0081 0203 4865 6C6C 6F2C 2057 6F72 6C64  |....Hello, World|
-//  00000010:  E284 A23C 3E41 4243 4445 4647            |...<>ABCDEFG    |
 //
+//	data := []byte("\x00\x81\x02\x03Hello, World™<>ABCDEFG")
+//	Hexdump(data, WithWordSize(2))
+//
+// will return the string
+//
+//	00000000:  0081 0203 4865 6C6C 6F2C 2057 6F72 6C64  |....Hello, World|
+//	00000010:  E284 A23C 3E41 4243 4445 4647            |...<>ABCDEFG    |
 func WithWordSize(w int) func(*hdopt) {
 	return func(o *hdopt) {
 		o.word = w
 	}
 }
 
-//
 // WithoutText may be added as an option to the Hexdump function
 // to suppress the text column from the generated display.
 //
 // Example:
-//  data := []byte("\x00\x81\x02\x03Hello, World™<>ABCDEFG")
-//  Hexdump(data, WithWordSize(2), WithoutText)
-// will return the string
-//  00000000:  0081 0203 4865 6C6C 6F2C 2057 6F72 6C64
-//  00000010:  E284 A23C 3E41 4243 4445 4647
 //
+//	data := []byte("\x00\x81\x02\x03Hello, World™<>ABCDEFG")
+//	Hexdump(data, WithWordSize(2), WithoutText)
+//
+// will return the string
+//
+//	00000000:  0081 0203 4865 6C6C 6F2C 2057 6F72 6C64
+//	00000010:  E284 A23C 3E41 4243 4445 4647
 func WithoutText(o *hdopt) {
 	o.ascii = false
 }
 
-//
 // PluralizeString emits a properly-pluralized version of a string,
 // by adding an "s" for quantities other than one.
-//
 func PluralizeString(base string, qty int) string {
 	if qty == 1 {
 		return base
@@ -283,10 +279,8 @@ func PluralizeString(base string, qty int) string {
 	return base + "s"
 }
 
-//
 // PluralizeCustom emits a properly-pluralized version of a string,
 // where that is more complicated than just adding an "s" to the end.
-//
 func PluralizeCustom(base, singularSuffix, pluralSuffix string, qty int) string {
 	if qty == 1 {
 		return base + singularSuffix
@@ -294,9 +288,7 @@ func PluralizeCustom(base, singularSuffix, pluralSuffix string, qty int) string 
 	return base + pluralSuffix
 }
 
-//
 // YorN is a simple yes/no interactive prompt.
-//
 func YorN(prompt string, defaultChoice bool) bool {
 	var answer string
 	r := bufio.NewReader(os.Stdin)
@@ -322,9 +314,9 @@ func YorN(prompt string, defaultChoice bool) bool {
 	}
 }
 
-// @[00]@| Go-GMA 5.32.1
+// @[00]@| Go-GMA 5.33.0
 // @[01]@|
-// @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
+// @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
 // @[12]@| Aloha, Oregon, USA. All Rights Reserved. Some components were introduced at different
 // @[13]@| points along that historical time line.

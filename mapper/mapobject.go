@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) \   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -37,22 +37,16 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/tcllist"
 )
 
-//
 // GMAMapperFileFormat gives
 // the GMA File Format version number current as of this build.
 // This is the format which will be used for saving map data.
-//
 const GMAMapperFileFormat = 23 // @@##@@ auto-configured
-//
 // MinimumSupportedMapFileFormat gives the lowest file format this package can
 // understand.
-//
 const MinimumSupportedMapFileFormat = 17
 
-//
 // MaximumSupportedMapFileFormat gives the highest file format this package
 // can understand. Saved data will be in this format.
-//
 const MaximumSupportedMapFileFormat = 23
 
 // ErrCreatureNoSizes is the error returned when a creature size code is expected but none given.
@@ -82,9 +76,7 @@ func init() {
 // numeric codes used here.
 //
 
-//
 // These are the allowed values for the Dash attribute of a MapElement.
-//
 type DashType byte
 
 const (
@@ -96,9 +88,7 @@ const (
 	DashLong2Short
 )
 
-//
 // These are the allowed values for the ArcMode attribute of an ArcElement.
-//
 type ArcModeType byte
 
 const (
@@ -107,9 +97,7 @@ const (
 	ArcModeChord
 )
 
-//
 // Valid values for a line's Arrow attribute.
-//
 type ArrowType byte
 
 const (
@@ -119,9 +107,7 @@ const (
 	ArrowBoth
 )
 
-//
 // These are the allowed values for the Join attribute of a PolygonElement.
-//
 type JoinStyle byte
 
 const (
@@ -130,9 +116,7 @@ const (
 	JoinRound
 )
 
-//
 // These are the valid values for the AoEShape attribute.
-//
 type AoEType byte
 
 const (
@@ -141,9 +125,7 @@ const (
 	AoEShapeRay
 )
 
-//
 // The valid font weights.
-//
 type FontWeightType byte
 
 const (
@@ -151,9 +133,7 @@ const (
 	FontWeightBold
 )
 
-//
 // The valid font slants.
-//
 type FontSlantType byte
 
 const (
@@ -161,9 +141,7 @@ const (
 	FontSlantItalic
 )
 
-//
 // The valid values for the Anchor attribute of a TextElement.
-//
 type AnchorDirection byte
 
 const (
@@ -178,9 +156,7 @@ const (
 	AnchorSE
 )
 
-//
 // The valid values for a creature's MoveMode attribute.
-//
 type MoveModeType byte
 
 const (
@@ -263,19 +239,15 @@ func attributeType(attrName string) (string, bool) {
 // |_|  |_|\__,_| .__/ \___/|_.__// |\___|\___|\__|
 //              |_|             |__/
 
-//
 // MapObject is anything the map server or client tracks and manages.
 // These are generally things that are displayed on-screen such as map features,
 // creature tokens, etc.
-//
 type MapObject interface {
 	ObjID() string
 }
 
-//
 // Coordinates give an (x, y) coordinate pair to locate something on the map.
 // Coordinates are in standard map pixel units (10 pixels = 1 foot).
-//
 type Coordinates struct {
 	X, Y float64
 }
@@ -318,10 +290,8 @@ type Coordinates struct {
 // FileDefinition
 //
 
-//
 // BaseMapObject holds attributes all MapObjects have in common, so they will import
 // BaseMapObject into their definitions by composition.
-//
 type BaseMapObject struct {
 	// Unique object identifier. May be any string
 	// consisting of upper- or lower-case letters, digits, '_', and "#"
@@ -334,11 +304,9 @@ type BaseMapObject struct {
 	ID string
 }
 
-//
 // ObjID returns the unique ID of a MapObject.
 // Each type must have one of these methods to satisfy the MapObject
 // interface.
-//
 func (o BaseMapObject) ObjID() string {
 	return o.ID
 }
@@ -351,14 +319,12 @@ func (o BaseMapObject) ObjID() string {
 // |_|  |_|\__,_| .__/|_____|_|\___|_| |_| |_|\___|_| |_|\__|
 //              |_|
 
-//
 // MapElement is a MapObject which represents a static map feature
 // to be displayed.
 //
 // Each MapElement has at least one pair of (x, y) coordinates which
 // locate the element's "reference point" on the map. What this means
 // is up to each different kind of MapElement.
-//
 type MapElement struct {
 	BaseMapObject
 	Coordinates
@@ -428,7 +394,6 @@ type MapElement struct {
 // (the endpoints connected to each other with a straight line), or
 // a pieslice (endpoints connected to the center of the circle with
 // straight lines).
-//
 type ArcElement struct {
 	MapElement
 	ArcMode ArcModeType
@@ -448,7 +413,6 @@ type ArcElement struct {
 // The ellipse is described by the rectangle formed by the reference point
 // and the single point in the Points attribute (as diagonally opposing points),
 // with the circle/ellipse being inscribed in that rectangle.
-//
 type CircleElement struct {
 	MapElement
 }
@@ -473,7 +437,6 @@ type CircleElement struct {
 // N.B.: the lines will be drawn with the Fill color, not the Line color,
 // to match the behavior of the Tk library underlying our client
 // implementations.
-//
 type LineElement struct {
 	MapElement
 
@@ -492,7 +455,6 @@ type LineElement struct {
 // PolygonElement is a MapElement that draws an arbitrary polygon, just as with
 // the LineElement, but the interior of the shape described by the line segments
 // may be filled in as a solid shape.
-//
 type PolygonElement struct {
 	MapElement
 
@@ -522,7 +484,6 @@ type PolygonElement struct {
 // RectangleElement is a MapElement which describes a rectangle as defined by
 // diagonally opposing points: the reference point and the single coordinate pair
 // in the Points attribute.
-//
 type RectangleElement struct {
 	MapElement
 }
@@ -546,10 +507,10 @@ type RectangleElement struct {
 //
 // The region has one of the following shapes as indicated by the AoEShape
 // attribute:
-//   cone    A 90° pieslice described as with ArcElement
-//   radius  An ellipse described as with CircleElement
-//   ray     A rectangle described as with RectangleElement
 //
+//	cone    A 90° pieslice described as with ArcElement
+//	radius  An ellipse described as with CircleElement
+//	ray     A rectangle described as with RectangleElement
 type SpellAreaOfEffectElement struct {
 	MapElement
 
@@ -565,9 +526,7 @@ type SpellAreaOfEffectElement struct {
 //   |_|\___/_/\_\\__|_____|_|\___|_| |_| |_|\___|_| |_|\__|
 //
 
-//
 // TextFont describes a font used by TextElements.
-//
 type TextFont struct {
 	// The name of the font family as recognized by Tk.
 	Family string
@@ -582,13 +541,11 @@ type TextFont struct {
 	Slant FontSlantType `json:",omitempty"`
 }
 
-//
 // TextElement is a MapElement which displays text on the map.
 //
 // The reference point is at the center of the text if Anchor is
 // AnchorCenter, or is at the top-left corner of the text if Anchor
 // is AnchorNW, and so on.
-//
 type TextElement struct {
 	MapElement
 
@@ -610,10 +567,8 @@ type TextElement struct {
 //   |_| |_|_|\___|_____|_|\___|_| |_| |_|\___|_| |_|\__|
 //
 
-//
 // TileElement is a MapElement which displays a bitmap image on the map.
 // The upper-left corner of the image will be drawn at the reference point.
-//
 type TileElement struct {
 	MapElement
 
@@ -636,10 +591,8 @@ type TileElement struct {
 //  \____|_|  \___|\__,_|\__|\__,_|_|  \___||_|\___/|_|\_\___|_| |_|
 //
 
-//
 // Creature type codes for the CreatureType field of CreatureToken
 // (and PlayerToken and MonsterToken) values.
-//
 type CreatureTypeCode byte
 
 const (
@@ -664,9 +617,8 @@ const (
 // An error is returned if one of the size codes is invalid. If there
 // is a conflict between the size value and the default size in skinSizes,
 // skinSizes takes priority.
-//
 func (c *CreatureToken) SetSizes(skinSize []string, skin int, size string) error {
-    //                                                     __1__      __2__      __3__      _4__ _5__
+	//                                                     __1__      __2__      __3__      _4__ _5__
 	sizeCodeRE := regexp.MustCompile(`^[fFdDtTsSmMlLhHgGcC](\d+)?(?:->(\d+))?(?:=(\d+))?(?::(\*)?(.*))?$`)
 
 	// If no skinSize list was present, just use size as the single item for that list.
@@ -705,10 +657,8 @@ func (c *CreatureToken) SetSizes(skinSize []string, skin int, size string) error
 	return nil
 }
 
-//
 // CreatureToken is a MapObject (but not a MapElement) which displays a movable
 // token indicating the size and location of a creature in the game.
-//
 type CreatureToken struct {
 	BaseMapObject
 
@@ -820,6 +770,26 @@ type CreatureToken struct {
 	// listed here. Attack rolls target the first name in the list.
 	// Damage rolls target all in the list (e.g., for area of effect damage).
 	Targets []string `json:",omitempty"`
+
+	// If this creature has designated other creatures in some ways such as
+	// studied targets, smite evil, or other cases where special modifiers apply,
+	// that is noted here.
+	TargetedModifiers map[string]CustomConditionModifier `json:",omitempty"`
+}
+
+type CustomConditionModifier struct {
+	// The custom target/condition type
+	Type string `json:",omitempty"`
+
+	// The marker shape the player is using locally to mark their target, in the same manner
+	// used for the DSM markers
+	Shape string `json:",omitempty"`
+
+	// The color and dash pattern used for the player's local marker in the same format as for DSM markers.
+	Color string `json:",omitempty"`
+
+	// List of die-roller modifier names to enable for this target when they are the active target for die rolls.
+	Modifiers []string `json:",omitempty"`
 }
 
 // CreatureCustomReach describes a creature's natural and extended
@@ -835,10 +805,8 @@ type CreatureCustomReach struct {
 	Extended int `json:",omitempty"`
 }
 
-//
 // CreatureHealth describes the current health statistics of a creature if we are
 // tracking it for them.
-//
 type CreatureHealth struct {
 	// Is the creature flat-footed?
 	IsFlatFooted bool `json:",omitempty"`
@@ -880,9 +848,7 @@ type CreatureHealth struct {
 	CMD          int `json:",omitempty"`
 }
 
-//
 // RadiusAoE describes the area of some spell or special effect emanating from the creature.
-//
 type RadiusAoE struct {
 	// Distance in standard map pixels away from the creature token's center
 	// to the perimeter of the affected area.
@@ -902,7 +868,6 @@ type RadiusAoE struct {
 
 // PlayerToken is a CreatureToken which describes a player character
 // or NPC ally.
-//
 type PlayerToken struct {
 	CreatureToken
 }
@@ -929,7 +894,6 @@ func (o PlayerToken) saveData(data []string, prefix, id string) ([]string, error
 //
 
 // MonsterToken is a CreatureToken which describes a monster or NPC adversary.
-//
 type MonsterToken struct {
 	CreatureToken
 }
@@ -942,11 +906,9 @@ type MonsterToken struct {
 // |___|_| |_| |_|\__,_|\__, |\___|____/ \___|_| |_|_| |_|_|\__|_|\___/|_| |_|
 //                      |___/
 
-//
 // ImageDefinition describes an image as known to the mapper system.
 // TileElements' Image attribute refers to the Name attribute of one of
 // these.
-//
 type ImageDefinition struct {
 	// The name of the image as known within the mapper.
 	Name  string
@@ -1000,7 +962,6 @@ type ImageAnimation struct {
 
 // FileDefinition describes a file as known to the mapper which
 // may be of interest to retrieve at some point.
-//
 type FileDefinition struct {
 	// If IsLocalFile is true, File is the name of the file on disk;
 	// otherwise it is the server's internal ID by which you may request
@@ -1011,14 +972,12 @@ type FileDefinition struct {
 	File string
 }
 
-//
 // objFloat looks for the given field in objDef, returning it as a float64 value.
 // If required is true, it is an error if no such value is found; otherwise a
 // missing value is returned as the zero value.
 //
 // i indicates which element of the field's value is to be retrieved. Most of our
 // fields are singletons, so this is usually 0.
-//
 func objFloat(objDef map[string][]string, i int, fldName string, required bool, err error) (float64, error) {
 	if err != nil {
 		return 0, err
@@ -1039,14 +998,12 @@ func objFloat(objDef map[string][]string, i int, fldName string, required bool, 
 	return strconv.ParseFloat(val[i], 64)
 }
 
-//
 // objInt looks for the given field in objDef, returning it as an int value.
 // If required is true, it is an error if no such value is found; otherwise a
 // missing value is returned as the zero value.
 //
 // i indicates which element of the field's value is to be retrieved. Most of our
 // fields are singletons, so this is usually 0.
-//
 func objInt(objDef map[string][]string, i int, fldName string, required bool, err error) (int, error) {
 	if err != nil {
 		return 0, err
@@ -1067,14 +1024,12 @@ func objInt(objDef map[string][]string, i int, fldName string, required bool, er
 	return strconv.Atoi(val[i])
 }
 
-//
 // objBool looks for the given field in objDef, returning it as a bool value.
 // If required is true, it is an error if no such value is found; otherwise a
 // missing value is returned as the zero value.
 //
 // i indicates which element of the field's value is to be retrieved. Most of our
 // fields are singletons, so this is usually 0.
-//
 func objBool(objDef map[string][]string, i int, fldName string, required bool, err error) (bool, error) {
 	if err != nil {
 		return false, err
@@ -1095,14 +1050,12 @@ func objBool(objDef map[string][]string, i int, fldName string, required bool, e
 	return strconv.ParseBool(val[i])
 }
 
-//
 // objString looks for the given field in objDef, returning it as a string value.
 // If required is true, it is an error if no such value is found; otherwise a
 // missing value is returned as the zero value.
 //
 // i indicates which element of the field's value is to be retrieved. Most of our
 // fields are singletons, so this is usually 0.
-//
 func objString(objDef map[string][]string, i int, fldName string, required bool, err error) (string, error) {
 	val, ok := objDef[fldName]
 	if !ok {
@@ -1120,7 +1073,6 @@ func objString(objDef map[string][]string, i int, fldName string, required bool,
 	return val[i], err
 }
 
-//
 // objStrings looks for the given field in objDef, returning it as a string slice value.
 // If required is true, it is an error if no such value is found; otherwise a
 // missing value is returned as the zero value.
@@ -1129,7 +1081,6 @@ func objString(objDef map[string][]string, i int, fldName string, required bool,
 //
 // i indicates which element of the field's value is to be retrieved. Most of our
 // fields are singletons, so this is usually 0.
-//
 func objStrings(objDef map[string][]string, i int, fldName string, required bool, err error) ([]string, error) {
 	if err != nil {
 		return nil, err
@@ -1154,14 +1105,12 @@ func objStrings(objDef map[string][]string, i int, fldName string, required bool
 	return list, err
 }
 
-//
 // objCoordinateList looks for the given field in objDef, returning it as a []Coordinate value.
 // If required is true, it is an error if no such value is found; otherwise a
 // missing value is returned as the zero value.
 //
 // i indicates which element of the field's value is to be retrieved. Most of our
 // fields are singletons, so this is usually 0.
-//
 func objCoordinateList(objDef map[string][]string, i int, fldName string, required bool, err error) ([]Coordinates, error) {
 	if err != nil {
 		return nil, err
@@ -1201,9 +1150,7 @@ func objCoordinateList(objDef map[string][]string, i int, fldName string, requir
 	return cl, nil
 }
 
-//
 // MapMetaData describes a mapper location save file (itself, not its contents)
-//
 type MapMetaData struct {
 	// Timestamp is the generation or modification time of the map file
 	// as a 64-bit integer Unix timestamp value.
@@ -1230,12 +1177,10 @@ type MapMetaData struct {
 	FileVersion uint `json:"-"`
 }
 
-//
 // WriteMapFile writes mapper data from a slice of map object values and
 // MapMetaData struct into the named file.  It is identical to
 // SaveMapFile other than the fact that it creates and opens the requested
 // file to be written into.
-//
 func WriteMapFile(path string, objList []any, meta MapMetaData) error {
 	file, err := os.Create(path)
 	if err != nil {
@@ -1249,13 +1194,11 @@ func WriteMapFile(path string, objList []any, meta MapMetaData) error {
 	return SaveMapFile(file, objList, meta)
 }
 
-//
 // SaveMapFile is the same as WriteMapFile, except it writes to an open
 // data stream.
 //
 // If the Timestamp field of the metadata is zero, the current date and
 // time will be written to the Timestamp and DateTime fields on output.
-//
 func SaveMapFile(output io.Writer, objList []any, meta MapMetaData) error {
 	writer := bufio.NewWriter(output)
 	writer.WriteString("__MAPPER__:21\n")
@@ -1340,13 +1283,11 @@ func SaveMapFile(output io.Writer, objList []any, meta MapMetaData) error {
 	return nil
 }
 
-//
 // ReadMapFile loads GMA mapper data from the named file, returning the data as three values: a slice of
 // MapObject values (which the caller will want to interpret based on their actual data type), the file
 // metadata, and an error (which will be nil if everything went as planned).
 //
 // Other than opening the named input file, it is identical to LoadMapFile.
-//
 func ReadMapFile(path string) ([]any, MapMetaData, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -1360,13 +1301,11 @@ func ReadMapFile(path string) ([]any, MapMetaData, error) {
 	return LoadMapFile(file)
 }
 
-//
 // ReadMapMetaData is just like ReadMapFile, except that it only goes as far
 // as reading the metadata from the file, returning that, but including any of
 // the actual map data.
 //
 // Its operation is identical to LoadMapMetaData other than opening the input file for you.
-//
 func ReadMapMetaData(path string) (MapMetaData, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -1380,11 +1319,9 @@ func ReadMapMetaData(path string) (MapMetaData, error) {
 	return LoadMapMetaData(file)
 }
 
-//
 // loadLegacyMapFile(scanner
 // reads a mapper file with format < 20, returning a slice
 // of map elements.
-//
 func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta string, metaDataOnly bool) ([]any, MapMetaData, error) {
 	//
 	// The map file formats prior to version 20 used a very different
@@ -1900,21 +1837,17 @@ func loadLegacyMapFile(scanner *bufio.Scanner, meta MapMetaData, legacyMeta stri
 	return objList, meta, nil
 }
 
-//
 // LoadMapMetaData is just like LoadMapFile but only reads enough of the
 // file to get the meta data, which is returned.
-//
 func LoadMapMetaData(input io.Reader) (MapMetaData, error) {
 	_, meta, err := loadMapFile(input, true)
 	return meta, err
 }
 
-//
 // LoadMapFile reads GMA mapper data from an already-open data stream,
 // returning a slice of map elements and the metadata read from the stream.
 //
 // If called with a nil input object, it just returns with empty data values.
-//
 func LoadMapFile(input io.Reader) ([]any, MapMetaData, error) {
 	return loadMapFile(input, false)
 }
@@ -2082,9 +2015,9 @@ func loadMapFile(input io.Reader, metaDataOnly bool) ([]any, MapMetaData, error)
 	return nil, meta, fmt.Errorf("invalid map file format: unexpected end of file")
 }
 
-// @[00]@| Go-GMA 5.32.1
+// @[00]@| Go-GMA 5.33.0
 // @[01]@|
-// @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
+// @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
 // @[12]@| Aloha, Oregon, USA. All Rights Reserved. Some components were introduced at different
 // @[13]@| points along that historical time line.

@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___   )    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  |    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /    /   )      | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   _/   /       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \ /   _/        | |        #
-# | (___) || )   ( || )   ( | Mapper    /\____) ) _ /\___/  /(   (__/\ _  __) (_       #
-# (_______)|/     \||/     \| Client    \______/ (_)\______/ \_______/(_) \____/       #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   \  \   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /   ___) /   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   (___ (    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) \   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\___/  / _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 #
@@ -35,87 +35,88 @@ local items to the database and saving core data to files.
 # SYNOPSIS
 
 (If using the full GMA core tool suite)
-   gma go coredb [options (see below) ...]
+
+	gma go coredb [options (see below) ...]
 
 (Otherwise)
-   coredb -h
-   coredb -help
-   coredb [-debug flags] [-export file] [-filter [!]re] [-ignore-case] [-import file] [-log file] [-preferences file] [-srd] [-type list]
-   coredb [-D flags] [-e file] [-f [!]re] [-I] [-i file] [-l file] [-preferences file] [-srd] [-t list]
+
+	coredb -h
+	coredb -help
+	coredb [-debug flags] [-export file] [-filter [!]re] [-ignore-case] [-import file] [-log file] [-preferences file] [-srd] [-type list]
+	coredb [-D flags] [-e file] [-f [!]re] [-I] [-i file] [-l file] [-preferences file] [-srd] [-t list]
 
 # OPTIONS
 
 The command-line options described below have a long form (e.g., -log) and a  short form (e.g., -l) which are equivalent.
 In either case, the option may be introduced with either one or two hyphens (e.g., -log or --log).
 
-Options which take parameter values may have the value separated from the option name by a space or an equals sign (e.g., -log=path or -log path), except for boolean flags which may be given alone (e.g., -I) to indicate that the option is set to ``true'' or may be given an explicit value which must be attached to the option with an equals sign (e.g., -I=true or -I=false).
+Options which take parameter values may have the value separated from the option name by a space or an equals sign (e.g., -log=path or -log path), except for boolean flags which may be given alone (e.g., -I) to indicate that the option is set to “true” or may be given an explicit value which must be attached to the option with an equals sign (e.g., -I=true or -I=false).
 
 You may not combine multiple single-letter options into a single composite argument, (e.g., the options -I and -h would need to be entered as two separate options, not as -Ih).
 
-  -D, -debug flags
-      Adds debugging messages to coredb's output. The flags
-      value is a comma-separated list of debug flag names, which
-      may be any of the following:
+	-D, -debug flags
+	    Adds debugging messages to coredb's output. The flags
+	    value is a comma-separated list of debug flag names, which
+	    may be any of the following:
 
-      all      Enable all debugging messages
-      none     Disable all debugging messages
-      queries  Database queries
-      misc     Miscellaneous debugging messages
+	    all      Enable all debugging messages
+	    none     Disable all debugging messages
+	    queries  Database queries
+	    misc     Miscellaneous debugging messages
 
-  -e, -export file
-      Write database entries to the named file.
+	-e, -export file
+	    Write database entries to the named file.
 
-  -f, -filter [!]regex
-      When importing or exporting, only include entries matching the regular expression
-      regex. If regex begins with a '!' character, all entries which do NOT match the
-      expression are included.
+	-f, -filter [!]regex
+	    When importing or exporting, only include entries matching the regular expression
+	    regex. If regex begins with a '!' character, all entries which do NOT match the
+	    expression are included.
 
-      The regex is matched against the Code and Name fields. If either matches, then
-      the entry is included (or excluded). For languages, the Language field is checked.
-      For monsters in the bestiary, the Code and Species fields are checked.
+	    The regex is matched against the Code and Name fields. If either matches, then
+	    the entry is included (or excluded). For languages, the Language field is checked.
+	    For monsters in the bestiary, the Code and Species fields are checked.
 
-  -h, -help
-      Print a command summary and exit.
+	-h, -help
+	    Print a command summary and exit.
 
-  -I, -ignore-case
-    Regex matching (-f/-filter option) is done irrespective of case.
+	-I, -ignore-case
+	  Regex matching (-f/-filter option) is done irrespective of case.
 
-  -i, -import file
-      Read the contents of the file into the database.
+	-i, -import file
+	    Read the contents of the file into the database.
 
-  -l, -log file
-      Write log messages to the named file instead of stdout.
-      Use "-" for the file to explicitly send to stdout.
+	-l, -log file
+	    Write log messages to the named file instead of stdout.
+	    Use "-" for the file to explicitly send to stdout.
 
-  -preferences file
-      Use a custom profile instead of the default.
+	-preferences file
+	    Use a custom profile instead of the default.
 
-  -srd
-      Normally, all entries imported by coredb into the database are assumed
-      to be local entries added for the user's campaign. Entries exported to
-      a file will only be local entries, ignoring the SRD entries initially
-      loaded from community data by "gma initdb". With this option, the inverse
-      is true: only the SRD entries will be exported and anything imported will
-      be assumed to be non-local SRD data.
+	-srd
+	    Normally, all entries imported by coredb into the database are assumed
+	    to be local entries added for the user's campaign. Entries exported to
+	    a file will only be local entries, ignoring the SRD entries initially
+	    loaded from community data by "gma initdb". With this option, the inverse
+	    is true: only the SRD entries will be exported and anything imported will
+	    be assumed to be non-local SRD data.
 
-  -t, -type list
-      Entries exported will include only database entries of the specified
-      type(s). When importing, any records in the import file which are not
-      of the specified type(s) will be skipped over.
+	-t, -type list
+	    Entries exported will include only database entries of the specified
+	    type(s). When importing, any records in the import file which are not
+	    of the specified type(s) will be skipped over.
 
-      The list parameter is a comma-separated list of type names, which
-      may be any of the following:
+	    The list parameter is a comma-separated list of type names, which
+	    may be any of the following:
 
-      all         All entry types
-      none        Reset list to empty before adding more types
-      bestiary    Creatures
-      class[es]   Classes
-      feat[s]     Feats
-      language[s] Languages
-      skill[s]    Skills
-      spell[s]    Spells
-      weapon[s]   Weapons
-
+	    all         All entry types
+	    none        Reset list to empty before adding more types
+	    bestiary    Creatures
+	    class[es]   Classes
+	    feat[s]     Feats
+	    language[s] Languages
+	    skill[s]    Skills
+	    spell[s]    Spells
+	    weapon[s]   Weapons
 */
 package main
 
@@ -349,9 +350,9 @@ func configureApp() (AppPreferences, error) {
 }
 
 /*
-# @[00]@| Go-GMA 5.32.1
+# @[00]@| Go-GMA 5.33.0
 # @[01]@|
-# @[10]@| Overall GMA package Copyright © 1992–2025 by Steven L. Willoughby (AKA MadScienceZone)
+# @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 # @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
 # @[12]@| Aloha, Oregon, USA. All Rights Reserved. Some components were introduced at different
 # @[13]@| points along that historical time line.
