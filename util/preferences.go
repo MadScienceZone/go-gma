@@ -30,9 +30,9 @@ import (
 
 const (
 	GMAMapperPreferencesMinimumVersion int = 1
-	GMAMapperPreferencesMaximumVersion int = 9
+	GMAMapperPreferencesMaximumVersion int = 13
 	GMAPreferencesMinimumVersion       int = 1
-	GMAPreferencesMaximumVersion       int = 2
+	GMAPreferencesMaximumVersion       int = 6
 )
 
 type UnsupportedPreferencesVersionError struct {
@@ -306,9 +306,16 @@ type DieRollComponent struct {
 }
 
 //
+// MapperA11y describes accessibility options for mapper clients.
+//
+type MapperA11y struct {
+	ColorizeDieLabels		bool	   `json:"colorize_die_labels,omitempty"`
+}
+
+//
 // UserPreferences represents the preferences settings for the GMA Mapper.
 //
-// This represents preferences version 4.
+// This represents preferences version 13.
 //
 type UserPreferences struct {
 	GMAMapperPreferencesVersion int        `json:"GMA_Mapper_preferences_version"`
@@ -316,6 +323,7 @@ type UserPreferences struct {
 	ButtonSize                  ButtonSize `json:"button_size,omitempty"`
 	ChatTimestamp               bool       `json:"chat_timestamp,omitempty"`
 	ColorizeDieRolls            bool       `json:"colorize_die_rolls,omitempty"`
+	A11y                        MapperA11y `json:"a11y"`
 	CurlPath                    string     `json:"curl_path,omitempty"`
 	CurlInsecure                bool       `json:"curl_insecure,omitempty"`
 	CurrentProfile              string     `json:"current_profile,omitempty"`
@@ -332,12 +340,17 @@ type UserPreferences struct {
 	MarkupEnabled bool                `json:"markup_enabled,omitempty"`
 	MenuButton    bool                `json:"menu_button,omitempty"`
 	NeverAnimate  bool                `json:"never_animate,omitempty"`
+	NoDice        bool				  `json:"no_dice,omitempty"`
+	NoOnDeckAudio bool				  `json:"no_ondeck_audio,omitempty"`
+	NoSFX		  bool				  `json:"no_sfx,omitempty"`
+	NotPlaying    bool                `json:"not_playing,omitempty"`
 	PreloadImages bool                `json:"preload,omitempty"`
 	Profiles      []ServerProfile     `json:"profiles,omitempty"`
 	Fonts         map[string]UserFont `json:"fonts,omitempty"`
 	Scaling       float64             `json:"scaling,omitempty"`
 	ShowTimers    TimerVisibility     `json:"show_timers,omitempty"`
 	Styles        StyleDescription    `json:"styles,omitempty"`
+	SuppressAKA	  bool				  `json:"suppress_aka,omitempty"`
 }
 
 //
@@ -352,6 +365,22 @@ type InitiativeSeedData struct {
 	BlurHP       int    `json:"blur_hp"`
 	IsPC         bool   `json:"is_pc"`
 	DieSpec      string `json:"die_spec"`
+	Tactical     MonsterTacticalData `json:"tactical,omitempty"`
+}
+
+type MonsterTacticalData struct {
+	AC struct { 
+		AC int `json:"ac"`
+		Touch int `json:"touch"`
+		Flat int `json:"flat"`
+	} `json:"ac"`
+	CMD struct {
+		CMD int `json:"cmd"`
+		Text string `json:"text"`
+	} `json:"cmd"`
+	SpellResistance int `json:"sr"`
+	Speed string `json:"move"`
+	Alignment string `json:"align"`
 }
 
 //
@@ -360,6 +389,20 @@ type InitiativeSeedData struct {
 type CasterData struct {
 	Name string `json:"name"`
 	CL   int    `json:"cl"`
+}
+
+//
+// ProgressClockType describes the custom types of progress clocks.
+//
+type ProgressClockType struct {
+	Steps int `json:"steps"`
+	TerminalQty int `json:"terminal_qty,omitempty"`
+	States map[string]string `json:"states"`	
+	TerminalState string `json:"terminal_state"`
+	AdvanceState string `json:"advance_state"`
+	InitialState string `json:"initial_state"`
+	Consecutive bool `json:"consecutive,omitempty"`
+	InitialQty int `json:"initial_qty,omitempty"`
 }
 
 //
@@ -374,6 +417,9 @@ type GMAPreferences struct {
 	} `json:"appearance"`
 	Worlds             map[string]GMAWorld          `json:"worlds"`
 	Networks           map[string]GMANetworkProfile `json:"networks"`
+	ProgressClockTypes []ProgressClockType			`json:"progress_clock_types"`
+	MassiveDamagePct   int							`json:"massive_damage_pct,omitempty"`
+	MassiveDamageMinimum int						`json:"massive_damage_minimum,omitempty"`
 	CurrentWorldName   string                       `json:"current_world"`
 	CurrentNetworkName string                       `json:"network_profile"`
 }
@@ -388,6 +434,8 @@ type GMAWorld struct {
 	DBName               string               `json:"db_name"`
 	DisplayName          string               `json:"display_name"`
 	InitiativeBackupPath string               `json:"initiative_backup_path,omitempty"`
+	SummaryIndexURL      string               `json:"summary_index_url"`
+	ForumImageURLBase    string				  `json:"forum_image_url_base"`
 	Password             string               `json:"password,omitempty"`
 	InitiativeSeed       []InitiativeSeedData `json:"initiative_seed"`
 	CasterLevels         []CasterData         `json:"caster_levels"`
@@ -493,11 +541,19 @@ func DefaultPreferences() UserPreferences {
 	}
 
 	return UserPreferences{
+		A11y:			  MapperA11y{
+			ColorizeDieLabels: false,
+		},
 		ButtonSize:       SmallButtons,
 		ChatTimestamp:    true,
 		ColorizeDieRolls: true,
 		CurlPath:         curlPath,
 		CurrentProfile:   "offline",
+		NoDice: false,
+		NoOnDeckAudio: false,
+		NoSFX: false,
+		SuppressAKA: false,
+		NotPlaying: false,
 		ImageFormat:      PNG,
 		ShowTimers:       ShowMyTimers,
 		Profiles: []ServerProfile{
