@@ -58,23 +58,32 @@ import (
 	"html"
 	"io/ioutil"
 	"os"
+	"strings"
 	"time"
+
 	"github.com/MadScienceZone/go-gma/v5/text"
 )
 
 type SessionStats struct {
-	GameSessions []GameSession `json:"game_sessions"`
+	GameSessions   []GameSession `json:"game_sessions"`
+	SessionSummary struct {
+		Campaign     string            `json:"campaign"`
+		JournalLinks map[string]string `json:"journal_links"`
+	} `json:"session-summary,omitempty"`
 }
 
 type GameSession struct {
-	Date       GameDate `json:"date"`
-	VideoToken string   `json:"video,omitempty"`
-	Duration   GameTime `json:"duration"`
-	Title      string   `json:"title"`
-	WorldDates string   `json:"world_dates,omitempty"`
-	BookNumber int      `json:"book"`
-	Synopsis   string   `json:"synopsis,omitempty"`
-	ForumURL   string	`json:"url,omitempty"`
+	Date       GameDate          `json:"date"`
+	VideoToken string            `json:"video,omitempty"`
+	Duration   GameTime          `json:"duration"`
+	Title      string            `json:"title"`
+	WorldDates string            `json:"world_dates,omitempty"`
+	BookNumber int               `json:"book"`
+	Synopsis   string            `json:"synopsis,omitempty"`
+	Comments   string            `json:"comments,omitempty"`
+	ForumURL   string            `json:"url,omitempty"`
+	Chapters   map[string]string `json:"chapters,omitempty"`
+	Journals   []string          `json:"journals,omitempty"`
 }
 
 type GameDate struct {
@@ -149,10 +158,9 @@ func generateGameSynopsis(stats SessionStats, reverseOrder bool) {
 <link rel="stylesheet" href="/gpbp/local.css" />
 <table class="pftable">
 	<thead>
-<th><b>Session</b></th>
-<th><b>Game Date</b></th>
-<th><b>Name</b></th>
-<th><b>Campaign Dates</b></th>
+<th><b>Session<br/>/Dates</b></th>
+<th><b>Title</b></th>
+<th><b>Journals</b></th>
 <th><b>Synopsis</b></th></tr>
 </thead>
 <tbody>`)
@@ -164,7 +172,7 @@ func generateGameSynopsis(stats SessionStats, reverseOrder bool) {
 		if current_book < session.BookNumber {
 			current_book = session.BookNumber
 			if current_book == 1 {
-				extra = "<b>Start of Age of Worms Campaign.</b> "
+				extra = "<b>Start of " + html.EscapeString(stats.SessionSummary.Campaign) + " Campaign.</b> "
 			} else {
 				bookRoman, err := text.ToRoman(current_book)
 				if err == nil {
@@ -176,22 +184,32 @@ func generateGameSynopsis(stats SessionStats, reverseOrder bool) {
 		} else {
 			extra = ""
 		}
+		var journalList []string
+		for _, author := range session.Journals {
+			if link, ok := stats.SessionSummary.JournalLinks[author]; ok {
+				journalList = append(journalList, fmt.Sprintf("<a href=\"%s\">%s</a>", link, author))
+			} else {
+				journalList = append(journalList, author)
+				fmt.Fprintf(os.Stderr, "WARNING: journal author %s has no journal_links entry defined\n", author)
+			}
+		}
+
 		synopses = append(synopses, fmt.Sprintf(`<tr>
-<td align=center valign=top><a href="%s">%d</a></td>
-<td align=center valign=top><a href="%s">%s</a></td>
-<td valign=top>%s</td>
-<td valign=top>%s</td>
-<td valign=top>%s%s</td></tr>`,
+<td align=center valign=top><a href="%[1]s"><font size=5>%[2]d</font></a><br/><a href="%[1]s">%[3]s</a><br/><a href="%[1]s">%[4]s</a></td>
+<td valign=top>%[5]s</td>
+<td valign=top>%[6]s</td>
+<td valign=top>%[7]s%[8]s</td></tr>`,
 			session.ForumURL, i+1,
-			session.ForumURL, session.Date.Format("02-Jan-2006"),
-			html.EscapeString(session.Title),
+			session.Date.Format("2-Jan"),
 			session.WorldDates,
+			html.EscapeString(session.Title),
+			strings.Join(journalList, "<br/>"),
 			extra, session.Synopsis,
 		))
 	}
 
 	if reverseOrder {
-		for i := len(synopses)-1; i >= 0; i-- {
+		for i := len(synopses) - 1; i >= 0; i-- {
 			fmt.Println(synopses[i])
 		}
 	} else {
