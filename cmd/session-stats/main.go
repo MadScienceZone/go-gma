@@ -158,8 +158,10 @@ func generateGameSynopsis(stats SessionStats, reverseOrder bool) {
 <link rel="stylesheet" href="/gpbp/local.css" />
 <table class="pftable">
 	<thead>
-<th><b>Session<br/>/Dates</b></th>
+<th><b>Session</b></th>
+<th><b>Game Date</b></th>
 <th><b>Title</b></th>
+<th><b>Campaign Dates</b></th>
 <th><b>Journals</b></th>
 <th><b>Synopsis</b></th></tr>
 </thead>
@@ -195,12 +197,14 @@ func generateGameSynopsis(stats SessionStats, reverseOrder bool) {
 		}
 
 		synopses = append(synopses, fmt.Sprintf(`<tr>
-<td align=center valign=top><a href="%[1]s"><font size=5>%[2]d</font></a><br/><a href="%[1]s">%[3]s</a><br/><a href="%[1]s">%[4]s</a></td>
+<td align=center valign=top><a href="%[1]s"><font size=5>%[2]d</font></a></td>
+<td align=center valign=top><a href="%[1]s">%[3]s</a></td>
 <td valign=top>%[5]s</td>
+<td valign=top>%[4]s</td>
 <td valign=top>%[6]s</td>
 <td valign=top>%[7]s%[8]s</td></tr>`,
 			session.ForumURL, i+1,
-			session.Date.Format("2-Jan"),
+			session.Date.Format("2-Jan-2006"),
 			session.WorldDates,
 			html.EscapeString(session.Title),
 			strings.Join(journalList, "<br/>"),
