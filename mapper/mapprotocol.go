@@ -91,6 +91,7 @@ func (m *MapConnection) RetrieveBatches(packet any) ([]any, error) {
 		b := bt.BatchInfo()
 		m.bLock.Lock()
 		defer m.bLock.Unlock()
+		m.debugf(DebugIO|DebugMessages, "RetrieveBatches: locked")
 
 		storage := m.batches[b.BatchGroup]
 		storageLen := len(storage)
@@ -100,10 +101,13 @@ func (m *MapConnection) RetrieveBatches(packet any) ([]any, error) {
 		}
 
 		packets := make([]any, 0)
+		m.debugf(DebugIO|DebugMessages, "RetrieveBatches: allocated packets slice")
 		for i := range storageLen {
 			packets = append(packets, storage[i])
+			m.debugf(DebugIO|DebugMessages, "RetrieveBatches: appended fragment %d of %d to packets slice", i+1, storageLen)
 		}
 		delete(m.batches, b.BatchGroup)
+		m.debugf(DebugIO|DebugMessages, "RetrieveBatches: deleted map")
 		return packets, nil
 	} else {
 		return nil, fmt.Errorf("incoming packet of type %T does not support batching; unable to retrieve fragments to unpack", packet)
@@ -123,13 +127,17 @@ func (m *MapConnection) StashBatch(packet any) (bool, error) {
 		m.bLock.Lock()
 		defer m.bLock.Unlock()
 
+		m.debugf(DebugIO|DebugMessages, "StashBatch: locked")
 		if m.batches == nil {
+			m.debugf(DebugIO|DebugMessages, "StashBatch: created new outer map")
 			m.batches = make(map[string]map[int]any)
 		}
 		if m.batches[b.BatchGroup] == nil {
+			m.debugf(DebugIO|DebugMessages, "StashBatch: created new inner map for %s", b.BatchGroup)
 			m.batches[b.BatchGroup] = make(map[int]any)
 		}
 		m.batches[b.BatchGroup][b.Batch] = packet
+		m.debugf(DebugIO|DebugMessages, "StashBatch: stored packet %v in map[%s][%d], -> %v", packet, b.BatchGroup, b.Batch, b.TotalBatches > len(m.batches[b.BatchGroup]))
 
 		return b.TotalBatches > len(m.batches[b.BatchGroup]), nil
 	} else {
@@ -667,7 +675,9 @@ rescan_input:
 		var moreRemaining bool
 		rescan = false
 		if b, isBatchable := p.(Batchable); isBatchable && b.IsBatched() {
+			c.debugf(DebugIO|DebugMessages, "type %T is batchable", p)
 			moreRemaining, err = c.StashBatch(p)
+			c.debugf(DebugIO|DebugMessages, "batch stashed, err=%v, p=%v, more=%v", err, p, moreRemaining)
 			if err != nil {
 				return p
 			}
@@ -676,14 +686,17 @@ rescan_input:
 				return nil
 			}
 			packets, err := c.RetrieveBatches(p)
+			c.debugf(DebugIO|DebugMessages, "batches retrieved, err=%v, packets=%v", err, packets)
 			if err != nil {
 				return p
 			}
 			p, err := b.Reassemble(packets)
+			c.debugf(DebugIO|DebugMessages, "batches reassembled, err=%v, p=%v", err, p)
 			if err != nil {
 				return p
 			}
 		}
+		c.debugf(DebugIO|DebugMessages, "handleBatching returns %T %v", p, p)
 		return p
 	}
 
