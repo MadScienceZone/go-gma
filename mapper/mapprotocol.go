@@ -128,9 +128,9 @@ func (m *MapConnection) StashBatch(packet any) (bool, error) {
 		}
 		if m.batches[b.BatchGroup] == nil {
 			m.batches[b.BatchGroup] = make(map[int]any)
-		} else {
-			m.batches[b.BatchGroup][b.Batch] = packet
 		}
+		m.batches[b.BatchGroup][b.Batch] = packet
+
 		return b.TotalBatches > len(m.batches[b.BatchGroup]), nil
 	} else {
 		return false, fmt.Errorf("packet of type %T does not support batching, unable to stash fragment", packet)
