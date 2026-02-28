@@ -844,6 +844,11 @@ func (b BatchableMessagePayload) IsBatched() bool {
 	return b.BatchGroup != ""
 }
 
+// BatchInfo returns the details about the batch for each fragment.
+func (b BatchableMessagePayload) BatchInfo() BatchableMessagePayload {
+	return b
+}
+
 // Split breaks up a payload into multiple parts, returning a slice of them.
 // This must be defined at the derived type level.
 //func (b BatchableMessagePayload) Split() []any {

@@ -87,7 +87,8 @@ type MapConnection struct {
 
 // RetrieveBatches retrieves all the batches belonging to a set and removes them from storage
 func (m *MapConnection) RetrieveBatches(packet any) ([]any, error) {
-	if b, isBatch := packet.(BatchableMessagePayload); isBatch {
+	if bt, ok := packet.(Batchable); ok {
+		b := bt.BatchInfo()
 		m.bLock.Lock()
 		defer m.bLock.Unlock()
 
@@ -104,15 +105,17 @@ func (m *MapConnection) RetrieveBatches(packet any) ([]any, error) {
 		}
 		delete(m.batches, b.BatchGroup)
 		return packets, nil
+	} else {
+		return nil, fmt.Errorf("incoming packet of type %T does not support batching; unable to retrieve fragments to unpack", packet)
 	}
-	return nil, fmt.Errorf("incoming packet does not appear to be a batch we can unpack")
 }
 
 // StashBatch stashes an incoming message payload which is part of a batched set, assuming we'll assemble all of the
 // pieces later. It returns true if we are still expecting more to arrive and an error if one occurred.
 // If an error is returned, the meaning of the boolean return value is undefined.
 func (m *MapConnection) StashBatch(packet any) (bool, error) {
-	if b, isBatch := packet.(BatchableMessagePayload); isBatch {
+	if bt, ok := packet.(Batchable); ok {
+		b := bt.BatchInfo()
 		if b.BatchGroup == "" {
 			return false, fmt.Errorf("missing BatchGroup")
 		}
@@ -129,8 +132,9 @@ func (m *MapConnection) StashBatch(packet any) (bool, error) {
 			m.batches[b.BatchGroup][b.Batch] = packet
 		}
 		return b.TotalBatches > len(m.batches[b.BatchGroup]), nil
+	} else {
+		return false, fmt.Errorf("packet of type %T does not support batching, unable to stash fragment", packet)
 	}
-	return false, fmt.Errorf("packet does not appear to be part of a batch")
 }
 
 func (m *MapConnection) IsReady() bool {
@@ -159,6 +163,7 @@ type Batchable interface {
 	Split() []any                                    // split up the message, returning the slice of batched payloads
 	AbortPayload(reason string, batchNumber int) any // generate an abort payload
 	Reassemble([]any) (any, error)                   // reassemble a slice of batches into a single payload structure
+	BatchInfo() BatchableMessagePayload              // return batch details for this message
 }
 
 // These commands are supposed to support batching
