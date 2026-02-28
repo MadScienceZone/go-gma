@@ -984,42 +984,62 @@ func (c AddImageMessagePayload) NeedsToBeSplit() bool {
 	return l > MaxServerMessageSize
 }
 
-func (c AddImageMessagePayload) Split() []AddImageMessagePayload {
-	payloads := make([]AddImageMessagePayload, len(c.Sizes))
-	payloads[0].Name = c.Name
-	payloads[0].Animation = c.Animation
+// Split records on Sizes (which are the instances of the images we
+// have at different zoom factors, etc.)
+//
+// 0  Name,
+// 0  Animation->{Frames,FrameSpeed,Loops}
+// 0+ Sizes[File,ImageData,IsLocalFile,Zoom]
+func (c AddImageMessagePayload) Split() []any {
+	payloads := make([]any, len(c.Sizes))
 	gid := uuid.NewString()
+
 	for i, instance := range c.Sizes {
-		payloads[i].Sizes = make([]ImageInstance, 1)
-		payloads[i].Sizes[0] = instance
-		payloads[i].TotalBatches = len(c.Sizes)
-		payloads[i].Batch = i
-		payloads[i].BatchGroup = gid
-		payloads[i].BatchError = ""
+		p := AddImageMessagePayload{
+			ImageDefinition: ImageDefinition{
+				Sizes: []ImageInstance{instance},
+			},
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: len(c.Sizes),
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		if i == 0 {
+			p.Name = c.Name
+			p.Animation = c.Animation
+		}
+		payloads[i] = p
 	}
 	return payloads
 }
 
-func (c *AddImageMessagePayload) Reassemble(p []AddImageMessagePayload) error {
-	for i, d := range p {
-		if d.Batch != i {
-			return fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), d.Batch)
-		}
-		if d.TotalBatches != len(p) {
-			return fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, d.TotalBatches, len(p))
-		}
-	}
+func (c AddImageMessagePayload) Reassemble(p []any) (any, error) {
+	ai := AddImageMessagePayload{}
 
-	c.Name = p[0].Name
-	c.Sizes = make([]ImageInstance, len(p))
-	c.Animation = p[0].Animation
 	for i, d := range p {
-		c.Sizes[i] = d.Sizes[0]
+		img, ok := d.(AddImageMessagePayload)
+		if !ok {
+			return ai, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if img.Batch != i {
+			return ai, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), img.Batch)
+		}
+		if img.TotalBatches != len(p) {
+			return ai, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, img.TotalBatches, len(p))
+		}
+
+		if i == 0 {
+			ai.Name = img.Name
+			ai.Sizes = make([]ImageInstance, len(p))
+			ai.Animation = img.Animation
+		}
+		ai.Sizes[i] = img.Sizes[0]
 	}
-	return nil
+	return ai, nil
 }
 
-func (c AddImageMessagePayload) AbortPayload(reason string, batchNumber int) AddImageMessagePayload {
+func (c AddImageMessagePayload) AbortPayload(reason string, batchNumber int) any {
 	return AddImageMessagePayload{
 		BatchableMessagePayload: BatchableMessagePayload{
 			BatchError:   reason,
@@ -1838,7 +1858,7 @@ type EchoMessagePayload struct {
 }
 
 func (c EchoMessagePayload) NeedsToBeSplit() bool {
-	if c.O == nil || len(c.O) <= 1 {
+	if len(c.O) <= 1 {
 		return false
 	}
 
@@ -1858,45 +1878,65 @@ func (c EchoMessagePayload) NeedsToBeSplit() bool {
 	}
 	return l >= MaxServerMessageSize
 }
-func (c EchoMessagePayload) Split() []EchoMessagePayload {
-	payloads := make([]EchoMessagePayload, len(c.O))
-	payloads[0].B = c.B
-	payloads[0].I = c.I
-	payloads[0].S = c.S
+
+func (c EchoMessagePayload) Split() []any {
+	if len(c.O) < 2 {
+		a := make([]any, 1)
+		a[0] = c
+		return a
+	}
+
+	payloads := make([]any, len(c.O))
 	gid := uuid.NewString()
 	i := 0
 	for k, v := range c.O {
-		payloads[i].O = make(map[string]any, 1)
-		payloads[i].O[k] = v
-		payloads[i].TotalBatches = len(c.O)
-		payloads[i].Batch = i
-		payloads[i].BatchGroup = gid
-		payloads[i].BatchError = ""
+		p := EchoMessagePayload{}
+		if i == 0 {
+			p.B = c.B
+			p.I = c.I
+			p.S = c.S
+		}
+		p.O = make(map[string]any, 1)
+		p.O[k] = v
+		p.TotalBatches = len(c.O)
+		p.Batch = i
+		p.BatchGroup = gid
+		payloads[i] = p
 		i++
 	}
 	return payloads
 }
-func (c EchoMessagePayload) Reassemble(p []EchoMessagePayload) error {
+
+func (c EchoMessagePayload) Reassemble(p []any) (any, error) {
+	var echo EchoMessagePayload
+
 	for i, d := range p {
-		if d.Batch != i {
-			return fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), d.Batch)
+		pkt, ok := d.(EchoMessagePayload)
+		if !ok {
+			return echo, fmt.Errorf("batched %T packet #%d of %d is of type %T", c, i, len(p), d)
 		}
-		if d.TotalBatches != len(p) {
-			return fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, d.TotalBatches, len(p))
+
+		if pkt.Batch != i {
+			return echo, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), pkt.Batch)
+		}
+		if pkt.TotalBatches != len(p) {
+			return echo, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, pkt.TotalBatches, len(p))
+		}
+		if i == 0 {
+			echo.B = pkt.B
+			echo.I = pkt.I
+			echo.S = pkt.S
+			echo.O = make(map[string]any, len(p))
+		}
+
+		for k, v := range pkt.O {
+			echo.O[k] = v
 		}
 	}
-	c.B = p[0].B
-	c.I = p[0].I
-	c.S = p[0].S
-	c.O = make(map[string]any, len(p))
-	for _, d := range p {
-		for k, v := range d.O {
-			c.O[k] = v
-		}
-	}
-	return nil
+	return echo, nil
 }
-func (c EchoMessagePayload) AbortPayload(reason string, batchNumber int) EchoMessagePayload {
+
+func (c EchoMessagePayload) AbortPayload(reason string, batchNumber int) any {
 	return EchoMessagePayload{
 		BatchableMessagePayload: BatchableMessagePayload{
 			BatchError:   reason,

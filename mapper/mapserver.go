@@ -123,6 +123,7 @@ func NewClientConnection(socket net.Conn, opts ...ClientConnectionOption) (Clien
 		Address: socket.RemoteAddr().String(),
 		Conn:    NewMapConnection(socket),
 	}
+	newCon.Conn.serverSide = true
 	newCon.Conn.debug = newCon.debug
 	newCon.Conn.debugf = newCon.debugf
 	newCon.D, err = dice.NewDieRoller()

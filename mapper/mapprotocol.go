@@ -51,8 +51,8 @@ import (
 // The GMA Mapper Protocol version number current as of this build,
 // and protocol versions supported by this code.
 const (
-	GMAMapperProtocol=423      // @@##@@ auto-configured
-	GoVersionNumber="5.33.0" // @@##@@ auto-configured
+	GMAMapperProtocol           = 423      // @@##@@ auto-configured
+	GoVersionNumber             = "5.33.0" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
 	MaximumSupportedMapProtocol = 423
 	MaxServerMessageSize        = 60 * 1024 // don't send server messages bigger than this
@@ -73,15 +73,16 @@ func init() {
 var ErrProtocol = errors.New("internal protocol error")
 
 type MapConnection struct {
-	conn     net.Conn               // network socket
-	reader   *bufio.Scanner         // read interface to socket
-	writer   *bufio.Writer          // write interface to socket
-	sendBuf  []string               // internal buffer of outgoing packets
-	sendChan chan string            // outgoing packets go through this channel
-	batches  map[string]map[int]any // storage for incoming batched packets	(batchID->batch#->packet)
-	bLock    *sync.Mutex            // mutex protecting batches
-	debug    func(DebugFlags, string)
-	debugf   func(DebugFlags, string, ...any)
+	serverSide bool                   // is this the server's connection out to clients?
+	conn       net.Conn               // network socket
+	reader     *bufio.Scanner         // read interface to socket
+	writer     *bufio.Writer          // write interface to socket
+	sendBuf    []string               // internal buffer of outgoing packets
+	sendChan   chan string            // outgoing packets go through this channel
+	batches    map[string]map[int]any // storage for incoming batched packets	(batchID->batch#->packet)
+	bLock      *sync.Mutex            // mutex protecting batches
+	debug      func(DebugFlags, string)
+	debugf     func(DebugFlags, string, ...any)
 }
 
 // RetrieveBatches retrieves all the batches belonging to a set and removes them from storage
@@ -157,8 +158,14 @@ type Batchable interface {
 	IsBatched() bool                                 // is this payload part of an incoming batch of payloads?
 	Split() []any                                    // split up the message, returning the slice of batched payloads
 	AbortPayload(reason string, batchNumber int) any // generate an abort payload
-	Reassemble([]any) error                          // reassemble a slice of batches into a single payload structure
+	Reassemble([]any) (any, error)                   // reassemble a slice of batches into a single payload structure
 }
+
+// These commands are supposed to support batching
+var (
+	_ Batchable = EchoMessagePayload{}
+	_ Batchable = AddImageMessagePayload{}
+)
 
 // SendEchoWithTimestamp is identical to Send, but only takes an EchoMessagePayload parameter
 // and writes the SentTime value into it as it sends it out.
@@ -571,7 +578,9 @@ func (c *MapConnection) sendln(commandWord, data string) error {
 	var packet strings.Builder
 
 	if len(data)+len(commandWord)+2 > MaxServerMessageSize {
-		c.sendChan <- fmt.Sprintf("FAILED {\"Command\": \"%s\",\"Reason\":\"Transmission failed for server message; payload length %d exceeds maximum allowed\"}\n", commandWord, len(data))
+		if c.serverSide {
+			c.sendChan <- fmt.Sprintf("FAILED {\"Command\": \"%s\",\"Reason\":\"Transmission failed for server message; payload length %d exceeds maximum allowed\"}\n", commandWord, len(data))
+		}
 		return fmt.Errorf("protocol error: outgoing data packet length %d would exceed maximum allowed", len(data))
 	}
 
@@ -665,7 +674,10 @@ rescan_input:
 			if err != nil {
 				return p
 			}
-			p = b.Reassemble(packets)
+			p, err := b.Reassemble(packets)
+			if err != nil {
+				return p
+			}
 		}
 		return p
 	}
