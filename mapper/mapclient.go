@@ -5238,7 +5238,7 @@ type InitiativeSlot struct {
 
 	// Deprecated: The current hit point total for the creature.
 	// Set creature hit points via the OA command instead.
-	//CurrentHP int
+	CurrentHP int
 
 	// The creature's name as displayed on the map.
 	Name string

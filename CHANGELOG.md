@@ -33,6 +33,7 @@ In addition, if your server didn't have the following updates installed previous
 
 ### Changed
  * Changed the format of generated game summaries.
+ * Removed deprecated `CurrentHP` field from `IL` server message.
 
 ## v5.32.1
 ### Fixed
