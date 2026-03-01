@@ -23,6 +23,17 @@ In addition, if your server didn't have the following updates installed previous
 
 `scripts/upgrade-5.13.1` for servers older than 5.13.1
 
+## v5.33.0 (unreleased)
+### Added
+ * Implements server protocol 423.
+ * Adds batching of large messages.
+ * Updates support for newer GMA file formats.
+ * Adds new `push-images` utility program.
+ * Adds support for targeted modifiers.
+
+### Changed
+ * Changed the format of generated game summaries.
+
 ## v5.32.1
 ### Fixed
  * Corrects error in supported protocol number in mapper package.
