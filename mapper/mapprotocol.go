@@ -91,7 +91,7 @@ func (m *MapConnection) RetrieveBatches(packet any) ([]any, error) {
 		b := bt.BatchInfo()
 		m.bLock.Lock()
 		defer m.bLock.Unlock()
-		m.debugf(DebugIO|DebugMessages, "RetrieveBatches: locked")
+		//m.debugf(DebugAll, "RetrieveBatches: locked")
 
 		storage := m.batches[b.BatchGroup]
 		storageLen := len(storage)
@@ -101,13 +101,13 @@ func (m *MapConnection) RetrieveBatches(packet any) ([]any, error) {
 		}
 
 		packets := make([]any, 0)
-		m.debugf(DebugIO|DebugMessages, "RetrieveBatches: allocated packets slice")
+		//m.debugf(DebugAll, "RetrieveBatches: allocated packets slice")
 		for i := range storageLen {
 			packets = append(packets, storage[i])
-			m.debugf(DebugIO|DebugMessages, "RetrieveBatches: appended fragment %d of %d to packets slice", i+1, storageLen)
+			//m.debugf(DebugAll, "RetrieveBatches: appended fragment %d of %d to packets slice", i+1, storageLen)
 		}
 		delete(m.batches, b.BatchGroup)
-		m.debugf(DebugIO|DebugMessages, "RetrieveBatches: deleted map")
+		//m.debugf(DebugAll, "RetrieveBatches: deleted map")
 		return packets, nil
 	} else {
 		return nil, fmt.Errorf("incoming packet of type %T does not support batching; unable to retrieve fragments to unpack", packet)
@@ -127,17 +127,17 @@ func (m *MapConnection) StashBatch(packet any) (bool, error) {
 		m.bLock.Lock()
 		defer m.bLock.Unlock()
 
-		m.debugf(DebugIO|DebugMessages, "StashBatch: locked")
+		//m.debugf(DebugAll, "StashBatch: locked")
 		if m.batches == nil {
-			m.debugf(DebugIO|DebugMessages, "StashBatch: created new outer map")
+			//m.debugf(DebugAll, "StashBatch: created new outer map")
 			m.batches = make(map[string]map[int]any)
 		}
 		if m.batches[b.BatchGroup] == nil {
-			m.debugf(DebugIO|DebugMessages, "StashBatch: created new inner map for %s", b.BatchGroup)
+			//m.debugf(DebugAll, "StashBatch: created new inner map for %s", b.BatchGroup)
 			m.batches[b.BatchGroup] = make(map[int]any)
 		}
 		m.batches[b.BatchGroup][b.Batch] = packet
-		m.debugf(DebugIO|DebugMessages, "StashBatch: stored packet %v in map[%s][%d], -> %v", packet, b.BatchGroup, b.Batch, b.TotalBatches > len(m.batches[b.BatchGroup]))
+		//m.debugf(DebugAll, "StashBatch: stored packet %v in map[%s][%d], -> %v", packet, b.BatchGroup, b.Batch, b.TotalBatches > len(m.batches[b.BatchGroup]))
 
 		return b.TotalBatches > len(m.batches[b.BatchGroup]), nil
 	} else {
@@ -151,6 +151,7 @@ func (m *MapConnection) IsReady() bool {
 
 func NewMapConnection(c net.Conn) MapConnection {
 	return MapConnection{
+		bLock:    new(sync.Mutex),
 		conn:     c,
 		reader:   bufio.NewScanner(c),
 		writer:   bufio.NewWriter(c),
@@ -176,8 +177,35 @@ type Batchable interface {
 
 // These commands are supposed to support batching
 var (
-	_ Batchable = EchoMessagePayload{}
 	_ Batchable = AddImageMessagePayload{}
+	_ Batchable = AddDicePresetsMessagePayload{}
+	_ Batchable = AddObjAttributesMessagePayload{}
+	_ Batchable = ChatMessageMessagePayload{}
+	_ Batchable = DefineDicePresetDelegatesMessagePayload{}
+	_ Batchable = DefineDicePresetsMessagePayload{}
+	_ Batchable = EchoMessagePayload{}
+	_ Batchable = HitPointRequestMessagePayload{}
+	_ Batchable = LoadArcObjectMessagePayload{}
+	_ Batchable = LoadCircleObjectMessagePayload{}
+	_ Batchable = LoadLineObjectMessagePayload{}
+	_ Batchable = LoadPolygonObjectMessagePayload{}
+	_ Batchable = LoadRectangleObjectMessagePayload{}
+	_ Batchable = LoadSpellAreaOfEffectObjectMessagePayload{}
+	_ Batchable = LoadTextObjectMessagePayload{}
+	_ Batchable = LoadTileObjectMessagePayload{}
+	_ Batchable = QueryImageMessagePayload{}
+	_ Batchable = TimerRequestMessagePayload{}
+	_ Batchable = PlaceSomeoneMessagePayload{}
+	_ Batchable = PlayAudioMessagePayload{}
+	_ Batchable = RemoveObjAttributesMessagePayload{}
+	_ Batchable = RollDiceMessagePayload{}
+	_ Batchable = RollResultMessagePayload{}
+	_ Batchable = PlayAudioMessagePayload{}
+	_ Batchable = UpdateDicePresetsMessagePayload{}
+	_ Batchable = UpdateInitiativeMessagePayload{}
+	_ Batchable = UpdateObjAttributesMessagePayload{}
+	_ Batchable = UpdatePeerListMessagePayload{}
+	_ Batchable = UpdateVersionsMessagePayload{}
 )
 
 // SendEchoWithTimestamp is identical to Send, but only takes an EchoMessagePayload parameter
@@ -673,30 +701,31 @@ rescan_input:
 
 	handleBatching := func(p any) any {
 		var moreRemaining bool
+		var packets []any
 		rescan = false
 		if b, isBatchable := p.(Batchable); isBatchable && b.IsBatched() {
-			c.debugf(DebugIO|DebugMessages, "type %T is batchable", p)
+			//c.debugf(DebugAll, "type %T is batchable", p)
 			moreRemaining, err = c.StashBatch(p)
-			c.debugf(DebugIO|DebugMessages, "batch stashed, err=%v, p=%v, more=%v", err, p, moreRemaining)
+			//c.debugf(DebugAll, "batch stashed, err=%v, p=%v, more=%v", err, p, moreRemaining)
 			if err != nil {
 				return p
 			}
 			if moreRemaining {
 				rescan = true
-				return nil
+				return p
 			}
-			packets, err := c.RetrieveBatches(p)
-			c.debugf(DebugIO|DebugMessages, "batches retrieved, err=%v, packets=%v", err, packets)
+			packets, err = c.RetrieveBatches(p)
+			//c.debugf(DebugAll, "batches retrieved, err=%v, packets=%v", err, packets)
 			if err != nil {
 				return p
 			}
-			p, err := b.Reassemble(packets)
-			c.debugf(DebugIO|DebugMessages, "batches reassembled, err=%v, p=%v", err, p)
+			p, err = b.Reassemble(packets)
+			//c.debugf(DebugAll, "batches reassembled, err=%v, p=%v", err, p)
 			if err != nil {
 				return p
 			}
 		}
-		c.debugf(DebugIO|DebugMessages, "handleBatching returns %T %v", p, p)
+		//c.debugf(DebugAll, "handleBatching returns %T %v", p, p)
 		return p
 	}
 

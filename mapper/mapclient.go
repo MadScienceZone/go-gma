@@ -51,6 +51,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/MadScienceZone/go-gma/v5/auth"
@@ -465,6 +466,7 @@ func NewConnection(endpoint string, opts ...ConnectionOption) (Connection, error
 	newCon.Reset()
 	newCon.serverConn.debug = newCon.debug
 	newCon.serverConn.debugf = newCon.debugf
+	newCon.serverConn.bLock = new(sync.Mutex)
 
 	for _, o := range opts {
 		if err := o(&newCon); err != nil {
@@ -971,11 +973,12 @@ type AddImageMessagePayload struct {
 
 func (c AddImageMessagePayload) NeedsToBeSplit() bool {
 	// AI Animation Name Sizes :
-	l := 6              // "AI {}"
-	l = 8 + len(c.Name) // "Name":,
+	l := 6               // "AI {}"
+	l += 8 + len(c.Name) // "Name":,
 	if c.Animation != nil {
 		l += 61 // "Animation":{"Frames":99999,"FrameSpeed":99999,"Loops":99999}
 	}
+	l += 11 // "Sizes": []
 	for _, i := range c.Sizes {
 		if i.IsLocalFile {
 			l += 19 // "IsLocalFile":true,
@@ -1080,6 +1083,74 @@ type AddObjAttributesMessagePayload struct {
 	ObjID    string
 	AttrName string
 	Values   []string
+}
+
+func (c AddObjAttributesMessagePayload) NeedsToBeSplit() bool {
+	l := 37 + len(c.ObjID) + len(c.AttrName) // OA+ ObjID:x AttrName:x Values:[]
+	for _, v := range c.Values {
+		l += len(v) + 3
+	}
+	return l > MaxServerMessageSize
+}
+
+func (c AddObjAttributesMessagePayload) Split() []any {
+	payloads := make([]any, len(c.Values))
+	gid := uuid.NewString()
+
+	for i, v := range c.Values {
+		p := AddObjAttributesMessagePayload{
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: len(c.Values),
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		if i == 0 {
+			p.ObjID = c.ObjID
+			p.AttrName = c.AttrName
+		}
+		p.Values = []string{v}
+		payloads[i] = p
+	}
+	return payloads
+}
+
+func (c AddObjAttributesMessagePayload) Reassemble(p []any) (any, error) {
+	newp := AddObjAttributesMessagePayload{}
+
+	for i, d := range p {
+		pp, ok := d.(AddObjAttributesMessagePayload)
+		if !ok {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if pp.Batch != i {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), pp.Batch)
+		}
+		if pp.TotalBatches != len(p) {
+			return newp, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, pp.TotalBatches, len(p))
+		}
+
+		if i == 0 {
+			newp.ObjID = pp.ObjID
+			newp.AttrName = pp.AttrName
+		}
+		for _, v := range pp.Values {
+			newp.Values = append(newp.Values, v)
+		}
+	}
+	return newp, nil
+}
+
+func (c AddObjAttributesMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return AddObjAttributesMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+		ObjID:    c.ObjID,
+		AttrName: c.AttrName,
+	}
 }
 
 // AddObjAttributes informs peers to add a set of string values to the existing
@@ -1356,6 +1427,97 @@ type ChatMessageMessagePayload struct {
 
 	// The text of the chat message we received.
 	Text string
+}
+
+func (c ChatMessageMessagePayload) NeedsToBeSplit() bool {
+	l := 138 + len(c.Sender) // TO Origin:false Replay:false Sender:x MessageID:i ToAll:false ToGM:false Sent:time[35]
+	l += 16
+	for _, r := range c.Recipients {
+		l += len(r) + 3 // Recipients:[x]
+	}
+	l += 34 + len(c.Text) // Markup:false Pin:false Text:x
+	return l > MaxServerMessageSize
+}
+
+func (c ChatMessageMessagePayload) Split() []any {
+	fragments := len(c.Recipients)
+	payloads := make([]any, fragments)
+	gid := uuid.NewString()
+
+	for i := range fragments {
+		p := ChatMessageMessagePayload{
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: fragments,
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		if i == 0 {
+			p.Origin = c.Origin
+			p.Replay = c.Replay
+			p.Sender = c.Sender
+			p.MessageID = c.MessageID
+			p.ToAll = c.ToAll
+			p.ToGM = c.ToGM
+			p.Sent = c.Sent
+			p.Markup = c.Markup
+			p.Pin = c.Pin
+			p.Text = c.Text
+		}
+		if len(c.Recipients) > i {
+			p.Recipients = []string{c.Recipients[i]}
+		}
+		payloads[i] = p
+	}
+	return payloads
+}
+
+func (c ChatMessageMessagePayload) Reassemble(p []any) (any, error) {
+	newp := ChatMessageMessagePayload{}
+
+	for i, d := range p {
+		pp, ok := d.(ChatMessageMessagePayload)
+		if !ok {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if pp.Batch != i {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), pp.Batch)
+		}
+		if pp.TotalBatches != len(p) {
+			return newp, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, pp.TotalBatches, len(p))
+		}
+
+		if i == 0 {
+			newp.Origin = pp.Origin
+			newp.Replay = pp.Replay
+			newp.Sender = pp.Sender
+			newp.MessageID = pp.MessageID
+			newp.ToAll = pp.ToAll
+			newp.ToGM = pp.ToGM
+			newp.Sent = pp.Sent
+			newp.Pin = pp.Pin
+			newp.Markup = pp.Markup
+			newp.Text = pp.Text
+		}
+		for _, t := range pp.Recipients {
+			newp.Recipients = append(newp.Recipients, t)
+		}
+	}
+	return newp, nil
+}
+
+func (c ChatMessageMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return ChatMessageMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+		ChatCommon: ChatCommon{
+			MessageID: c.MessageID,
+			Sender:    c.Sender,
+		},
+	}
 }
 
 // ChatMessage sends a message on the chat channel to other
@@ -2169,9 +2331,98 @@ type GrantedMessagePayload struct {
 // that their HitPointRequest message was accepted.
 type HitPointAcknowledgeMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 	RequestID        string
 	RequestingClient string `json:",omitempty"`
 	RequestedBy      string `json:",omitempty"`
+}
+
+func (c HitPointRequestMessagePayload) NeedsToBeSplit() bool {
+	l := 108 + len(c.Description) + len(c.RequestID) + len(c.RequestedBy) + len(c.RequestingClient) // HPREQ Targets[] Description:x RequestedBy:x RequestingClient:x RequestID:x Health:* TmpHP:*
+	for _, t := range c.Targets {
+		l += len(t) + 3
+	}
+	if c.Health == nil {
+		l += 4
+	} else {
+		l += 84 + 7*5 // MaxHP:i LethalDamage:i NonLethalDamage:i AC:i FlatFootedAC:i TouchAC: CMD:i
+	}
+	if c.TmpHP == nil {
+		l += 4
+	} else {
+		l += 33 + 10 + len(c.TmpHP.Expires) // TmpHP:i TmpDamage:i Expires:x
+	}
+	return l > MaxServerMessageSize
+}
+
+func (c HitPointRequestMessagePayload) Split() []any {
+	payloads := make([]any, len(c.Targets))
+	gid := uuid.NewString()
+
+	for i, instance := range c.Targets {
+		p := HitPointRequestMessagePayload{
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: len(c.Targets),
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		if i == 0 {
+			p.Description = c.Description
+			p.RequestID = c.RequestID
+			p.Health = c.Health
+			p.TmpHP = c.TmpHP
+			p.RequestedBy = c.RequestedBy
+			p.RequestingClient = c.RequestingClient
+		}
+		p.Targets = []string{instance}
+		payloads[i] = p
+	}
+	return payloads
+}
+
+func (c HitPointRequestMessagePayload) Reassemble(p []any) (any, error) {
+	newp := HitPointRequestMessagePayload{}
+
+	for i, d := range p {
+		pp, ok := d.(HitPointRequestMessagePayload)
+		if !ok {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if pp.Batch != i {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), pp.Batch)
+		}
+		if pp.TotalBatches != len(p) {
+			return newp, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, pp.TotalBatches, len(p))
+		}
+
+		if i == 0 {
+			newp.Description = pp.Description
+			newp.RequestID = pp.RequestID
+			newp.Health = pp.Health
+			newp.TmpHP = pp.TmpHP
+			newp.RequestedBy = pp.RequestedBy
+			newp.RequestingClient = pp.RequestingClient
+		}
+		for _, t := range pp.Targets {
+			newp.Targets = append(newp.Targets, t)
+		}
+	}
+	return newp, nil
+}
+
+func (c HitPointRequestMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return HitPointRequestMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+		Description:      c.Description,
+		RequestedBy:      c.RequestedBy,
+		RequestID:        c.RequestID,
+		RequestingClient: c.RequestingClient,
+	}
 }
 
 // .  _   _ _ _   ____       _       _   ____                            _
@@ -2375,6 +2626,880 @@ type LoadTileObjectMessagePayload struct {
 	TileElement
 }
 
+func (c LoadArcObjectMessagePayload) NeedsToBeSplit() bool {
+	l := 8 // LS-ARC
+	l += 121 + len(c.ID) + len(c.Stipple) + len(c.Line) + len(c.Fill) + len(c.Layer) + len(c.Group) + 45
+	// ID:x X:x Y:x Z:x Stipple:x Line:x Fill:x Width:i Layer:x Level:i Goup:x Dash:i Hidden:false Locked:false
+	l += 30 + 22 // ArcMode:i Start:f Extent:f
+	l += 13      // Points:[X:f Y:f]
+	l += (10 + 20) * len(c.Points)
+	return l > MaxServerMessageSize
+}
+
+func (c LoadArcObjectMessagePayload) Split() []any {
+	payloads := make([]any, len(c.Points))
+	gid := uuid.NewString()
+
+	for i, instance := range c.Points {
+		p := LoadArcObjectMessagePayload{
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: len(c.Points),
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		if i == 0 {
+			p.ID = c.ID
+			p.X = c.X
+			p.Y = c.Y
+			p.Z = c.Z
+			p.Hidden = c.Hidden
+			p.Locked = c.Locked
+			p.Dash = c.Dash
+			p.Width = c.Width
+			p.Level = c.Level
+			p.Line = c.Line
+			p.Fill = c.Fill
+			p.Stipple = c.Stipple
+			p.Layer = c.Layer
+			p.Group = c.Group
+			//
+			p.ArcMode = c.ArcMode
+			p.Start = c.Start
+			p.Extent = c.Extent
+		}
+		p.Points = []Coordinates{instance}
+		payloads[i] = p
+	}
+	return payloads
+}
+
+func (c LoadArcObjectMessagePayload) Reassemble(p []any) (any, error) {
+	newp := LoadArcObjectMessagePayload{}
+
+	for i, d := range p {
+		pp, ok := d.(LoadArcObjectMessagePayload)
+		if !ok {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if pp.Batch != i {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), pp.Batch)
+		}
+		if pp.TotalBatches != len(p) {
+			return newp, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, pp.TotalBatches, len(p))
+		}
+
+		if i == 0 {
+			newp.ID = pp.ID
+			newp.X = pp.X
+			newp.Y = pp.Y
+			newp.Z = pp.Z
+			newp.Hidden = pp.Hidden
+			newp.Locked = pp.Locked
+			newp.Dash = pp.Dash
+			newp.Width = pp.Width
+			newp.Level = pp.Level
+			newp.Line = pp.Line
+			newp.Fill = pp.Fill
+			newp.Stipple = pp.Stipple
+			newp.Layer = pp.Layer
+			newp.Group = pp.Group
+			//
+			newp.ArcMode = pp.ArcMode
+			newp.Start = pp.Start
+			newp.Extent = pp.Extent
+		}
+		for _, pt := range pp.Points {
+			newp.Points = append(newp.Points, pt)
+		}
+	}
+	return newp, nil
+}
+
+func (c LoadArcObjectMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return LoadArcObjectMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+		ArcElement: ArcElement{
+			MapElement: MapElement{
+				BaseMapObject: BaseMapObject{
+					ID: c.ID,
+				},
+				Coordinates: Coordinates{
+					X: c.X,
+					Y: c.Y,
+				},
+				Z: c.Z,
+			},
+		},
+	}
+}
+
+func (c LoadCircleObjectMessagePayload) NeedsToBeSplit() bool {
+	l := 9 // LS-CIRC
+	l += 121 + len(c.ID) + len(c.Stipple) + len(c.Line) + len(c.Fill) + len(c.Layer) + len(c.Group) + 45
+	// ID:x X:x Y:x Z:x Stipple:x Line:x Fill:x Width:i Layer:x Level:i Goup:x Dash:i Hidden:false Locked:false
+	l += 13 // Points:[X:f Y:f]
+	l += (10 + 20) * len(c.Points)
+	return l > MaxServerMessageSize
+}
+
+func (c LoadCircleObjectMessagePayload) Split() []any {
+	payloads := make([]any, len(c.Points))
+	gid := uuid.NewString()
+
+	for i, instance := range c.Points {
+		p := LoadCircleObjectMessagePayload{
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: len(c.Points),
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		if i == 0 {
+			p.ID = c.ID
+			p.X = c.X
+			p.Y = c.Y
+			p.Z = c.Z
+			p.Hidden = c.Hidden
+			p.Locked = c.Locked
+			p.Dash = c.Dash
+			p.Width = c.Width
+			p.Level = c.Level
+			p.Line = c.Line
+			p.Fill = c.Fill
+			p.Stipple = c.Stipple
+			p.Layer = c.Layer
+			p.Group = c.Group
+			//
+		}
+		p.Points = []Coordinates{instance}
+		payloads[i] = p
+	}
+	return payloads
+}
+
+func (c LoadCircleObjectMessagePayload) Reassemble(p []any) (any, error) {
+	newp := LoadCircleObjectMessagePayload{}
+
+	for i, d := range p {
+		pp, ok := d.(LoadCircleObjectMessagePayload)
+		if !ok {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if pp.Batch != i {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), pp.Batch)
+		}
+		if pp.TotalBatches != len(p) {
+			return newp, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, pp.TotalBatches, len(p))
+		}
+
+		if i == 0 {
+			newp.ID = pp.ID
+			newp.X = pp.X
+			newp.Y = pp.Y
+			newp.Z = pp.Z
+			newp.Hidden = pp.Hidden
+			newp.Locked = pp.Locked
+			newp.Dash = pp.Dash
+			newp.Width = pp.Width
+			newp.Level = pp.Level
+			newp.Line = pp.Line
+			newp.Fill = pp.Fill
+			newp.Stipple = pp.Stipple
+			newp.Layer = pp.Layer
+			newp.Group = pp.Group
+			//
+		}
+		for _, pt := range pp.Points {
+			newp.Points = append(newp.Points, pt)
+		}
+	}
+	return newp, nil
+}
+
+func (c LoadCircleObjectMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return LoadCircleObjectMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+		CircleElement: CircleElement{
+			MapElement: MapElement{
+				BaseMapObject: BaseMapObject{
+					ID: c.ID,
+				},
+				Coordinates: Coordinates{
+					X: c.X,
+					Y: c.Y,
+				},
+				Z: c.Z,
+			},
+		},
+	}
+}
+
+func (c LoadLineObjectMessagePayload) NeedsToBeSplit() bool {
+	l := 8 // LS-LINE
+	l += 121 + len(c.ID) + len(c.Stipple) + len(c.Line) + len(c.Fill) + len(c.Layer) + len(c.Group) + 45
+	// ID:x X:x Y:x Z:x Stipple:x Line:x Fill:x Width:i Layer:x Level:i Goup:x Dash:i Hidden:false Locked:false
+	l += 10 // Arrow:i
+	l += 13 // Points:[X:f Y:f]
+	l += (10 + 20) * len(c.Points)
+	return l > MaxServerMessageSize
+}
+
+func (c LoadLineObjectMessagePayload) Split() []any {
+	payloads := make([]any, len(c.Points))
+	gid := uuid.NewString()
+
+	for i, instance := range c.Points {
+		p := LoadLineObjectMessagePayload{
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: len(c.Points),
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		if i == 0 {
+			p.ID = c.ID
+			p.X = c.X
+			p.Y = c.Y
+			p.Z = c.Z
+			p.Hidden = c.Hidden
+			p.Locked = c.Locked
+			p.Dash = c.Dash
+			p.Width = c.Width
+			p.Level = c.Level
+			p.Line = c.Line
+			p.Fill = c.Fill
+			p.Stipple = c.Stipple
+			p.Layer = c.Layer
+			p.Group = c.Group
+			//
+			p.Arrow = c.Arrow
+		}
+		p.Points = []Coordinates{instance}
+		payloads[i] = p
+	}
+	return payloads
+}
+
+func (c LoadLineObjectMessagePayload) Reassemble(p []any) (any, error) {
+	newp := LoadLineObjectMessagePayload{}
+
+	for i, d := range p {
+		pp, ok := d.(LoadLineObjectMessagePayload)
+		if !ok {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if pp.Batch != i {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), pp.Batch)
+		}
+		if pp.TotalBatches != len(p) {
+			return newp, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, pp.TotalBatches, len(p))
+		}
+
+		if i == 0 {
+			newp.ID = pp.ID
+			newp.X = pp.X
+			newp.Y = pp.Y
+			newp.Z = pp.Z
+			newp.Hidden = pp.Hidden
+			newp.Locked = pp.Locked
+			newp.Dash = pp.Dash
+			newp.Width = pp.Width
+			newp.Level = pp.Level
+			newp.Line = pp.Line
+			newp.Fill = pp.Fill
+			newp.Stipple = pp.Stipple
+			newp.Layer = pp.Layer
+			newp.Group = pp.Group
+			//
+			newp.Arrow = pp.Arrow
+		}
+		for _, pt := range pp.Points {
+			newp.Points = append(newp.Points, pt)
+		}
+	}
+	return newp, nil
+}
+
+func (c LoadLineObjectMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return LoadLineObjectMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+		LineElement: LineElement{
+			MapElement: MapElement{
+				BaseMapObject: BaseMapObject{
+					ID: c.ID,
+				},
+				Coordinates: Coordinates{
+					X: c.X,
+					Y: c.Y,
+				},
+				Z: c.Z,
+			},
+		},
+	}
+}
+
+func (c LoadPolygonObjectMessagePayload) NeedsToBeSplit() bool {
+	l := 8 // LS-POLY
+	l += 121 + len(c.ID) + len(c.Stipple) + len(c.Line) + len(c.Fill) + len(c.Layer) + len(c.Group) + 45
+	// ID:x X:x Y:x Z:x Stipple:x Line:x Fill:x Width:i Layer:x Level:i Goup:x Dash:i Hidden:false Locked:false
+	l += 20 // Spline:i Join:i
+	l += 13 // Points:[X:f Y:f]
+	l += (10 + 20) * len(c.Points)
+	return l > MaxServerMessageSize
+}
+
+func (c LoadPolygonObjectMessagePayload) Split() []any {
+	payloads := make([]any, len(c.Points))
+	gid := uuid.NewString()
+
+	for i, instance := range c.Points {
+		p := LoadPolygonObjectMessagePayload{
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: len(c.Points),
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		if i == 0 {
+			p.ID = c.ID
+			p.X = c.X
+			p.Y = c.Y
+			p.Z = c.Z
+			p.Hidden = c.Hidden
+			p.Locked = c.Locked
+			p.Dash = c.Dash
+			p.Width = c.Width
+			p.Level = c.Level
+			p.Line = c.Line
+			p.Fill = c.Fill
+			p.Stipple = c.Stipple
+			p.Layer = c.Layer
+			p.Group = c.Group
+			//
+			p.Spline = c.Spline
+			p.Join = c.Join
+		}
+		p.Points = []Coordinates{instance}
+		payloads[i] = p
+	}
+	return payloads
+}
+
+func (c LoadPolygonObjectMessagePayload) Reassemble(p []any) (any, error) {
+	newp := LoadPolygonObjectMessagePayload{}
+
+	for i, d := range p {
+		pp, ok := d.(LoadPolygonObjectMessagePayload)
+		if !ok {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if pp.Batch != i {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), pp.Batch)
+		}
+		if pp.TotalBatches != len(p) {
+			return newp, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, pp.TotalBatches, len(p))
+		}
+
+		if i == 0 {
+			newp.ID = pp.ID
+			newp.X = pp.X
+			newp.Y = pp.Y
+			newp.Z = pp.Z
+			newp.Hidden = pp.Hidden
+			newp.Locked = pp.Locked
+			newp.Dash = pp.Dash
+			newp.Width = pp.Width
+			newp.Level = pp.Level
+			newp.Line = pp.Line
+			newp.Fill = pp.Fill
+			newp.Stipple = pp.Stipple
+			newp.Layer = pp.Layer
+			newp.Group = pp.Group
+			//
+			newp.Spline = pp.Spline
+			newp.Join = pp.Join
+		}
+		for _, pt := range pp.Points {
+			newp.Points = append(newp.Points, pt)
+		}
+	}
+	return newp, nil
+}
+
+func (c LoadPolygonObjectMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return LoadPolygonObjectMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+		PolygonElement: PolygonElement{
+			MapElement: MapElement{
+				BaseMapObject: BaseMapObject{
+					ID: c.ID,
+				},
+				Coordinates: Coordinates{
+					X: c.X,
+					Y: c.Y,
+				},
+				Z: c.Z,
+			},
+		},
+	}
+}
+
+func (c LoadRectangleObjectMessagePayload) NeedsToBeSplit() bool {
+	l := 8 // LS-ARC
+	l += 121 + len(c.ID) + len(c.Stipple) + len(c.Line) + len(c.Fill) + len(c.Layer) + len(c.Group) + 45
+	// ID:x X:x Y:x Z:x Stipple:x Line:x Fill:x Width:i Layer:x Level:i Goup:x Dash:i Hidden:false Locked:false
+	l += 13 // Points:[X:f Y:f]
+	l += (10 + 20) * len(c.Points)
+	return l > MaxServerMessageSize
+}
+
+func (c LoadRectangleObjectMessagePayload) Split() []any {
+	payloads := make([]any, len(c.Points))
+	gid := uuid.NewString()
+
+	for i, instance := range c.Points {
+		p := LoadRectangleObjectMessagePayload{
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: len(c.Points),
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		if i == 0 {
+			p.ID = c.ID
+			p.X = c.X
+			p.Y = c.Y
+			p.Z = c.Z
+			p.Hidden = c.Hidden
+			p.Locked = c.Locked
+			p.Dash = c.Dash
+			p.Width = c.Width
+			p.Level = c.Level
+			p.Line = c.Line
+			p.Fill = c.Fill
+			p.Stipple = c.Stipple
+			p.Layer = c.Layer
+			p.Group = c.Group
+			//
+		}
+		p.Points = []Coordinates{instance}
+		payloads[i] = p
+	}
+	return payloads
+}
+
+func (c LoadRectangleObjectMessagePayload) Reassemble(p []any) (any, error) {
+	newp := LoadRectangleObjectMessagePayload{}
+
+	for i, d := range p {
+		pp, ok := d.(LoadRectangleObjectMessagePayload)
+		if !ok {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if pp.Batch != i {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), pp.Batch)
+		}
+		if pp.TotalBatches != len(p) {
+			return newp, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, pp.TotalBatches, len(p))
+		}
+
+		if i == 0 {
+			newp.ID = pp.ID
+			newp.X = pp.X
+			newp.Y = pp.Y
+			newp.Z = pp.Z
+			newp.Hidden = pp.Hidden
+			newp.Locked = pp.Locked
+			newp.Dash = pp.Dash
+			newp.Width = pp.Width
+			newp.Level = pp.Level
+			newp.Line = pp.Line
+			newp.Fill = pp.Fill
+			newp.Stipple = pp.Stipple
+			newp.Layer = pp.Layer
+			newp.Group = pp.Group
+			//
+		}
+		for _, pt := range pp.Points {
+			newp.Points = append(newp.Points, pt)
+		}
+	}
+	return newp, nil
+}
+
+func (c LoadRectangleObjectMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return LoadRectangleObjectMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+		RectangleElement: RectangleElement{
+			MapElement: MapElement{
+				BaseMapObject: BaseMapObject{
+					ID: c.ID,
+				},
+				Coordinates: Coordinates{
+					X: c.X,
+					Y: c.Y,
+				},
+				Z: c.Z,
+			},
+		},
+	}
+}
+
+func (c LoadSpellAreaOfEffectObjectMessagePayload) NeedsToBeSplit() bool {
+	l := 10 // LS-SAOE
+	l += 121 + len(c.ID) + len(c.Stipple) + len(c.Line) + len(c.Fill) + len(c.Layer) + len(c.Group) + 45
+	// ID:x X:x Y:x Z:x Stipple:x Line:x Fill:x Width:i Layer:x Level:i Goup:x Dash:i Hidden:false Locked:false
+	l += 30 + 22 // AoEShape:i
+	l += 13      // Points:[X:f Y:f]
+	l += (10 + 20) * len(c.Points)
+	return l > MaxServerMessageSize
+}
+
+func (c LoadSpellAreaOfEffectObjectMessagePayload) Split() []any {
+	payloads := make([]any, len(c.Points))
+	gid := uuid.NewString()
+
+	for i, instance := range c.Points {
+		p := LoadSpellAreaOfEffectObjectMessagePayload{
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: len(c.Points),
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		if i == 0 {
+			p.ID = c.ID
+			p.X = c.X
+			p.Y = c.Y
+			p.Z = c.Z
+			p.Hidden = c.Hidden
+			p.Locked = c.Locked
+			p.Dash = c.Dash
+			p.Width = c.Width
+			p.Level = c.Level
+			p.Line = c.Line
+			p.Fill = c.Fill
+			p.Stipple = c.Stipple
+			p.Layer = c.Layer
+			p.Group = c.Group
+			//
+			p.AoEShape = c.AoEShape
+		}
+		p.Points = []Coordinates{instance}
+		payloads[i] = p
+	}
+	return payloads
+}
+
+func (c LoadSpellAreaOfEffectObjectMessagePayload) Reassemble(p []any) (any, error) {
+	newp := LoadSpellAreaOfEffectObjectMessagePayload{}
+
+	for i, d := range p {
+		pp, ok := d.(LoadSpellAreaOfEffectObjectMessagePayload)
+		if !ok {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if pp.Batch != i {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), pp.Batch)
+		}
+		if pp.TotalBatches != len(p) {
+			return newp, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, pp.TotalBatches, len(p))
+		}
+
+		if i == 0 {
+			newp.ID = pp.ID
+			newp.X = pp.X
+			newp.Y = pp.Y
+			newp.Z = pp.Z
+			newp.Hidden = pp.Hidden
+			newp.Locked = pp.Locked
+			newp.Dash = pp.Dash
+			newp.Width = pp.Width
+			newp.Level = pp.Level
+			newp.Line = pp.Line
+			newp.Fill = pp.Fill
+			newp.Stipple = pp.Stipple
+			newp.Layer = pp.Layer
+			newp.Group = pp.Group
+			//
+			newp.AoEShape = pp.AoEShape
+		}
+		for _, pt := range pp.Points {
+			newp.Points = append(newp.Points, pt)
+		}
+	}
+	return newp, nil
+}
+
+func (c LoadSpellAreaOfEffectObjectMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return LoadSpellAreaOfEffectObjectMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+		SpellAreaOfEffectElement: SpellAreaOfEffectElement{
+			MapElement: MapElement{
+				BaseMapObject: BaseMapObject{
+					ID: c.ID,
+				},
+				Coordinates: Coordinates{
+					X: c.X,
+					Y: c.Y,
+				},
+				Z: c.Z,
+			},
+		},
+	}
+}
+
+func (c LoadTextObjectMessagePayload) NeedsToBeSplit() bool {
+	l := 8 // LS-ARC
+	l += 121 + len(c.ID) + len(c.Stipple) + len(c.Line) + len(c.Fill) + len(c.Layer) + len(c.Group) + 45
+	// ID:x X:x Y:x Z:x Stipple:x Line:x Fill:x Width:i Layer:x Level:i Goup:x Dash:i Hidden:false Locked:false
+	l += 78 + len(c.Text) + len(c.Font.Family) // Text:x Font:{Family:x Size:f Weight:i Slant:i} Anchor:i
+	l += 13                                    // Points:[X:f Y:f]
+	l += (10 + 20) * len(c.Points)
+	return l > MaxServerMessageSize
+}
+
+func (c LoadTextObjectMessagePayload) Split() []any {
+	payloads := make([]any, len(c.Points))
+	gid := uuid.NewString()
+
+	for i, instance := range c.Points {
+		p := LoadTextObjectMessagePayload{
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: len(c.Points),
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		if i == 0 {
+			p.ID = c.ID
+			p.X = c.X
+			p.Y = c.Y
+			p.Z = c.Z
+			p.Hidden = c.Hidden
+			p.Locked = c.Locked
+			p.Dash = c.Dash
+			p.Width = c.Width
+			p.Level = c.Level
+			p.Line = c.Line
+			p.Fill = c.Fill
+			p.Stipple = c.Stipple
+			p.Layer = c.Layer
+			p.Group = c.Group
+			//
+			p.Anchor = c.Anchor
+			p.Text = c.Text
+			p.Font = c.Font
+		}
+		p.Points = []Coordinates{instance}
+		payloads[i] = p
+	}
+	return payloads
+}
+
+func (c LoadTextObjectMessagePayload) Reassemble(p []any) (any, error) {
+	newp := LoadTextObjectMessagePayload{}
+
+	for i, d := range p {
+		pp, ok := d.(LoadTextObjectMessagePayload)
+		if !ok {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if pp.Batch != i {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), pp.Batch)
+		}
+		if pp.TotalBatches != len(p) {
+			return newp, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, pp.TotalBatches, len(p))
+		}
+
+		if i == 0 {
+			newp.ID = pp.ID
+			newp.X = pp.X
+			newp.Y = pp.Y
+			newp.Z = pp.Z
+			newp.Hidden = pp.Hidden
+			newp.Locked = pp.Locked
+			newp.Dash = pp.Dash
+			newp.Width = pp.Width
+			newp.Level = pp.Level
+			newp.Line = pp.Line
+			newp.Fill = pp.Fill
+			newp.Stipple = pp.Stipple
+			newp.Layer = pp.Layer
+			newp.Group = pp.Group
+			//
+			newp.Anchor = pp.Anchor
+			newp.Text = pp.Text
+			newp.Font = pp.Font
+		}
+		for _, pt := range pp.Points {
+			newp.Points = append(newp.Points, pt)
+		}
+	}
+	return newp, nil
+}
+
+func (c LoadTextObjectMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return LoadTextObjectMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+		TextElement: TextElement{
+			MapElement: MapElement{
+				BaseMapObject: BaseMapObject{
+					ID: c.ID,
+				},
+				Coordinates: Coordinates{
+					X: c.X,
+					Y: c.Y,
+				},
+				Z: c.Z,
+			},
+			Text: c.Text,
+		},
+	}
+}
+
+func (c LoadTileObjectMessagePayload) NeedsToBeSplit() bool {
+	l := 10 // LS-TILE
+	l += 121 + len(c.ID) + len(c.Stipple) + len(c.Line) + len(c.Fill) + len(c.Layer) + len(c.Group) + 45
+	// ID:x X:x Y:x Z:x Stipple:x Line:x Fill:x Width:i Layer:x Level:i Goup:x Dash:i Hidden:false Locked:false
+	l += 52 + len(c.Image) // Image:x BBHeight:f BBWidth:f
+	l += 13                // Points:[X:f Y:f]
+	l += (10 + 20) * len(c.Points)
+	return l > MaxServerMessageSize
+}
+
+func (c LoadTileObjectMessagePayload) Split() []any {
+	payloads := make([]any, len(c.Points))
+	gid := uuid.NewString()
+
+	for i, instance := range c.Points {
+		p := LoadTileObjectMessagePayload{
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: len(c.Points),
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		if i == 0 {
+			p.ID = c.ID
+			p.X = c.X
+			p.Y = c.Y
+			p.Z = c.Z
+			p.Hidden = c.Hidden
+			p.Locked = c.Locked
+			p.Dash = c.Dash
+			p.Width = c.Width
+			p.Level = c.Level
+			p.Line = c.Line
+			p.Fill = c.Fill
+			p.Stipple = c.Stipple
+			p.Layer = c.Layer
+			p.Group = c.Group
+			//
+			p.Image = c.Image
+			p.BBHeight = c.BBHeight
+			p.BBWidth = c.BBWidth
+		}
+		p.Points = []Coordinates{instance}
+		payloads[i] = p
+	}
+	return payloads
+}
+
+func (c LoadTileObjectMessagePayload) Reassemble(p []any) (any, error) {
+	newp := LoadTileObjectMessagePayload{}
+
+	for i, d := range p {
+		pp, ok := d.(LoadTileObjectMessagePayload)
+		if !ok {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if pp.Batch != i {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), pp.Batch)
+		}
+		if pp.TotalBatches != len(p) {
+			return newp, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, pp.TotalBatches, len(p))
+		}
+
+		if i == 0 {
+			newp.ID = pp.ID
+			newp.X = pp.X
+			newp.Y = pp.Y
+			newp.Z = pp.Z
+			newp.Hidden = pp.Hidden
+			newp.Locked = pp.Locked
+			newp.Dash = pp.Dash
+			newp.Width = pp.Width
+			newp.Level = pp.Level
+			newp.Line = pp.Line
+			newp.Fill = pp.Fill
+			newp.Stipple = pp.Stipple
+			newp.Layer = pp.Layer
+			newp.Group = pp.Group
+			//
+			newp.Image = pp.Image
+			newp.BBHeight = pp.BBHeight
+			newp.BBWidth = pp.BBWidth
+		}
+		for _, pt := range pp.Points {
+			newp.Points = append(newp.Points, pt)
+		}
+	}
+	return newp, nil
+}
+
+func (c LoadTileObjectMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return LoadTileObjectMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+		TileElement: TileElement{
+			MapElement: MapElement{
+				BaseMapObject: BaseMapObject{
+					ID: c.ID,
+				},
+				Coordinates: Coordinates{
+					X: c.X,
+					Y: c.Y,
+				},
+				Z: c.Z,
+			},
+			Image: c.Image,
+		},
+	}
+}
+
 // LoadObject sends a MapObject to all peers.
 // It may be given a value of any of the supported MapObject
 // types for map graphic elements (Arc, Circle, Line, Polygon,
@@ -2478,6 +3603,157 @@ type PlaceSomeoneMessagePayload struct {
 	CreatureToken
 }
 
+func (c PlaceSomeoneMessagePayload) NeedsToBeSplit() bool {
+	l := 100 + len(c.ID)                                                 // PS ID:x Killed:false Dim:false PolyGM:false CreatureType:i MoveMode:i Reach:i Skin:i
+	l += 112 + len(c.Name) + len(c.Note) + len(c.Size) + len(c.DispSize) // Elev:i Gx:f Gy:f Name:x SkinSize:[x] Note:x Size:x DispSize:x StatusList:[x]
+	for _, s := range c.SkinSize {
+		l += len(s)
+	}
+	for _, s := range c.StatusList {
+		l += len(s)
+	}
+	l += 73 // CustomReach:{Enabled:false Natural:i Extended:i} Targets:[x]
+	for _, t := range c.Targets {
+		l += len(t)
+	}
+	l += 23 // TargetedModifiers:{x:{Type:x Shape:x Color:x Modifiers:[x]}}
+	for tk, tv := range c.TargetedModifiers {
+		l += len(tk) + 6 + 41 + len(tv.Type) + len(tv.Shape) + len(tv.Color)
+		for _, m := range tv.Modifiers {
+			l += len(m)
+		}
+	}
+	if c.AoE == nil {
+		l += 8
+	} else {
+		l += 38 + len(c.AoE.Color) // Aoe*{Radius:f Color:x}
+	}
+	if c.Health == nil {
+		l += 14
+	} else {
+		l += 132                          // Health:*{IsFlatFooted:false IsStable:false MaxHP:i TmpHP:i TmpDamage:i LethalDamage:i NonLethalDamage:i}
+		l += 82 + len(c.Health.Condition) // Con:i HPBlur:i Condition:x AC:i FlatFootedAC:i TouchAC:i CMD:i
+	}
+
+	return l > MaxServerMessageSize
+}
+
+func (c PlaceSomeoneMessagePayload) Split() []any {
+	fragments := max(len(c.Targets), len(c.TargetedModifiers))
+	payloads := make([]any, fragments)
+	gid := uuid.NewString()
+	tmods := []string{}
+	for k, _ := range c.TargetedModifiers {
+		tmods = append(tmods, k)
+	}
+
+	for i := range fragments {
+		p := PlaceSomeoneMessagePayload{
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: fragments,
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		if i == 0 {
+			p.ID = c.ID
+			p.Killed = c.Killed
+			p.Dim = c.Dim
+			p.Hidden = c.Hidden
+			p.PolyGM = c.PolyGM
+			p.CreatureType = c.CreatureType
+			p.MoveMode = c.MoveMode
+			p.Reach = c.Reach
+			p.Skin = c.Skin
+			p.Elev = c.Elev
+			p.Gx = c.Gx
+			p.Gy = c.Gy
+			p.Name = c.Name
+			p.Health = c.Health
+			p.SkinSize = c.SkinSize
+			p.Color = c.Color
+			p.Note = c.Note
+			p.Size = c.Size
+			p.DispSize = c.DispSize
+			p.StatusList = c.StatusList
+			p.AoE = c.AoE
+			p.CustomReach = c.CustomReach
+		}
+		if len(c.Targets) > i {
+			p.Targets = []string{c.Targets[i]}
+		}
+		if len(tmods) > i {
+			p.TargetedModifiers = map[string]CustomConditionModifier{tmods[i]: c.TargetedModifiers[tmods[i]]}
+		}
+		payloads[i] = p
+	}
+	return payloads
+}
+
+func (c PlaceSomeoneMessagePayload) Reassemble(p []any) (any, error) {
+	newp := PlaceSomeoneMessagePayload{}
+
+	for i, d := range p {
+		pp, ok := d.(PlaceSomeoneMessagePayload)
+		if !ok {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if pp.Batch != i {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), pp.Batch)
+		}
+		if pp.TotalBatches != len(p) {
+			return newp, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, pp.TotalBatches, len(p))
+		}
+
+		if i == 0 {
+			newp.ID = pp.ID
+			newp.Killed = pp.Killed
+			newp.Dim = pp.Dim
+			newp.Hidden = pp.Hidden
+			newp.PolyGM = pp.PolyGM
+			newp.CreatureType = pp.CreatureType
+			newp.MoveMode = pp.MoveMode
+			newp.Reach = pp.Reach
+			newp.Skin = pp.Skin
+			newp.Elev = pp.Elev
+			newp.Gx = pp.Gx
+			newp.Gy = pp.Gy
+			newp.Name = pp.Name
+			newp.Health = pp.Health
+			newp.SkinSize = pp.SkinSize
+			newp.Color = pp.Color
+			newp.Note = pp.Note
+			newp.DispSize = pp.DispSize
+			newp.StatusList = pp.StatusList
+			newp.AoE = pp.AoE
+			newp.CustomReach = pp.CustomReach
+		}
+		for _, t := range pp.Targets {
+			newp.Targets = append(newp.Targets, t)
+		}
+		for k, v := range pp.TargetedModifiers {
+			newp.TargetedModifiers[k] = v
+		}
+	}
+	return newp, nil
+}
+
+func (c PlaceSomeoneMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return PlaceSomeoneMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+		CreatureToken: CreatureToken{
+			BaseMapObject: BaseMapObject{
+				ID: c.ID,
+			},
+			Name: c.Name,
+		},
+	}
+}
+
 // PlaceSomeone tells all peers to add a new creature token on their
 // maps. The parameter passed must be either a PlayerToken or MonsterToken.
 //
@@ -2530,6 +3806,78 @@ type PlayAudioMessagePayload struct {
 	// If non-empty, Addrs lists the client addresses (as obtained from the Addr field from
 	// the CONN response) of the specific clients which should play the sound clip.
 	Addrs []string
+}
+
+func (c PlayAudioMessagePayload) NeedsToBeSplit() bool {
+	// AI Animation Name Sizes :
+	l := 71 + len(c.Name) // AA Name:x Loop:false Stop:false IsLocalFile:false  Addrs:[x]
+	for _, a := range c.Addrs {
+		l += len(a) + 3
+	}
+	return l > MaxServerMessageSize
+}
+
+func (c PlayAudioMessagePayload) Split() []any {
+	payloads := make([]any, len(c.Addrs))
+	gid := uuid.NewString()
+
+	for i, instance := range c.Addrs {
+		p := PlayAudioMessagePayload{
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: len(c.Addrs),
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		if i == 0 {
+			p.Name = c.Name
+			p.Loop = c.Loop
+			p.Stop = c.Stop
+			p.IsLocalFile = c.IsLocalFile
+		}
+		p.Addrs = []string{instance}
+		payloads[i] = p
+	}
+	return payloads
+}
+
+func (c PlayAudioMessagePayload) Reassemble(p []any) (any, error) {
+	ai := PlayAudioMessagePayload{}
+
+	for i, d := range p {
+		img, ok := d.(PlayAudioMessagePayload)
+		if !ok {
+			return ai, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if img.Batch != i {
+			return ai, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), img.Batch)
+		}
+		if img.TotalBatches != len(p) {
+			return ai, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, img.TotalBatches, len(p))
+		}
+
+		if i == 0 {
+			ai.Name = img.Name
+			ai.Loop = img.Loop
+			ai.Stop = img.Stop
+			ai.IsLocalFile = img.IsLocalFile
+		}
+		for _, a := range img.Addrs {
+			ai.Addrs = append(ai.Addrs, a)
+		}
+	}
+	return ai, nil
+}
+
+func (c PlayAudioMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return PlayAudioMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+		Name: c.Name,
+	}
 }
 
 // PlayAudio requests that clients start playing a sound.
@@ -2615,6 +3963,81 @@ type QueryImageMessagePayload struct {
 	BaseMessagePayload
 	BatchableMessagePayload
 	ImageDefinition
+}
+
+func (c QueryImageMessagePayload) NeedsToBeSplit() bool {
+	// AI Animation Name Sizes :
+	l := 7                 // "AI? {}"
+	l += 8 + len(c.Name)   // "Name":,
+	l += 11                // "Sizes": []
+	l += len(c.Sizes) * 13 // "Zoom": (float)
+	return l > MaxServerMessageSize
+}
+
+func (c QueryImageMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return QueryImageMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+		ImageDefinition: ImageDefinition{
+			Name: c.Name,
+		},
+	}
+}
+
+// Split records on Sizes (which are the instances of the images we
+// have at different zoom factors, etc.)
+//
+// 0  Name,
+// 0  Animation->{Frames,FrameSpeed,Loops}
+// 0+ Sizes[File,ImageData,IsLocalFile,Zoom]
+func (c QueryImageMessagePayload) Split() []any {
+	payloads := make([]any, len(c.Sizes))
+	gid := uuid.NewString()
+
+	for i, instance := range c.Sizes {
+		p := QueryImageMessagePayload{
+			ImageDefinition: ImageDefinition{
+				Sizes: []ImageInstance{instance},
+			},
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: len(c.Sizes),
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		if i == 0 {
+			p.Name = c.Name
+		}
+		payloads[i] = p
+	}
+	return payloads
+}
+
+func (c QueryImageMessagePayload) Reassemble(p []any) (any, error) {
+	ai := QueryImageMessagePayload{}
+
+	for i, d := range p {
+		img, ok := d.(QueryImageMessagePayload)
+		if !ok {
+			return ai, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if img.Batch != i {
+			return ai, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), img.Batch)
+		}
+		if img.TotalBatches != len(p) {
+			return ai, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, img.TotalBatches, len(p))
+		}
+
+		if i == 0 {
+			ai.Name = img.Name
+			ai.Sizes = make([]ImageInstance, len(p))
+		}
+		ai.Sizes[i] = img.Sizes[0]
+	}
+	return ai, nil
 }
 
 // QueryImage asks the server and peers if anyone else knows
@@ -2704,6 +4127,74 @@ type RemoveObjAttributesMessagePayload struct {
 
 	// The values to remove from the attribute.
 	Values []string
+}
+
+func (c RemoveObjAttributesMessagePayload) NeedsToBeSplit() bool {
+	l := 37 + len(c.ObjID) + len(c.AttrName) // OA- ObjID:x AttrName:x Values:[]
+	for _, v := range c.Values {
+		l += len(v) + 3
+	}
+	return l > MaxServerMessageSize
+}
+
+func (c RemoveObjAttributesMessagePayload) Split() []any {
+	payloads := make([]any, len(c.Values))
+	gid := uuid.NewString()
+
+	for i, v := range c.Values {
+		p := RemoveObjAttributesMessagePayload{
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: len(c.Values),
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		if i == 0 {
+			p.ObjID = c.ObjID
+			p.AttrName = c.AttrName
+		}
+		p.Values = []string{v}
+		payloads[i] = p
+	}
+	return payloads
+}
+
+func (c RemoveObjAttributesMessagePayload) Reassemble(p []any) (any, error) {
+	newp := RemoveObjAttributesMessagePayload{}
+
+	for i, d := range p {
+		pp, ok := d.(RemoveObjAttributesMessagePayload)
+		if !ok {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if pp.Batch != i {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), pp.Batch)
+		}
+		if pp.TotalBatches != len(p) {
+			return newp, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, pp.TotalBatches, len(p))
+		}
+
+		if i == 0 {
+			newp.ObjID = pp.ObjID
+			newp.AttrName = pp.AttrName
+		}
+		for _, v := range pp.Values {
+			newp.Values = append(newp.Values, v)
+		}
+	}
+	return newp, nil
+}
+
+func (c RemoveObjAttributesMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return RemoveObjAttributesMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+		ObjID:    c.ObjID,
+		AttrName: c.AttrName,
+	}
 }
 
 // RemoveObjAttributes informs peers to remove a set of string values from the existing
@@ -2860,6 +4351,112 @@ const (
 	DTypeDamage      = "damage"
 )
 
+func (c RollDiceMessagePayload) NeedsToBeSplit() bool {
+	l := 52 + len(c.RequestID) + len(c.RollSpec) + len(c.Type) // D RequestID RollSpec Targets Type {}
+	l += 103 + 10 + 34 + len(c.Sender)                         // ChatCommon: "Origin":false, "Replay":false, "Sender":x, "Recipients":[], "MessageID":int, "ToAll":false, "ToGM":false, "Sent":time[34]
+	for _, r := range c.Recipients {
+		l += len(r)
+	}
+	for _, t := range c.Targets {
+		l += len(t)
+	}
+	return l > MaxServerMessageSize
+}
+
+// Split records on Sizes (which are the instances of the images we
+// have at different zoom factors, etc.)
+//
+// 0  Name,
+// 0  Animation->{Frames,FrameSpeed,Loops}
+// 0+ Sizes[File,ImageData,IsLocalFile,Zoom]
+func (c RollDiceMessagePayload) Split() []any {
+	fragments := max(len(c.Targets), len(c.Recipients))
+	payloads := make([]any, fragments)
+	gid := uuid.NewString()
+
+	for i := range fragments {
+		p := RollDiceMessagePayload{
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: fragments,
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		if i == 0 {
+			p.Origin = c.Origin
+			p.Replay = c.Replay
+			p.Sender = c.Sender
+			p.MessageID = c.MessageID
+			p.ToAll = c.ToAll
+			p.ToGM = c.ToGM
+			p.Sent = c.Sent
+			p.RequestID = c.RequestID
+			p.RollSpec = c.RollSpec
+			p.Type = c.Type
+		}
+		if len(c.Recipients) > i {
+			p.Recipients = []string{c.Recipients[i]}
+		}
+		if len(c.Targets) > i {
+			p.Targets = []string{c.Targets[i]}
+		}
+		payloads[i] = p
+	}
+	return payloads
+}
+
+func (c RollDiceMessagePayload) Reassemble(p []any) (any, error) {
+	newp := RollDiceMessagePayload{}
+
+	for i, d := range p {
+		pp, ok := d.(RollDiceMessagePayload)
+		if !ok {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if pp.Batch != i {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), pp.Batch)
+		}
+		if pp.TotalBatches != len(p) {
+			return newp, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, pp.TotalBatches, len(p))
+		}
+
+		if i == 0 {
+			newp.Origin = pp.Origin
+			newp.Replay = pp.Replay
+			newp.Sender = pp.Sender
+			newp.MessageID = pp.MessageID
+			newp.ToAll = pp.ToAll
+			newp.ToGM = pp.ToGM
+			newp.RequestID = pp.RequestID
+			newp.RollSpec = pp.RollSpec
+			newp.Type = pp.Type
+		}
+		for _, s := range pp.Targets {
+			newp.Targets = append(newp.Targets, s)
+		}
+		for _, s := range pp.Recipients {
+			newp.Recipients = append(newp.Recipients, s)
+		}
+	}
+	return newp, nil
+}
+
+func (c RollDiceMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return RollDiceMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+		ChatCommon: ChatCommon{
+			MessageID: c.MessageID,
+		},
+		RequestID: c.RequestID,
+		RollSpec:  c.RollSpec,
+		Type:      c.Type,
+	}
+}
+
 // RollDiceToAll is equivalent to RollDice, sending the results to all users.
 func (c *Connection) RollDiceToAll(rollspec string) error {
 	if c == nil {
@@ -2940,6 +4537,127 @@ type RollResultMessagePayload struct {
 	Type string `json:",omitempty"`
 }
 
+func (c RollResultMessagePayload) NeedsToBeSplit() bool {
+	l := 138 + len(c.Sender) // ROLL Origin:false Replay:false Sender:x MessageID:i ToAll:false ToGM:false Sent:time[35]
+	l += 16
+	for _, r := range c.Recipients {
+		l += len(r) + 3 // Recipients:[x]
+	}
+	l += 42 + len(c.RequestID) + len(c.Title) // MoreResults:false RequestID:x Title:x
+	l += 84                                   // Result:{ResultSuppressed:false InvalidRequest:false Result:i Details:[]{Type:x Value:x}
+	for _, r := range c.Result.Details {
+		l += 22 + len(r.Type) + len(r.Value)
+	}
+	l += 14 // Targets[x]
+	for _, r := range c.Targets {
+		l += len(r) + 3
+	}
+	l += 8 + len(c.Type) // Type:x
+	return l > MaxServerMessageSize
+}
+
+func (c RollResultMessagePayload) Split() []any {
+	fragments := max(len(c.Targets), len(c.Result.Details), len(c.Recipients))
+	payloads := make([]any, fragments)
+	gid := uuid.NewString()
+
+	for i := range fragments {
+		p := RollResultMessagePayload{
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: fragments,
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		if i == 0 {
+			p.Origin = c.Origin
+			p.Replay = c.Replay
+			p.Sender = c.Sender
+			p.MessageID = c.MessageID
+			p.ToAll = c.ToAll
+			p.ToGM = c.ToGM
+			p.Sent = c.Sent
+			p.MoreResults = c.MoreResults
+			p.RequestID = c.RequestID
+			p.Title = c.Title
+			p.Type = c.Type
+			p.Result.ResultSuppressed = c.Result.ResultSuppressed
+			p.Result.InvalidRequest = c.Result.InvalidRequest
+			p.Result.Result = c.Result.Result
+		}
+		if len(c.Result.Details) > i {
+			p.Result.Details = dice.StructuredDescriptionSet([]dice.StructuredDescription{c.Result.Details[i]})
+		}
+		if len(c.Recipients) > i {
+			p.Recipients = []string{c.Recipients[i]}
+		}
+		if len(c.Targets) > i {
+			p.Targets = []string{c.Targets[i]}
+		}
+		payloads[i] = p
+	}
+	return payloads
+}
+
+func (c RollResultMessagePayload) Reassemble(p []any) (any, error) {
+	newp := RollResultMessagePayload{}
+
+	for i, d := range p {
+		pp, ok := d.(RollResultMessagePayload)
+		if !ok {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if pp.Batch != i {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), pp.Batch)
+		}
+		if pp.TotalBatches != len(p) {
+			return newp, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, pp.TotalBatches, len(p))
+		}
+
+		if i == 0 {
+			newp.Origin = pp.Origin
+			newp.Replay = pp.Replay
+			newp.Sender = pp.Sender
+			newp.MessageID = pp.MessageID
+			newp.ToAll = pp.ToAll
+			newp.ToGM = pp.ToGM
+			newp.Sent = pp.Sent
+			newp.MoreResults = pp.MoreResults
+			newp.RequestID = pp.RequestID
+			newp.Title = pp.Title
+			newp.Type = pp.Type
+			newp.Result.ResultSuppressed = pp.Result.ResultSuppressed
+			newp.Result.InvalidRequest = pp.Result.InvalidRequest
+			newp.Result.Result = pp.Result.Result
+		}
+		for _, t := range pp.Result.Details {
+			newp.Result.Details = append(newp.Result.Details, t)
+		}
+		for _, t := range pp.Recipients {
+			newp.Recipients = append(newp.Recipients, t)
+		}
+		for _, t := range pp.Targets {
+			newp.Targets = append(newp.Targets, t)
+		}
+	}
+	return newp, nil
+}
+
+func (c RollResultMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return RollResultMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+		RequestID: c.RequestID,
+		ChatCommon: ChatCommon{
+			MessageID: c.MessageID,
+			Sender:    c.Sender,
+		},
+	}
+}
+
 //  ____  _          ____                     _
 // |  _ \(_) ___ ___|  _ \ _ __ ___  ___  ___| |_ ___
 // | | | | |/ __/ _ \ |_) | '__/ _ \/ __|/ _ \ __/ __|
@@ -3015,8 +4733,209 @@ type DefineDicePresetsMessagePayload struct {
 
 type DefineDicePresetDelegatesMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 	For       string   `json:",omitempty"`
 	Delegates []string `json:",omitempty"`
+}
+
+func (c DefineDicePresetDelegatesMessagePayload) NeedsToBeSplit() bool {
+	l := 27 + len(c.For) // DDD For:x Delegates[]
+	for _, p := range c.Delegates {
+		l += len(p)
+	}
+	return l > MaxServerMessageSize
+}
+
+func (c DefineDicePresetDelegatesMessagePayload) Split() []any {
+	payloads := make([]any, len(c.Delegates))
+	gid := uuid.NewString()
+
+	for i, instance := range c.Delegates {
+		p := DefineDicePresetDelegatesMessagePayload{
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: len(c.Delegates),
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		if i == 0 {
+			p.For = c.For
+		}
+		p.Delegates = []string{instance}
+		payloads[i] = p
+	}
+	return payloads
+}
+
+func (c DefineDicePresetDelegatesMessagePayload) Reassemble(p []any) (any, error) {
+	newp := DefineDicePresetDelegatesMessagePayload{}
+
+	for i, d := range p {
+		pp, ok := d.(DefineDicePresetDelegatesMessagePayload)
+		if !ok {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if pp.Batch != i {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), pp.Batch)
+		}
+		if pp.TotalBatches != len(p) {
+			return newp, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, pp.TotalBatches, len(p))
+		}
+
+		if i == 0 {
+			newp.For = pp.For
+		}
+		for _, pre := range pp.Delegates {
+			newp.Delegates = append(newp.Delegates, pre)
+		}
+	}
+	return newp, nil
+}
+
+func (c DefineDicePresetDelegatesMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return DefineDicePresetDelegatesMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+		For: c.For,
+	}
+}
+func (c DefineDicePresetsMessagePayload) NeedsToBeSplit() bool {
+	l := 40 + len(c.For) // DD For:x Global:false Presets:[]
+	for _, p := range c.Presets {
+		l += 53 + len(p.Name) + len(p.Description) + len(p.DieRollSpec) // Global:false, Name:x, Description:x, DieRollSpec:x
+	}
+	return l > MaxServerMessageSize
+}
+
+func (c DefineDicePresetsMessagePayload) Split() []any {
+	payloads := make([]any, len(c.Presets))
+	gid := uuid.NewString()
+
+	for i, instance := range c.Presets {
+		p := DefineDicePresetsMessagePayload{
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: len(c.Presets),
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		if i == 0 {
+			p.Global = c.Global
+			p.For = c.For
+		}
+		p.Presets = []dice.DieRollPreset{instance}
+		payloads[i] = p
+	}
+	return payloads
+}
+
+func (c DefineDicePresetsMessagePayload) Reassemble(p []any) (any, error) {
+	newp := DefineDicePresetsMessagePayload{}
+
+	for i, d := range p {
+		pp, ok := d.(DefineDicePresetsMessagePayload)
+		if !ok {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if pp.Batch != i {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), pp.Batch)
+		}
+		if pp.TotalBatches != len(p) {
+			return newp, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, pp.TotalBatches, len(p))
+		}
+
+		if i == 0 {
+			newp.Global = pp.Global
+			newp.For = pp.For
+		}
+		for _, pre := range pp.Presets {
+			newp.Presets = append(newp.Presets, pre)
+		}
+	}
+	return newp, nil
+}
+
+func (c DefineDicePresetsMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return DefineDicePresetsMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+		For:    c.For,
+		Global: c.Global,
+	}
+}
+
+func (c AddDicePresetsMessagePayload) NeedsToBeSplit() bool {
+	l := 40 + len(c.For) // DD For:x Global:false Presets:[]
+	for _, p := range c.Presets {
+		l += 53 + len(p.Name) + len(p.Description) + len(p.DieRollSpec) // Global:false, Name:x, Description:x, DieRollSpec:x
+	}
+	return l > MaxServerMessageSize
+}
+
+func (c AddDicePresetsMessagePayload) Split() []any {
+	payloads := make([]any, len(c.Presets))
+	gid := uuid.NewString()
+
+	for i, instance := range c.Presets {
+		p := AddDicePresetsMessagePayload{
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: len(c.Presets),
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		if i == 0 {
+			p.Global = c.Global
+			p.For = c.For
+		}
+		p.Presets = []dice.DieRollPreset{instance}
+		payloads[i] = p
+	}
+	return payloads
+}
+
+func (c AddDicePresetsMessagePayload) Reassemble(p []any) (any, error) {
+	newp := AddDicePresetsMessagePayload{}
+
+	for i, d := range p {
+		pp, ok := d.(AddDicePresetsMessagePayload)
+		if !ok {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if pp.Batch != i {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), pp.Batch)
+		}
+		if pp.TotalBatches != len(p) {
+			return newp, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, pp.TotalBatches, len(p))
+		}
+
+		if i == 0 {
+			newp.Global = pp.Global
+			newp.For = pp.For
+		}
+		for _, pre := range pp.Presets {
+			newp.Presets = append(newp.Presets, pre)
+		}
+	}
+	return newp, nil
+}
+
+func (c AddDicePresetsMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return AddDicePresetsMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+		For:    c.For,
+		Global: c.Global,
+	}
 }
 
 // AddDicePresets is like DefineDicePresets except that it adds the presets
@@ -3056,6 +4975,7 @@ func (c *Connection) AddDicePresetsFor(user string, presets []dice.DieRollPreset
 
 type AddDicePresetsMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 	Global  bool                 `json:",omitempty"`
 	For     string               `json:",omitempty"`
 	Presets []dice.DieRollPreset `json:",omitempty"`
@@ -3131,11 +5051,102 @@ func (c *Connection) UpdateClock(absolute, relative int64, keepRunning bool) err
 // using.
 type UpdateDicePresetsMessagePayload struct {
 	BaseMessagePayload
+	BatchableMessagePayload
 	Global      bool `json:",omitempty"`
 	Presets     []dice.DieRollPreset
 	For         string   `json:",omitempty"`
 	DelegateFor []string `json:",omitempty"`
 	Delegates   []string `json:",omitempty"`
+}
+
+func (c UpdateDicePresetsMessagePayload) NeedsToBeSplit() bool {
+	l := 40 + len(c.For) // DD For:x Global:false Presets:[]
+	l += 34              // DelegateFor:[] Delegates:[]
+	for _, p := range c.DelegateFor {
+		l += len(p)
+	}
+	for _, p := range c.Delegates {
+		l += len(p)
+	}
+	for _, p := range c.Presets {
+		l += 53 + len(p.Name) + len(p.Description) + len(p.DieRollSpec) // Global:false, Name:x, Description:x, DieRollSpec:x
+	}
+	return l > MaxServerMessageSize
+}
+
+func (c UpdateDicePresetsMessagePayload) Split() []any {
+	fragments := max(len(c.Presets), len(c.DelegateFor), len(c.Delegates))
+	payloads := make([]any, fragments)
+	gid := uuid.NewString()
+
+	for i := range fragments {
+		p := UpdateDicePresetsMessagePayload{
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: fragments,
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		if i == 0 {
+			p.Global = c.Global
+			p.For = c.For
+		}
+		if len(c.Presets) > i {
+			p.Presets = []dice.DieRollPreset{c.Presets[i]}
+		}
+		if len(c.Delegates) > i {
+			p.Delegates = []string{c.Delegates[i]}
+		}
+		if len(c.DelegateFor) > i {
+			p.DelegateFor = []string{c.DelegateFor[i]}
+		}
+		payloads[i] = p
+	}
+	return payloads
+}
+
+func (c UpdateDicePresetsMessagePayload) Reassemble(p []any) (any, error) {
+	newp := UpdateDicePresetsMessagePayload{}
+
+	for i, d := range p {
+		pp, ok := d.(UpdateDicePresetsMessagePayload)
+		if !ok {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if pp.Batch != i {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), pp.Batch)
+		}
+		if pp.TotalBatches != len(p) {
+			return newp, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, pp.TotalBatches, len(p))
+		}
+
+		if i == 0 {
+			newp.Global = pp.Global
+			newp.For = pp.For
+		}
+		for _, pre := range pp.Presets {
+			newp.Presets = append(newp.Presets, pre)
+		}
+		for _, pre := range pp.Delegates {
+			newp.Delegates = append(newp.Delegates, pre)
+		}
+		for _, pre := range pp.DelegateFor {
+			newp.DelegateFor = append(newp.DelegateFor, pre)
+		}
+	}
+	return newp, nil
+}
+
+func (c UpdateDicePresetsMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return AddDicePresetsMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+		For:    c.For,
+		Global: c.Global,
+	}
 }
 
 // UpdateInitiativeMessagePayload holds the information sent by the server's UpdateInitiative
@@ -3145,6 +5156,63 @@ type UpdateInitiativeMessagePayload struct {
 	BaseMessagePayload
 	BatchableMessagePayload
 	InitiativeList []InitiativeSlot
+}
+
+func (c UpdateInitiativeMessagePayload) NeedsToBeSplit() bool {
+	l := 24 // IL InitiativeList[]
+	for _, p := range c.InitiativeList {
+		l += 82 + len(p.Name) // Slot:i Name:x IsHolding:false HasReadiedAction:false IsFlatFooted:false CurrentHP:i
+	}
+	return l > MaxServerMessageSize
+}
+
+func (c UpdateInitiativeMessagePayload) Split() []any {
+	payloads := make([]any, len(c.InitiativeList))
+	gid := uuid.NewString()
+
+	for i, instance := range c.InitiativeList {
+		p := UpdateInitiativeMessagePayload{
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: len(c.InitiativeList),
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+			InitiativeList: []InitiativeSlot{instance},
+		}
+		payloads[i] = p
+	}
+	return payloads
+}
+
+func (c UpdateInitiativeMessagePayload) Reassemble(p []any) (any, error) {
+	newp := UpdateInitiativeMessagePayload{}
+
+	for i, d := range p {
+		pp, ok := d.(UpdateInitiativeMessagePayload)
+		if !ok {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if pp.Batch != i {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), pp.Batch)
+		}
+		if pp.TotalBatches != len(p) {
+			return newp, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, pp.TotalBatches, len(p))
+		}
+		for _, l := range pp.InitiativeList {
+			newp.InitiativeList = append(newp.InitiativeList, l)
+		}
+	}
+	return newp, nil
+}
+
+func (c UpdateInitiativeMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return UpdateInitiativeMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+	}
 }
 
 // UpdateInitiative informs our peers of a change to the
@@ -3166,7 +5234,7 @@ type InitiativeSlot struct {
 
 	// Deprecated: The current hit point total for the creature.
 	// Set creature hit points via the OA command instead.
-	CurrentHP int
+	//CurrentHP int
 
 	// The creature's name as displayed on the map.
 	Name string
@@ -3196,6 +5264,74 @@ type UpdateObjAttributesMessagePayload struct {
 
 	// A map of attribute name to its new value.
 	NewAttrs map[string]any
+}
+
+func (c UpdateObjAttributesMessagePayload) NeedsToBeSplit() bool {
+	l := 27 + len(c.ObjID) // OA ObjID:x NewAttrs:{}
+	for k, v := range c.NewAttrs {
+		l += len(k) + len(fmt.Sprintf("%v", v)) + 8
+	}
+	return l > MaxServerMessageSize
+}
+
+func (c UpdateObjAttributesMessagePayload) Split() []any {
+	payloads := make([]any, len(c.NewAttrs))
+	gid := uuid.NewString()
+
+	i := 0
+	for k, v := range c.NewAttrs {
+		p := UpdateObjAttributesMessagePayload{
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: len(c.NewAttrs),
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		if i == 0 {
+			p.ObjID = c.ObjID
+		}
+		p.NewAttrs = map[string]any{k: v}
+		payloads[i] = p
+		i++
+	}
+	return payloads
+}
+
+func (c UpdateObjAttributesMessagePayload) Reassemble(p []any) (any, error) {
+	newp := UpdateObjAttributesMessagePayload{}
+	newp.NewAttrs = make(map[string]any, len(p))
+
+	for i, d := range p {
+		pp, ok := d.(UpdateObjAttributesMessagePayload)
+		if !ok {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if pp.Batch != i {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), pp.Batch)
+		}
+		if pp.TotalBatches != len(p) {
+			return newp, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, pp.TotalBatches, len(p))
+		}
+
+		if i == 0 {
+			newp.ObjID = pp.ObjID
+		}
+		for k, v := range pp.NewAttrs {
+			newp.NewAttrs[k] = v
+		}
+	}
+	return newp, nil
+}
+
+func (c UpdateObjAttributesMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return UpdateObjAttributesMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+		ObjID: c.ObjID,
+	}
 }
 
 // UpdateObjAttributes informs peers that they should modify the
@@ -3245,6 +5381,79 @@ type Peer struct {
 
 	// True if this structure describes the connection of this client program
 	IsMe bool `json:",omitempty"`
+}
+
+func (c UpdatePeerListMessagePayload) NeedsToBeSplit() bool {
+	// AI Animation Name Sizes :
+	l := 21 // CONN {"PeerList": []}"
+	for _, p := range c.PeerList {
+		l += 8 + len(p.Addr) // "Addr":,
+		l += 8 + len(p.User) // "User":,
+		l += 19              // "NotPlaying":false,
+		l += 9               // "AKA":[],
+		for _, aka := range p.AKA {
+			l += len(aka)
+		}
+		l += 23 // "LastPolo": (float)
+		l += 24 // "IsAuthenticated":false,
+		l += 8  // "IsMe":false,
+	}
+	return l > MaxServerMessageSize
+}
+
+// Split records on Sizes (which are the instances of the images we
+// have at different zoom factors, etc.)
+//
+// 0  Name,
+// 0  Animation->{Frames,FrameSpeed,Loops}
+// 0+ Sizes[File,ImageData,IsLocalFile,Zoom]
+func (c UpdatePeerListMessagePayload) Split() []any {
+	payloads := make([]any, len(c.PeerList))
+	gid := uuid.NewString()
+
+	for i, instance := range c.PeerList {
+		p := UpdatePeerListMessagePayload{
+			PeerList: []Peer{instance},
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: len(c.PeerList),
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		payloads[i] = p
+	}
+	return payloads
+}
+
+func (c UpdatePeerListMessagePayload) Reassemble(p []any) (any, error) {
+	ai := UpdatePeerListMessagePayload{
+		PeerList: make([]Peer, len(p)),
+	}
+
+	for i, d := range p {
+		pr, ok := d.(UpdatePeerListMessagePayload)
+		if !ok {
+			return ai, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if pr.Batch != i {
+			return ai, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), pr.Batch)
+		}
+		if pr.TotalBatches != len(p) {
+			return ai, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, pr.TotalBatches, len(p))
+		}
+
+		ai.PeerList[i] = pr.PeerList[0]
+	}
+	return ai, nil
+}
+func (c UpdatePeerListMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return UpdatePeerListMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+	}
 }
 
 // QueryPeers asks the server to send an UpdatePeerList
@@ -3465,6 +5674,66 @@ type UpdateVersionsMessagePayload struct {
 	Packages []PackageUpdate `json:",omitempty"`
 }
 
+func (c UpdateVersionsMessagePayload) NeedsToBeSplit() bool {
+	l := 25 // UPDATES Packages[]
+	for _, p := range c.Packages {
+		l += 57 + len(p.Name) + len(p.VersionPattern) + len(p.MinimumVersion) // Name:x VersionPattern:x MinimumVersion:x Instances[OS:x Arch:x Version:x Token:x]
+		for _, i := range p.Instances {
+			l += 34 + len(i.OS) + len(i.Arch) + len(i.Version) + len(i.Token)
+		}
+	}
+	return l > MaxServerMessageSize
+}
+
+func (c UpdateVersionsMessagePayload) Split() []any {
+	payloads := make([]any, len(c.Packages))
+	gid := uuid.NewString()
+
+	for i, instance := range c.Packages {
+		p := UpdateVersionsMessagePayload{
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: len(c.Packages),
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		p.Packages = []PackageUpdate{instance}
+		payloads[i] = p
+	}
+	return payloads
+}
+
+func (c UpdateVersionsMessagePayload) Reassemble(p []any) (any, error) {
+	newp := UpdateVersionsMessagePayload{}
+
+	for i, d := range p {
+		pp, ok := d.(UpdateVersionsMessagePayload)
+		if !ok {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if pp.Batch != i {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), pp.Batch)
+		}
+		if pp.TotalBatches != len(p) {
+			return newp, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, pp.TotalBatches, len(p))
+		}
+		for _, pkg := range pp.Packages {
+			newp.Packages = append(newp.Packages, pkg)
+		}
+	}
+	return newp, nil
+}
+
+func (c UpdateVersionsMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return UpdateVersionsMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+	}
+}
+
 type PackageUpdate struct {
 	Name           string
 	VersionPattern string         `json:",omitempty"`
@@ -3537,6 +5806,87 @@ type TimerRequestMessagePayload struct {
 	// The server will fill in this information about the requesting client.
 	RequestedBy      string
 	RequestingClient string
+}
+
+func (c TimerRequestMessagePayload) NeedsToBeSplit() bool {
+	l := 123 + len(c.RequestID) + len(c.Description) + len(c.Expires) + len(c.RequestedBy) + len(c.RequestingClient)
+	// TMRQ ShowToAll:false IsRunning:false RequestID:x Description:x Expires:x Targets:[x] RequestedBy:x RequestingClient:x
+	for _, a := range c.Targets {
+		l += len(a) + 3
+	}
+	return l > MaxServerMessageSize
+}
+
+func (c TimerRequestMessagePayload) Split() []any {
+	payloads := make([]any, len(c.Targets))
+	gid := uuid.NewString()
+
+	for i, instance := range c.Targets {
+		p := TimerRequestMessagePayload{
+			BatchableMessagePayload: BatchableMessagePayload{
+				TotalBatches: len(c.Targets),
+				Batch:        i,
+				BatchGroup:   gid,
+			},
+		}
+		if i == 0 {
+			p.ShowToAll = c.ShowToAll
+			p.IsRunning = c.IsRunning
+			p.RequestID = c.RequestID
+			p.Description = c.Description
+			p.Expires = c.Expires
+			p.RequestedBy = c.RequestedBy
+			p.RequestingClient = c.RequestingClient
+		}
+		p.Targets = []string{instance}
+		payloads[i] = p
+	}
+	return payloads
+}
+
+func (c TimerRequestMessagePayload) Reassemble(p []any) (any, error) {
+	newp := TimerRequestMessagePayload{}
+
+	for i, d := range p {
+		pp, ok := d.(TimerRequestMessagePayload)
+		if !ok {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d is of type %T", c, i, len(p), d)
+		}
+		if pp.Batch != i {
+			return newp, fmt.Errorf("batched %T packet fragment #%d of %d claims to be #%d", c, i, len(p), pp.Batch)
+		}
+		if pp.TotalBatches != len(p) {
+			return newp, fmt.Errorf("batched %T packet fragment #%d claims there will be %d batches but %d were collected", c, i, pp.TotalBatches, len(p))
+		}
+
+		if i == 0 {
+			newp.ShowToAll = pp.ShowToAll
+			newp.IsRunning = pp.IsRunning
+			newp.RequestID = pp.RequestID
+			newp.Description = pp.Description
+			newp.Expires = pp.Expires
+			newp.RequestedBy = pp.RequestedBy
+			newp.RequestingClient = pp.RequestingClient
+		}
+		for _, t := range pp.Targets {
+			newp.Targets = append(newp.Targets, t)
+		}
+	}
+	return newp, nil
+}
+
+func (c TimerRequestMessagePayload) AbortPayload(reason string, batchNumber int) any {
+	return TimerRequestMessagePayload{
+		BatchableMessagePayload: BatchableMessagePayload{
+			BatchError:   reason,
+			Batch:        batchNumber,
+			TotalBatches: c.TotalBatches,
+		},
+		RequestID:        c.RequestID,
+		Description:      c.Description,
+		RequestedBy:      c.RequestedBy,
+		RequestingClient: c.RequestingClient,
+	}
 }
 
 // TimerRequest sends a timer requst to the GM. If approved, the new timer will be added

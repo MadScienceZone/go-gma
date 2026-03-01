@@ -210,7 +210,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/util"
 )
 
-const GoVersionNumber="5.33.0" //@@##@@
+const GoVersionNumber = "5.33.0" //@@##@@
 
 var Fhost string
 var Fport uint
@@ -1130,10 +1130,10 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 	case mapper.UpdateInitiativeMessagePayload:
 		printFields(mono, "UpdateInitiative")
 		printFields(mono, "",
-			fieldDesc{"       NAME----------- HLD RDY FLT -HP SL", nil})
+			fieldDesc{"       NAME----------- HLD RDY FLT SL", nil})
 		for i, slot := range m.InitiativeList {
 			printFields(mono, "",
-				fieldDesc{fmt.Sprintf("  [%02d]", i), fmt.Sprintf("%-15s %s %s %s %3d %2d",
+				fieldDesc{fmt.Sprintf("  [%02d]", i), fmt.Sprintf("%-15s %s %s %s %2d",
 					slot.Name,
 					func(b bool) string {
 						if b {
@@ -1153,7 +1153,6 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 						}
 						return colorize(" N ", "Red", mono)
 					}(slot.IsFlatFooted),
-					slot.CurrentHP,
 					slot.Slot)})
 		}
 
