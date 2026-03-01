@@ -2062,6 +2062,8 @@ func (c EchoMessagePayload) Split() []any {
 			p.B = c.B
 			p.I = c.I
 			p.S = c.S
+			p.ReceivedTime = c.ReceivedTime
+			p.SentTime = c.SentTime
 		}
 		p.O = make(map[string]any, 1)
 		p.O[k] = v
@@ -2094,6 +2096,8 @@ func (c EchoMessagePayload) Reassemble(p []any) (any, error) {
 			echo.I = pkt.I
 			echo.S = pkt.S
 			echo.O = make(map[string]any, len(p))
+			echo.ReceivedTime = pkt.ReceivedTime
+			echo.SentTime = pkt.SentTime
 		}
 
 		for k, v := range pkt.O {
