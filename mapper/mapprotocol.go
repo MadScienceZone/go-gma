@@ -47,6 +47,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+
 	"github.com/google/uuid"
 )
 
@@ -58,7 +59,7 @@ const (
 	MinimumSupportedMapProtocol = 400
 	MaximumSupportedMapProtocol = 423
 	MaxServerMessageSize        = 60 * 1024 // don't send server messages bigger than this
-	MaxAllowedGiantPacketSize   = 1024*1024*10
+	MaxAllowedGiantPacketSize   = 1024 * 1024 * 10
 )
 
 func init() {
@@ -76,14 +77,14 @@ func init() {
 var ErrProtocol = errors.New("internal protocol error")
 
 type MapConnection struct {
-	serverSide bool                   // is this the server's connection out to clients?
-	conn       net.Conn               // network socket
-	reader     *bufio.Scanner         // read interface to socket
-	writer     *bufio.Writer          // write interface to socket
-	sendBuf    []string               // internal buffer of outgoing packets
-	sendChan   chan string            // outgoing packets go through this channel
+	serverSide bool                                           // is this the server's connection out to clients?
+	conn       net.Conn                                       // network socket
+	reader     *bufio.Scanner                                 // read interface to socket
+	writer     *bufio.Writer                                  // write interface to socket
+	sendBuf    []string                                       // internal buffer of outgoing packets
+	sendChan   chan string                                    // outgoing packets go through this channel
 	batches    map[string]map[int]BatchFragmentMessagePayload // storage for incoming batched packets	(batchID->batch#->packet)
-	bLock      *sync.Mutex            // mutex protecting batches
+	bLock      *sync.Mutex                                    // mutex protecting batches
 	debug      func(DebugFlags, string)
 	debugf     func(DebugFlags, string, ...any)
 }
@@ -566,25 +567,25 @@ func (c *MapConnection) sendJSON(commandWord string, data any) error {
 	const fragSize = 32768
 	if j, err := json.Marshal(data); err == nil {
 		sj := string(j)
-		if len(sj) + len(commandWord) + 2 > MaxServerMessageSize {
+		if len(sj)+len(commandWord)+2 > MaxServerMessageSize {
 			blob := []byte(sj)
-			totalFragments := len(blob)/fragSize
-			if len(blob) % fragSize != 0 {
+			totalFragments := len(blob) / fragSize
+			if len(blob)%fragSize != 0 {
 				totalFragments++
 			}
 			batchID := uuid.NewString()
 			bail := func(part int, err error) error {
 				j, e := json.Marshal(BatchFragmentMessagePayload{
-					ID: batchID,
-					Part: part,
-					Of: totalFragments,
+					ID:      batchID,
+					Part:    part,
+					Of:      totalFragments,
 					Command: commandWord,
-					Error: err.Error(),
+					Error:   err.Error(),
 				})
 				if e != nil {
 					return e
 				}
-				e = c.sendln("BATCH", string(j))	// tell the other side we're giving up
+				e = c.sendln("BATCH", string(j)) // tell the other side we're giving up
 				if e != nil {
 					return e
 				}
@@ -595,7 +596,7 @@ func (c *MapConnection) sendJSON(commandWord string, data any) error {
 					ID:   batchID,
 					Part: part,
 					Of:   totalFragments,
-					Data: blob[part*fragSize:min((part+1)*fragSize,len(blob))],
+					Data: blob[part*fragSize : min((part+1)*fragSize, len(blob))],
 				}
 				if part == 0 {
 					batch.Command = commandWord
@@ -614,44 +615,44 @@ func (c *MapConnection) sendJSON(commandWord string, data any) error {
 		return c.sendln(commandWord, sj)
 	}
 
-//TODO	bail := func(b Batchable, reason string, origError error, batch int) error {
-//TODO		j, err := json.Marshal(b.AbortPayload(fmt.Sprintf("Error: %s: %v", reason, origError), batch))
-//TODO		if err != nil {
-//TODO			return fmt.Errorf("send error %v for batch %d: %v", origError, batch, err)
-//TODO		}
-//TODO		return c.sendln(commandWord, string(j))
-//TODO	}
-//TODO
-//TODO	splitIntoBatches := func(b Batchable) error {
-//TODO		for i, batch := range b.Split() {
-//TODO			j, err := json.Marshal(batch)
-//TODO			if err != nil {
-//TODO				return bail(b, "marshaling payload", err, i)
-//TODO			}
-//TODO			err = c.sendln(commandWord, string(j))
-//TODO			if err != nil {
-//TODO				return bail(b, "sending payload", err, i)
-//TODO			}
-//TODO		}
-//TODO		return nil
-//TODO	}
-//TODO
-//TODO	if b, isBatchable := data.(Batchable); isBatchable && b.NeedsToBeSplit() {
-//TODO		return splitIntoBatches(b)
-//TODO	}
-//TODO
-//TODO	if j, err := json.Marshal(data); err == nil {
-//TODO		sj := string(j)
-//TODO		if len(sj)+len(commandWord)+2 > MaxServerMessageSize {
-//TODO			if b, isBatchable := data.(Batchable); isBatchable {
-//TODO				// the up-front batchable check didn't predict we needed to do this but we ended up here anyway,
-//TODO				// perhaps because of the cost of character encoding or something. Let's split it up now.
-//TODO				return splitIntoBatches(b)
-//TODO			}
-//TODO			// Otherwise this will fail, but we handle that case in sendln...
-//TODO		}
-//TODO		return c.sendln(commandWord, sj)
-//TODO	}
+	//TODO	bail := func(b Batchable, reason string, origError error, batch int) error {
+	//TODO		j, err := json.Marshal(b.AbortPayload(fmt.Sprintf("Error: %s: %v", reason, origError), batch))
+	//TODO		if err != nil {
+	//TODO			return fmt.Errorf("send error %v for batch %d: %v", origError, batch, err)
+	//TODO		}
+	//TODO		return c.sendln(commandWord, string(j))
+	//TODO	}
+	//TODO
+	//TODO	splitIntoBatches := func(b Batchable) error {
+	//TODO		for i, batch := range b.Split() {
+	//TODO			j, err := json.Marshal(batch)
+	//TODO			if err != nil {
+	//TODO				return bail(b, "marshaling payload", err, i)
+	//TODO			}
+	//TODO			err = c.sendln(commandWord, string(j))
+	//TODO			if err != nil {
+	//TODO				return bail(b, "sending payload", err, i)
+	//TODO			}
+	//TODO		}
+	//TODO		return nil
+	//TODO	}
+	//TODO
+	//TODO	if b, isBatchable := data.(Batchable); isBatchable && b.NeedsToBeSplit() {
+	//TODO		return splitIntoBatches(b)
+	//TODO	}
+	//TODO
+	//TODO	if j, err := json.Marshal(data); err == nil {
+	//TODO		sj := string(j)
+	//TODO		if len(sj)+len(commandWord)+2 > MaxServerMessageSize {
+	//TODO			if b, isBatchable := data.(Batchable); isBatchable {
+	//TODO				// the up-front batchable check didn't predict we needed to do this but we ended up here anyway,
+	//TODO				// perhaps because of the cost of character encoding or something. Let's split it up now.
+	//TODO				return splitIntoBatches(b)
+	//TODO			}
+	//TODO			// Otherwise this will fail, but we handle that case in sendln...
+	//TODO		}
+	//TODO		return c.sendln(commandWord, sj)
+	//TODO	}
 	return fmt.Errorf("send: %v", err)
 }
 
@@ -718,781 +719,789 @@ func (c *Connection) UNSAFEsendRaw(data string) error {
 // Receive waits for a message to arrive on the MapConnection's input then returns it.
 func (c *MapConnection) Receive() (MessagePayload, error) {
 	var err error
-//	var rescan bool
+	//	var rescan bool
 
 	if c == nil {
 		return nil, fmt.Errorf("Receive called on nil MapConnection")
 	}
 
-//rescan_input:
-	if !c.reader.Scan() {
-		//c.debug(DebugIO, "Receive: scan failed; stopping")
-		if err = c.reader.Err(); err != nil {
-			//c.debugf(DebugIO, "Receive: scan failed with %v", err)
-			return nil, err
-		}
-		return nil, nil
-	}
-
-	// Comments are anything starting with "//"
-	// The input line is in the form COMMAND-WORD [JSON] \n
-	c.debugf(DebugIO|DebugMessages, "<-%v", c.reader.Text())
-	payload := BaseMessagePayload{
-		rawMessage: c.reader.Text(),
-	}
-	commandWord, jsonString, hasJsonPart := strings.Cut(c.reader.Text(), " ")
-	if strings.Index(commandWord, "//") == 0 {
-		payload.messageType = Comment
-		return CommentMessagePayload{
-			BaseMessagePayload: payload,
-			Text:               c.reader.Text()[2:],
-		}, nil
-	}
-	sendError := func(reason error) (MessagePayload, error) {
-		payload.messageType = ERROR
-		return ErrorMessagePayload{
-			BaseMessagePayload: payload,
-			Error:              reason,
-		}, nil
-	}
-
-
-	if commandWord == "BATCH" {
-		var moreRemaining bool
-
-		p := BatchFragmentMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				return sendError(err)
+	for {
+		if !c.reader.Scan() {
+			//c.debug(DebugIO, "Receive: scan failed; stopping")
+			if err = c.reader.Err(); err != nil {
+				//c.debugf(DebugIO, "Receive: scan failed with %v", err)
+				return nil, err
 			}
-		} else {
-			return sendError(fmt.Errorf("BATCH message missing required payload"))
-		}
-		p.messageType = BatchFragment
-		moreRemaining, err = c.StashBatch(p)
-		if err != nil {
-			return sendError(err)
-		}
-		if moreRemaining {
 			return nil, nil
 		}
-		commandWord, jsonString, err = c.RetrieveBatches(p)
+
+		// Comments are anything starting with "//"
+		// The input line is in the form COMMAND-WORD [JSON] \n
+		c.debugf(DebugIO|DebugMessages, "<-%v", c.reader.Text())
+		payload := BaseMessagePayload{
+			rawMessage: c.reader.Text(),
+		}
+		commandWord, jsonString, hasJsonPart := strings.Cut(c.reader.Text(), " ")
+		if strings.Index(commandWord, "//") == 0 {
+			payload.messageType = Comment
+			return CommentMessagePayload{
+				BaseMessagePayload: payload,
+				Text:               c.reader.Text()[2:],
+			}, nil
+		}
+		sendError := func(reason error) (MessagePayload, error) {
+			payload.messageType = ERROR
+			return ErrorMessagePayload{
+				BaseMessagePayload: payload,
+				Error:              reason,
+			}, nil
+		}
+
+		if commandWord == "BATCH" {
+			var moreRemaining bool
+
+			p := BatchFragmentMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					c.debugf(DebugIO|DebugMessages, "ERROR decoding batched message: %v", err)
+					return sendError(err)
+				}
+			} else {
+				c.debugf(DebugIO|DebugMessages, "ERROR decoding batched message: missing payload")
+				return sendError(fmt.Errorf("BATCH message missing required payload"))
+			}
+			c.debugf(DebugIO|DebugMessages, "Received incoming batched message %s part %d of %d", p.ID, p.Part, p.Of)
+			p.messageType = BatchFragment
+			moreRemaining, err = c.StashBatch(p)
+			if err != nil {
+				c.debugf(DebugIO|DebugMessages, "ERROR stashing batched message: %v", err)
+				return sendError(err)
+			}
+			if moreRemaining {
+				c.debugf(DebugIO|DebugMessages, "Waiting for more pieces to arrive.")
+				continue
+			}
+			c.debugf(DebugIO|DebugMessages, "Retrieving saved fragments...")
+			commandWord, jsonString, err = c.RetrieveBatches(p)
+			c.debugf(DebugIO|DebugMessages, "Reassembled %s command with payload %v, err=%v", commandWord, jsonString, err)
+			if err != nil {
+				c.debugf(DebugIO|DebugMessages, "ERROR stops command decode: %v", err)
+				return sendError(err)
+			}
+		}
+
+		switch commandWord {
+		case "AC":
+			p := AddCharacterMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = AddCharacter
+			return p, nil
+
+		case "ACCEPT":
+			p := AcceptMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = Accept
+			return p, nil
+
+		case "AA":
+			p := AddAudioMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = AddAudio
+			return p, nil
+
+		case "AA?":
+			p := QueryAudioMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = QueryAudio
+			return p, nil
+
+		case "AA/":
+			p := FilterAudioMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = FilterAudio
+			return p, nil
+
+		case "AI":
+			p := AddImageMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = AddImage
+			return p, nil
+
+		case "AI?":
+			p := QueryImageMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = QueryImage
+			return p, nil
+
+		case "AI/":
+			p := FilterImagesMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = FilterImages
+			return p, nil
+
+		case "AKA":
+			p := CharacterNameMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = CharacterName
+			return p, nil
+
+		case "ALLOW":
+			p := AllowMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = Allow
+			return p, nil
+
+		case "AUTH":
+			p := AuthMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = Auth
+			return p, nil
+
+		case "AV":
+			p := AdjustViewMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = AdjustView
+			return p, nil
+
+		case "CC":
+			p := ClearChatMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = ClearChat
+			return p, nil
+
+		case "CLR":
+			p := ClearMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = Clear
+			return p, nil
+
+		case "CLR@":
+			p := ClearFromMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = ClearFrom
+			return p, nil
+
+		case "CO":
+			p := CombatModeMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = CombatMode
+			return p, nil
+
+		case "CONN":
+			p := UpdatePeerListMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = UpdatePeerList
+			return p, nil
+
+		case "CORE":
+			p := QueryCoreDataMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = QueryCoreData
+			return p, nil
+
+		case "COREIDX":
+			p := QueryCoreIndexMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = QueryCoreIndex
+			return p, nil
+
+		case "CORE/":
+			p := FilterCoreDataMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = FilterCoreData
+			return p, nil
+
+		case "CORE=":
+			p := UpdateCoreDataMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = UpdateCoreData
+			return p, nil
+
+		case "COREIDX=":
+			p := UpdateCoreIndexMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = UpdateCoreIndex
+			return p, nil
+
+		case "CS":
+			p := UpdateClockMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = UpdateClock
+			return p, nil
+
+		case "D":
+			p := RollDiceMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = RollDice
+			return p, nil
+
+		case "DD":
+			p := DefineDicePresetsMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = DefineDicePresets
+			return p, nil
+
+		case "DDD":
+			p := DefineDicePresetDelegatesMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = DefineDicePresetDelegates
+			return p, nil
+
+		case "DD+":
+			p := AddDicePresetsMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = AddDicePresets
+			return p, nil
+
+		case "DD/":
+			p := FilterDicePresetsMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = FilterDicePresets
+			return p, nil
+
+		case "DD=":
+			p := UpdateDicePresetsMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = UpdateDicePresets
+			return p, nil
+
+		case "DENIED":
+			p := DeniedMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = Denied
+			return p, nil
+
+		case "DR":
+			p := QueryDicePresetsMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = QueryDicePresets
+			return p, nil
+
+		case "DSM":
+			p := UpdateStatusMarkerMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = UpdateStatusMarker
+			return p, nil
+
+		case "ECHO":
+			p := EchoMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = Echo
+			return p, nil
+
+		case "FAILED":
+			p := FailedMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = Failed
+			return p, nil
+
+		case "GRANTED":
+			p := GrantedMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = Granted
+			return p, nil
+
+		case "HPACK":
+			p := HitPointAcknowledgeMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = HitPointAcknowledge
+			return p, nil
+
+		case "HPREQ":
+			p := HitPointRequestMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = HitPointRequest
+			return p, nil
+
+		case "I":
+			p := UpdateTurnMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = UpdateTurn
+			return p, nil
+
+		case "IL":
+			p := UpdateInitiativeMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = UpdateInitiative
+			return p, nil
+
+		case "L":
+			p := LoadFromMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = LoadFrom
+			return p, nil
+
+		case "LS-ARC":
+			p := LoadArcObjectMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = LoadArcObject
+			return p, nil
+
+		case "LS-CIRC":
+			p := LoadCircleObjectMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = LoadCircleObject
+			return p, nil
+
+		case "LS-LINE":
+			p := LoadLineObjectMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = LoadLineObject
+			return p, nil
+
+		case "LS-POLY":
+			p := LoadPolygonObjectMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = LoadPolygonObject
+			return p, nil
+
+		case "LS-RECT":
+			p := LoadRectangleObjectMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = LoadRectangleObject
+			return p, nil
+
+		case "LS-SAOE":
+			p := LoadSpellAreaOfEffectObjectMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = LoadSpellAreaOfEffectObject
+			return p, nil
+
+		case "LS-TEXT":
+			p := LoadTextObjectMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = LoadTextObject
+			return p, nil
+
+		case "LS-TILE":
+			p := LoadTileObjectMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = LoadTileObject
+			return p, nil
+
+		case "MARCO":
+			p := MarcoMessagePayload{BaseMessagePayload: payload}
+			p.messageType = Marco
+			return p, nil
+
+		case "MARK":
+			p := MarkMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = Mark
+			return p, nil
+
+		case "OA":
+			p := UpdateObjAttributesMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = UpdateObjAttributes
+			return p, nil
+
+		case "OA+":
+			p := AddObjAttributesMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = AddObjAttributes
+			return p, nil
+
+		case "OA-":
+			p := RemoveObjAttributesMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = RemoveObjAttributes
+			return p, nil
+
+		case "OK":
+			p := ChallengeMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = Challenge
+			return p, nil
+
+		case "POLO":
+			p := PoloMessagePayload{BaseMessagePayload: payload}
+			p.messageType = Polo
+			return p, nil
+
+		case "PRIV":
+			p := PrivMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = Priv
+			return p, nil
+
+		case "PROGRESS":
+			p := UpdateProgressMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = UpdateProgress
+			return p, nil
+
+		case "PROTOCOL":
+			p := ProtocolMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				// not really JSON for this command; just the protocol version as an integer
+				p.ProtocolVersion, err = strconv.Atoi(jsonString)
+				if err != nil {
+					break
+				}
+			} else {
+				err = fmt.Errorf("Server PROTOCOL command invalid (no version value)")
+				break
+			}
+			return p, nil
+
+		case "PS":
+			p := PlaceSomeoneMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = PlaceSomeone
+			return p, nil
+
+		case "READY":
+			p := ReadyMessagePayload{BaseMessagePayload: payload}
+			p.messageType = Ready
+			return p, nil
+
+		case "REDIRECT":
+			p := RedirectMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = Redirect
+			return p, nil
+
+		case "ROLL":
+			p := RollResultMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = RollResult
+			return p, nil
+
+		case "SOUND":
+			p := PlayAudioMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = PlayAudio
+			return p, nil
+
+		case "SYNC":
+			p := SyncMessagePayload{BaseMessagePayload: payload}
+			p.messageType = Sync
+			return p, nil
+
+		case "SYNC-CHAT":
+			p := SyncChatMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = SyncChat
+			return p, nil
+
+		case "TB":
+			p := ToolbarMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = Toolbar
+			return p, nil
+
+		case "TMACK":
+			p := TimerAcknowledgeMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = TimerAcknowledge
+			return p, nil
+
+		case "TMRQ":
+			p := TimerRequestMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = TimerRequest
+			return p, nil
+
+		case "TO":
+			p := ChatMessageMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = ChatMessage
+			return p, nil
+
+		case "UPDATES":
+			p := UpdateVersionsMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = UpdateVersions
+			return p, nil
+
+		case "WORLD":
+			p := WorldMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = World
+			return p, nil
+
+		case "/CONN":
+			p := QueryPeersMessagePayload{BaseMessagePayload: payload}
+			p.messageType = QueryPeers
+			return p, nil
+
+		default:
+			payload.messageType = UNKNOWN
+			return payload, nil
+		}
+
 		if err != nil {
 			return sendError(err)
 		}
+
+		c.debug(DebugIO, "unable to cope with message, returning nil")
+		return nil, fmt.Errorf("bailing out, unable to cope with received packet")
 	}
-
-	switch commandWord {
-	case "AC":
-		p := AddCharacterMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = AddCharacter
-		return p, nil
-
-	case "ACCEPT":
-		p := AcceptMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = Accept
-		return p, nil
-
-	case "AA":
-		p := AddAudioMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = AddAudio
-		return p, nil
-
-	case "AA?":
-		p := QueryAudioMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = QueryAudio
-		return p, nil
-
-	case "AA/":
-		p := FilterAudioMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = FilterAudio
-		return p, nil
-
-	case "AI":
-		p := AddImageMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = AddImage
-		return p, nil
-
-	case "AI?":
-		p := QueryImageMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = QueryImage
-		return p, nil
-
-	case "AI/":
-		p := FilterImagesMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = FilterImages
-		return p, nil
-
-	case "AKA":
-		p := CharacterNameMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = CharacterName
-		return p, nil
-
-	case "ALLOW":
-		p := AllowMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = Allow
-		return p, nil
-
-	case "AUTH":
-		p := AuthMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = Auth
-		return p, nil
-
-	case "AV":
-		p := AdjustViewMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = AdjustView
-		return p, nil
-
-	case "CC":
-		p := ClearChatMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = ClearChat
-		return p, nil
-
-	case "CLR":
-		p := ClearMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = Clear
-		return p, nil
-
-	case "CLR@":
-		p := ClearFromMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = ClearFrom
-		return p, nil
-
-	case "CO":
-		p := CombatModeMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = CombatMode
-		return p, nil
-
-	case "CONN":
-		p := UpdatePeerListMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = UpdatePeerList
-		return p, nil
-
-	case "CORE":
-		p := QueryCoreDataMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = QueryCoreData
-		return p, nil
-
-	case "COREIDX":
-		p := QueryCoreIndexMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = QueryCoreIndex
-		return p, nil
-
-	case "CORE/":
-		p := FilterCoreDataMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = FilterCoreData
-		return p, nil
-
-	case "CORE=":
-		p := UpdateCoreDataMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = UpdateCoreData
-		return p, nil
-
-	case "COREIDX=":
-		p := UpdateCoreIndexMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = UpdateCoreIndex
-		return p, nil
-
-	case "CS":
-		p := UpdateClockMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = UpdateClock
-		return p, nil
-
-	case "D":
-		p := RollDiceMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = RollDice
-		return p, nil
-
-	case "DD":
-		p := DefineDicePresetsMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = DefineDicePresets
-		return p, nil
-
-	case "DDD":
-		p := DefineDicePresetDelegatesMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = DefineDicePresetDelegates
-		return p, nil
-
-	case "DD+":
-		p := AddDicePresetsMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = AddDicePresets
-		return p, nil
-
-	case "DD/":
-		p := FilterDicePresetsMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = FilterDicePresets
-		return p, nil
-
-	case "DD=":
-		p := UpdateDicePresetsMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = UpdateDicePresets
-		return p, nil
-
-	case "DENIED":
-		p := DeniedMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = Denied
-		return p, nil
-
-	case "DR":
-		p := QueryDicePresetsMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = QueryDicePresets
-		return p, nil
-
-	case "DSM":
-		p := UpdateStatusMarkerMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = UpdateStatusMarker
-		return p, nil
-
-	case "ECHO":
-		p := EchoMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = Echo
-		return p, nil
-
-	case "FAILED":
-		p := FailedMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = Failed
-		return p, nil
-
-	case "GRANTED":
-		p := GrantedMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = Granted
-		return p, nil
-
-	case "HPACK":
-		p := HitPointAcknowledgeMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = HitPointAcknowledge
-		return p, nil
-
-	case "HPREQ":
-		p := HitPointRequestMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = HitPointRequest
-		return p, nil
-
-	case "I":
-		p := UpdateTurnMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = UpdateTurn
-		return p, nil
-
-	case "IL":
-		p := UpdateInitiativeMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = UpdateInitiative
-		return p, nil
-
-	case "L":
-		p := LoadFromMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = LoadFrom
-		return p, nil
-
-	case "LS-ARC":
-		p := LoadArcObjectMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = LoadArcObject
-		return p, nil
-
-	case "LS-CIRC":
-		p := LoadCircleObjectMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = LoadCircleObject
-		return p, nil
-
-	case "LS-LINE":
-		p := LoadLineObjectMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = LoadLineObject
-		return p, nil
-
-	case "LS-POLY":
-		p := LoadPolygonObjectMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = LoadPolygonObject
-		return p, nil
-
-	case "LS-RECT":
-		p := LoadRectangleObjectMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = LoadRectangleObject
-		return p, nil
-
-	case "LS-SAOE":
-		p := LoadSpellAreaOfEffectObjectMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = LoadSpellAreaOfEffectObject
-		return p, nil
-
-	case "LS-TEXT":
-		p := LoadTextObjectMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = LoadTextObject
-		return p, nil
-
-	case "LS-TILE":
-		p := LoadTileObjectMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = LoadTileObject
-		return p, nil
-
-	case "MARCO":
-		p := MarcoMessagePayload{BaseMessagePayload: payload}
-		p.messageType = Marco
-		return p, nil
-
-	case "MARK":
-		p := MarkMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = Mark
-		return p, nil
-
-	case "OA":
-		p := UpdateObjAttributesMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = UpdateObjAttributes
-		return p, nil
-
-	case "OA+":
-		p := AddObjAttributesMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = AddObjAttributes
-		return p, nil
-
-	case "OA-":
-		p := RemoveObjAttributesMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = RemoveObjAttributes
-		return p, nil
-
-	case "OK":
-		p := ChallengeMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = Challenge
-		return p, nil
-
-	case "POLO":
-		p := PoloMessagePayload{BaseMessagePayload: payload}
-		p.messageType = Polo
-		return p, nil
-
-	case "PRIV":
-		p := PrivMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = Priv
-		return p, nil
-
-	case "PROGRESS":
-		p := UpdateProgressMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = UpdateProgress
-		return p, nil
-
-	case "PROTOCOL":
-		p := ProtocolMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			// not really JSON for this command; just the protocol version as an integer
-			p.ProtocolVersion, err = strconv.Atoi(jsonString)
-			if err != nil {
-				break
-			}
-		} else {
-			err = fmt.Errorf("Server PROTOCOL command invalid (no version value)")
-			break
-		}
-		return p, nil
-
-	case "PS":
-		p := PlaceSomeoneMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = PlaceSomeone
-		return p, nil
-
-	case "READY":
-		p := ReadyMessagePayload{BaseMessagePayload: payload}
-		p.messageType = Ready
-		return p, nil
-
-	case "REDIRECT":
-		p := RedirectMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = Redirect
-		return p, nil
-
-	case "ROLL":
-		p := RollResultMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = RollResult
-		return p, nil
-
-	case "SOUND":
-		p := PlayAudioMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = PlayAudio
-		return p, nil
-
-	case "SYNC":
-		p := SyncMessagePayload{BaseMessagePayload: payload}
-		p.messageType = Sync
-		return p, nil
-
-	case "SYNC-CHAT":
-		p := SyncChatMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = SyncChat
-		return p, nil
-
-	case "TB":
-		p := ToolbarMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = Toolbar
-		return p, nil
-
-	case "TMACK":
-		p := TimerAcknowledgeMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = TimerAcknowledge
-		return p, nil
-
-	case "TMRQ":
-		p := TimerRequestMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = TimerRequest
-		return p, nil
-
-	case "TO":
-		p := ChatMessageMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = ChatMessage
-		return p, nil
-
-	case "UPDATES":
-		p := UpdateVersionsMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = UpdateVersions
-		return p, nil
-
-	case "WORLD":
-		p := WorldMessagePayload{BaseMessagePayload: payload}
-		if hasJsonPart {
-			if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
-				break
-			}
-		}
-		p.messageType = World
-		return p, nil
-
-	case "/CONN":
-		p := QueryPeersMessagePayload{BaseMessagePayload: payload}
-		p.messageType = QueryPeers
-		return p, nil
-
-	default:
-		payload.messageType = UNKNOWN
-		return payload, nil
-	}
-
-	if err != nil {
-		return sendError(err)
-	}
-
-	c.debug(DebugIO, "unable to cope with message, returning nil")
-	return nil, fmt.Errorf("bailing out, unable to cope with received packet")
 }
 
 // Send out all waiting outbound messages and then return
