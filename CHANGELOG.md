@@ -23,7 +23,7 @@ In addition, if your server didn't have the following updates installed previous
 
 `scripts/upgrade-5.13.1` for servers older than 5.13.1
 
-## v5.33.0 (unreleased)
+## v5.33.0
 ### Added
  * Implements server protocol 423.
  * Adds batching of large messages.
