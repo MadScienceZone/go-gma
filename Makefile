@@ -1,4 +1,5 @@
 DIRS=coredb\
+     download-presets\
      image-audit\
      map-console\
      map-update\

@@ -1,0 +1,92 @@
+.\" vim:set syntax=nroff:
+'\" <<ital-is-var>>
+'\" <<bold-is-fixed>>
+.TH GMA-GO-DOWNLOAD-PRESETS 6 "Go-GMA 5.33.0" 27-Feb-2026 "Games" \" @@mp@@
+.SH NAME
+gma go download-presets \- Download die-roll presets from a GMA server
+.SH SYNOPSIS
+'\" <<usage>>
+.LP
+(If using the full GMA core tool suite)
+.LP
+.na
+.B gma
+.B go
+.B download\-presets
+.RI [ args
+\&...]
+.ad
+.LP
+(Otherwise)
+.LP
+.na
+.B download\-presets
+.B \-endpoint
+.RI [ hostname ]\fB:\fP port
+.RB [ \-for
+.IR username ]
+.RB [ \-global ]
+.RB [ \-output
+.IR path ]
+.RB [ \-pass
+.IR password ]
+.RB [ \-user
+.IR username ]
+.I file
+\&...
+.ad
+'\" <</usage>>
+.SH DESCRIPTION
+.LP
+.B Download-presets
+connects to a GMA server and retrieves the die-roll
+presets stored there for the logged-in user or the one
+named by the
+.B \-for
+option.
+The die-roll preset data are then stored locally
+in the 
+format documented by
+.BR gma-dice (5).
+.SH OPTIONS
+.LP
+The following options control the action of
+.BR download-presets .
+'\" <<list>>
+.TP
+.BI "\-endpoint \fR[\fP" hostname \fR]\fP: port
+Connect to the server at the specified TCP port.
+.TP
+.BI "\-for " username
+Retrieve the presets for
+.I username
+instead of the user you are logged in as.
+.TP
+.B \-global
+Retrieve only the system-wide global presets.
+.TP
+.BI "\-output " path
+Store the preset data in the named file.
+.TP
+.BI "\-pass " password
+Log in to the server with the specified
+.I password
+.TP
+.BI "\-user " username
+Log in to the server with the specified
+.I username
+(default
+.RB \*(lq GM \*(rq).
+'\" <</>>
+.SH "SEE ALSO"
+.LP
+.BR gma (6),
+.BR gma-mapper (5),
+.BR gma-mapper (6),
+.BR gma-go-upload-presets (6).
+.BR gma-go-server (6).
+.SH AUTHOR
+.LP
+Steve Willoughby / steve@madscience.zone.
+.SH COPYRIGHT
+Part of the GMA software suite, copyright \(co 1992\-2026 by Steven L. Willoughby, Aloha, Oregon, USA. All Rights Reserved. Distributed under BSD-3-Clause License. \"@m(c)@
