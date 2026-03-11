@@ -50,6 +50,9 @@ The following options control the action of upload-presets.
 	   Replace the user’s entire set of presets with the uploaded data.
 	   By default the uploaded presets will be added to any that already exist for that user.
 
+	-global
+	   Update system-wide global presets instead of those belonging to a user.
+
 	−user username
 	   Log in to the server with the specified username (default “GM”).
 */
@@ -71,10 +74,17 @@ func main() {
 	var fPass = flag.String("pass", "", "password to log in to server")
 	var fFor = flag.String("for", "", "who to load the presets for [default is yourself]")
 	var fAdd = flag.Bool("replace", false, "replace all existing presets [default is to add to the existing set]")
+	var fGlobal = flag.Bool("global", false, "upload system-wide global presets instead of a user's set")
 
 	flag.Parse()
 	if flag.NArg() == 0 {
-		fmt.Printf("You need to specify at least one preset file to be loaded.\n")
+		fmt.Println("You need to specify at least one preset file to be loaded.")
+		os.Exit(1)
+	}
+
+	if *fGlobal && *fFor != "" {
+		fmt.Println("You can't specify both -global and -for at the same time.")
+		os.Exit(1)
 	}
 
 	sync := make(chan mapper.MessagePayload, 1)
@@ -102,10 +112,18 @@ func main() {
 		}
 		fmt.Printf("Loaded %s (%s) from %s: %d presets\n", inputFilename, metaData.Comment, metaData.DateTime, len(presets))
 		if fFor == nil || *fFor == "" {
-			if *fAdd {
-				err = server.AddDicePresets(presets)
+			if *fGlobal {
+				if *fAdd {
+					err = server.AddGlobalDicePresets(presets)
+				} else {
+					err = server.DefineGlobalDicePresets(presets)
+				}
 			} else {
-				err = server.DefineDicePresets(presets)
+				if *fAdd {
+					err = server.AddDicePresets(presets)
+				} else {
+					err = server.DefineDicePresets(presets)
+				}
 			}
 		} else {
 			if *fAdd {
