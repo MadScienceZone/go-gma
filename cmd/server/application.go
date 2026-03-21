@@ -769,8 +769,14 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		}
 		p.MessageID = <-a.MessageIDGenerator
 		a.SendToAllExcept(requester, mapper.ClearChat, p)
-		if err := a.ClearChatHistory(p.Target); err != nil {
-			a.Logf("error clearing chat history (target=%d): %v", p.Target, err)
+		if len(p.TargetMessages) > 0 {
+			if err := a.ClearChatHistoryList(p.TargetMessages, p.RequestedBy); err != nil {
+				a.Logf("error removing selectively from chat history (targets=%v, requested by %s): %v", p.TargetMessages, p.RequestedBy, err)
+			}
+		} else {
+			if err := a.ClearChatHistory(p.Target); err != nil {
+				a.Logf("error clearing chat history (target=%d): %v", p.Target, err)
+			}
 		}
 		if err := a.AddToChatHistory(p.MessageID, mapper.ClearChat, p); err != nil {
 			a.Logf("unable to add ClearChat event to chat history: %v", err)
@@ -1536,7 +1542,7 @@ func (a *Application) managePreambleData() {
 	a.Log("preamble data manager started")
 	defer a.Log("preamble data manager stopped")
 
-	commitInitCommand := func(cmd string, src strings.Builder, dst *[]string) error {
+	commitInitCommand := func(cmd string, src strings.Builder, dst *[]string, world **mapper.WorldMessagePayload) error {
 		var b []byte
 		var err error
 
@@ -1816,14 +1822,15 @@ func (a *Application) managePreambleData() {
 		case "WORLD":
 			var data mapper.WorldMessagePayload
 			if err = json.Unmarshal(s, &data); err == nil {
-				b, err = json.Marshal(data)
+				*world = &data
+				b = nil
 			}
 
 		default:
 			return fmt.Errorf("invalid command %v in initialization file", cmd)
 		}
 
-		if err == nil {
+		if err == nil && b != nil {
 			*dst = append(*dst, fmt.Sprintf("%s %s", cmd, string(b)))
 		}
 		return err
@@ -1850,7 +1857,9 @@ func (a *Application) managePreambleData() {
 		a.clientPreamble.data.PostAuth = nil
 		a.clientPreamble.data.PostReady = nil
 		a.clientPreamble.data.SyncData = false
+		a.clientPreamble.data.WorldData = nil
 		currentPreamble := &a.clientPreamble.data.Preamble
+		currentWorld := &a.clientPreamble.data.WorldData
 
 		scanner := bufio.NewScanner(f)
 	outerScan:
@@ -1889,7 +1898,7 @@ func (a *Application) managePreambleData() {
 						if endOfRecordPattern.MatchString(scanner.Text()) {
 							dataPacket.WriteString(scanner.Text())
 						}
-						if err := commitInitCommand(f[1], dataPacket, currentPreamble); err != nil {
+						if err := commitInitCommand(f[1], dataPacket, currentPreamble, currentWorld); err != nil {
 							a.Logf("error in initial command file: %v", err)
 							return
 						}
@@ -1902,7 +1911,7 @@ func (a *Application) managePreambleData() {
 					}
 				}
 				// We reached EOF while scanning with a command in progress
-				if err := commitInitCommand(f[1], dataPacket, currentPreamble); err != nil {
+				if err := commitInitCommand(f[1], dataPacket, currentPreamble, currentWorld); err != nil {
 					a.Logf("error in initial command file: %v", err)
 					return
 				}

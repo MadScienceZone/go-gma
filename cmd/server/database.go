@@ -177,6 +177,21 @@ func (a *Application) ClearChatHistory(target int) error {
 	return nil
 }
 
+func (a *Application) QueryMessageIdRange() (int, int, error) {
+	rows, err := a.sqldb.Query(`SELECT MIN(msgid), MAX(msgid) FROM chats`)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer rows.Close()
+	if rows.Next() {
+		var lower, upper int
+		err := rows.Scan(&lower, &upper)
+		return lower, upper, err
+	}
+	a.Log("Unable to retrieve minimum/maximum message ID (0 rows in result); using 0-0")
+	return 0, 0, nil
+}
+
 func (a *Application) QueryImageData(img mapper.ImageDefinition) (mapper.ImageDefinition, error) {
 	var resultSet mapper.ImageDefinition
 

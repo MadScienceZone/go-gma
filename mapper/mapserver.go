@@ -19,6 +19,7 @@ package mapper
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"strings"
@@ -45,6 +46,7 @@ type MapServer interface {
 	RemoveClient(*ClientConnection)
 	SendGameState(*ClientConnection)
 	GetAllowedClients() []PackageUpdate
+	QueryMessageIdRange() (int, int, error)
 }
 
 // ClientPreamble contains information given to each client upon
@@ -58,6 +60,7 @@ type ClientPreamble struct {
 	Preamble  []string
 	PostAuth  []string
 	PostReady []string
+	WorldData *WorldMessagePayload
 }
 
 // ClientConnection describes the connection to a single
@@ -874,6 +877,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 				if err != nil {
 					c.Logf("error trying to authenticate: %v", err)
 					done <- err
+					return
 				}
 				if success {
 					c.Auth.Client = packet.Client
@@ -908,6 +912,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 		})
 		if err := c.Conn.Flush(); err != nil {
 			done <- err
+			return
 		}
 	}
 
@@ -917,6 +922,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 			c.Conn.sendRaw(line)
 			if err := c.Conn.Flush(); err != nil {
 				done <- err
+				return
 			}
 		}
 	}
@@ -925,6 +931,27 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 	c.Conn.Send(Ready, nil)
 	if err := c.Conn.Flush(); err != nil {
 		done <- err
+		return
+	}
+	if preamble != nil && preamble.WorldData != nil {
+		var err error
+		var b []byte
+
+		preamble.WorldData.MinimumMessageID, preamble.WorldData.MaximumMessageID, err = c.Server.QueryMessageIdRange()
+		if err != nil {
+			done <- err
+			return
+		}
+
+		if b, err = json.Marshal(*preamble.WorldData); err != nil {
+			c.Logf("Error preparing WORLD message: %v", err)
+		} else {
+			c.Conn.sendRaw("WORLD " + string(b))
+			if err := c.Conn.Flush(); err != nil {
+				done <- err
+				return
+			}
+		}
 	}
 	done <- nil // login is done at this point, let the caller start the normal client listener for I/O
 	if preamble != nil {
@@ -932,6 +959,7 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 			c.debugf(DebugIO, "post-ready preamble line %d: %s", i, line)
 			c.Conn.sendRaw(line)
 		}
+
 		if preamble.SyncData {
 			c.Log("syncing client to current game state...")
 			c.Server.SendGameState(c)

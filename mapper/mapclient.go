@@ -193,6 +193,10 @@ type Connection struct {
 	// The server's protocol version number.
 	Protocol int
 
+	// The server's message ID extents.
+	MinimumMessageID int
+	MaximumMessageID int
+
 	// The verbosity level of debugging log messages.
 	DebuggingLevel DebugFlags
 
@@ -708,7 +712,7 @@ var ServerMessageByName = map[string]ServerMessage{
 	"AdjustView":                  AdjustView,
 	"Allow":                       Allow,
 	"Auth":                        Auth,
-	"BatchFragment":			   BatchFragment,
+	"BatchFragment":               BatchFragment,
 	"Challenge":                   Challenge,
 	"CharacterName":               CharacterName,
 	"ChatMessage":                 ChatMessage,
@@ -968,7 +972,7 @@ func (c *Connection) AddAudio(adef AudioDefinition) error {
 // of an image file they should be aware of.
 type AddImageMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 	ImageDefinition
 }
 
@@ -1080,7 +1084,7 @@ func (c *Connection) AddImage(idef ImageDefinition) error {
 // Call the AddObjAttributes method to send this message out to other clients.
 type AddObjAttributesMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 	ObjID    string
 	AttrName string
 	Values   []string
@@ -1286,14 +1290,13 @@ type AuthMessagePayload struct {
 	Platform string `json:",omitempty"`
 }
 
-
-//  ____        _       _     _____                                     _   
-// | __ )  __ _| |_ ___| |__ |  ___| __ __ _  __ _ _ __ ___   ___ _ __ | |_ 
+//  ____        _       _     _____                                     _
+// | __ )  __ _| |_ ___| |__ |  ___| __ __ _  __ _ _ __ ___   ___ _ __ | |_
 // |  _ \ / _` | __/ __| '_ \| |_ | '__/ _` |/ _` | '_ ` _ \ / _ \ '_ \| __|
-// | |_) | (_| | || (__| | | |  _|| | | (_| | (_| | | | | | |  __/ | | | |_ 
+// | |_) | (_| | || (__| | | |  _|| | | (_| | (_| | | | | | |  __/ | | | |_
 // |____/ \__,_|\__\___|_| |_|_|  |_|  \__,_|\__, |_| |_| |_|\___|_| |_|\__|
-//                                           |___/                          
-// 
+//                                           |___/
+//
 
 // BatchFragmentMessagePayload holds a piece of a larger server message that was too
 // large to send in one piece.
@@ -1310,7 +1313,7 @@ type BatchFragmentMessagePayload struct {
 	Part int `json:",omitempty"`
 
 	// Total number of parts to be sent
-	Of int 
+	Of int
 
 	// Signal that sending the batch is being abandoned and why
 	Error string `json:",omitempty"`
@@ -1450,7 +1453,7 @@ type ChatCommon struct {
 // Call the ChatMessage, ChatMessageToAll, or ChatMessageToGM methods to send this message out to other clients.
 type ChatMessageMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 	ChatCommon
 
 	// True if the message contains GMA markup formatting codes
@@ -1726,6 +1729,9 @@ type ClearChatMessagePayload struct {
 
 	// Chat message ID of this notice.
 	MessageID int `json:",omitempty"`
+
+	// If non-empty, clear these messages and ignore Target field
+	TargetMessages []int `json:",omitempty"`
 }
 
 // ClearChat tells peers to remove all messages from their
@@ -1740,6 +1746,17 @@ func (c *Connection) ClearChat(target int, silently bool) error {
 	return c.serverConn.Send(ClearChat, ClearChatMessagePayload{
 		DoSilently: silently,
 		Target:     target,
+	})
+}
+
+// ClearChatList tells peers to remove specific messages from their chat history.
+func (c *Connection) ClearChatList(targetList []int, silently bool) error {
+	if c == nil {
+		return fmt.Errorf("nil Connection")
+	}
+	return c.serverConn.Send(ClearChat, ClearChatMessagePayload{
+		DoSilently:     silently,
+		TargetMessages: targetList,
 	})
 }
 
@@ -2048,7 +2065,7 @@ type DeniedMessagePayload struct {
 // given as the O value.
 type EchoMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 
 	B            bool           `json:"b,omitempty"`
 	I            int            `json:"i,omitempty"`
@@ -2369,7 +2386,7 @@ type GrantedMessagePayload struct {
 // that their HitPointRequest message was accepted.
 type HitPointAcknowledgeMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 	RequestID        string
 	RequestingClient string `json:",omitempty"`
 	RequestedBy      string `json:",omitempty"`
@@ -2473,7 +2490,7 @@ type HitPointAcknowledgeMessagePayload struct {
 // HitPointRequestMessagePayload requests that the GM add temporary hit points to a creature (usually a PC).
 type HitPointRequestMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 
 	// Simple description to explain the request to the GM
 	Description string
@@ -2611,56 +2628,56 @@ func (c *Connection) LoadFrom(path string, local bool, merge bool) error {
 // LoadArcObjectMessagePayload holds the information needed to send an arc element to a map.
 type LoadArcObjectMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 	ArcElement
 }
 
 // LoadCircleObjectMessagePayload holds the information needed to send an ellipse element to a map.
 type LoadCircleObjectMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 	CircleElement
 }
 
 // LoadLineObjectMessagePayload holds the information needed to send a line element to a map.
 type LoadLineObjectMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 	LineElement
 }
 
 // LoadPolygonObjectMessagePayload holds the information needed to send a polygon element to a map.
 type LoadPolygonObjectMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 	PolygonElement
 }
 
 // LoadRectangleObjectMessagePayload holds the information needed to send a rectangle element to a map.
 type LoadRectangleObjectMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 	RectangleElement
 }
 
 // LoadSpellAreaOfEffectObjectMessagePayload holds the information needed to send a spell area of effect element to a map.
 type LoadSpellAreaOfEffectObjectMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 	SpellAreaOfEffectElement
 }
 
 // LoadTextObjectMessagePayload holds the information needed to send a text element to a map.
 type LoadTextObjectMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 	TextElement
 }
 
 // LoadTileObjectMessagePayload holds the information needed to send a graphic tile element to a map.
 type LoadTileObjectMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 	TileElement
 }
 
@@ -3637,7 +3654,7 @@ func (c *Connection) Mark(x, y float64) error {
 // Call the PlaceSomeone method to send this message out to other clients.
 type PlaceSomeoneMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 	CreatureToken
 }
 
@@ -3824,7 +3841,7 @@ func (c *Connection) PlaceSomeone(someone any) error {
 // stop playing an audio clip on a client.
 type PlayAudioMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 
 	// Name is the sound clip ID as known by the mapper.
 	// This may be "*" to refer to all sounds (e.g., to stop all playing sounds).
@@ -3999,7 +4016,7 @@ type PrivMessagePayload struct {
 // Call the QueryImage method to send this message out to other clients.
 type QueryImageMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 	ImageDefinition
 }
 
@@ -4155,7 +4172,7 @@ type ReadyMessagePayload struct {
 // Call the RemoveObjAttributes method to send this message out to other clients.
 type RemoveObjAttributesMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 
 	// The ID of the object to be modified
 	ObjID string
@@ -4363,7 +4380,7 @@ func (c *Connection) RollDiceWithID(to []string, rollspec string, requestID stri
 // server when requesting a die roll.
 type RollDiceMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 	ChatCommon
 
 	// If you want to track the results to the requests that created them,
@@ -4553,7 +4570,7 @@ func (c *Connection) RollDiceToGMWithID(rollspec, requestID string) error {
 // message. This tells the client the results of a die roll.
 type RollResultMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 	ChatCommon
 
 	// True if there will be more results following this one for the same request
@@ -4763,7 +4780,7 @@ func (c *Connection) DefineDicePresetsFor(user string, presets []dice.DieRollPre
 
 type DefineDicePresetsMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 	Global  bool                 `json:",omitempty"`
 	For     string               `json:",omitempty"`
 	Presets []dice.DieRollPreset `json:",omitempty"`
@@ -4771,7 +4788,7 @@ type DefineDicePresetsMessagePayload struct {
 
 type DefineDicePresetDelegatesMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 	For       string   `json:",omitempty"`
 	Delegates []string `json:",omitempty"`
 }
@@ -5013,7 +5030,7 @@ func (c *Connection) AddDicePresetsFor(user string, presets []dice.DieRollPreset
 
 type AddDicePresetsMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 	Global  bool                 `json:",omitempty"`
 	For     string               `json:",omitempty"`
 	Presets []dice.DieRollPreset `json:",omitempty"`
@@ -5089,7 +5106,7 @@ func (c *Connection) UpdateClock(absolute, relative int64, keepRunning bool) err
 // using.
 type UpdateDicePresetsMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 	Global      bool `json:",omitempty"`
 	Presets     []dice.DieRollPreset
 	For         string   `json:",omitempty"`
@@ -5192,7 +5209,7 @@ type UpdateDicePresetsMessagePayload struct {
 // notion of the initiative order should be replaced by the one given here.
 type UpdateInitiativeMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 	InitiativeList []InitiativeSlot
 }
 
@@ -5295,7 +5312,7 @@ type InitiativeSlot struct {
 // Call the UpdateObjAttributes method to send this message out to other clients.
 type UpdateObjAttributesMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 
 	// The ID of the object to be modified.
 	ObjID string
@@ -5390,7 +5407,7 @@ func (c *Connection) UpdateObjAttributes(objID string, newAttrs map[string]any) 
 // other connected peers has changed.
 type UpdatePeerListMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 	PeerList []Peer
 }
 
@@ -5708,7 +5725,7 @@ type SyncChatMessagePayload struct {
 
 type UpdateVersionsMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
+	//TODO	BatchableMessagePayload
 	Packages []PackageUpdate `json:",omitempty"`
 }
 
@@ -5797,8 +5814,10 @@ type ClientSettingsOverrides struct {
 
 type WorldMessagePayload struct {
 	BaseMessagePayload
-	Calendar       string
-	ClientSettings *ClientSettingsOverrides `json:",omitempty"`
+	Calendar         string
+	ClientSettings   *ClientSettingsOverrides `json:",omitempty"`
+	MinimumMessageID int                      `json:",omitempty"`
+	MaximumMessageID int                      `json:",omitempty"`
 }
 
 type RedirectMessagePayload struct {
@@ -5821,8 +5840,7 @@ type TimerAcknowledgeMessagePayload struct {
 // to the GM's time tracker.
 type TimerRequestMessagePayload struct {
 	BaseMessagePayload
-//TODO	BatchableMessagePayload
-
+	//TODO	BatchableMessagePayload
 	// If true, the timer should be visible to the players instead of just the GM
 	ShowToAll bool
 
@@ -6229,6 +6247,8 @@ func (c *Connection) login(done chan error) {
 		case WorldMessagePayload:
 			c.CalendarSystem = response.Calendar
 			c.ClientSettings = nil
+			c.MinimumMessageID = response.MinimumMessageID
+			c.MaximumMessageID = response.MaximumMessageID
 			if response.ClientSettings != nil && (response.ClientSettings.MkdirPath != "" ||
 				response.ClientSettings.ImageBaseURL != "" ||
 				response.ClientSettings.ModuleCode != "" ||
