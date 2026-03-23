@@ -46,6 +46,7 @@ type MapServer interface {
 	SendGameState(*ClientConnection)
 	GetAllowedClients() []PackageUpdate
 	QueryMessageIdRange() (int, int, error)
+	PrepareY2() (ServerStateMessagePayload, error)
 }
 
 // ClientPreamble contains information given to each client upon
@@ -926,6 +927,13 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 	}
 
 	c.debug(DebugIO, "signalling end of login step")
+	y2, err := c.Server.PrepareY2()
+	if err != nil {
+		c.Log("error retrieving message range: %v", err)
+	} else {
+		c.Conn.Send(ServerState, y2)
+	}
+
 	c.Conn.Send(Ready, nil)
 	if err := c.Conn.Flush(); err != nil {
 		done <- err

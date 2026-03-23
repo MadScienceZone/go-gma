@@ -363,6 +363,7 @@ func main() {
 			mapper.PlayAudio,
 			mapper.RemoveObjAttributes,
 			mapper.RollResult,
+			mapper.ServerState,
 			mapper.TimerAcknowledge,
 			mapper.TimerRequest,
 			mapper.Toolbar,
@@ -433,6 +434,7 @@ func main() {
 			}
 		}
 	}
+	fmt.Println(colorize(fmt.Sprintf("Stored messageID range is %d-%d", server.MinimumMessageID, server.MaximumMessageID), "Green", mono))
 
 	if server.ClientSettings != nil {
 		log.Printf("Server requests client settings changes")
@@ -890,6 +892,7 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"requestedBy", m.RequestedBy},
 			fieldDesc{"silent", m.DoSilently},
 			fieldDesc{"target", m.Target},
+			fieldDesc{"targetMessages", m.TargetMessages},
 			fieldDesc{"messageID", m.MessageID},
 		)
 
@@ -1030,7 +1033,7 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 
 	case mapper.RollResultMessagePayload:
 		if m.Result.InvalidRequest {
-			if m.Result.Details != nil && len(m.Result.Details) >= 1 && m.Result.Details[0].Type == "error" {
+			if len(m.Result.Details) >= 1 && m.Result.Details[0].Type == "error" {
 				fmt.Print(colorize(fmt.Sprintf("ERROR in die roll request: %v; ", m.Result.Details[0].Value), "Red", mono))
 			}
 		}
@@ -1049,6 +1052,12 @@ func describeIncomingMessage(msg mapper.MessagePayload, mono bool, cal gma.Calen
 			fieldDesc{"suppressed?", m.Result.ResultSuppressed},
 			fieldDesc{"targets", m.Targets},
 			fieldDesc{"type", m.Type},
+		)
+
+	case mapper.ServerStateMessagePayload:
+		printFields(mono, "ServerState",
+			fieldDesc{"minimumMessageID", m.MinimumMessageID},
+			fieldDesc{"maximumMessageID", m.MaximumMessageID},
 		)
 
 	case mapper.TimerAcknowledgeMessagePayload:

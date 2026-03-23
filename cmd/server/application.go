@@ -2317,11 +2317,8 @@ func (a *Application) manageGameState() {
 				client.Conn.Send(mapper.CombatMode, mapper.CombatModeMessagePayload{Enabled: isInCombatMode})
 				client.Conn.Send(mapper.Toolbar, mapper.ToolbarMessagePayload{Enabled: !toolbarHidden})
 				client.Conn.Send(mapper.AdjustView, mapper.AdjustViewMessagePayload{Grid: viewg, XView: viewx, YView: viewy})
-				minID, maxID, err := a.QueryMessageIdRange()
-				if err != nil {
-					a.Logf("unable to get min/max message ID range: %v", err)
-				} else {
-					client.Conn.Send(mapper.ServerState, mapper.ServerStateMessagePayload{MinimumMessageID: minID, MaximumMessageID: maxID})
+				if y2, err := a.PrepareY2(); err != nil {
+					client.Conn.Send(mapper.ServerState, y2)
 				}
 				if currentTurn == nil {
 					client.Conn.Send(mapper.Comment, "no current turn set")
@@ -2370,6 +2367,14 @@ func (a *Application) manageGameState() {
 			}()
 		}
 	}
+}
+
+func (a *Application) PrepareY2() (mapper.ServerStateMessagePayload, error) {
+	minid, maxid, err := a.QueryMessageIdRange()
+	return mapper.ServerStateMessagePayload{
+		MinimumMessageID: minid,
+		MaximumMessageID: maxid,
+	}, err
 }
 
 func (a *Application) UpdateGameState(event *mapper.MessagePayload) {
