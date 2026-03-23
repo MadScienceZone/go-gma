@@ -77,6 +77,7 @@ func (a *Application) dbOpen() error {
 			create table chats (
 				msgid   integer primary key,
 				msgtype integer,
+				sender  text,
 				rawdata text    not null
 			);
 			create table images (
@@ -154,6 +155,40 @@ func (a *Application) debugDbAffected(result sql.Result, msg string) {
 	} else {
 		a.Debugf(DebugDB, "%s, rows affected=%d", msg, affected)
 	}
+}
+
+func (a *Application) ClearChatHistoryList(targets []int, requestedBy string, force bool) error {
+	// validate request
+	var row *sql.Row
+	var err error
+	for _, targetID := range targets {
+		row = a.sqldb.QueryRow(`select msgtype, sender from chats where msgid=?`, targetID)
+		if row.Err() != nil {
+			return row.Err()
+		}
+		var messageType int
+		var messageSender string
+		if err = row.Scan(&messageType, &messageSender); err != nil {
+			return err
+		}
+		if messageType == MsgTypeClearChat {
+			return fmt.Errorf("refusing to clear CC record (id=%d)", targetID)
+		}
+		if !force && (messageSender != requestedBy) {
+			return fmt.Errorf("unauthorized attempt to clear chat message id=%d originally sent by %s", targetID, messageSender)
+		}
+	}
+
+	// looks good, proceed...
+	var result sql.Result
+	a.Logf("deleting chat messages %v from history", targets)
+	for i, targetID := range targets {
+		if result, err = a.sqldb.Exec(`delete from chats where msgid=?`, targetID); err != nil {
+			return err
+		}
+		a.debugDbAffected(result, fmt.Sprintf("clear chat history target %d (%d/%d)", targetID, i+1, len(targets)))
+	}
+	return nil
 }
 
 func (a *Application) ClearChatHistory(target int) error {
@@ -528,14 +563,36 @@ func (a *Application) SendDicePresets(user string, onlyGlobal bool, broadcast bo
 
 func (a *Application) AddToChatHistory(id int, chatType mapper.ServerMessage, chatData any) error {
 	var dbMessageType int
+	var sender string
 
 	switch chatType {
 	case mapper.ClearChat:
 		dbMessageType = 0
+		if p, ok := chatData.(mapper.ClearChatMessagePayload); ok {
+			sender = p.RequestedBy
+		} else {
+			a.Logf("AddToChatHistory: id=%d, internal error: unexpected data type %T where CC message type expected", id, chatData)
+			return fmt.Errorf("internal error: unexpected data type %T where CC message type expected", chatData)
+		}
+
 	case mapper.ChatMessage:
 		dbMessageType = 1
+		if p, ok := chatData.(mapper.ChatMessageMessagePayload); ok {
+			sender = p.Sender
+		} else {
+			a.Logf("AddToChatHistory: id=%d, internal error: unexpected data type %T where TO message type expected", id, chatData)
+			return fmt.Errorf("internal error: unexpected data type %T where TO message type expected", chatData)
+		}
+
 	case mapper.RollResult:
 		dbMessageType = 2
+		if p, ok := chatData.(mapper.RollResultMessagePayload); ok {
+			sender = p.Sender
+		} else {
+			a.Logf("AddToChatHistory: id=%d, internal error: unexpected data type %T where ROLl message type expected", id, chatData)
+			return fmt.Errorf("internal error: unexpected data type %T where ROLl message type expected", chatData)
+		}
+
 	default:
 		a.Logf("ERROR in AddToChatHistory: Invalid chatType value %v (entry not added to history database)", chatType)
 		return fmt.Errorf("invalid chatType value %v", chatType)
@@ -545,7 +602,7 @@ func (a *Application) AddToChatHistory(id int, chatType mapper.ServerMessage, ch
 	if err != nil {
 		return err
 	}
-	result, err := a.sqldb.Exec(`insert into chats (msgid, msgtype, rawdata) values (?, ?, ?)`, id, dbMessageType, string(jdata))
+	result, err := a.sqldb.Exec(`insert into chats (msgid, msgtype, sender, rawdata) values (?, ?, ?, ?)`, id, dbMessageType, sender, string(jdata))
 	if err != nil {
 		return err
 	}

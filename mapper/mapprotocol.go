@@ -57,7 +57,7 @@ const (
 	GMAMapperProtocol           = 423      // @@##@@ auto-configured
 	GoVersionNumber             = "5.33.0" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
-	MaximumSupportedMapProtocol = 423
+	MaximumSupportedMapProtocol = 424
 	MaxServerMessageSize        = 60 * 1024 // don't send server messages bigger than this
 	MaxAllowedGiantPacketSize   = 1024 * 1024 * 10
 )
@@ -481,6 +481,10 @@ func (c *MapConnection) Send(command ServerMessage, data any) error {
 	case RollResult:
 		if rd, ok := data.(RollResultMessagePayload); ok {
 			return c.sendJSON("ROLL", rd)
+		}
+	case ServerState:
+		if ss, ok := data.(ServerStateMessagePayload); ok {
+			return c.sendJSON("Y2", ss)
 		}
 	case Sync:
 		return c.sendln("SYNC", "")
@@ -1483,6 +1487,16 @@ func (c *MapConnection) Receive() (MessagePayload, error) {
 				}
 			}
 			p.messageType = World
+			return p, nil
+
+		case "Y2":
+			p := ServerStateMessagePayload{BaseMessagePayload: payload}
+			if hasJsonPart {
+				if err = json.Unmarshal([]byte(jsonString), &p); err != nil {
+					break
+				}
+			}
+			p.messageType = ServerState
 			return p, nil
 
 		case "/CONN":

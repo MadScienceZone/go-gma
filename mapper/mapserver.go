@@ -19,7 +19,6 @@ package mapper
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net"
 	"strings"
@@ -60,7 +59,6 @@ type ClientPreamble struct {
 	Preamble  []string
 	PostAuth  []string
 	PostReady []string
-	WorldData *WorldMessagePayload
 }
 
 // ClientConnection describes the connection to a single
@@ -609,7 +607,7 @@ mainloop:
 					MarcoMessagePayload, PrivMessagePayload, ReadyMessagePayload, RedirectMessagePayload,
 					RollResultMessagePayload, UpdateCoreDataMessagePayload, UpdateCoreIndexMessagePayload,
 					UpdatePeerListMessagePayload,
-					UpdateVersionsMessagePayload, WorldMessagePayload:
+					UpdateVersionsMessagePayload, WorldMessagePayload, ServerStateMessagePayload:
 					c.Conn.Send(Priv, PrivMessagePayload{
 						Command: p.RawMessage(),
 						Reason:  "I get to send that command, not you.",
@@ -932,26 +930,6 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 	if err := c.Conn.Flush(); err != nil {
 		done <- err
 		return
-	}
-	if preamble != nil && preamble.WorldData != nil {
-		var err error
-		var b []byte
-
-		preamble.WorldData.MinimumMessageID, preamble.WorldData.MaximumMessageID, err = c.Server.QueryMessageIdRange()
-		if err != nil {
-			done <- err
-			return
-		}
-
-		if b, err = json.Marshal(*preamble.WorldData); err != nil {
-			c.Logf("Error preparing WORLD message: %v", err)
-		} else {
-			c.Conn.sendRaw("WORLD " + string(b))
-			if err := c.Conn.Flush(); err != nil {
-				done <- err
-				return
-			}
-		}
 	}
 	done <- nil // login is done at this point, let the caller start the normal client listener for I/O
 	if preamble != nil {

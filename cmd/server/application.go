@@ -764,22 +764,37 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 		}
 
 	case mapper.ClearChatMessagePayload:
+		var err error
 		if requester != nil && requester.Auth != nil {
 			p.RequestedBy = requester.Auth.Username
 		}
 		p.MessageID = <-a.MessageIDGenerator
-		a.SendToAllExcept(requester, mapper.ClearChat, p)
 		if len(p.TargetMessages) > 0 {
-			if err := a.ClearChatHistoryList(p.TargetMessages, p.RequestedBy); err != nil {
+			force := false
+			if requester != nil && requester.Auth != nil {
+				force = requester.Auth.GmMode
+			}
+			if err = a.ClearChatHistoryList(p.TargetMessages, p.RequestedBy, force); err != nil {
 				a.Logf("error removing selectively from chat history (targets=%v, requested by %s): %v", p.TargetMessages, p.RequestedBy, err)
 			}
 		} else {
-			if err := a.ClearChatHistory(p.Target); err != nil {
+			if requester.Auth == nil || !requester.Auth.GmMode {
+				a.Logf("unauthorized CC target=%d", p.Target)
+				requester.Conn.Send(mapper.Priv, mapper.PrivMessagePayload{
+					Command: p.RawMessage(),
+					Reason:  fmt.Sprintf("You are not authorized to issue CC command for Target=%d", p.Target),
+				})
+				return
+			}
+			if err = a.ClearChatHistory(p.Target); err != nil {
 				a.Logf("error clearing chat history (target=%d): %v", p.Target, err)
 			}
 		}
-		if err := a.AddToChatHistory(p.MessageID, mapper.ClearChat, p); err != nil {
-			a.Logf("unable to add ClearChat event to chat history: %v", err)
+		if err == nil {
+			a.SendToAllExcept(requester, mapper.ClearChat, p)
+			if err = a.AddToChatHistory(p.MessageID, mapper.ClearChat, p); err != nil {
+				a.Logf("unable to add ClearChat event to chat history: %v", err)
+			}
 		}
 
 	case mapper.RollDiceMessagePayload:
@@ -1542,7 +1557,7 @@ func (a *Application) managePreambleData() {
 	a.Log("preamble data manager started")
 	defer a.Log("preamble data manager stopped")
 
-	commitInitCommand := func(cmd string, src strings.Builder, dst *[]string, world **mapper.WorldMessagePayload) error {
+	commitInitCommand := func(cmd string, src strings.Builder, dst *[]string) error {
 		var b []byte
 		var err error
 
@@ -1822,8 +1837,7 @@ func (a *Application) managePreambleData() {
 		case "WORLD":
 			var data mapper.WorldMessagePayload
 			if err = json.Unmarshal(s, &data); err == nil {
-				*world = &data
-				b = nil
+				b, err = json.Marshal(data)
 			}
 
 		default:
@@ -1857,9 +1871,7 @@ func (a *Application) managePreambleData() {
 		a.clientPreamble.data.PostAuth = nil
 		a.clientPreamble.data.PostReady = nil
 		a.clientPreamble.data.SyncData = false
-		a.clientPreamble.data.WorldData = nil
 		currentPreamble := &a.clientPreamble.data.Preamble
-		currentWorld := &a.clientPreamble.data.WorldData
 
 		scanner := bufio.NewScanner(f)
 	outerScan:
@@ -1898,7 +1910,7 @@ func (a *Application) managePreambleData() {
 						if endOfRecordPattern.MatchString(scanner.Text()) {
 							dataPacket.WriteString(scanner.Text())
 						}
-						if err := commitInitCommand(f[1], dataPacket, currentPreamble, currentWorld); err != nil {
+						if err := commitInitCommand(f[1], dataPacket, currentPreamble); err != nil {
 							a.Logf("error in initial command file: %v", err)
 							return
 						}
@@ -1911,7 +1923,7 @@ func (a *Application) managePreambleData() {
 					}
 				}
 				// We reached EOF while scanning with a command in progress
-				if err := commitInitCommand(f[1], dataPacket, currentPreamble, currentWorld); err != nil {
+				if err := commitInitCommand(f[1], dataPacket, currentPreamble); err != nil {
 					a.Logf("error in initial command file: %v", err)
 					return
 				}
@@ -2305,6 +2317,12 @@ func (a *Application) manageGameState() {
 				client.Conn.Send(mapper.CombatMode, mapper.CombatModeMessagePayload{Enabled: isInCombatMode})
 				client.Conn.Send(mapper.Toolbar, mapper.ToolbarMessagePayload{Enabled: !toolbarHidden})
 				client.Conn.Send(mapper.AdjustView, mapper.AdjustViewMessagePayload{Grid: viewg, XView: viewx, YView: viewy})
+				minID, maxID, err := a.QueryMessageIdRange()
+				if err != nil {
+					a.Logf("unable to get min/max message ID range: %v", err)
+				} else {
+					client.Conn.Send(mapper.ServerState, mapper.ServerStateMessagePayload{MinimumMessageID: minID, MaximumMessageID: maxID})
+				}
 				if currentTurn == nil {
 					client.Conn.Send(mapper.Comment, "no current turn set")
 				} else {

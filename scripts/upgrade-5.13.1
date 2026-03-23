@@ -1,6 +1,6 @@
 #!/bin/sh
 echo "Upgrading database(s) to 5.13.1+ schema (static chat history message type codes)"
-if [ "$1" == "" ]; then
+if [ "$1" = "" ]; then
 	echo "Usage: $0 databasefile"
 	exit 1
 fi

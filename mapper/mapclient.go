@@ -680,6 +680,7 @@ const (
 	RemoveObjAttributes
 	RollDice
 	RollResult
+	ServerState
 	Sync
 	SyncChat
 	TimerAcknowledge
@@ -760,6 +761,7 @@ var ServerMessageByName = map[string]ServerMessage{
 	"RemoveObjAttributes":         RemoveObjAttributes,
 	"RollDice":                    RollDice,
 	"RollResult":                  RollResult,
+	"ServerState":                 ServerState,
 	"Sync":                        Sync,
 	"SyncChat":                    SyncChat,
 	"TimerAcknowledge":            TimerAcknowledge,
@@ -5812,12 +5814,16 @@ type ClientSettingsOverrides struct {
 	ServerHostname string `json:",omitempty"`
 }
 
+type ServerStateMessagePayload struct {
+	BaseMessagePayload
+	MinimumMessageID int `json:",omitempty"`
+	MaximumMessageID int `json:",omitempty"`
+}
+
 type WorldMessagePayload struct {
 	BaseMessagePayload
-	Calendar         string
-	ClientSettings   *ClientSettingsOverrides `json:",omitempty"`
-	MinimumMessageID int                      `json:",omitempty"`
-	MaximumMessageID int                      `json:",omitempty"`
+	Calendar       string
+	ClientSettings *ClientSettingsOverrides `json:",omitempty"`
 }
 
 type RedirectMessagePayload struct {
@@ -6244,11 +6250,13 @@ func (c *Connection) login(done chan error) {
 		case UpdateStatusMarkerMessagePayload:
 			c.receiveDSM(response)
 
+		case ServerStateMessagePayload:
+			c.MinimumMessageID = response.MinimumMessageID
+			c.MaximumMessageID = response.MaximumMessageID
+
 		case WorldMessagePayload:
 			c.CalendarSystem = response.Calendar
 			c.ClientSettings = nil
-			c.MinimumMessageID = response.MinimumMessageID
-			c.MaximumMessageID = response.MaximumMessageID
 			if response.ClientSettings != nil && (response.ClientSettings.MkdirPath != "" ||
 				response.ClientSettings.ImageBaseURL != "" ||
 				response.ClientSettings.ModuleCode != "" ||
@@ -6354,6 +6362,10 @@ waitForReady:
 			c.Endpoint = fmt.Sprintf("%s:%d", response.Host, response.Port)
 			done <- ErrRetryConnection
 			return
+
+		case ServerStateMessagePayload:
+			c.MinimumMessageID = response.MinimumMessageID
+			c.MaximumMessageID = response.MaximumMessageID
 
 		case WorldMessagePayload:
 			c.CalendarSystem = response.Calendar
@@ -6697,6 +6709,13 @@ func (c *Connection) listen(done chan error) {
 				ch <- cmd
 			}
 
+		case ServerStateMessagePayload:
+			c.MinimumMessageID = cmd.MinimumMessageID
+			c.MaximumMessageID = cmd.MaximumMessageID
+			if ch, ok := c.Subscriptions[ServerState]; ok {
+				ch <- cmd
+			}
+
 		case TimerAcknowledgeMessagePayload:
 			if ch, ok := c.Subscriptions[TimerAcknowledge]; ok {
 				ch <- cmd
@@ -6970,6 +6989,8 @@ func (c *Connection) filterSubscriptions() error {
 			subList = append(subList, "OA-")
 		case RollResult:
 			subList = append(subList, "ROLL")
+		case ServerState:
+			subList = append(subList, "Y2")
 		case TimerAcknowledge:
 			subList = append(subList, "TMACK")
 		case TimerRequest:

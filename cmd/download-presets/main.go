@@ -119,9 +119,9 @@ serverSync:
 				if syncVal.S == "xyzzy" {
 					break serverSync
 				}
-				fmt.Println("...%s\n", syncVal.S)
+				fmt.Printf("...%s\n", syncVal.S)
 			} else {
-				fmt.Println("Unexpected sync message type %T received\n", e)
+				fmt.Printf("Unexpected sync message type %T received\n", e)
 				fmt.Println("Not sure we can recover from this.")
 			}
 		case <-presets:

@@ -1,0 +1,37 @@
+#!/bin/sh
+echo "Upgrading database(s) to 5.34+ schema (adds sender name to record)"
+echo "If you are upgrading from a server version prior to 5.31.0, be sure"
+echo "you RUN EVERY UPGRADE SCRIPT IN VERSION-NUMBER ORDER as necessary"
+echo "to upgrade your database incrementally to each version you are"
+echo "upgrading through!"
+if [ "$1" = "" ]; then
+	echo "Usage: $0 databasefile"
+	exit 1
+fi
+if [ ! -d 5.34 ]; then
+	if [ -d scripts/5.34 ]; then
+		echo "moving to scripts directory"
+		cd scripts
+	else
+		echo "No 5.34 directory found here. Please run this script from the 'scripts' directory in the go-gma directory structure."
+		exit 1
+	fi
+fi
+if [ -f "$1" ]; then
+	/bin/echo -n "Upgrading database file $1 to 5.34 schema in"
+	for count in 10 9 8 7 6 5 4 3 2 1
+	do
+		/bin/echo -n " $count..."
+		sleep 1
+	done
+	echo ""
+else
+	echo "$1 does not exist. Please specify the path to your database file."
+	exit 1
+fi
+go run 5.34/upgrade_db_5.34.go "$1"
+if [ $? -ne 0 ]; then
+	echo "ERROR RUNNING COMMAND: database probably not (fully) upgraded!"
+else
+	echo "Run this again for each database you need to upgrade."
+fi
