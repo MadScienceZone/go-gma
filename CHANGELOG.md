@@ -1,27 +1,42 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.33.0                <!-- @@##@@ -->
- * Effective Date: 27-Feb-2026			<!-- @@##@@ -->
+ * This Package Version: 5.34.0                <!-- @@##@@ -->
+ * Effective Date: 23-Mar-2026			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 6.42		<!-- @@##@@ -->
- * GMA Mapper Version: 4.36.7		<!-- @@##@@ -->
- * GMA Mapper Protocol: 423		<!-- @@##@@ -->
+ * GMA Core API Library Version: 6.44		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.38.0		<!-- @@##@@ -->
+ * GMA Mapper Protocol: 424		<!-- @@##@@ -->
  * GMA Mapper File Format: 23		<!-- @@##@@ -->
  * GMA Mapper Preferences File Format: 13 <!-- @@##@@ -->
  * GMA User Preferences File Format: 6 <!-- @@##@@ -->
 
 # Notice
-When upgrading an existing server to version 5.31.0 or later, be sure to run `scripts/upgrade-5.31.0` on each database file to update it to the new schema.
+When upgrading an existing server to version 5.34.0 or later, **YOU MUST** be sure to run `scripts/upgrade-5.34.0` on each database file to update it to the new schema.
 
-This script requires the `sqlite3` command-line tool to be installed.
+Note that there are upgrade scripts to run to patch existing systems' database files. If you are upgrading from a much older version of the server which hasn't been run on any of the following versions (or later), **YOU MUST** run each of these scripts **IN ORDER** as they each make incremental changes to the database schema and assume the previous ones were applied.
 
-In addition, if your server didn't have the following updates installed previously, do them as well. Each of these should be applied from oldest to newest, as needed, and **only** the ones needed.  If you don't need to retain any data when setting up a new server, just delete the database file and the server will create a new one when it starts. These scripts are only needed to patch your old database for use with a newer server.
+Only run the scripts that are for server versions after the one your database files were most recently used with.
 
-`scripts/upgrade-5.15.0` for servers older than 5.15.0
+| Server Version | Upgrade Script | What does it do? |
+| -------------- | -------------- | ---------------- |
+| 5.8.0          | `scripts/upgrade5.7.0-5.8.0` | Alters images table for new image attributes |
+| 5.13.1         | `scripts/upgrade-5.13.1` | Adjusts chat message types to new numbering scheme |
+| 5.15.0         | `scripts/upgrade-5.15.0` | Creates new table for die-roll delegation |
+| 5.31.0         | `scripts/upgrade-5.31.0` | Creates new table for sound effect media |
+| 5.34.0         | `scripts/upgrade-5.34.0` | Creates new field to track message deletion and rewrites all existing chat messages |
 
-`scripts/upgrade-5.13.1` for servers older than 5.13.1
+Most of these scripts require the `sqlite3` command-line tool to be installed.
+
+## v5.34.0
+### Added
+ * `download-presets` utility to download die-roll preset data from the server to a local file. This is useful for backups, migrating data, or editing the files offline to then push back to the server using `upload-presets`.
+ * `upload-presets` now includes a `-global` option to load system-wide presets from a local file.
+ * Supports protocol version 424.  **REQUIRES DATABASE UPDATES**
+   * Adds `ServerState` message type. This helps clients prune their cached chat history data when old messages are deleted entirely from the server.
+   * Enhances `ClearChat` message to allow removing individual messages in addition to ranges of the oldest ones.
+   * `ClearChat` now requires GM privileges unless you are individually deleting messages you yourself sent.
 
 ## v5.33.0
 ### Added

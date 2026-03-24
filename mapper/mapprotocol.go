@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   ______      _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   \  \   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____        ___) /   ___) /   | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (   (___ (    | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )         ) \      ) \   |   / | |     #
-# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\___/  / _ |  (__) |     #
-# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
+#  _______  _______  _______             _______     ______      ___       _______     #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \    /   )     (  __   )    #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \  / /) |     | (  )  |    #
+# | |      | || || || (___) | Assistant | (____        ___) / / (_) (_    | | /   |    #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ ( (____   _)   | (/ /) |    #
+# | | \_  )| |   | || (   ) |                 ) )         ) \     ) (     |   / | |    #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  /     | |   _ |  (__) |    #
+# (_______)|/     \||/     \|           \______/ (_)\______/      (_)  (_)(_______)    #
 #                                                                                      #
 ########################################################################################
 */
@@ -54,8 +54,8 @@ import (
 // The GMA Mapper Protocol version number current as of this build,
 // and protocol versions supported by this code.
 const (
-	GMAMapperProtocol           = 423      // @@##@@ auto-configured
-	GoVersionNumber             = "5.33.0" // @@##@@ auto-configured
+	GMAMapperProtocol=424      // @@##@@ auto-configured
+	GoVersionNumber="5.34.0" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
 	MaximumSupportedMapProtocol = 424
 	MaxServerMessageSize        = 60 * 1024 // don't send server messages bigger than this
