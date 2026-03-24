@@ -54,8 +54,8 @@ import (
 // The GMA Mapper Protocol version number current as of this build,
 // and protocol versions supported by this code.
 const (
-	GMAMapperProtocol=424      // @@##@@ auto-configured
-	GoVersionNumber="5.34.0" // @@##@@ auto-configured
+	GMAMapperProtocol           = 424      // @@##@@ auto-configured
+	GoVersionNumber             = "5.34.0" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
 	MaximumSupportedMapProtocol = 424
 	MaxServerMessageSize        = 60 * 1024 // don't send server messages bigger than this
@@ -156,6 +156,21 @@ func NewMapConnection(c net.Conn) MapConnection {
 		reader:   bufio.NewScanner(c),
 		writer:   bufio.NewWriter(c),
 		sendChan: make(chan string, 50),
+	}
+}
+
+func (c *MapConnection) IP() string {
+	switch v := c.conn.RemoteAddr().(type) {
+	case *net.IPAddr:
+		return v.IP.String()
+	case *net.TCPAddr:
+		return v.IP.String()
+	case *net.UDPAddr:
+		return v.IP.String()
+	case *net.IPNet:
+		return v.IP.String()
+	default:
+		return ""
 	}
 }
 

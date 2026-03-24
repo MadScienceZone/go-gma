@@ -49,6 +49,16 @@ type MapServer interface {
 	PrepareY2() (ServerStateMessagePayload, error)
 }
 
+type ClientLimits struct {
+	BanList []ClientLimitIdentity
+}
+
+type ClientLimitIdentity struct {
+	Username string
+	Address  string
+	Reason   string
+}
+
 // ClientPreamble contains information given to each client upon
 // connection to the server.
 type ClientPreamble struct {
@@ -60,6 +70,8 @@ type ClientPreamble struct {
 	Preamble  []string
 	PostAuth  []string
 	PostReady []string
+	//
+	Limits ClientLimits
 }
 
 // ClientConnection describes the connection to a single
@@ -732,6 +744,20 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 	}
 	c.Conn.Send(Protocol, GMAMapperProtocol)
 	if preamble != nil {
+		for _, banned := range preamble.Limits.BanList {
+			if banned.Username == "" && banned.Address != "" {
+				// we banned an IP, so we can handle that now
+				if c.Conn.IP() == banned.Address {
+					c.Logf("Denied login from banned client address %s", banned.Address)
+					c.Conn.Send(Denied, DeniedMessagePayload{Reason: "You have been banned from this server. " + banned.Reason})
+					c.Conn.Flush()
+					time.Sleep(time.Second * 2)
+					done <- fmt.Errorf("client IP banned")
+					return
+				}
+			}
+		}
+
 		for i, line := range preamble.Preamble {
 			c.debugf(DebugIO, "preamble line %d: %s", i, line)
 			c.Conn.sendRaw(line)
@@ -869,6 +895,18 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 					done <- fmt.Errorf("access denied")
 					return
 				}
+				for _, banned := range preamble.Limits.BanList {
+					if banned.Username == packet.User && (banned.Address == "" || banned.Address == c.Conn.IP()) {
+						// This user is banned (from a specific IP if that was specified)
+						c.Logf("Denied login from banned user %s", banned.Username)
+						c.Conn.sendJSON("DENIED", DeniedMessagePayload{Reason: "You have been banned from this server. " + banned.Reason})
+						c.Conn.Flush()
+						time.Sleep(time.Second * 2)
+						done <- fmt.Errorf("client user banned")
+						return
+					}
+				}
+
 				if newSecret := c.Server.GetPersonalCredentials(packet.User); newSecret != nil {
 					c.Auth.SetSecret(newSecret)
 				}

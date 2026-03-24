@@ -1910,7 +1910,14 @@ func (a *Application) managePreambleData() {
 						if endOfRecordPattern.MatchString(scanner.Text()) {
 							dataPacket.WriteString(scanner.Text())
 						}
-						if err := commitInitCommand(f[1], dataPacket, currentPreamble); err != nil {
+						if f[1] == "LIMIT" {
+							var data mapper.ClientLimits
+							if err = json.Unmarshal([]byte(dataPacket.String()), &data); err == nil {
+								a.clientPreamble.data.Limits = data
+							} else {
+								a.Logf("unable to interpret LIMIT record: %v", err)
+							}
+						} else if err := commitInitCommand(f[1], dataPacket, currentPreamble); err != nil {
 							a.Logf("error in initial command file: %v", err)
 							return
 						}
