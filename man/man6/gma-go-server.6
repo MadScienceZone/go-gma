@@ -402,6 +402,49 @@ that condition.
 '\" <</>>
 .TP
 '\" <<New>>
+.B LIMIT
+Imposes access limits on the server. The value for this item is a JSON object with the
+following field:
+'\" <<list>>
+'\" <</ital-is-var>>
+.RS
+.TP
+.BI BanList " (list of objects)"
+The value for this field is a list of JSON objects, each of which specifies a user and/or IP address
+which is forbidden from accessing the server. The fields of each element of this list include:
+'\" <<list>>
+.RS
+.TP
+.B Address
+An IP address to ban from access. This may have the same form as the IP address reported in the server
+logs for incoming client connections, except for the trailing colon and TCP port number. For example,
+it may include an IP4 address such as
+.RB \*(lq 10.26.42.128 \*(rq
+or an IP6 address in square brackets as in
+.RB \*(lq [::1] \*(rq.
+Wildcard patterns and IP ranges are not supported at this time.
+If
+.B Username
+is also specified, then only users logging in with that user name
+.I and
+coming from the specified IP address are banned. Otherwise, all connections from the given
+address are banned.
+.TP
+.B Username
+If this field is present and non-empty, any user authenticating with the given name is
+banned from access to the server. If
+.B Address
+is also given, that user is only banned if coming from that address; otherwise, they are banned
+regardless of where they are connecting from.
+.TP
+.B Reason
+If this field is present and non-empty, it is appended to the message sent to the user letting
+them know they are not allowed access to the server.
+.RE
+'\" <</>>
+.RE
+'\" <</>>
+.TP
 .B QOS
 Sets quality of service limits in the server. If a client session violates any of these
 limits, its session will be terminated immediately. Make sure that whatever values you
@@ -412,10 +455,10 @@ If any of these rules are not included in the
 .B QOS
 payload, that rule will not be enforced at all.
 '\" <<list>>
+'\" <</New>>
 .RS
 '\" <<Warning>>
 .TP 16
-'\" <</ital-is-var>>
 .BI MaxUsers " (int)"
 Sets the maximum number of users allowed to be logged in to the server at any one time. If not present
 or set to 0 (zero), then no limit is imposed. Otherwise, any attempt to log in will be denied if this
@@ -423,8 +466,9 @@ many users are already on the server.
 Although GM logins count against this total number, this limit does not prevent the GM from
 logging into the server.
 Not yet implemented.
-'\" <</ital-is-var>>
 '\" <</Warning>>
+'\" <<New>>
+'\" <</ital-is-var>>
 .TP
 .B QueryImage
 Reject clients which excessively ask for the same images after being informed of where

@@ -1972,6 +1972,7 @@ func (a *Application) managePreambleData() {
 			Preamble:  pp,
 			PostAuth:  pa,
 			PostReady: pr,
+			Limits:    a.clientPreamble.data.Limits,
 		}
 	}
 
