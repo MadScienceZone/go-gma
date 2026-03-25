@@ -1,12 +1,12 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.34.0                <!-- @@##@@ -->
- * Effective Date: 23-Mar-2026			<!-- @@##@@ -->
+ * This Package Version: 5.34.1                <!-- @@##@@ -->
+ * Effective Date: 24-Mar-2026			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 6.44		<!-- @@##@@ -->
- * GMA Mapper Version: 4.38.0		<!-- @@##@@ -->
+ * GMA Core API Library Version: 6.44.1		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.38.2		<!-- @@##@@ -->
  * GMA Mapper Protocol: 424		<!-- @@##@@ -->
  * GMA Mapper File Format: 23		<!-- @@##@@ -->
  * GMA Mapper Preferences File Format: 13 <!-- @@##@@ -->
@@ -28,6 +28,10 @@ Only run the scripts that are for server versions after the one your database fi
 | 5.34.0         | `scripts/upgrade-5.34.0` | Creates new field to track message deletion and rewrites all existing chat messages |
 
 Most of these scripts require the `sqlite3` command-line tool to be installed.
+
+## v5.34.1
+### Fixed
+ * The server lacked the means to block users and/or IPs. This has been implemented in the form of the new `LIMIT` stanza to the server init file.
 
 ## v5.34.0
 ### Added
