@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______      ___        __         #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \    /   )      /  \        #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \  / /) |      \/) )       #
-# | |      | || || || (___) | Assistant | (____        ___) / / (_) (_       | |       #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ ( (____   _)      | |       #
-# | | \_  )| |   | || (   ) |                 ) )         ) \     ) (        | |       #
-# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  /     | |   _  __) (_      #
-# (_______)|/     \||/     \|           \______/ (_)\______/      (_)  (_) \____/      #
+#  _______  _______  _______             _______     ______   _______     _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ (  ____ \   (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \| (    \/   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /| (____     | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ ( (_____ \    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) )   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\____) ) _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -778,6 +778,9 @@ type CreatureToken struct {
 }
 
 type CustomConditionModifier struct {
+	// If true, draw a line between the targeter and target
+	Tracer bool `json:",omitempty"`
+
 	// The custom target/condition type
 	Type string `json:",omitempty"`
 
@@ -2015,7 +2018,7 @@ func loadMapFile(input io.Reader, metaDataOnly bool) ([]any, MapMetaData, error)
 	return nil, meta, fmt.Errorf("invalid map file format: unexpected end of file")
 }
 
-// @[00]@| Go-GMA 5.34.1
+// @[00]@| Go-GMA 5.35.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
