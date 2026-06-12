@@ -29,6 +29,10 @@ Only run the scripts that are for server versions after the one your database fi
 
 Most of these scripts require the `sqlite3` command-line tool to be installed.
 
+## v5.35.0
+### Added
+ * Added `Tracer` field to custom condition markers for creatures.
+
 ## v5.34.1
 ### Fixed
  * The server lacked the means to block users and/or IPs. This has been implemented in the form of the new `LIMIT` stanza to the server init file.
