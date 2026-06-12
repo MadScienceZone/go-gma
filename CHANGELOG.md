@@ -1,7 +1,7 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.35.0                <!-- @@##@@ -->
+ * This Package Version: 5.35.1                <!-- @@##@@ -->
  * Effective Date: 12-Jun-2026			<!-- @@##@@ -->
 
 ## Compatibility
@@ -28,6 +28,10 @@ Only run the scripts that are for server versions after the one your database fi
 | 5.34.0         | `scripts/upgrade-5.34.0` | Creates new field to track message deletion and rewrites all existing chat messages |
 
 Most of these scripts require the `sqlite3` command-line tool to be installed.
+
+## v5.53.1
+### Fixed
+ * Added missing `Description` field to custom condition markers.
 
 ## v5.35.0
 ### Added

@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______     _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ (  ____ \   (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \| (    \/   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____        ___) /| (____     | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ ( (_____ \    | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )         ) \      ) )   |   / | |     #
-# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\____) ) _ |  (__) |     #
-# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
+#  _______  _______  _______             _______     ______   _______      __          #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ (  ____ \    /  \         #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \| (    \/    \/) )        #
+# | |      | || || || (___) | Assistant | (____        ___) /| (____        | |        #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ ( (_____ \       | |        #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) )      | |        #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\____) ) _  __) (_       #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_) \____/       #
 #                                                                                      #
 ########################################################################################
 */
@@ -790,6 +790,9 @@ type CustomConditionModifier struct {
 
 	// The color and dash pattern used for the player's local marker in the same format as for DSM markers.
 	Color string `json:",omitempty"`
+
+	// Text description of the effect of this condition on the target creature.
+	Description string `json:",omitempty"`
 
 	// List of die-roller modifier names to enable for this target when they are the active target for die rolls.
 	Modifiers []string `json:",omitempty"`
@@ -2018,7 +2021,7 @@ func loadMapFile(input io.Reader, metaDataOnly bool) ([]any, MapMetaData, error)
 	return nil, meta, fmt.Errorf("invalid map file format: unexpected end of file")
 }
 
-// @[00]@| Go-GMA 5.35.0
+// @[00]@| Go-GMA 5.35.1
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
