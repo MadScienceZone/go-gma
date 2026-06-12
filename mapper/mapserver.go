@@ -744,8 +744,11 @@ func (c *ClientConnection) loginClient(ctx context.Context, done chan error, ser
 	}
 	c.Conn.Send(Protocol, GMAMapperProtocol)
 	if preamble != nil {
+		c.Logf("banlist %v", preamble.Limits.BanList)
 		for _, banned := range preamble.Limits.BanList {
+			c.Logf("checking user %s addr %s vs my ip %s", banned.Username, banned.Address, c.Conn.IP())
 			if banned.Username == "" && banned.Address != "" {
+				c.Logf("ok checking user %s addr %s vs my ip %s", banned.Username, banned.Address, c.Conn.IP())
 				// we banned an IP, so we can handle that now
 				if c.Conn.IP() == banned.Address {
 					c.Logf("Denied login from banned client address %s", banned.Address)

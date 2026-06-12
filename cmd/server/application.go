@@ -1911,11 +1911,13 @@ func (a *Application) managePreambleData() {
 							dataPacket.WriteString(scanner.Text())
 						}
 						if f[1] == "LIMIT" {
+							a.Logf("LIMIT record %s", dataPacket.String())
 							var data mapper.ClientLimits
 							if err = json.Unmarshal([]byte(dataPacket.String()), &data); err == nil {
 								a.clientPreamble.data.Limits = data
+								a.Logf("Stored LIMIT struct %v", data)
 							} else {
-								a.Logf("unable to interpret LIMIT record: %v", err)
+								a.Logf("unable to interpret LIMIT record %s: %v", dataPacket.String(), err)
 							}
 						} else if err := commitInitCommand(f[1], dataPacket, currentPreamble); err != nil {
 							a.Logf("error in initial command file: %v", err)
@@ -1972,6 +1974,7 @@ func (a *Application) managePreambleData() {
 			Preamble:  pp,
 			PostAuth:  pa,
 			PostReady: pr,
+			Limits: a.clientPreamble.data.Limits,
 		}
 	}
 
