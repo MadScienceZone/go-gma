@@ -29,7 +29,11 @@ Only run the scripts that are for server versions after the one your database fi
 
 Most of these scripts require the `sqlite3` command-line tool to be installed.
 
-## v5.53.1
+## v5.36.0
+### Added
+ * Updated to protocol 426, which changed the format of the `TargetedModifiers` field for creatures.
+
+## v5.35.1
 ### Fixed
  * Added missing `Description` field to custom condition markers.
 
