@@ -774,15 +774,12 @@ type CreatureToken struct {
 	// If this creature has designated other creatures in some ways such as
 	// studied targets, smite evil, or other cases where special modifiers apply,
 	// that is noted here.
-	TargetedModifiers map[string][]CustomConditionModifier `json:",omitempty"`
+	TargetedModifiers map[string]map[string]CustomConditionModifier `json:",omitempty"`
 }
 
 type CustomConditionModifier struct {
 	// If true, draw a line between the targeter and target
 	Tracer bool `json:",omitempty"`
-
-	// The custom target/condition type
-	Type string `json:",omitempty"`
 
 	// The marker shape the player is using locally to mark their target, in the same manner
 	// used for the DSM markers
