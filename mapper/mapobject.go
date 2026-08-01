@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   _______      __          #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ (  ____ \    /  \         #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \| (    \/    \/) )        #
-# | |      | || || || (___) | Assistant | (____        ___) /| (____        | |        #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ ( (_____ \       | |        #
-# | | \_  )| |   | || (   ) |                 ) )         ) \      ) )      | |        #
-# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\____) ) _  __) (_       #
-# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_) \____/       #
+#  _______  _______  _______             _______     ______    ______     _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \  / ____ \   (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \( (    \/   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /| (____     | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ ( |  ___ \    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \| (   ) )   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  /( (___) ) _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/  \_____/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -774,15 +774,12 @@ type CreatureToken struct {
 	// If this creature has designated other creatures in some ways such as
 	// studied targets, smite evil, or other cases where special modifiers apply,
 	// that is noted here.
-	TargetedModifiers map[string]CustomConditionModifier `json:",omitempty"`
+	TargetedModifiers map[string]map[string]CustomConditionModifier `json:",omitempty"`
 }
 
 type CustomConditionModifier struct {
 	// If true, draw a line between the targeter and target
 	Tracer bool `json:",omitempty"`
-
-	// The custom target/condition type
-	Type string `json:",omitempty"`
 
 	// The marker shape the player is using locally to mark their target, in the same manner
 	// used for the DSM markers
@@ -2021,7 +2018,7 @@ func loadMapFile(input io.Reader, metaDataOnly bool) ([]any, MapMetaData, error)
 	return nil, meta, fmt.Errorf("invalid map file format: unexpected end of file")
 }
 
-// @[00]@| Go-GMA 5.35.1
+// @[00]@| Go-GMA 5.36.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
