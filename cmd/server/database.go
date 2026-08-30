@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______    ______     _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \  / ____ \   (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \( (    \/   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____        ___) /| (____     | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ ( |  ___ \    | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )         ) \| (   ) )   |   / | |     #
-# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  /( (___) ) _ |  (__) |     #
-# (_______)|/     \||/     \|           \______/ (_)\______/  \_____/ (_)(_______)     #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  )   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /    /  /    | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (    /  /     | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \  /  /      |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  / /  /     _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/  \_/     (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -589,7 +589,7 @@ func (a *Application) AddToChatHistory(id int, chatType mapper.ServerMessage, ch
 		if p, ok := chatData.(mapper.RollResultMessagePayload); ok {
 			sender = p.Sender
 		} else {
-			a.Logf("AddToChatHistory: id=%d, internal error: unexpected data type %T where ROLl message type expected", id, chatData)
+			a.Logf("AddToChatHistory: id=%d, internal error: unexpected data type %T where ROLL message type expected", id, chatData)
 			return fmt.Errorf("internal error: unexpected data type %T where ROLl message type expected", chatData)
 		}
 
@@ -738,7 +738,7 @@ func (a *Application) FilterAudio(f mapper.FilterAudioMessagePayload) error {
 	return nil
 }
 
-// @[00]@| Go-GMA 5.36.0
+// @[00]@| Go-GMA 5.37.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

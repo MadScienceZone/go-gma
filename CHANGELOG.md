@@ -1,15 +1,15 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.36.0                <!-- @@##@@ -->
- * Effective Date: 01-Aug-2026			<!-- @@##@@ -->
+ * This Package Version: 5.37.0                <!-- @@##@@ -->
+ * Effective Date: 29-Aug-2026			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 6.46.1		<!-- @@##@@ -->
- * GMA Mapper Version: 4.39.2		<!-- @@##@@ -->
- * GMA Mapper Protocol: 426		<!-- @@##@@ -->
- * GMA Mapper File Format: 23		<!-- @@##@@ -->
- * GMA Mapper Preferences File Format: 13 <!-- @@##@@ -->
+ * GMA Core API Library Version: 6.47.1		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.40.3		<!-- @@##@@ -->
+ * GMA Mapper Protocol: 427		<!-- @@##@@ -->
+ * GMA Mapper File Format: 24		<!-- @@##@@ -->
+ * GMA Mapper Preferences File Format: 15 <!-- @@##@@ -->
  * GMA User Preferences File Format: 6 <!-- @@##@@ -->
 
 # Notice
@@ -28,6 +28,10 @@ Only run the scripts that are for server versions after the one your database fi
 | 5.34.0         | `scripts/upgrade-5.34.0` | Creates new field to track message deletion and rewrites all existing chat messages |
 
 Most of these scripts require the `sqlite3` command-line tool to be installed.
+
+## v5.37.0
+### Added
+ * Updated to protocol 427, which adds support for attribution for delegated die rolls.
 
 ## v5.36.0
 ### Added
