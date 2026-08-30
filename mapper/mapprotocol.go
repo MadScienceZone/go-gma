@@ -57,7 +57,7 @@ const (
 	GMAMapperProtocol=427      // @@##@@ auto-configured
 	GoVersionNumber="5.37.0" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
-	MaximumSupportedMapProtocol = 426
+	MaximumSupportedMapProtocol = 427
 	MaxServerMessageSize        = 60 * 1024 // don't send server messages bigger than this
 	MaxAllowedGiantPacketSize   = 1024 * 1024 * 10
 )
