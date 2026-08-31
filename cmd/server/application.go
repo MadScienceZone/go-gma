@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______    ______     _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \  / ____ \   (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \( (    \/   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____        ___) /| (____     | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ ( |  ___ \    | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )         ) \| (   ) )   |   / | |     #
-# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  /( (___) ) _ |  (__) |     #
-# (_______)|/     \||/     \|           \______/ (_)\______/  \_____/ (_)(_______)     #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  )   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /    /  /    | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (    /  /     | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \  /  /      |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  / /  /     _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/  \_/     (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -831,6 +831,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				RequestID: p.RequestID,
 				Type:      p.Type,
 				Targets:   p.Targets,
+				For:       p.For,
 				Result: dice.StructuredResult{
 					InvalidRequest: true,
 					Details: dice.StructuredDescriptionSet{
@@ -858,6 +859,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				ToGM:       p.ToGM,
 				Sent:       time.Now(),
 			},
+			For:       p.For,
 			Title:     label,
 			RequestID: p.RequestID,
 			Type:      p.Type,
@@ -903,6 +905,7 @@ func (a *Application) HandleServerMessage(payload mapper.MessagePayload, request
 				Result:    receiptResult,
 				Type:      p.Type,
 				Targets:   p.Targets,
+				For:       p.For,
 			}
 			if err := a.AddToChatHistory(receiptMessageID, mapper.RollResult, receiptPayload); err != nil {
 				a.Logf("unable to add RollResult receipt to chat history: %v", err)

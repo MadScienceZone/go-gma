@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______    ______     _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \  / ____ \   (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \( (    \/   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____        ___) /| (____     | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ ( |  ___ \    | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )         ) \| (   ) )   |   / | |     #
-# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  /( (___) ) _ |  (__) |     #
-# (_______)|/     \||/     \|           \______/ (_)\______/  \_____/ (_)(_______)     #
+#  _______  _______  _______             _______     ______   ______      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  )   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /    /  /    | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (    /  /     | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \  /  /      |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  / /  /     _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/  \_/     (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -2670,6 +2670,9 @@ type RollDiceMessagePayload struct {
 
 	// Die-roll type
 	Type string `json:",omitempty"`
+
+	// If requesting for someone else, whom?
+	For string `json:",omitempty"`
 }
 
 // Predefined values for Type field of RollDiceMessagePayload
@@ -2758,6 +2761,9 @@ type RollResultMessagePayload struct {
 
 	// The die-roll type
 	Type string `json:",omitempty"`
+
+	// If the request was from one user for another, indicate this
+	For string `json:",omitempty"`
 }
 
 //  ____  _          ____                     _
@@ -4489,7 +4495,7 @@ func (c *Connection) CheckVersionOf(packageName, myVersionNumber string) (*Packa
 	return availableVersion, nil
 }
 
-// @[00]@| Go-GMA 5.36.0
+// @[00]@| Go-GMA 5.37.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
