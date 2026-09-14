@@ -561,7 +561,7 @@ func (l dieLabel) computeMaxValue(s *evalStack) error {
 }
 
 func (l dieLabel) setMisfortune(_ bool) {}
-func (l dieLabel) setFortune(_ bool) {}
+func (l dieLabel) setFortune(_ bool)    {}
 func (l dieLabel) lastValue() int {
 	return 0
 }
@@ -612,7 +612,7 @@ func (o dieOperator) computeMaxValue(s *evalStack) error {
 }
 
 func (l dieOperator) setMisfortune(_ bool) {}
-func (l dieOperator) setFortune(_ bool) {}
+func (l dieOperator) setFortune(_ bool)    {}
 func (o dieOperator) lastValue() int {
 	return 0
 }
@@ -648,7 +648,7 @@ func (b dieBeginGroup) computeMaxValue(s *evalStack) error {
 }
 
 func (l dieBeginGroup) setMisfortune(_ bool) {}
-func (l dieBeginGroup) setFortune(_ bool) {}
+func (l dieBeginGroup) setFortune(_ bool)    {}
 func (b dieBeginGroup) lastValue() int {
 	return 0
 }
@@ -685,7 +685,7 @@ func (b dieEndGroup) computeMaxValue(s *evalStack) error {
 }
 
 func (l dieEndGroup) setMisfortune(_ bool) {}
-func (l dieEndGroup) setFortune(_ bool) {}
+func (l dieEndGroup) setFortune(_ bool)    {}
 func (b dieEndGroup) lastValue() int {
 	return 0
 }
@@ -724,7 +724,7 @@ func (d *dieConstant) computeMaxValue(s *evalStack) error {
 }
 
 func (l *dieConstant) setMisfortune(_ bool) {}
-func (l *dieConstant) setFortune(_ bool) {}
+func (l *dieConstant) setFortune(_ bool)    {}
 func (d *dieConstant) lastValue() int {
 	return int(d.Value)
 }
@@ -1645,10 +1645,10 @@ func (d *Dice) StructuredDescribeRoll(options ...func(*sdrOptions)) ([]Structure
 // Note that it is not expected for the user to set or query these structures
 // directly. Use the provided functions instead.
 type DieRoller struct {
-	Confirm bool // Are we supposed to confirm potential critical rolls?
-	DoMax   bool // Maximize all die rolls?
-	Misfortune bool // Force all d20s to "worst of 2"
-	Fortune bool // Force all d20s to "best of 2"
+	Confirm        bool // Are we supposed to confirm potential critical rolls?
+	DoMax          bool // Maximize all die rolls?
+	Misfortune     bool // Force all d20s to "worst of 2"
+	Fortune        bool // Force all d20s to "best of 2"
 	NoStackFortune bool // Don't stack fortune effects
 
 	// If we need to repeatedly roll dice, we will either do so RepeatFor
@@ -1856,7 +1856,7 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 						d.FailMessage = "MISS"
 					}
 				} else if fields := reModFortune.FindStringSubmatch(majorPieces[i]); fields != nil {
-					// 
+					//
 					// MODIFIER
 					//  | [m[is]]f[ortune]
 					//
@@ -2129,7 +2129,7 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 // To prevent getting caught in an infinite loop, a maximum of  100  rolls
 // will be made regardless of repeat, total, and until options.
 //
-//  | f[ortune][*]
+//	| f[ortune][*]
 //
 // Rolls with fortune. Fortune causes all "d20" rolls
 // in the die roll expression to have an implicit "best of 2" added
@@ -2145,7 +2145,7 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 // "best of" or "worst of" modifier that the d20 rolls had previously
 // are REPLACED by the new "best of 2" imposed by the fortune option.
 //
-//  | m[is]f[ortune][*]
+//	| m[is]f[ortune][*]
 //
 // Rolls with misfortune. This is just like fortune, except in reverse.
 // It adds a "worst of 2" to all d20 rolls in the expression.
@@ -2654,7 +2654,7 @@ func (d *DieRoller) rollDice(repeatIter, repeatCount, repeatTotal int) (int, []S
 	} else if d.Misfortune {
 		d.d.setMisfortune(d.NoStackFortune)
 	}
-		
+
 	if d.d == nil {
 		return 0, nil, repeatTotal, fmt.Errorf("no defined Dice object to consume")
 	}
@@ -2902,7 +2902,7 @@ func (sr StructuredDescriptionSet) Text() (string, error) {
 		case "dc":
 			fmt.Fprintf(&t, "DC %s ", r.Value)
 
-		case "diespec", "maximized", "operator":
+		case "diespec", "maximized", "operator", "fortune", "misfortune":
 			fmt.Fprintf(&t, "%s", r.Value)
 
 		case "discarded":
@@ -3299,7 +3299,11 @@ meaning of the whole thing. Each option begins with a vertical bar (**|**) chara
 
 **|dc** //n// (Indicate that the roll was a “success” if the result was at least //n//.)
 
+**|fortune**   (Roll all d20s twice, taking better result; use **fortune\.*** to avoid stacking)
+
 **|maximized** (All die rolls are forced to their maximum possible values.)
+
+**|misfortune**   (Roll all d20s twice, taking worse result; use **misfortune\.*** to avoid stacking)
 
 **|repeat** //n// (Roll //n// times.)
 

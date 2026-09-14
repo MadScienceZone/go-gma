@@ -84,7 +84,7 @@ import (
 	"github.com/MadScienceZone/go-gma/v5/text"
 )
 
-const GoVersionNumber="5.37.0" //@@##@@
+const GoVersionNumber = "5.37.0" //@@##@@
 
 func main() {
 	var err error
@@ -117,7 +117,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		fmt.Print(helpText)
+		fmt.Println(helpText)
 		os.Exit(0)
 	}
 
