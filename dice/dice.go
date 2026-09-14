@@ -543,6 +543,10 @@ type dieComponent interface {
 	// 0 is returned. The second return value is the number of sides on the die.
 	// Thus, a natural 3 on a d20 would be returned as (3, 20).
 	naturalRoll() (int, int)
+
+	// Sets fortune or misfortune mode on the d20s in the dice found in the set.
+	setMisfortune(bool)
+	setFortune(bool)
 }
 
 // dieLabel represents a bare label appearing outside the normal expression context.
@@ -556,6 +560,8 @@ func (l dieLabel) computeMaxValue(s *evalStack) error {
 	return nil
 }
 
+func (l dieLabel) setMisfortune(_ bool) {}
+func (l dieLabel) setFortune(_ bool) {}
 func (l dieLabel) lastValue() int {
 	return 0
 }
@@ -605,6 +611,8 @@ func (o dieOperator) computeMaxValue(s *evalStack) error {
 	return o.compute(s)
 }
 
+func (l dieOperator) setMisfortune(_ bool) {}
+func (l dieOperator) setFortune(_ bool) {}
 func (o dieOperator) lastValue() int {
 	return 0
 }
@@ -639,6 +647,8 @@ func (b dieBeginGroup) computeMaxValue(s *evalStack) error {
 	return b.compute(s)
 }
 
+func (l dieBeginGroup) setMisfortune(_ bool) {}
+func (l dieBeginGroup) setFortune(_ bool) {}
 func (b dieBeginGroup) lastValue() int {
 	return 0
 }
@@ -674,6 +684,8 @@ func (b dieEndGroup) computeMaxValue(s *evalStack) error {
 	return b.compute(s)
 }
 
+func (l dieEndGroup) setMisfortune(_ bool) {}
+func (l dieEndGroup) setFortune(_ bool) {}
 func (b dieEndGroup) lastValue() int {
 	return 0
 }
@@ -711,6 +723,8 @@ func (d *dieConstant) computeMaxValue(s *evalStack) error {
 	return d.compute(s)
 }
 
+func (l *dieConstant) setMisfortune(_ bool) {}
+func (l *dieConstant) setFortune(_ bool) {}
 func (d *dieConstant) lastValue() int {
 	return int(d.Value)
 }
@@ -889,6 +903,56 @@ func (d *dieSpec) computeMaxValue(s *evalStack) error {
 	d.Value = reduceSums(d.History)[0]
 	s.push(float64(d.Value))
 	return nil
+}
+
+func (d *dieSpec) setMisfortune(replace bool) {
+	if d.Sides == 20 {
+		if replace {
+			d.Rerolls = 1
+			d.BestReroll = false
+			return
+		}
+
+		if d.Rerolls > 0 {
+			if d.BestReroll {
+				// we're already rolling with fortune; take it down a notch
+				// this counters fortune or dampens a stacked fortune
+				d.Rerolls--
+			} else {
+				// we're already rolling with misfortune; stack them up
+				d.Rerolls++
+			}
+		} else {
+			// start misfortune
+			d.Rerolls = 1
+			d.BestReroll = false
+		}
+	}
+}
+
+func (d *dieSpec) setFortune(replace bool) {
+	if d.Sides == 20 {
+		if replace {
+			d.Rerolls = 1
+			d.BestReroll = true
+			return
+		}
+
+		if d.Rerolls > 0 {
+			if d.BestReroll {
+				// we're already rolling with fortune; stack them up
+				d.Rerolls++
+			} else {
+				// we're already rolling with misfortune; reduce it. This
+				// will counter a single misfortune or dampen a stacked one.
+				d.Rerolls--
+			}
+		} else {
+			// start fortune
+			d.Rerolls = 1
+			d.BestReroll = true
+		}
+	}
 }
 
 func (d *dieSpec) lastValue() int {
@@ -1583,6 +1647,9 @@ func (d *Dice) StructuredDescribeRoll(options ...func(*sdrOptions)) ([]Structure
 type DieRoller struct {
 	Confirm bool // Are we supposed to confirm potential critical rolls?
 	DoMax   bool // Maximize all die rolls?
+	Misfortune bool // Force all d20s to "worst of 2"
+	Fortune bool // Force all d20s to "best of 2"
+	NoStackFortune bool // Don't stack fortune effects
 
 	// If we need to repeatedly roll dice, we will either do so RepeatFor
 	// times (if > 0), or until the result meets or exceeds RepeatUntil
@@ -1699,6 +1766,9 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 	d.sfOpt = ""
 	d.SuccessMessage = ""
 	d.FailMessage = ""
+	d.Misfortune = false
+	d.Fortune = false
+	d.NoStackFortune = false
 	d.Template = ""
 	d.Permutations = nil
 	d.RepeatUntil = 0
@@ -1720,6 +1790,7 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 	reModSF := regexp.MustCompile(`^\s*sf(?:\s+(\S.*?)(?:/(\S.*?))?)?\s*$`)
 	rePermutations := regexp.MustCompile(`\{(.*?)\}`)
 	rePctRoll := regexp.MustCompile(`^\s*(\d+)%(.*)$`)
+	reModFortune := regexp.MustCompile(`^\s*(m(?:is)?)?f(?:ortune)?(\*)?\s*$`)
 
 	//
 	// Convert <= and >= so we don't confuse them with the = that indicates a title string
@@ -1783,6 +1854,19 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 					}
 					if d.FailMessage == "" {
 						d.FailMessage = "MISS"
+					}
+				} else if fields := reModFortune.FindStringSubmatch(majorPieces[i]); fields != nil {
+					// 
+					// MODIFIER
+					//  | [m[is]]f[ortune]
+					//
+					if fields[1] == "" {
+						d.Fortune = true
+					} else {
+						d.Misfortune = true
+					}
+					if fields[2] != "" {
+						d.NoStackFortune = true
 					}
 				} else if fields := reModUntilTotal.FindStringSubmatch(majorPieces[i]); fields != nil {
 					//
@@ -2045,6 +2129,28 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 // To prevent getting caught in an infinite loop, a maximum of  100  rolls
 // will be made regardless of repeat, total, and until options.
 //
+//  | f[ortune][*]
+//
+// Rolls with fortune. Fortune causes all "d20" rolls
+// in the die roll expression to have an implicit "best of 2" added
+// to them, causing each d20 to be rolled twice, taking the better
+// result. If there was already a "best of" or "worst of" modifier
+// on the d20 roll, it is MODIFIED by this condition. Thus, if the
+// original expression was "d20 worst of 2+10" and you add "|fortune"
+// to the end, that counters the "worst of" (they cancel each other).
+// On the other hand, if it already had a "best of 2", they would "stack",
+// resulting in an effective "best of 3" instead. The option may be
+// abbreviated to "f". If an asterisk (*) follows the option (i.e.,
+// "|fortune*" or "|f*"), then this stacking does not occur, and any
+// "best of" or "worst of" modifier that the d20 rolls had previously
+// are REPLACED by the new "best of 2" imposed by the fortune option.
+//
+//  | m[is]f[ortune][*]
+//
+// Rolls with misfortune. This is just like fortune, except in reverse.
+// It adds a "worst of 2" to all d20 rolls in the expression.
+// It may be abbreviated to "mfortune", "misf", or "mf".
+//
 // Anywhere  in  the  string  you may introduce a combination specifier in
 // curly braces as “{<a>/<b>/<c>/...}”.  This will repeat the overall die roll
 // expression once for each of the values <a>, <b>, <c>, etc., substituting each
@@ -2251,6 +2357,32 @@ func (d *DieRoller) ExplainSecretRoll(spec, notice string) (string, StructuredRe
 				StructuredDescription{Type: "sf", Value: d.sfOpt},
 			)
 		}
+		if d.Misfortune {
+			if d.NoStackFortune {
+				thisResult = append(thisResult,
+					StructuredDescription{Type: "moddelim", Value: "|"},
+					StructuredDescription{Type: "misfortune", Value: "misfortune*"},
+				)
+			} else {
+				thisResult = append(thisResult,
+					StructuredDescription{Type: "moddelim", Value: "|"},
+					StructuredDescription{Type: "misfortune", Value: "misfortune"},
+				)
+			}
+		}
+		if d.Fortune {
+			if d.NoStackFortune {
+				thisResult = append(thisResult,
+					StructuredDescription{Type: "moddelim", Value: "|"},
+					StructuredDescription{Type: "fortune", Value: "fortune*"},
+				)
+			} else {
+				thisResult = append(thisResult,
+					StructuredDescription{Type: "moddelim", Value: "|"},
+					StructuredDescription{Type: "fortune", Value: "fortune"},
+				)
+			}
+		}
 	}
 
 	//
@@ -2425,6 +2557,32 @@ func (d *DieRoller) rollDice(repeatIter, repeatCount, repeatTotal int) (int, []S
 				StructuredDescription{Type: "sf", Value: d.sfOpt},
 			)
 		}
+		if d.Misfortune {
+			if d.NoStackFortune {
+				thisResult = append(thisResult,
+					StructuredDescription{Type: "moddelim", Value: "|"},
+					StructuredDescription{Type: "misfortune", Value: "misfortune*"},
+				)
+			} else {
+				thisResult = append(thisResult,
+					StructuredDescription{Type: "moddelim", Value: "|"},
+					StructuredDescription{Type: "misfortune", Value: "misfortune"},
+				)
+			}
+		}
+		if d.Fortune {
+			if d.NoStackFortune {
+				thisResult = append(thisResult,
+					StructuredDescription{Type: "moddelim", Value: "|"},
+					StructuredDescription{Type: "fortune", Value: "fortune*"},
+				)
+			} else {
+				thisResult = append(thisResult,
+					StructuredDescription{Type: "moddelim", Value: "|"},
+					StructuredDescription{Type: "fortune", Value: "fortune"},
+				)
+			}
+		}
 	}
 
 	//
@@ -2488,6 +2646,15 @@ func (d *DieRoller) rollDice(repeatIter, repeatCount, repeatTotal int) (int, []S
 	//
 	// Enough of the preliminaries, let's get working.
 	//
+	if d.Fortune {
+		if !d.Misfortune {
+			// if both were set, they cancel out
+			d.d.setFortune(d.NoStackFortune)
+		}
+	} else if d.Misfortune {
+		d.d.setMisfortune(d.NoStackFortune)
+	}
+		
 	if d.d == nil {
 		return 0, nil, repeatTotal, fmt.Errorf("no defined Dice object to consume")
 	}
@@ -2659,6 +2826,18 @@ func (d *DieRoller) IsNaturalMax() (result bool) {
 // dice, etc.)
 func (d *DieRoller) IsNatural1() (result bool) {
 	return d.isNatural(false)
+}
+
+func (d *Dice) setMisfortune(replace bool) {
+	for _, die := range d.multiDice {
+		die.setMisfortune(replace)
+	}
+}
+
+func (d *Dice) setFortune(replace bool) {
+	for _, die := range d.multiDice {
+		die.setFortune(replace)
+	}
 }
 
 func (d *DieRoller) isNatural(checkForMax bool) (result bool) {
