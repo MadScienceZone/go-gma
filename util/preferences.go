@@ -691,6 +691,10 @@ func DefaultPreferences() UserPreferences {
 						FontName: "Important",
 						Format:   "(%s)",
 					},
+					"fortune": DieRollComponent{
+						FG:       ColorSet{Dark: "#aaaaaa", Light: "#888888"},
+						FontName: "Special",
+					},
 					"from": DieRollComponent{
 						FG:       ColorSet{Dark: "cyan", Light: "blue"},
 						FontName: "Normal",
@@ -742,6 +746,10 @@ func DefaultPreferences() UserPreferences {
 						FG:       ColorSet{Dark: "#aaaaaa", Light: "#888888"},
 						FontName: "Special",
 						Format:   "min %s",
+					},
+					"misfortune": DieRollComponent{
+						FG:       ColorSet{Dark: "#aaaaaa", Light: "#888888"},
+						FontName: "Special",
 					},
 					"moddelim": DieRollComponent{
 						FG:       ColorSet{Dark: "#fffb00", Light: "#f05b00"},

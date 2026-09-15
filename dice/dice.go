@@ -1127,14 +1127,20 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 			d.desc = strings.TrimSpace(majorPieces[0])
 			for _, modifier := range majorPieces[1:] {
 				if m := reMin.FindStringSubmatch(modifier); m != nil {
-					d.MinValue, err = strconv.Atoi(m[1])
+					minv, err := strconv.Atoi(m[1])
 					if err != nil {
 						return nil, err
 					}
+					if d.MinValue < minv {
+						d.MinValue = minv
+					}
 				} else if m := reMax.FindStringSubmatch(modifier); m != nil {
-					d.MaxValue, err = strconv.Atoi(m[1])
+					maxv, err := strconv.Atoi(m[1])
 					if err != nil {
 						return nil, err
+					}
+					if d.MaxValue == 0 || d.MaxValue > maxv {
+						d.MaxValue = maxv
 					}
 				} else {
 					return nil, fmt.Errorf("invalid global modifier %s", modifier)
@@ -1692,7 +1698,7 @@ type DieRoller struct {
 	Postfix []string
 
 	// fortune/misfortune configuration history
-	Fortunes []string
+	Fortunes    []string
 	Misfortunes []string
 
 	generator *rand.Rand
@@ -1836,15 +1842,21 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 					//
 					d.Confirm = true
 					if fields[1] != "" {
-						d.critThreat, err = strconv.Atoi(fields[1])
+						threat, err := strconv.Atoi(fields[1])
 						if err != nil {
 							return fmt.Errorf("value error in die roll confirm expression: %v", err)
 						}
+						if d.critThreat == 0 || d.critThreat > threat {
+							d.critThreat = threat
+						}
 					}
 					if fields[2] != "" {
-						d.critBonus, err = strconv.Atoi(fields[2])
+						bonus, err := strconv.Atoi(fields[2])
 						if err != nil {
 							return fmt.Errorf("value error in die roll confirm expression: %v", err)
+						}
+						if d.critBonus < bonus {
+							d.critBonus = bonus
 						}
 					}
 					//
@@ -1865,7 +1877,7 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 					if fields[2] == "" {
 						d.Fortunes = append(d.Fortunes, fields[1])
 					} else {
-						d.Misfortunes = append(d.Fortunes, fields[1])
+						d.Misfortunes = append(d.Misfortunes, fields[1])
 					}
 					if fields[3] != "" {
 						d.NoStackFortune = true
@@ -1876,16 +1888,23 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 					//  | total <n>
 					// Repeat rolling until the cumulative total is at least <n>
 					//
-					d.RepeatUntilTotal, err = strconv.Atoi(fields[1])
+					rut, err := strconv.Atoi(fields[1])
+					if err != nil {
+						return fmt.Errorf("value error in die roll total clause: %v", err)
+					}
+					d.RepeatUntilTotal += rut
 				} else if fields := reModUntil.FindStringSubmatch(majorPieces[i]); fields != nil {
 					//
 					// MODIFIER
 					//  | until <n>
 					// Repeat rolling until reaching limit <n>
 					//
-					d.RepeatUntil, err = strconv.Atoi(fields[1])
+					run, err := strconv.Atoi(fields[1])
 					if err != nil {
 						return fmt.Errorf("value error in die roll until clause: %v", err)
+					}
+					if d.RepeatUntil < run {
+						d.RepeatUntil = run
 					}
 				} else if fields := reModRepeat.FindStringSubmatch(majorPieces[i]); fields != nil {
 					//
@@ -1893,9 +1912,14 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 					//  | repeat <n>
 					// Repeat the die roll <n> times
 					//
-					d.RepeatFor, err = strconv.Atoi(fields[1])
+					rf, err := strconv.Atoi(fields[1])
 					if err != nil {
 						return fmt.Errorf("value error in die roll repeat clause: %v", err)
+					}
+					if d.RepeatFor == 0 {
+						d.RepeatFor = rf
+					} else {
+						d.RepeatFor *= rf
 					}
 				} else if reModMaximized.MatchString(majorPieces[i]) {
 					//
@@ -1910,9 +1934,13 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 					//  | DC <n>
 					// Seek a value at least <n>
 					//
-					d.DC, err = strconv.Atoi(fields[1])
+					dc, err := strconv.Atoi(fields[1])
 					if err != nil {
 						return fmt.Errorf("value error in die roll DC clause: %v", err)
+					}
+					// If dc is given multiple times, we want the lowest of them
+					if d.DC == 0 || d.DC > dc {
+						d.DC = dc
 					}
 				} else if fields := reModSF.FindStringSubmatch(majorPieces[i]); fields != nil {
 					//
@@ -2359,31 +2387,17 @@ func (d *DieRoller) ExplainSecretRoll(spec, notice string) (string, StructuredRe
 				StructuredDescription{Type: "sf", Value: d.sfOpt},
 			)
 		}
-		if d.Misfortune {
-			if d.NoStackFortune {
-				thisResult = append(thisResult,
-					StructuredDescription{Type: "moddelim", Value: "|"},
-					StructuredDescription{Type: "misfortune", Value: "misfortune*"},
-				)
-			} else {
-				thisResult = append(thisResult,
-					StructuredDescription{Type: "moddelim", Value: "|"},
-					StructuredDescription{Type: "misfortune", Value: "misfortune"},
-				)
-			}
+		for _, f := range d.Misfortunes {
+			thisResult = append(thisResult,
+				StructuredDescription{Type: "moddelim", Value: "|"},
+				StructuredDescription{Type: "misfortune", Value: f},
+			)
 		}
-		if d.Fortune {
-			if d.NoStackFortune {
-				thisResult = append(thisResult,
-					StructuredDescription{Type: "moddelim", Value: "|"},
-					StructuredDescription{Type: "fortune", Value: "fortune*"},
-				)
-			} else {
-				thisResult = append(thisResult,
-					StructuredDescription{Type: "moddelim", Value: "|"},
-					StructuredDescription{Type: "fortune", Value: "fortune"},
-				)
-			}
+		for _, f := range d.Fortunes {
+			thisResult = append(thisResult,
+				StructuredDescription{Type: "moddelim", Value: "|"},
+				StructuredDescription{Type: "fortune", Value: f},
+			)
 		}
 	}
 
@@ -2559,31 +2573,17 @@ func (d *DieRoller) rollDice(repeatIter, repeatCount, repeatTotal int) (int, []S
 				StructuredDescription{Type: "sf", Value: d.sfOpt},
 			)
 		}
-		if d.Misfortune {
-			if d.NoStackFortune {
-				thisResult = append(thisResult,
-					StructuredDescription{Type: "moddelim", Value: "|"},
-					StructuredDescription{Type: "misfortune", Value: "misfortune*"},
-				)
-			} else {
-				thisResult = append(thisResult,
-					StructuredDescription{Type: "moddelim", Value: "|"},
-					StructuredDescription{Type: "misfortune", Value: "misfortune"},
-				)
-			}
+		for _, f := range d.Misfortunes {
+			thisResult = append(thisResult,
+				StructuredDescription{Type: "moddelim", Value: "|"},
+				StructuredDescription{Type: "misfortune", Value: f},
+			)
 		}
-		if d.Fortune {
-			if d.NoStackFortune {
-				thisResult = append(thisResult,
-					StructuredDescription{Type: "moddelim", Value: "|"},
-					StructuredDescription{Type: "fortune", Value: "fortune*"},
-				)
-			} else {
-				thisResult = append(thisResult,
-					StructuredDescription{Type: "moddelim", Value: "|"},
-					StructuredDescription{Type: "fortune", Value: "fortune"},
-				)
-			}
+		for _, f := range d.Fortunes {
+			thisResult = append(thisResult,
+				StructuredDescription{Type: "moddelim", Value: "|"},
+				StructuredDescription{Type: "fortune", Value: f},
+			)
 		}
 	}
 
@@ -2648,12 +2648,10 @@ func (d *DieRoller) rollDice(repeatIter, repeatCount, repeatTotal int) (int, []S
 	//
 	// Enough of the preliminaries, let's get working.
 	//
-	if d.Fortune {
-		if !d.Misfortune {
-			// if both were set, they cancel out
-			d.d.setFortune(d.NoStackFortune)
-		}
-	} else if d.Misfortune {
+	for range d.Fortunes {
+		d.d.setFortune(d.NoStackFortune)
+	}
+	for range d.Misfortunes {
 		d.d.setMisfortune(d.NoStackFortune)
 	}
 
