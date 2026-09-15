@@ -1919,13 +1919,13 @@ func TestDiceStructured(t *testing.T) {
 		}},
 		// 79: fortune
 		{Roll: "d20+27|fortune", Reslist: []StructuredResult{
-			{Result: 32, Details: []StructuredDescription{
-				{Type: "result", Value: "32"},
+			{Result: 46, Details: []StructuredDescription{
+				{Type: "result", Value: "46"},
 				{Type: "separator", Value: "="},
 				{Type: "diespec", Value: "1d20"},
 				{Type: "best", Value: "2"},
-				{Type: "discarded", Value: "1"},
-				{Type: "roll", Value: "5"},
+				{Type: "roll", Value: "19"},
+				{Type: "discarded", Value: "11"},
 				{Type: "operator", Value: "+"},
 				{Type: "constant", Value: "27"},
 				{Type: "moddelim", Value: "|"},
@@ -1934,13 +1934,13 @@ func TestDiceStructured(t *testing.T) {
 		}},
 		// 80: fortune x2
 		{Roll: "d20+27|fortune|f", Reslist: []StructuredResult{
-			{Result: 32, Details: []StructuredDescription{
-				{Type: "result", Value: "32"},
+			{Result: 46, Details: []StructuredDescription{
+				{Type: "result", Value: "46"},
 				{Type: "separator", Value: "="},
 				{Type: "diespec", Value: "1d20"},
 				{Type: "best", Value: "2"},
-				{Type: "discarded", Value: "1"},
-				{Type: "roll", Value: "5"},
+				{Type: "roll", Value: "19"},
+				{Type: "discarded", Value: "5"},
 				{Type: "operator", Value: "+"},
 				{Type: "constant", Value: "27"},
 				{Type: "moddelim", Value: "|"},
