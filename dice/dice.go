@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   ______      _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  )   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____        ___) /    /  /    | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (    /  /     | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )         ) \  /  /      |   / | |     #
-# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  / /  /     _ |  (__) |     #
-# (_______)|/     \||/     \|           \______/ (_)\______/  \_/     (_)(_______)     #
+#  _______  _______  _______             _______     ______    _____      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \  / ___ \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \( (___) )   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) / \     /    | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (  / ___ \    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \( (   ) )   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  /( (___) ) _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/  \_____/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -543,6 +543,10 @@ type dieComponent interface {
 	// 0 is returned. The second return value is the number of sides on the die.
 	// Thus, a natural 3 on a d20 would be returned as (3, 20).
 	naturalRoll() (int, int)
+
+	// Sets fortune or misfortune mode on the d20s in the dice found in the set.
+	setMisfortune(bool)
+	setFortune(bool)
 }
 
 // dieLabel represents a bare label appearing outside the normal expression context.
@@ -556,6 +560,8 @@ func (l dieLabel) computeMaxValue(s *evalStack) error {
 	return nil
 }
 
+func (l dieLabel) setMisfortune(_ bool) {}
+func (l dieLabel) setFortune(_ bool)    {}
 func (l dieLabel) lastValue() int {
 	return 0
 }
@@ -605,6 +611,8 @@ func (o dieOperator) computeMaxValue(s *evalStack) error {
 	return o.compute(s)
 }
 
+func (l dieOperator) setMisfortune(_ bool) {}
+func (l dieOperator) setFortune(_ bool)    {}
 func (o dieOperator) lastValue() int {
 	return 0
 }
@@ -639,6 +647,8 @@ func (b dieBeginGroup) computeMaxValue(s *evalStack) error {
 	return b.compute(s)
 }
 
+func (l dieBeginGroup) setMisfortune(_ bool) {}
+func (l dieBeginGroup) setFortune(_ bool)    {}
 func (b dieBeginGroup) lastValue() int {
 	return 0
 }
@@ -674,6 +684,8 @@ func (b dieEndGroup) computeMaxValue(s *evalStack) error {
 	return b.compute(s)
 }
 
+func (l dieEndGroup) setMisfortune(_ bool) {}
+func (l dieEndGroup) setFortune(_ bool)    {}
 func (b dieEndGroup) lastValue() int {
 	return 0
 }
@@ -711,6 +723,8 @@ func (d *dieConstant) computeMaxValue(s *evalStack) error {
 	return d.compute(s)
 }
 
+func (l *dieConstant) setMisfortune(_ bool) {}
+func (l *dieConstant) setFortune(_ bool)    {}
 func (d *dieConstant) lastValue() int {
 	return int(d.Value)
 }
@@ -891,6 +905,56 @@ func (d *dieSpec) computeMaxValue(s *evalStack) error {
 	return nil
 }
 
+func (d *dieSpec) setMisfortune(replace bool) {
+	if d.Sides == 20 {
+		if replace {
+			d.Rerolls = 1
+			d.BestReroll = false
+			return
+		}
+
+		if d.Rerolls > 0 {
+			if d.BestReroll {
+				// we're already rolling with fortune; take it down a notch
+				// this counters fortune or dampens a stacked fortune
+				d.Rerolls--
+			} else {
+				// we're already rolling with misfortune; stack them up
+				d.Rerolls++
+			}
+		} else {
+			// start misfortune
+			d.Rerolls = 1
+			d.BestReroll = false
+		}
+	}
+}
+
+func (d *dieSpec) setFortune(replace bool) {
+	if d.Sides == 20 {
+		if replace {
+			d.Rerolls = 1
+			d.BestReroll = true
+			return
+		}
+
+		if d.Rerolls > 0 {
+			if d.BestReroll {
+				// we're already rolling with fortune; stack them up
+				d.Rerolls++
+			} else {
+				// we're already rolling with misfortune; reduce it. This
+				// will counter a single misfortune or dampen a stacked one.
+				d.Rerolls--
+			}
+		} else {
+			// start fortune
+			d.Rerolls = 1
+			d.BestReroll = true
+		}
+	}
+}
+
 func (d *dieSpec) lastValue() int {
 	return d.Value
 }
@@ -1063,14 +1127,20 @@ func New(options ...func(*Dice) error) (*Dice, error) {
 			d.desc = strings.TrimSpace(majorPieces[0])
 			for _, modifier := range majorPieces[1:] {
 				if m := reMin.FindStringSubmatch(modifier); m != nil {
-					d.MinValue, err = strconv.Atoi(m[1])
+					minv, err := strconv.Atoi(m[1])
 					if err != nil {
 						return nil, err
 					}
+					if d.MinValue < minv {
+						d.MinValue = minv
+					}
 				} else if m := reMax.FindStringSubmatch(modifier); m != nil {
-					d.MaxValue, err = strconv.Atoi(m[1])
+					maxv, err := strconv.Atoi(m[1])
 					if err != nil {
 						return nil, err
+					}
+					if d.MaxValue == 0 || d.MaxValue > maxv {
+						d.MaxValue = maxv
 					}
 				} else {
 					return nil, fmt.Errorf("invalid global modifier %s", modifier)
@@ -1581,8 +1651,9 @@ func (d *Dice) StructuredDescribeRoll(options ...func(*sdrOptions)) ([]Structure
 // Note that it is not expected for the user to set or query these structures
 // directly. Use the provided functions instead.
 type DieRoller struct {
-	Confirm bool // Are we supposed to confirm potential critical rolls?
-	DoMax   bool // Maximize all die rolls?
+	Confirm        bool // Are we supposed to confirm potential critical rolls?
+	DoMax          bool // Maximize all die rolls?
+	NoStackFortune bool // Don't stack fortune effects
 
 	// If we need to repeatedly roll dice, we will either do so RepeatFor
 	// times (if > 0), or until the result meets or exceeds RepeatUntil
@@ -1625,6 +1696,10 @@ type DieRoller struct {
 
 	// Postfix expression(s) generated by the most recent roll
 	Postfix []string
+
+	// fortune/misfortune configuration history
+	Fortunes    []string
+	Misfortunes []string
 
 	generator *rand.Rand
 	d         *Dice // underlying Dice object
@@ -1699,6 +1774,9 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 	d.sfOpt = ""
 	d.SuccessMessage = ""
 	d.FailMessage = ""
+	d.Misfortunes = d.Misfortunes[:0]
+	d.Fortunes = d.Fortunes[:0]
+	d.NoStackFortune = false
 	d.Template = ""
 	d.Permutations = nil
 	d.RepeatUntil = 0
@@ -1720,6 +1798,7 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 	reModSF := regexp.MustCompile(`^\s*sf(?:\s+(\S.*?)(?:/(\S.*?))?)?\s*$`)
 	rePermutations := regexp.MustCompile(`\{(.*?)\}`)
 	rePctRoll := regexp.MustCompile(`^\s*(\d+)%(.*)$`)
+	reModFortune := regexp.MustCompile(`^\s*((m(?:is)?)?f(?:ortune)?(\*)?)\s*$`)
 
 	//
 	// Convert <= and >= so we don't confuse them with the = that indicates a title string
@@ -1763,15 +1842,21 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 					//
 					d.Confirm = true
 					if fields[1] != "" {
-						d.critThreat, err = strconv.Atoi(fields[1])
+						threat, err := strconv.Atoi(fields[1])
 						if err != nil {
 							return fmt.Errorf("value error in die roll confirm expression: %v", err)
 						}
+						if d.critThreat == 0 || d.critThreat > threat {
+							d.critThreat = threat
+						}
 					}
 					if fields[2] != "" {
-						d.critBonus, err = strconv.Atoi(fields[2])
+						bonus, err := strconv.Atoi(fields[2])
 						if err != nil {
 							return fmt.Errorf("value error in die roll confirm expression: %v", err)
+						}
+						if d.critBonus < bonus {
+							d.critBonus = bonus
 						}
 					}
 					//
@@ -1784,22 +1869,42 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 					if d.FailMessage == "" {
 						d.FailMessage = "MISS"
 					}
+				} else if fields := reModFortune.FindStringSubmatch(majorPieces[i]); fields != nil {
+					//
+					// MODIFIER
+					//  | [m[is]]f[ortune][*]
+					//
+					if fields[2] == "" {
+						d.Fortunes = append(d.Fortunes, fields[1])
+					} else {
+						d.Misfortunes = append(d.Misfortunes, fields[1])
+					}
+					if fields[3] != "" {
+						d.NoStackFortune = true
+					}
 				} else if fields := reModUntilTotal.FindStringSubmatch(majorPieces[i]); fields != nil {
 					//
 					// MODIFIER
 					//  | total <n>
 					// Repeat rolling until the cumulative total is at least <n>
 					//
-					d.RepeatUntilTotal, err = strconv.Atoi(fields[1])
+					rut, err := strconv.Atoi(fields[1])
+					if err != nil {
+						return fmt.Errorf("value error in die roll total clause: %v", err)
+					}
+					d.RepeatUntilTotal += rut
 				} else if fields := reModUntil.FindStringSubmatch(majorPieces[i]); fields != nil {
 					//
 					// MODIFIER
 					//  | until <n>
 					// Repeat rolling until reaching limit <n>
 					//
-					d.RepeatUntil, err = strconv.Atoi(fields[1])
+					run, err := strconv.Atoi(fields[1])
 					if err != nil {
 						return fmt.Errorf("value error in die roll until clause: %v", err)
+					}
+					if d.RepeatUntil < run {
+						d.RepeatUntil = run
 					}
 				} else if fields := reModRepeat.FindStringSubmatch(majorPieces[i]); fields != nil {
 					//
@@ -1807,9 +1912,14 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 					//  | repeat <n>
 					// Repeat the die roll <n> times
 					//
-					d.RepeatFor, err = strconv.Atoi(fields[1])
+					rf, err := strconv.Atoi(fields[1])
 					if err != nil {
 						return fmt.Errorf("value error in die roll repeat clause: %v", err)
+					}
+					if d.RepeatFor == 0 {
+						d.RepeatFor = rf
+					} else {
+						d.RepeatFor *= rf
 					}
 				} else if reModMaximized.MatchString(majorPieces[i]) {
 					//
@@ -1824,9 +1934,13 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 					//  | DC <n>
 					// Seek a value at least <n>
 					//
-					d.DC, err = strconv.Atoi(fields[1])
+					dc, err := strconv.Atoi(fields[1])
 					if err != nil {
 						return fmt.Errorf("value error in die roll DC clause: %v", err)
+					}
+					// If dc is given multiple times, we want the lowest of them
+					if d.DC == 0 || d.DC > dc {
+						d.DC = dc
 					}
 				} else if fields := reModSF.FindStringSubmatch(majorPieces[i]); fields != nil {
 					//
@@ -2045,6 +2159,28 @@ func (d *DieRoller) setNewSpecification(spec string) error {
 // To prevent getting caught in an infinite loop, a maximum of  100  rolls
 // will be made regardless of repeat, total, and until options.
 //
+//	| f[ortune][*]
+//
+// Rolls with fortune. Fortune causes all "d20" rolls
+// in the die roll expression to have an implicit "best of 2" added
+// to them, causing each d20 to be rolled twice, taking the better
+// result. If there was already a "best of" or "worst of" modifier
+// on the d20 roll, it is MODIFIED by this condition. Thus, if the
+// original expression was "d20 worst of 2+10" and you add "|fortune"
+// to the end, that counters the "worst of" (they cancel each other).
+// On the other hand, if it already had a "best of 2", they would "stack",
+// resulting in an effective "best of 3" instead. The option may be
+// abbreviated to "f". If an asterisk (*) follows the option (i.e.,
+// "|fortune*" or "|f*"), then this stacking does not occur, and any
+// "best of" or "worst of" modifier that the d20 rolls had previously
+// are REPLACED by the new "best of 2" imposed by the fortune option.
+//
+//	| m[is]f[ortune][*]
+//
+// Rolls with misfortune. This is just like fortune, except in reverse.
+// It adds a "worst of 2" to all d20 rolls in the expression.
+// It may be abbreviated to "mfortune", "misf", or "mf".
+//
 // Anywhere  in  the  string  you may introduce a combination specifier in
 // curly braces as “{<a>/<b>/<c>/...}”.  This will repeat the overall die roll
 // expression once for each of the values <a>, <b>, <c>, etc., substituting each
@@ -2251,6 +2387,18 @@ func (d *DieRoller) ExplainSecretRoll(spec, notice string) (string, StructuredRe
 				StructuredDescription{Type: "sf", Value: d.sfOpt},
 			)
 		}
+		for _, f := range d.Misfortunes {
+			thisResult = append(thisResult,
+				StructuredDescription{Type: "moddelim", Value: "|"},
+				StructuredDescription{Type: "misfortune", Value: f},
+			)
+		}
+		for _, f := range d.Fortunes {
+			thisResult = append(thisResult,
+				StructuredDescription{Type: "moddelim", Value: "|"},
+				StructuredDescription{Type: "fortune", Value: f},
+			)
+		}
 	}
 
 	//
@@ -2425,6 +2573,18 @@ func (d *DieRoller) rollDice(repeatIter, repeatCount, repeatTotal int) (int, []S
 				StructuredDescription{Type: "sf", Value: d.sfOpt},
 			)
 		}
+		for _, f := range d.Misfortunes {
+			thisResult = append(thisResult,
+				StructuredDescription{Type: "moddelim", Value: "|"},
+				StructuredDescription{Type: "misfortune", Value: f},
+			)
+		}
+		for _, f := range d.Fortunes {
+			thisResult = append(thisResult,
+				StructuredDescription{Type: "moddelim", Value: "|"},
+				StructuredDescription{Type: "fortune", Value: f},
+			)
+		}
 	}
 
 	//
@@ -2488,6 +2648,13 @@ func (d *DieRoller) rollDice(repeatIter, repeatCount, repeatTotal int) (int, []S
 	//
 	// Enough of the preliminaries, let's get working.
 	//
+	for range d.Fortunes {
+		d.d.setFortune(d.NoStackFortune)
+	}
+	for range d.Misfortunes {
+		d.d.setMisfortune(d.NoStackFortune)
+	}
+
 	if d.d == nil {
 		return 0, nil, repeatTotal, fmt.Errorf("no defined Dice object to consume")
 	}
@@ -2661,6 +2828,18 @@ func (d *DieRoller) IsNatural1() (result bool) {
 	return d.isNatural(false)
 }
 
+func (d *Dice) setMisfortune(replace bool) {
+	for _, die := range d.multiDice {
+		die.setMisfortune(replace)
+	}
+}
+
+func (d *Dice) setFortune(replace bool) {
+	for _, die := range d.multiDice {
+		die.setFortune(replace)
+	}
+}
+
 func (d *DieRoller) isNatural(checkForMax bool) (result bool) {
 	if !d.d.Rolled {
 		return
@@ -2723,7 +2902,7 @@ func (sr StructuredDescriptionSet) Text() (string, error) {
 		case "dc":
 			fmt.Fprintf(&t, "DC %s ", r.Value)
 
-		case "diespec", "maximized", "operator":
+		case "diespec", "maximized", "operator", "fortune", "misfortune":
 			fmt.Fprintf(&t, "%s", r.Value)
 
 		case "discarded":
@@ -3120,7 +3299,11 @@ meaning of the whole thing. Each option begins with a vertical bar (**|**) chara
 
 **|dc** //n// (Indicate that the roll was a “success” if the result was at least //n//.)
 
+**|fortune**   (Roll all d20s twice, taking better result; use **fortune\.*** to avoid stacking)
+
 **|maximized** (All die rolls are forced to their maximum possible values.)
+
+**|misfortune**   (Roll all d20s twice, taking worse result; use **misfortune\.*** to avoid stacking)
 
 **|repeat** //n// (Roll //n// times.)
 
@@ -3179,7 +3362,7 @@ d representation:
 
 */
 
-// @[00]@| Go-GMA 5.37.0
+// @[00]@| Go-GMA 5.38.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

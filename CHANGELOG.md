@@ -1,12 +1,12 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.37.0                <!-- @@##@@ -->
- * Effective Date: 29-Aug-2026			<!-- @@##@@ -->
+ * This Package Version: 5.38.0                <!-- @@##@@ -->
+ * Effective Date: 16-Sep-2026			<!-- @@##@@ -->
 
 ## Compatibility
- * GMA Core API Library Version: 6.47.1		<!-- @@##@@ -->
- * GMA Mapper Version: 4.40.3		<!-- @@##@@ -->
+ * GMA Core API Library Version: 6.48		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.41		<!-- @@##@@ -->
  * GMA Mapper Protocol: 427		<!-- @@##@@ -->
  * GMA Mapper File Format: 24		<!-- @@##@@ -->
  * GMA Mapper Preferences File Format: 15 <!-- @@##@@ -->
@@ -28,6 +28,12 @@ Only run the scripts that are for server versions after the one your database fi
 | 5.34.0         | `scripts/upgrade-5.34.0` | Creates new field to track message deletion and rewrites all existing chat messages |
 
 Most of these scripts require the `sqlite3` command-line tool to be installed.
+
+## v5.38.0
+### Enhanced
+ * Die-roll syntax enhanced to include options `|misfortune` and `|fortune` which stack an implicit "worst of 2" or "best of 2" respectively to all d20 rolls in the expression.
+ * Now all die-roll options do something sensible when they appear multiple times (e.g., `|repeat 2|repeat 4` is equivalent now to `|repeat 8` since it's repeating the "repeat 2" four more times; previously it would have just discarded the first option and only retained the last one encountered).
+ * See **gma-dice-syntax**(7) in the gma project documentation (also in the `gma.pdf` document linked from this project's github home page, starting on p. 738 as of this writing) for full details.
 
 ## v5.37.0
 ### Added

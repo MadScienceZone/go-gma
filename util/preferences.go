@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   ______      _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  )   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____        ___) /    /  /    | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (    /  /     | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )         ) \  /  /      |   / | |     #
-# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  / /  /     _ |  (__) |     #
-# (_______)|/     \||/     \|           \______/ (_)\______/  \_/     (_)(_______)     #
+#  _______  _______  _______             _______     ______    _____      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \  / ___ \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \( (___) )   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) / \     /    | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (  / ___ \    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \( (   ) )   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  /( (___) ) _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/  \_____/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -691,6 +691,10 @@ func DefaultPreferences() UserPreferences {
 						FontName: "Important",
 						Format:   "(%s)",
 					},
+					"fortune": DieRollComponent{
+						FG:       ColorSet{Dark: "#aaaaaa", Light: "#888888"},
+						FontName: "Special",
+					},
 					"from": DieRollComponent{
 						FG:       ColorSet{Dark: "cyan", Light: "blue"},
 						FontName: "Normal",
@@ -742,6 +746,10 @@ func DefaultPreferences() UserPreferences {
 						FG:       ColorSet{Dark: "#aaaaaa", Light: "#888888"},
 						FontName: "Special",
 						Format:   "min %s",
+					},
+					"misfortune": DieRollComponent{
+						FG:       ColorSet{Dark: "#aaaaaa", Light: "#888888"},
+						FontName: "Special",
 					},
 					"moddelim": DieRollComponent{
 						FG:       ColorSet{Dark: "#fffb00", Light: "#f05b00"},
@@ -1066,7 +1074,7 @@ func SearchInPath(program string) (string, error) {
 	return "", fmt.Errorf("file not found in PATH")
 }
 
-// @[00]@| Go-GMA 5.37.0
+// @[00]@| Go-GMA 5.38.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),

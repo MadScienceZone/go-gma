@@ -3,14 +3,14 @@
 #  __                                                                                  #
 # /__ _                                                                                #
 # \_|(_)                                                                               #
-#  _______  _______  _______             _______     ______   ______      _______      #
-# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \ / ___  \    (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \\/   )  )   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____        ___) /    /  /    | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (    /  /     | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )         ) \  /  /      |   / | |     #
-# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  / /  /     _ |  (__) |     #
-# (_______)|/     \||/     \|           \______/ (_)\______/  \_/     (_)(_______)     #
+#  _______  _______  _______             _______     ______    _____      _______      #
+# (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \  / ___ \    (  __   )     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \( (___) )   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) / \     /    | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (  / ___ \    | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \( (   ) )   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  /( (___) ) _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/  \_____/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -1917,6 +1917,536 @@ func TestDiceStructured(t *testing.T) {
 				{Type: "iteration", Value: "4"},
 			}},
 		}},
+		// 79: fortune
+		{Roll: "d20+27|fortune", Reslist: []StructuredResult{
+			{Result: 46, Details: []StructuredDescription{
+				{Type: "result", Value: "46"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "best", Value: "2"},
+				{Type: "roll", Value: "19"},
+				{Type: "discarded", Value: "11"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "27"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "fortune", Value: "fortune"},
+			}},
+		}},
+		// 80: fortune x2
+		{Roll: "d20+27|fortune|f", Reslist: []StructuredResult{
+			{Result: 46, Details: []StructuredDescription{
+				{Type: "result", Value: "46"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "best", Value: "3"},
+				{Type: "roll", Value: "19"},
+				{Type: "discarded", Value: "5"},
+				{Type: "discarded", Value: "17"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "27"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "fortune", Value: "fortune"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "fortune", Value: "f"},
+			}},
+		}},
+		// 81: misfortune
+		{Roll: "d20+27|misfortune", Reslist: []StructuredResult{
+			{Result: 42, Details: []StructuredDescription{
+				{Type: "result", Value: "42"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "worst", Value: "2"},
+				{Type: "roll", Value: "15"},
+				{Type: "discarded", Value: "20"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "27"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "misfortune", Value: "misfortune"},
+			}},
+		}},
+		// 82: mixed fortunes
+		{Roll: "d20+27|fortune|mf", Reslist: []StructuredResult{
+			{Result: 37, Details: []StructuredDescription{
+				{Type: "result", Value: "37"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "10"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "27"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "misfortune", Value: "mf"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "fortune", Value: "fortune"},
+			}},
+		}},
+		// 83: misfortunes
+		{Roll: "d20+27|fortune|mf|mf|mf|mf", Reslist: []StructuredResult{
+			{Result: 29, Details: []StructuredDescription{
+				{Type: "result", Value: "29"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "worst", Value: "4"},
+				{Type: "discarded", Value: "8"},
+				{Type: "discarded", Value: "12"},
+				{Type: "roll", Value: "2"},
+				{Type: "discarded", Value: "19"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "27"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "misfortune", Value: "mf"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "misfortune", Value: "mf"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "misfortune", Value: "mf"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "misfortune", Value: "mf"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "fortune", Value: "fortune"},
+			}},
+		}},
+		// 84: non-stacking fortune
+		{Roll: "d20+27|fortune|f|f|f*|f|f", Reslist: []StructuredResult{
+			{Result: 41, Details: []StructuredDescription{
+				{Type: "result", Value: "41"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "best", Value: "2"},
+				{Type: "roll", Value: "14"},
+				{Type: "discarded", Value: "8"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "27"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "fortune", Value: "fortune"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "fortune", Value: "f"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "fortune", Value: "f"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "fortune", Value: "f*"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "fortune", Value: "f"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "fortune", Value: "f"},
+			}},
+		}},
+		// 85: stacking fortune
+		{Roll: "d20 best of 3+27|fortune|f", Reslist: []StructuredResult{
+			{Result: 47, Details: []StructuredDescription{
+				{Type: "result", Value: "47"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "best", Value: "5"},
+				{Type: "discarded", Value: "19"},
+				{Type: "discarded", Value: "8"},
+				{Type: "discarded", Value: "12"},
+				{Type: "roll", Value: "20"},
+				{Type: "discarded", Value: "5"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "27"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "fortune", Value: "fortune"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "fortune", Value: "f"},
+			}},
+		}},
+		// 86: stacking fortune
+		{Roll: "d20 worst of 3+27+2d20|fortune", Reslist: []StructuredResult{
+			{Result: 47, Details: []StructuredDescription{
+				{Type: "result", Value: "47"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "worst", Value: "2"},
+				{Type: "discarded", Value: "14"},
+				{Type: "roll", Value: "4"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "27"},
+				{Type: "operator", Value: "+"},
+				{Type: "diespec", Value: "2d20"},
+				{Type: "subtotal", Value: "16"},
+				{Type: "best", Value: "2"},
+				{Type: "roll", Value: "11,5"},
+				{Type: "discarded", Value: "2,6"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "fortune", Value: "fortune"},
+			}},
+		}},
+		// 87: stacking mixed fortunes
+		{Roll: "d20 best of 7+27+5d20|f|f|mf|f", Reslist: []StructuredResult{
+			{Result: 97, Details: []StructuredDescription{
+				{Type: "result", Value: "97"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "best", Value: "9"},
+				{Type: "roll", Value: "19"},
+				{Type: "discarded", Value: "4"},
+				{Type: "discarded", Value: "17"},
+				{Type: "discarded", Value: "2"},
+				{Type: "discarded", Value: "5"},
+				{Type: "discarded", Value: "3"},
+				{Type: "discarded", Value: "19"},
+				{Type: "discarded", Value: "3"},
+				{Type: "discarded", Value: "1"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "27"},
+				{Type: "operator", Value: "+"},
+				{Type: "diespec", Value: "5d20"},
+				{Type: "subtotal", Value: "51"},
+				{Type: "best", Value: "3"},
+				{Type: "roll", Value: "9,11,3,20,8"},
+				{Type: "discarded", Value: "15,3,2,1,3"},
+				{Type: "discarded", Value: "8,2,3,8,17"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "misfortune", Value: "mf"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "fortune", Value: "f"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "fortune", Value: "f"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "fortune", Value: "f"},
+			}},
+		}},
+		// 88: more fortunes
+		{Roll: "d20 best of 2+27|f*|f|f", Reslist: []StructuredResult{
+			{Result: 37, Details: []StructuredDescription{
+				{Type: "result", Value: "37"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "best", Value: "2"},
+				{Type: "roll", Value: "10"},
+				{Type: "discarded", Value: "6"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "27"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "fortune", Value: "f*"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "fortune", Value: "f"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "fortune", Value: "f"},
+			}},
+		}},
+		// 89: multi-option combat
+		{Roll: "d20+27|c18|c19", Reslist: []StructuredResult{
+			{Result: 46, Details: []StructuredDescription{
+				{Type: "result", Value: "46"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "19"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "27"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "critspec", Value: "c18"},
+			}},
+			{Result: 36, Details: []StructuredDescription{
+				{Type: "critlabel", Value: "Confirm:"},
+				{Type: "result", Value: "36"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "9"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "27"},
+			}},
+		}},
+		// 90: multi-dc
+		{Roll: "d20+27|dc15|dc12|dc26", Reslist: []StructuredResult{
+			{Result: 47, Details: []StructuredDescription{
+				{Type: "result", Value: "47"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "20"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "27"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "dc", Value: "12"},
+				{Type: "exceeded", Value: "35"},
+			}},
+		}},
+		// 91: multi-min-max
+		{Roll: "d20+27|max15|max16|min10|min12|min11", Reslist: []StructuredResult{
+			{Result: 15, Details: []StructuredDescription{
+				{Type: "result", Value: "15"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "8"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "27"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "min", Value: "12"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "max", Value: "15"},
+			}},
+		}},
+		// 92: multi-total
+		{Roll: "d20+27|total10|total20", Reslist: []StructuredResult{
+			{Result: 29, Details: []StructuredDescription{
+				{Type: "result", Value: "29"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "2"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "27"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "total", Value: "30"},
+				{Type: "cumulative", Value: "29"},
+				{Type: "iteration", Value: "1"},
+			}},
+			{Result: 46, Details: []StructuredDescription{
+				{Type: "result", Value: "46"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "19"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "27"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "total", Value: "30"},
+				{Type: "cumulative", Value: "75"},
+				{Type: "iteration", Value: "2"},
+			}},
+		}},
+		// 93: multi-until
+		{Roll: "d70|until5|until42|until20", Reslist: []StructuredResult{
+			{Result: 29, Details: []StructuredDescription{
+				{Type: "result", Value: "29"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d70"},
+				{Type: "roll", Value: "29"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "until", Value: "42"},
+				{Type: "iteration", Value: "1"},
+				{Type: "short", Value: "13"},
+			}},
+			{Result: 8, Details: []StructuredDescription{
+				{Type: "result", Value: "8"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d70"},
+				{Type: "roll", Value: "8"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "until", Value: "42"},
+				{Type: "iteration", Value: "2"},
+				{Type: "short", Value: "34"},
+			}},
+			{Result: 2, Details: []StructuredDescription{
+				{Type: "result", Value: "2"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d70"},
+				{Type: "roll", Value: "2"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "until", Value: "42"},
+				{Type: "iteration", Value: "3"},
+				{Type: "short", Value: "40"},
+			}},
+			{Result: 20, Details: []StructuredDescription{
+				{Type: "result", Value: "20"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d70"},
+				{Type: "roll", Value: "20"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "until", Value: "42"},
+				{Type: "iteration", Value: "4"},
+				{Type: "short", Value: "22"},
+			}},
+			{Result: 48, Details: []StructuredDescription{
+				{Type: "result", Value: "48"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d70"},
+				{Type: "roll", Value: "48"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "until", Value: "42"},
+				{Type: "iteration", Value: "5"},
+				{Type: "exceeded", Value: "6"},
+			}},
+		}},
+		// 94: multi-maximized
+		{Roll: "d20+27|maximized|maximized", Reslist: []StructuredResult{
+			{Result: 47, Details: []StructuredDescription{
+				{Type: "result", Value: "47"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "maxroll", Value: "20"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "27"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "fullmax", Value: "maximized"},
+			}},
+		}},
+		// 95: multi-repeat
+		{Roll: "d20|repeat3|repeat5", Reslist: []StructuredResult{
+			{Result: 13, Details: []StructuredDescription{
+				{Type: "result", Value: "13"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "13"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "repeat", Value: "15"},
+				{Type: "iteration", Value: "1"},
+			}},
+			{Result: 12, Details: []StructuredDescription{
+				{Type: "result", Value: "12"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "12"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "repeat", Value: "15"},
+				{Type: "iteration", Value: "2"},
+			}},
+			{Result: 20, Details: []StructuredDescription{
+				{Type: "result", Value: "20"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "20"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "repeat", Value: "15"},
+				{Type: "iteration", Value: "3"},
+			}},
+			{Result: 12, Details: []StructuredDescription{
+				{Type: "result", Value: "12"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "12"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "repeat", Value: "15"},
+				{Type: "iteration", Value: "4"},
+			}},
+			{Result: 20, Details: []StructuredDescription{
+				{Type: "result", Value: "20"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "20"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "repeat", Value: "15"},
+				{Type: "iteration", Value: "5"},
+			}},
+			{Result: 12, Details: []StructuredDescription{
+				{Type: "result", Value: "12"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "12"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "repeat", Value: "15"},
+				{Type: "iteration", Value: "6"},
+			}},
+			{Result: 4, Details: []StructuredDescription{
+				{Type: "result", Value: "4"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "4"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "repeat", Value: "15"},
+				{Type: "iteration", Value: "7"},
+			}},
+			{Result: 17, Details: []StructuredDescription{
+				{Type: "result", Value: "17"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "17"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "repeat", Value: "15"},
+				{Type: "iteration", Value: "8"},
+			}},
+			{Result: 11, Details: []StructuredDescription{
+				{Type: "result", Value: "11"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "11"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "repeat", Value: "15"},
+				{Type: "iteration", Value: "9"},
+			}},
+			{Result: 17, Details: []StructuredDescription{
+				{Type: "result", Value: "17"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "17"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "repeat", Value: "15"},
+				{Type: "iteration", Value: "10"},
+			}},
+			{Result: 16, Details: []StructuredDescription{
+				{Type: "result", Value: "16"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "16"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "repeat", Value: "15"},
+				{Type: "iteration", Value: "11"},
+			}},
+			{Result: 9, Details: []StructuredDescription{
+				{Type: "result", Value: "9"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "9"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "repeat", Value: "15"},
+				{Type: "iteration", Value: "12"},
+			}},
+			{Result: 9, Details: []StructuredDescription{
+				{Type: "result", Value: "9"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "9"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "repeat", Value: "15"},
+				{Type: "iteration", Value: "13"},
+			}},
+			{Result: 11, Details: []StructuredDescription{
+				{Type: "result", Value: "11"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "11"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "repeat", Value: "15"},
+				{Type: "iteration", Value: "14"},
+			}},
+			{Result: 11, Details: []StructuredDescription{
+				{Type: "result", Value: "11"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "11"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "repeat", Value: "15"},
+				{Type: "iteration", Value: "15"},
+			}},
+		}},
+		// 96: multi-sf, no arg, two arg
+		{Roll: "d20+27|sf|sf x/y", Reslist: []StructuredResult{
+			{Result: 30, Details: []StructuredDescription{
+				{Type: "result", Value: "30"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "3"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "27"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "sf", Value: "sf x/y"},
+			}},
+		}},
+		// 97: multi-sf, two arg, one arg
+		{Roll: "d20+27|sf foo/bar|sf a", Reslist: []StructuredResult{
+			{Result: 28, Details: []StructuredDescription{
+				{Type: "fail", Value: "NOT a"},
+				{Type: "result", Value: "28"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "1"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "27"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "sf", Value: "sf a"},
+			}},
+		}},
+		// 98: multi-sf, two arg, no arg
+		{Roll: "d20+27|sf xx/yy|sf", Reslist: []StructuredResult{
+			{Result: 40, Details: []StructuredDescription{
+				{Type: "result", Value: "40"},
+				{Type: "separator", Value: "="},
+				{Type: "diespec", Value: "1d20"},
+				{Type: "roll", Value: "13"},
+				{Type: "operator", Value: "+"},
+				{Type: "constant", Value: "27"},
+				{Type: "moddelim", Value: "|"},
+				{Type: "sf", Value: "sf"},
+			}},
+		}},
 	}
 
 	for i, test := range testcases {
@@ -1930,7 +2460,7 @@ func TestDiceStructured(t *testing.T) {
 				t.Fatalf("test #%d error %v", i, err)
 			}
 			if !compareResults(results, test.Reslist) {
-				t.Fatalf("test #%d result %v, expected %v", i, results, test.Reslist)
+				t.Fatalf("test #%d result\n%v, expected\n%v", i, results, test.Reslist)
 			}
 			if label != "" {
 				t.Fatalf("test #%d label was %v, expected it to be empty", i, label)
@@ -2155,7 +2685,7 @@ func TestDicePrivateRolls(t *testing.T) {
 	}
 }
 
-// @[00]@| Go-GMA 5.37.0
+// @[00]@| Go-GMA 5.38.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
