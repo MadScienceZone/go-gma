@@ -5,12 +5,12 @@
 # \_|(_)                                                                               #
 #  _______  _______  _______             _______     ______    _____      _______      #
 # (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \  / ___ \    (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \( (___) )   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____        ___) / \     /    | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (  / ___ \    | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )         ) \( (   ) )   |   / | |     #
-# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  /( (___) ) _ |  (__) |     #
-# (_______)|/     \||/     \|           \______/ (_)\______/  \_____/ (_)(_______)     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \( (   ) )   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /( (___) |   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (  \____  |   | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) |   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\____) ) _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -780,6 +780,12 @@ type CreatureToken struct {
 type CustomConditionModifier struct {
 	// If true, draw a line between the targeter and target
 	Tracer bool `json:",omitempty"`
+
+	// If true, the condition only applies until the target's death
+	EndAtDeath bool `json:",omitempty"`
+
+	// If positive, the condition can only be applied to this number of targets at a time.
+	Limit int `json:",omitempty"`
 
 	// The marker shape the player is using locally to mark their target, in the same manner
 	// used for the DSM markers
@@ -2018,7 +2024,7 @@ func loadMapFile(input io.Reader, metaDataOnly bool) ([]any, MapMetaData, error)
 	return nil, meta, fmt.Errorf("invalid map file format: unexpected end of file")
 }
 
-// @[00]@| Go-GMA 5.38.0
+// @[00]@| Go-GMA 5.39.0
 // @[01]@|
 // @[10]@| Overall GMA package Copyright © 1992–2026 by Steven L. Willoughby (AKA MadScienceZone)
 // @[11]@| steve@madscience.zone (previously AKA Software Alchemy),
