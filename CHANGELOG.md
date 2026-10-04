@@ -1,13 +1,13 @@
 # Game Master's Assistant / Go Utilities
 # Release Notes
 ## Current Version Information
- * This Package Version: 5.38.0                <!-- @@##@@ -->
- * Effective Date: 16-Sep-2026			<!-- @@##@@ -->
+ * This Package Version: 5.39.0                <!-- @@##@@ -->
+ * Effective Date: 04-Oct-2026			<!-- @@##@@ -->
 
 ## Compatibility
  * GMA Core API Library Version: 6.48		<!-- @@##@@ -->
- * GMA Mapper Version: 4.41		<!-- @@##@@ -->
- * GMA Mapper Protocol: 427		<!-- @@##@@ -->
+ * GMA Mapper Version: 4.41.1		<!-- @@##@@ -->
+ * GMA Mapper Protocol: 428		<!-- @@##@@ -->
  * GMA Mapper File Format: 24		<!-- @@##@@ -->
  * GMA Mapper Preferences File Format: 15 <!-- @@##@@ -->
  * GMA User Preferences File Format: 6 <!-- @@##@@ -->
@@ -28,6 +28,10 @@ Only run the scripts that are for server versions after the one your database fi
 | 5.34.0         | `scripts/upgrade-5.34.0` | Creates new field to track message deletion and rewrites all existing chat messages |
 
 Most of these scripts require the `sqlite3` command-line tool to be installed.
+
+## v5.39.0
+### Added
+ * Updated to protocol 428, which extends the `TargetedModifiers` attribute for creatures to allow clients to limit how many targets can have a condition at a time.
 
 ## v5.38.0
 ### Enhanced

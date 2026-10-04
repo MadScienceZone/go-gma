@@ -5,12 +5,12 @@
 # \_|(_)                                                                               #
 #  _______  _______  _______             _______     ______    _____      _______      #
 # (  ____ \(       )(  ___  ) Game      (  ____ \   / ___  \  / ___ \    (  __   )     #
-# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \( (___) )   | (  )  |     #
-# | |      | || || || (___) | Assistant | (____        ___) / \     /    | | /   |     #
-# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (  / ___ \    | (/ /) |     #
-# | | \_  )| |   | || (   ) |                 ) )         ) \( (   ) )   |   / | |     #
-# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  /( (___) ) _ |  (__) |     #
-# (_______)|/     \||/     \|           \______/ (_)\______/  \_____/ (_)(_______)     #
+# | (    \/| () () || (   ) | Master's  | (    \/   \/   \  \( (   ) )   | (  )  |     #
+# | |      | || || || (___) | Assistant | (____        ___) /( (___) |   | | /   |     #
+# | | ____ | |(_)| ||  ___  | (Go Port) (_____ \      (___ (  \____  |   | (/ /) |     #
+# | | \_  )| |   | || (   ) |                 ) )         ) \      ) |   |   / | |     #
+# | (___) || )   ( || )   ( |           /\____) ) _ /\___/  //\____) ) _ |  (__) |     #
+# (_______)|/     \||/     \|           \______/ (_)\______/ \______/ (_)(_______)     #
 #                                                                                      #
 ########################################################################################
 */
@@ -54,10 +54,10 @@ import (
 // The GMA Mapper Protocol version number current as of this build,
 // and protocol versions supported by this code.
 const (
-	GMAMapperProtocol=427      // @@##@@ auto-configured
-	GoVersionNumber="5.38.0" // @@##@@ auto-configured
+	GMAMapperProtocol=428      // @@##@@ auto-configured
+	GoVersionNumber="5.39.0" // @@##@@ auto-configured
 	MinimumSupportedMapProtocol = 400
-	MaximumSupportedMapProtocol = 427
+	MaximumSupportedMapProtocol = 428
 	MaxServerMessageSize        = 60 * 1024 // don't send server messages bigger than this
 	MaxAllowedGiantPacketSize   = 1024 * 1024 * 10
 )
